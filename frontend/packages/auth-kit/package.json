@@ -1,0 +1,14 @@
+{
+  "name": "auth-kit",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "keycloak-js": "^25.0.6"
+  },
+  "peerDependencies": {
+    "react": "^18.3.0"
+  }
+}

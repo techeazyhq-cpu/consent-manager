@@ -1,0 +1,195 @@
+# Backend services build via infra/docker/Dockerfile.service, which wraps an already-built
+# JAR (`./gradlew build` on the host first). This is a pragmatic testing workaround, not
+# Phase 1's intended approach — plan §6 calls for Spring Boot Buildpacks, no hand-written
+# Dockerfile, but this environment's Docker Desktop rejects bootBuildImage's pinned old
+# Docker API version (v1.24) with a 400; see the Dockerfile's own header comment.
+#
+# Each backend service activates its "docker" Spring profile (application-docker.yml,
+# sitting next to each service's default application.yml) for container-network hostnames —
+# not per-field environment variable overrides. Spring's relaxed env-var binding does not
+# merge indexed list properties (e.g. cm-gw's spring.cloud.gateway.routes[]) across sources,
+# so overriding even one field of one route via an env var silently drops the rest of that
+# route list; discovered and fixed during Phase 1 verification.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cm
+      POSTGRES_PASSWORD: cm
+      POSTGRES_DB: consent_manager
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cm -d consent_manager"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pulsar:
+    image: apachepulsar/pulsar:3.3.1
+    command: bin/pulsar standalone
+    ports:
+      - "6650:6650"
+      - "8181:8080" # Pulsar's own admin/web port, remapped so it doesn't clash with Keycloak's 8080
+    volumes:
+      - pulsar-data:/pulsar/data
+    healthcheck:
+      test: ["CMD", "bin/pulsar-admin", "brokers", "healthcheck"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # web UI
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./keycloak/realm-export:/opt/keycloak/data/import
+      # cm-idn-otp-spi provider JAR (plan §9a) — built via ./gradlew :cm-idn-otp-spi:build,
+      # copied here before `docker compose up` (see scripts/build-otp-spi.sh, Phase 1 task).
+      - ../backend/keycloak-ext/cm-idn-otp-spi/build/libs:/opt/keycloak/providers
+
+  opa:
+    image: openpolicyagent/opa:latest-envoy
+    command: ["run", "--server", "--addr=0.0.0.0:8181", "/policies"]
+    ports:
+      - "8282:8181" # cm-pdp's real port is 8181 inside the network; host-mapped to 8282 to avoid clashing with Pulsar's 8181 mapping above
+    volumes:
+      - ./opa/policies:/policies
+
+  cm-df-reg-svc:
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-df-reg-svc/cm-df-reg-boot/build/libs/cm-df-reg-boot-0.1.0-SNAPSHOT.jar
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CM_KEYCLOAK_ADMIN-USERNAME: admin
+      CM_KEYCLOAK_ADMIN-PASSWORD: admin
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pulsar:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  cm-cns-cmd-svc:
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-cns-cmd-svc/cm-cns-cmd-boot/build/libs/cm-cns-cmd-boot-0.1.0-SNAPSHOT.jar
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pulsar:
+        condition: service_healthy
+      cm-df-reg-svc:
+        condition: service_started
+      cm-bil-svc:
+        condition: service_started
+
+  cm-cns-qry-svc:
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-cns-qry-svc/cm-cns-qry-boot/build/libs/cm-cns-qry-boot-0.1.0-SNAPSHOT.jar
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pulsar:
+        condition: service_healthy
+
+  cm-ntf-svc:
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-ntf-svc/cm-ntf-boot/build/libs/cm-ntf-boot-0.1.0-SNAPSHOT.jar
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      pulsar:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  cm-bil-svc:
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-bil-svc/cm-bil-boot/build/libs/cm-bil-boot-0.1.0-SNAPSHOT.jar
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pulsar:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  cm-gw:
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-gw/build/libs/cm-gw-0.1.0-SNAPSHOT.jar
+    ports:
+      - "9000:9000"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - keycloak
+      - opa
+      - redis
+      - cm-df-reg-svc
+      - cm-cns-cmd-svc
+      - cm-cns-qry-svc
+      - cm-ntf-svc
+      - cm-bil-svc
+
+volumes:
+  pg-data:
+  pulsar-data:

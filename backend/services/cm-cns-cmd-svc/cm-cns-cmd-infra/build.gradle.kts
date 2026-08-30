@@ -1,0 +1,20 @@
+plugins {
+    id("java-library")
+}
+
+dependencies {
+    api(project(":cm-cns-cmd-app"))
+    implementation(project(":cm-evt-kit"))
+
+    implementation("org.springframework.boot:spring-boot-starter-data-r2dbc:3.3.4")
+    implementation("org.postgresql:r2dbc-postgresql:1.0.5.RELEASE")
+    implementation("org.springframework.boot:spring-boot-starter-webflux:3.3.4") // WebClient, for the DfActivePort/DfSubEligiblePolicy adapters
+    implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:3.1.2")
+    implementation("org.apache.pulsar:pulsar-client-reactive-api:0.5.2")
+    implementation("org.apache.pulsar:pulsar-client-reactive-adapter:0.5.2")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
+
+    testImplementation(platform("org.junit:junit-bom:5.10.3"))
+    testImplementation("org.junit.jupiter:junit-jupiter")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}

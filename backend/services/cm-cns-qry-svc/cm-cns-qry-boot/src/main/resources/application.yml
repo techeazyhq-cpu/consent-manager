@@ -1,0 +1,34 @@
+server:
+  port: 8083
+  http2:
+    enabled: true
+
+spring:
+  application:
+    name: cm-cns-qry-svc
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/consent_manager?schema=cns_qry
+    username: cm
+    password: cm
+  flyway:
+    url: jdbc:postgresql://localhost:5432/consent_manager
+    user: cm
+    password: cm
+    schemas: cns_qry
+    default-schema: cns_qry
+    locations: classpath:db/migration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/cm-realm
+
+cm:
+  pulsar:
+    service-url: pulsar://localhost:6650
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

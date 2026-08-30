@@ -1,0 +1,12 @@
+{
+  "name": "cm-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev:dp-portal": "pnpm --filter mf-dp-portal dev",
+    "dev:df-app": "pnpm --filter mf-df-app dev",
+    "dev:cm-admin": "pnpm --filter mf-cm-admin dev",
+    "build": "pnpm -r build",
+    "preview:all": "pnpm -r --parallel preview"
+  }
+}
