@@ -1,0 +1,105 @@
+package com.techeazyhq.cm.bil;
+
+import org.apache.pulsar.client.api.PulsarClient;
+import org.apache.pulsar.reactive.client.adapter.AdaptedReactivePulsarClientFactory;
+import org.apache.pulsar.reactive.client.api.ReactivePulsarClient;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.event.EventListener;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+import org.springframework.r2dbc.core.DatabaseClient;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techeazyhq.cm.bil.app.AssignSubPlnCmdHandler;
+import com.techeazyhq.cm.bil.app.GetDfSubStatusQryHandler;
+import com.techeazyhq.cm.bil.app.GetUsgQryHandler;
+import com.techeazyhq.cm.bil.app.ListSubPlnsQryHandler;
+import com.techeazyhq.cm.bil.app.OnDfActivatedEvtHandler;
+import com.techeazyhq.cm.bil.app.SetDfSubStsCmdHandler;
+import com.techeazyhq.cm.bil.app.SubEligQryHandler;
+import com.techeazyhq.cm.bil.dom.DfSubRepoPort;
+import com.techeazyhq.cm.bil.dom.SubPlnRepoPort;
+import com.techeazyhq.cm.bil.dom.UsgPort;
+import com.techeazyhq.cm.bil.infra.PulsarDfActivatedConsumer;
+import com.techeazyhq.cm.bil.infra.R2dbcDfSubRepoAdapter;
+import com.techeazyhq.cm.bil.infra.R2dbcSubPlnRepoAdapter;
+import com.techeazyhq.cm.bil.infra.RedisUsgCtrAdapter;
+
+@Configuration
+public class BilBeanConfig {
+
+    @Bean
+    public DfSubRepoPort dfSubRepoPort(DatabaseClient db) {
+        return new R2dbcDfSubRepoAdapter(db);
+    }
+
+    @Bean
+    public SubPlnRepoPort subPlnRepoPort(DatabaseClient db) {
+        return new R2dbcSubPlnRepoAdapter(db);
+    }
+
+    @Bean
+    public UsgPort usgPort(ReactiveStringRedisTemplate redisTemplate) {
+        return new RedisUsgCtrAdapter(redisTemplate);
+    }
+
+    @Bean
+    public OnDfActivatedEvtHandler onDfActivatedEvtHandler(DfSubRepoPort dfSubRepo, SubPlnRepoPort subPlnRepo) {
+        return new OnDfActivatedEvtHandler(dfSubRepo, subPlnRepo);
+    }
+
+    @Bean
+    public AssignSubPlnCmdHandler assignSubPlnCmdHandler(DfSubRepoPort dfSubRepo, SubPlnRepoPort subPlnRepo) {
+        return new AssignSubPlnCmdHandler(dfSubRepo, subPlnRepo);
+    }
+
+    @Bean
+    public SetDfSubStsCmdHandler setDfSubStsCmdHandler(DfSubRepoPort dfSubRepo) {
+        return new SetDfSubStsCmdHandler(dfSubRepo);
+    }
+
+    @Bean
+    public GetUsgQryHandler getUsgQryHandler(UsgPort usgPort) {
+        return new GetUsgQryHandler(usgPort);
+    }
+
+    @Bean
+    public SubEligQryHandler subEligQryHandler(DfSubRepoPort dfSubRepo, SubPlnRepoPort subPlnRepo, UsgPort usgPort) {
+        return new SubEligQryHandler(dfSubRepo, subPlnRepo, usgPort);
+    }
+
+    @Bean
+    public ListSubPlnsQryHandler listSubPlnsQryHandler(SubPlnRepoPort subPlnRepo) {
+        return new ListSubPlnsQryHandler(subPlnRepo);
+    }
+
+    @Bean
+    public GetDfSubStatusQryHandler getDfSubStatusQryHandler(DfSubRepoPort dfSubRepo, SubPlnRepoPort subPlnRepo, UsgPort usgPort) {
+        return new GetDfSubStatusQryHandler(dfSubRepo, subPlnRepo, usgPort);
+    }
+
+    @Bean(destroyMethod = "close")
+    public PulsarClient pulsarClient(@Value("${cm.pulsar.service-url:pulsar://localhost:6650}") String serviceUrl)
+            throws org.apache.pulsar.client.api.PulsarClientException {
+        return PulsarClient.builder().serviceUrl(serviceUrl).build();
+    }
+
+    @Bean
+    public ReactivePulsarClient reactivePulsarClient(PulsarClient pulsarClient) {
+        return AdaptedReactivePulsarClientFactory.create(pulsarClient);
+    }
+
+    @Bean
+    public PulsarDfActivatedConsumer pulsarDfActivatedConsumer(ReactivePulsarClient reactivePulsarClient,
+                                                                 ObjectMapper objectMapper,
+                                                                 OnDfActivatedEvtHandler handler) {
+        return new PulsarDfActivatedConsumer(reactivePulsarClient, objectMapper, handler);
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void startConsumers(ApplicationReadyEvent event) {
+        event.getApplicationContext().getBean(PulsarDfActivatedConsumer.class).start();
+    }
+}

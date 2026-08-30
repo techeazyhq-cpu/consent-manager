@@ -1,0 +1,12 @@
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://postgres:5432/consent_manager?schema=bil
+  flyway:
+    url: jdbc:postgresql://postgres:5432/consent_manager
+  data:
+    redis:
+      host: redis
+
+cm:
+  pulsar:
+    service-url: pulsar://pulsar:6650

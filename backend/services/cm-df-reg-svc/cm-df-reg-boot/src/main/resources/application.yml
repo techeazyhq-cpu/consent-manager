@@ -1,0 +1,37 @@
+server:
+  port: 8081
+  http2:
+    enabled: true
+
+spring:
+  application:
+    name: cm-df-reg-svc
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/consent_manager?schema=df_reg
+    username: cm
+    password: cm
+  flyway:
+    url: jdbc:postgresql://localhost:5432/consent_manager
+    user: cm
+    password: cm
+    schemas: df_reg
+    default-schema: df_reg
+    locations: classpath:db/migration
+
+cm:
+  pulsar:
+    service-url: pulsar://localhost:6650
+  keycloak:
+    base-url: http://localhost:8080
+    realm: cm-realm
+    admin-username: admin
+    admin-password: admin
+  dfreg:
+    obx-relay:
+      fixed-delay-ms: 1000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

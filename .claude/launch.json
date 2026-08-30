@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "cm-dp-portal",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-dp-portal", "run", "preview"],
+      "port": 5174
+    },
+    {
+      "name": "cm-df-app",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-df-app", "run", "preview"],
+      "port": 5175
+    },
+    {
+      "name": "cm-cm-admin",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-cm-admin", "run", "preview"],
+      "port": 5176
+    }
+  ]
+}

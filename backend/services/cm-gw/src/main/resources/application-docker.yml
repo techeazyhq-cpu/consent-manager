@@ -1,0 +1,51 @@
+# Docker-network overrides (plan §6) — activated via SPRING_PROFILES_ACTIVE=docker in
+# docker-compose.yml. Kept as a proper Spring profile file rather than per-field environment
+# variables: Spring's relaxed env-var binding does NOT merge an indexed list property
+# (spring.cloud.gateway.routes[]) across sources — setting even one route's uri via an env
+# var makes environment variables the sole source for the whole list, silently dropping the
+# YAML-defined predicates for every route (this broke the gateway on first docker-compose run
+# — "Property: spring.cloud.gateway.routes[0].predicates ... must not be empty").
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # jwk-set-uri, not issuer-uri: fetches signing keys from the container-network
+          # hostname without also requiring the token's iss claim to equal that same
+          # hostname — tokens obtained by a host-side client (curl, a browser on localhost)
+          # carry iss=http://localhost:8080/..., which issuer-uri would reject as a mismatch
+          # even though the signature is valid and the token genuinely came from this same
+          # Keycloak. Discovered and fixed during Phase 1 verification.
+          jwk-set-uri: http://keycloak:8080/realms/cm-realm/protocol/openid-connect/certs
+  data:
+    redis:
+      host: redis
+  cloud:
+    gateway:
+      routes:
+        - id: df-reg
+          uri: http://cm-df-reg-svc:8081
+          predicates:
+            - Path=/api/df-reg/**
+        - id: cns-cmd
+          uri: http://cm-cns-cmd-svc:8082
+          predicates:
+            - Path=/api/cns-cmd/**
+        - id: cns-qry
+          uri: http://cm-cns-qry-svc:8083
+          predicates:
+            - Path=/api/cns-qry/**
+        - id: ntf
+          uri: http://cm-ntf-svc:8084
+          predicates:
+            - Path=/api/ntf/**
+        - id: bil
+          uri: http://cm-bil-svc:8085
+          predicates:
+            - Path=/api/bil/**
+
+cm:
+  pdp:
+    base-url: http://opa:8181
+  service-urls:
+    bil: http://cm-bil-svc:8085

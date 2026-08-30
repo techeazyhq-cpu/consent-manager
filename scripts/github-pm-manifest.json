@@ -1,0 +1,295 @@
+{
+  "labels": [
+    { "name": "epic", "color": "5319E7", "description": "Large body of work grouping multiple tasks" },
+    { "name": "task", "color": "1D76DB", "description": "Concrete unit of implementation work" },
+    { "name": "phase-1", "color": "0E8A16", "description": "Phase 1 vertical-slice MVP scope" },
+    { "name": "phase-2", "color": "FBCA04", "description": "Deferred, Phase 2+ scope" },
+    { "name": "backlog", "color": "D4C5F9", "description": "Not yet scheduled / not decomposed into tasks" },
+    { "name": "df-reg", "color": "C2E0C6", "description": "cm-df-reg-svc" },
+    { "name": "cns-cmd", "color": "C2E0C6", "description": "cm-cns-cmd-svc" },
+    { "name": "cns-qry", "color": "C2E0C6", "description": "cm-cns-qry-svc" },
+    { "name": "ntf", "color": "C2E0C6", "description": "cm-ntf-svc" },
+    { "name": "bil", "color": "C2E0C6", "description": "cm-bil-svc" },
+    { "name": "gw-pep-pdp", "color": "C2E0C6", "description": "cm-gw + cm-pdp" },
+    { "name": "idn", "color": "C2E0C6", "description": "Keycloak + cm-idn-otp-spi" },
+    { "name": "frontend", "color": "BFD4F2", "description": "React micro-frontends" },
+    { "name": "infra", "color": "BFD4F2", "description": "Build tooling, docker-compose, CI" },
+    { "name": "story", "color": "0052CC", "description": "Vertical slice of value within an epic, grouping related tasks" }
+  ],
+  "milestones": [
+    { "title": "Phase 1 — Vertical Slice MVP", "description": "One fully working consent lifecycle end-to-end, per the approved architecture plan." },
+    { "title": "Phase 2 — Platform Expansion", "description": "Deferred bounded contexts and hardening items, tracked as backlog epics." }
+  ],
+  "project": {
+    "title": "CM Platform"
+  },
+  "epics": [
+    {
+      "key": "platform-infra",
+      "title": "Platform Infra & DevEx",
+      "labels": ["epic", "phase-1", "infra"],
+      "milestone": "Phase 1 — Vertical Slice MVP",
+      "body": "Gradle multi-module reactor, convention plugins, shared libs, docker-compose local environment. See the approved architecture plan §4–§6.",
+      "tasks": [
+        { "title": "Bootstrap Gradle multi-module reactor (settings.gradle.kts, version catalog)", "body": "- [ ] settings.gradle.kts with all backend modules\n- [ ] gradle/libs.versions.toml version catalog\n- [ ] root build.gradle.kts common config" },
+        { "title": "Write cm.spring-service and cm.clean-arch convention plugins", "body": "- [ ] cm.spring-service.gradle.kts (Boot deps, Java 21 toolchain)\n- [ ] cm.clean-arch.gradle.kts (applies ArchUnit layering test)\n- [ ] cm-test-kit LayeredArchitectureTest base class" },
+        { "title": "Scaffold shared libs: cm-dom-kit, cm-evt-kit, cm-web-kit, cm-sec-kit", "body": "- [ ] cm-dom-kit: Agg/Entity/ValueObject/DomainEvent base classes\n- [ ] cm-evt-kit: event envelope schema, Obx row schema, Pulsar topic-name constants\n- [ ] cm-web-kit: WebFlux ProblemDetail handler, correlation-id filter\n- [ ] cm-sec-kit: OAuth2 resource-server config, AuthCtx adapter, CnsTknSigner" },
+        { "title": "docker-compose.yml: postgres, pulsar, redis, keycloak, opa, mailpit", "body": "- [ ] postgres with per-service schema init scripts\n- [ ] pulsar standalone\n- [ ] redis\n- [ ] keycloak with --import-realm\n- [ ] opa with policy bundle mount\n- [ ] mailpit" },
+        { "title": "Keycloak realm export: cm-realm.json (roles, cm-shell PKCE client, cm-df-api client-credentials client)", "body": "- [ ] CM_ADMIN/DF/DP roles\n- [ ] cm-shell PKCE client\n- [ ] cm-df-api client-credentials client with df_id mapper\n- [ ] custom Browser flow slot for OTP authenticator" },
+        { "title": "ADRs: clean architecture, saga orchestration, PEP/PDP, Pulsar, subscription rate limiting, DP identity linking", "body": "- [ ] adr-0001 through adr-0006 written in docs/architecture/" }
+      ],
+      "stories": [
+        { "title": "Story: Gradle Multi-Module Build Setup", "body": "Bootstrap the reactor and convention plugins so every service builds the same way.", "taskTitles": ["Bootstrap Gradle multi-module reactor (settings.gradle.kts, version catalog)", "Write cm.spring-service and cm.clean-arch convention plugins"] },
+        { "title": "Story: Shared Libraries & Local Environment", "body": "Shared kit libraries and the docker-compose local environment every service depends on.", "taskTitles": ["Scaffold shared libs: cm-dom-kit, cm-evt-kit, cm-web-kit, cm-sec-kit", "docker-compose.yml: postgres, pulsar, redis, keycloak, opa, mailpit", "Keycloak realm export: cm-realm.json (roles, cm-shell PKCE client, cm-df-api client-credentials client)", "ADRs: clean architecture, saga orchestration, PEP/PDP, Pulsar, subscription rate limiting, DP identity linking"] }
+      ]
+    },
+    {
+      "key": "df-onboarding",
+      "title": "DF Onboarding & Registry",
+      "labels": ["epic", "phase-1", "df-reg"],
+      "milestone": "Phase 1 — Vertical Slice MVP",
+      "body": "cm-df-reg-svc: register/activate a Data Fiduciary; activation provisions a cm-df-api client secret and triggers DfActivatedEvt. See plan §3, §7b, §10.",
+      "tasks": [
+        { "title": "Scaffold cm-df-reg-svc 5-module skeleton + ArchUnit test", "body": "- [ ] cm-df-reg-dom/app/infra/if-rest/boot modules\n- [ ] wire convention plugins\n- [ ] passing ArchUnit layering test" },
+        { "title": "Df aggregate, DfSts value object, DfFactory", "body": "- [ ] Df.java aggregate\n- [ ] DfSts enum (PENDING/ACTIVE)\n- [ ] DfFactory" },
+        { "title": "Register/Activate Cmd handlers", "body": "- [ ] RegisterDfCmdHandler\n- [ ] ActivateDfCmdHandler — provisions cm-df-api client secret via Keycloak Admin API, emits DfActivatedEvt" },
+        { "title": "R2DBC adapter + Flyway V1 schema", "body": "- [ ] DfRepoPort / R2dbcDfRepoAdapter\n- [ ] db/migration/V1__init_df_reg_schema.sql" },
+        { "title": "Outbox relay + PulsarDfEvtProducer", "body": "- [ ] outbox_evt table + relay\n- [ ] emits persistent://cm/dfreg/evt-df-activated-v1" },
+        { "title": "REST controllers + OpenAPI", "body": "- [ ] POST /api/df-reg/dfs\n- [ ] POST /api/df-reg/dfs/{id}/activate\n- [ ] springdoc-openapi annotations" },
+        { "title": "Testcontainers integration tests (cm-df-reg-svc)", "body": "- [ ] register→activate flow persists + publishes DfActivatedEvt" }
+      ],
+      "stories": [
+        { "title": "Story: DF Registration & Domain Model", "body": "Df aggregate and the register/activate command handlers.", "taskTitles": ["Scaffold cm-df-reg-svc 5-module skeleton + ArchUnit test", "Df aggregate, DfSts value object, DfFactory", "Register/Activate Cmd handlers"] },
+        { "title": "Story: DF Persistence, Eventing & API", "body": "Wire the domain to Postgres, Pulsar, and the REST API.", "taskTitles": ["R2DBC adapter + Flyway V1 schema", "Outbox relay + PulsarDfEvtProducer", "REST controllers + OpenAPI", "Testcontainers integration tests (cm-df-reg-svc)"] }
+      ]
+    },
+    {
+      "key": "consent-lifecycle",
+      "title": "Consent Lifecycle — Command/Write & SAGA (incl. Deferred DP Linking & Subscription Gate)",
+      "labels": ["epic", "phase-1", "cns-cmd"],
+      "milestone": "Phase 1 — Vertical Slice MVP",
+      "body": "cm-cns-cmd-svc: CnsReq/CnsArt aggregates, saga orchestrator, DpRef deferred linking, DfSubEligiblePolicy gate, CnsTkn signing, expiry sweep. See plan §5–§8, §7a, §7b, §7c.",
+      "tasks": [
+        { "title": "Scaffold cm-cns-cmd-svc 5-module skeleton + ArchUnit test", "body": "- [ ] cm-cns-cmd-dom/app/infra/if-rest/boot modules\n- [ ] passing ArchUnit layering test" },
+        { "title": "CnsReq/CnsArt aggregates, value objects incl. DpRef, factories", "body": "- [ ] CnsArt.java, CnsReq.java\n- [ ] CnsReqSts, CnsArtSts enums\n- [ ] DpRef sealed interface (LnkdDpRef/UnlnkDpRef)\n- [ ] Prps/DCat/Scp/ValPrd value objects\n- [ ] CnsArtFactory/CnsReqFactory" },
+        { "title": "Cmd handlers: create/approve/deny/revoke/link-dp", "body": "- [ ] CreateCnsReqCmdHandler (incl. DF-active + DfSubEligiblePolicy checks)\n- [ ] ApproveCnsCmdHandler / DenyCnsCmdHandler\n- [ ] RevokeCnsCmdHandler\n- [ ] LinkDpCmdHandler" },
+        { "title": "DfSubEligiblePolicy Specification + Circuit-Breaker call to cm-bil-svc", "body": "- [ ] DfSubEligiblePolicy\n- [ ] Resilience4j-wrapped call to GET /internal/dfs/{dfId}/sub-eligibility\n- [ ] 402/429 problem+json mapping" },
+        { "title": "CnsLifecycleSagaOrchestrator + sga_state persistence", "body": "- [ ] orchestrator steps: CreateCnsReq→NotifyDp→AwaitDpDecision→NotifyDf→RevokeConsent\n- [ ] sga_state table + crash-recovery re-drive on startup" },
+        { "title": "R2DBC adapters + Flyway V1 (cns_req, cns_art, outbox_evt, sga_state)", "body": "- [ ] R2dbcCnsArtRepoAdapter / R2dbcCnsReqRepoAdapter\n- [ ] db/migration/V1__init_cns_cmd_schema.sql" },
+        { "title": "Outbox relay + PulsarCnsEvtProducer", "body": "- [ ] emits CnsReqCreatedEvt/CnsGrantedEvt/CnsDeniedEvt/CnsRevokedEvt/CnsDpLinkedEvt/CnsExpiredEvt" },
+        { "title": "CnsTknSigner integration on grant", "body": "- [ ] cm-sec-kit CnsTknSigner wired on approve\n- [ ] JWT claims: sub_did/fiduciary_id/purpose_code/access_type/scope/exp" },
+        { "title": "CnsExpirySweepJob (scheduled)", "body": "- [ ] @Scheduled sweep of ValPrd-expired ISSUED CnsArt rows\n- [ ] transitions to EXPIRED, emits CnsExpiredEvt" },
+        { "title": "REST controllers (cns-reqs, cns-arts, dp-links) + OpenAPI", "body": "- [ ] CnsReqController, DpLinkController\n- [ ] springdoc-openapi annotations" },
+        { "title": "Testcontainers integration tests (cm-cns-cmd-svc)", "body": "- [ ] full create→approve→revoke flow\n- [ ] unlinked→linked DP flow\n- [ ] subscription-ineligible DF rejected at CreateCnsReq" }
+      ],
+      "stories": [
+        { "title": "Story: Consent Domain Model & Business Rules", "body": "Aggregates, value objects, command handlers, and the subscription-eligibility gate.", "taskTitles": ["Scaffold cm-cns-cmd-svc 5-module skeleton + ArchUnit test", "CnsReq/CnsArt aggregates, value objects incl. DpRef, factories", "Cmd handlers: create/approve/deny/revoke/link-dp", "DfSubEligiblePolicy Specification + Circuit-Breaker call to cm-bil-svc"] },
+        { "title": "Story: Saga Orchestration & Lifecycle Automation", "body": "Cross-service notification orchestration and the scheduled expiry sweep.", "taskTitles": ["CnsLifecycleSagaOrchestrator + sga_state persistence", "CnsExpirySweepJob (scheduled)"] },
+        { "title": "Story: Persistence, Eventing & Token Signing", "body": "R2DBC/Outbox/Pulsar wiring and CnsTkn issuance.", "taskTitles": ["R2DBC adapters + Flyway V1 (cns_req, cns_art, outbox_evt, sga_state)", "Outbox relay + PulsarCnsEvtProducer", "CnsTknSigner integration on grant"] },
+        { "title": "Story: Consent Lifecycle API & Verification", "body": "REST surface and integration tests proving the full lifecycle.", "taskTitles": ["REST controllers (cns-reqs, cns-arts, dp-links) + OpenAPI", "Testcontainers integration tests (cm-cns-cmd-svc)"] }
+      ]
+    },
+    {
+      "key": "consent-query",
+      "title": "Consent Query, CQRS Read Model & Audit",
+      "labels": ["epic", "phase-1", "cns-qry"],
+      "milestone": "Phase 1 — Vertical Slice MVP",
+      "body": "cm-cns-qry-svc: Pulsar-projected read model, CnsHst audit trail, DP tile dashboard, live status endpoint for the PDP. See plan §8.",
+      "tasks": [
+        { "title": "Scaffold cm-cns-qry-svc 5-module skeleton + ArchUnit test", "body": "- [ ] cm-cns-qry-dom/app/infra/if-rest/boot modules" },
+        { "title": "Read model schema: cns_art_rd_mdl, cns_hst_rd_mdl, prj_ckpt", "body": "- [ ] db/migration/V1__init_cns_qry_schema.sql\n- [ ] unified CnsLcySts enum" },
+        { "title": "Pulsar Key_Shared Projector (Observer) consuming evt-cns-*", "body": "- [ ] idempotent upsert into cns_art_rd_mdl\n- [ ] append cns_hst_rd_mdl\n- [ ] handles CnsDpLinkedEvt setting dp_id\n- [ ] prj_ckpt tracking" },
+        { "title": "Redis read-through cache with write-through invalidation", "body": "- [ ] cns:rdmdl:{id} cache\n- [ ] invalidated by the Projector" },
+        { "title": "Internal live-status endpoint for the PDP", "body": "- [ ] GET /internal/cns-arts/{id}/status, network-restricted to cm-pdp" },
+        { "title": "DpDashboardQryHandler + GET /api/cns-qry/dp-dashboard", "body": "- [ ] GROUP BY df_id aggregate: activeCnt/pendingCnt/lastUpdatedAt" },
+        { "title": "REST query controllers + OpenAPI", "body": "- [ ] GET /api/cns-qry/cns-arts, .../{id}, .../{id}/history, .../{id}/verify-data" },
+        { "title": "Testcontainers integration tests (cm-cns-qry-svc)", "body": "- [ ] projection correctness, dp-link projection, dashboard aggregation" }
+      ],
+      "stories": [
+        { "title": "Story: Read Model & Projection", "body": "The Pulsar-driven projector and its Redis cache.", "taskTitles": ["Scaffold cm-cns-qry-svc 5-module skeleton + ArchUnit test", "Read model schema: cns_art_rd_mdl, cns_hst_rd_mdl, prj_ckpt", "Pulsar Key_Shared Projector (Observer) consuming evt-cns-*", "Redis read-through cache with write-through invalidation"] },
+        { "title": "Story: Query API & Dashboard", "body": "The DP tile dashboard and the PDP's internal status lookup.", "taskTitles": ["Internal live-status endpoint for the PDP", "DpDashboardQryHandler + GET /api/cns-qry/dp-dashboard", "REST query controllers + OpenAPI", "Testcontainers integration tests (cm-cns-qry-svc)"] }
+      ]
+    },
+    {
+      "key": "notification",
+      "title": "Notification Service (Multi-Channel: Email/SMS/WhatsApp/App)",
+      "labels": ["epic", "phase-1", "ntf"],
+      "milestone": "Phase 1 — Vertical Slice MVP",
+      "body": "cm-ntf-svc: shared channel-adapter layer for OTP delivery and consent-initiated DP notification. See plan §9a.",
+      "tasks": [
+        { "title": "Scaffold cm-ntf-svc 5-module skeleton + ArchUnit test", "body": "- [ ] cm-ntf-dom/app/infra/if-rest/boot modules" },
+        { "title": "EmailSenderPort / SmtpEmailSenderAdapter (real, via Mailpit)", "body": "- [ ] spring-boot-starter-mail on Schedulers.boundedElastic()\n- [ ] configurable SMTP host" },
+        { "title": "SmsSenderPort/WhatsAppSenderPort + self-built SMS/WhatsApp catcher (dev/test)", "body": "- [ ] SmsCatcherAdapter, WhatsAppCatcherAdapter — in-memory capture + GET /dev/sms-catcher, /dev/whatsapp-catcher (no trustworthy free OSS SMS catcher exists, so we build our own, same role Mailpit plays for email)" },
+        { "title": "NotifyDpCmd / NotifyDfCmd handlers (Pulsar consumers from the saga)", "body": "- [ ] fan-out across available channels per DpRef" },
+        { "title": "POST /internal/otp/send endpoint (network-restricted)", "body": "- [ ] dispatches through the same Email/Sms adapters" },
+        { "title": "Testcontainers integration tests (cm-ntf-svc)", "body": "- [ ] email captured via Mailpit's HTTP API in test\n- [ ] SMS/WhatsApp captured via our own catcher endpoints in test" }
+      ],
+      "stories": [
+        { "title": "Story: Notification Channel Adapters", "body": "Email via Mailpit; SMS/WhatsApp via our own self-built catcher (no trustworthy free OSS SMS catcher exists).", "taskTitles": ["Scaffold cm-ntf-svc 5-module skeleton + ArchUnit test", "EmailSenderPort / SmtpEmailSenderAdapter (real, via Mailpit)", "SmsSenderPort/WhatsAppSenderPort + self-built SMS/WhatsApp catcher (dev/test)"] },
+        { "title": "Story: Notification & OTP Delivery Flows", "body": "The saga-driven notify handlers and OTP code delivery.", "taskTitles": ["NotifyDpCmd / NotifyDfCmd handlers (Pulsar consumers from the saga)", "POST /internal/otp/send endpoint (network-restricted)", "Testcontainers integration tests (cm-ntf-svc)"] }
+      ]
+    },
+    {
+      "key": "billing-subscription",
+      "title": "Billing & Subscription (cm-bil-svc) + Gateway Rate-Limit Integration",
+      "labels": ["epic", "phase-1", "bil"],
+      "milestone": "Phase 1 — Vertical Slice MVP",
+      "body": "cm-bil-svc: SubPln tiers, DfSub assignment, UsgCtr metering, eligibility endpoint. See plan §7b, §11.",
+      "tasks": [
+        { "title": "Scaffold cm-bil-svc 5-module skeleton (no CQRS split, no saga)", "body": "- [ ] cm-bil-dom/app/infra/if-rest/boot modules" },
+        { "title": "SubPln/DfSub/UsgCtr domain + DfSubRepoPort", "body": "- [ ] SubPln, DfSub, UsgCtr\n- [ ] DfSubSts enum" },
+        { "title": "AssignSubPlnCmdHandler + OnDfActivatedEvtHandler (Pulsar consumer)", "body": "- [ ] auto-creates FREE DfSub on DfActivatedEvt" },
+        { "title": "R2DBC adapters + Flyway V1 (sub_pln, df_sub seed data)", "body": "- [ ] db/migration/V1__init_bil_schema.sql\n- [ ] seed FREE/STANDARD/PREMIUM plans" },
+        { "title": "RedisUsgCtrAdapter (usg:{dfId}:{period} counters)", "body": "- [ ] increment/read helpers shared with cm-gw's filter" },
+        { "title": "REST controllers: sub-plns, dfs/{id}/usage, dfs/{id}/sub-pln", "body": "- [ ] CM_ADMIN-only CRUD + assignment" },
+        { "title": "GET /internal/dfs/{dfId}/sub-eligibility (restricted to cm-cns-cmd-svc)", "body": "- [ ] returns dfSubSts/curPeriodUsg/reqPerMonthQta" },
+        { "title": "cm-gw DfQuotaRateLimiterResolver wiring", "body": "- [ ] Redis RequestRateLimiter sourced from DfSub.subPlnId's reqPerSecQta\n- [ ] short-TTL local cache" },
+        { "title": "Testcontainers integration tests incl. 429-on-quota-breach", "body": "- [ ] auto-DfSub creation, usage increments, quota breach rejection" }
+      ],
+      "stories": [
+        { "title": "Story: Subscription Domain & Persistence", "body": "SubPln/DfSub/UsgCtr domain and its Postgres persistence.", "taskTitles": ["Scaffold cm-bil-svc 5-module skeleton (no CQRS split, no saga)", "SubPln/DfSub/UsgCtr domain + DfSubRepoPort", "AssignSubPlnCmdHandler + OnDfActivatedEvtHandler (Pulsar consumer)", "R2DBC adapters + Flyway V1 (sub_pln, df_sub seed data)"] },
+        { "title": "Story: Usage Metering & Gateway Integration", "body": "Redis usage counters, the eligibility endpoint, and cm-gw's rate-limit wiring.", "taskTitles": ["RedisUsgCtrAdapter (usg:{dfId}:{period} counters)", "REST controllers: sub-plns, dfs/{id}/usage, dfs/{id}/sub-pln", "GET /internal/dfs/{dfId}/sub-eligibility (restricted to cm-cns-cmd-svc)", "cm-gw DfQuotaRateLimiterResolver wiring", "Testcontainers integration tests incl. 429-on-quota-breach"] }
+      ]
+    },
+    {
+      "key": "gateway-pep-pdp",
+      "title": "API Gateway, PEP/PDP & DF Integration API",
+      "labels": ["epic", "phase-1", "gw-pep-pdp"],
+      "milestone": "Phase 1 — Vertical Slice MVP",
+      "body": "cm-gw + cm-pdp (OPA): routing, HTTP/2, PEP/PDP dynamic enforcement, DF Integration API grant types. See plan §9, §10.",
+      "tasks": [
+        { "title": "Scaffold cm-gw single module, route config for the 6 downstream services", "body": "- [ ] Spring Cloud Gateway routes for df-reg/cns-cmd/cns-qry/ntf/bil" },
+        { "title": "OAuth2 Resource Server + Keycloak JWT validation", "body": "- [ ] role-restricted routes\n- [ ] downstream services re-validate independently" },
+        { "title": "Resilience4j Circuit Breaker filters + correlation-id + Micrometer", "body": "- [ ] per-route circuit breakers, 503 problem+json fallback" },
+        { "title": "PepVerifyGatewayFilter calling cm-pdp (OPA)", "body": "- [ ] extracts CnsTkn header, forwards to OPA, proxies allow/deny verdict" },
+        { "title": "cns_authz.rego policy bundle", "body": "- [ ] verifies CnsTkn JWS + exp\n- [ ] matches purpose_code/access_type\n- [ ] http.send to cm-cns-qry-svc's internal status endpoint" },
+        { "title": "cm-df-api client-credentials wiring + df_id claim propagation", "body": "- [ ] Keycloak client mapper\n- [ ] DF Integration API routes accept both PKCE and client-credentials tokens" },
+        { "title": "HTTP/2 (h2c) config across gateway and downstream", "body": "- [ ] server.http2.enabled=true on all services" },
+        { "title": "springdoc-openapi aggregation at /api-docs/**", "body": "- [ ] aggregates each service's OpenAPI 3 spec" },
+        { "title": "Testcontainers/integration tests: PEP/PDP allow+deny, rate-limit 429", "body": "- [ ] verify route allow/deny\n- [ ] burst-rate 429" }
+      ],
+      "stories": [
+        { "title": "Story: Gateway Routing & Security", "body": "Route config, OAuth2 resource server, and resilience filters.", "taskTitles": ["Scaffold cm-gw single module, route config for the 6 downstream services", "OAuth2 Resource Server + Keycloak JWT validation", "Resilience4j Circuit Breaker filters + correlation-id + Micrometer"] },
+        { "title": "Story: PEP/PDP Dynamic Enforcement", "body": "The gateway-as-PEP filter and the OPA Rego policy it calls.", "taskTitles": ["PepVerifyGatewayFilter calling cm-pdp (OPA)", "cns_authz.rego policy bundle"] },
+        { "title": "Story: DF Integration API, HTTP/2 & Verification", "body": "Client-credentials wiring, HTTP/2, published API docs, and tests.", "taskTitles": ["cm-df-api client-credentials wiring + df_id claim propagation", "HTTP/2 (h2c) config across gateway and downstream", "springdoc-openapi aggregation at /api-docs/**", "Testcontainers/integration tests: PEP/PDP allow+deny, rate-limit 429"] }
+      ]
+    },
+    {
+      "key": "identity-access",
+      "title": "Identity & Access (incl. Email/SMS OTP Authentication SPI)",
+      "labels": ["epic", "phase-1", "idn"],
+      "milestone": "Phase 1 — Vertical Slice MVP",
+      "body": "Keycloak realm setup + cm-idn-otp-spi custom Authenticator replacing password login. See plan §9a.",
+      "tasks": [
+        { "title": "Scaffold cm-idn-otp-spi Keycloak provider module", "body": "- [ ] Gradle module producing a Keycloak provider JAR (not a Spring Boot service)" },
+        { "title": "OtpAuthenticator + OtpAuthenticatorFactory (SPI)", "body": "- [ ] generates 6-digit OTP, stores in Redis with TTL + max-attempts\n- [ ] calls cm-ntf-svc POST /internal/otp/send\n- [ ] verifies code, issues token" },
+        { "title": "Custom Browser authentication flow bound to cm-realm", "body": "- [ ] replaces default username/password step\n- [ ] applies uniformly to CmAdmApp/DfApp/DpPrt" },
+        { "title": "Deploy provider JAR into Keycloak container (docker-compose)", "body": "- [ ] providers volume mount, kc.sh build step" },
+        { "title": "Manual + scripted verification of OTP login for all 3 frontends", "body": "- [ ] Mailpit-delivered code, wrong-code rejection, uniform flow across apps" }
+      ],
+      "stories": [
+        { "title": "Story: OTP Authenticator SPI", "body": "The custom Keycloak Authentication SPI provider itself.", "taskTitles": ["Scaffold cm-idn-otp-spi Keycloak provider module", "OtpAuthenticator + OtpAuthenticatorFactory (SPI)"] },
+        { "title": "Story: Realm Integration & Verification", "body": "Binding the SPI into cm-realm's Browser flow and proving it works for all 3 apps.", "taskTitles": ["Custom Browser authentication flow bound to cm-realm", "Deploy provider JAR into Keycloak container (docker-compose)", "Manual + scripted verification of OTP login for all 3 frontends"] }
+      ]
+    },
+    {
+      "key": "dp-portal-mf",
+      "title": "DP Portal Microfrontend",
+      "labels": ["epic", "phase-1", "frontend"],
+      "milestone": "Phase 1 — Vertical Slice MVP",
+      "body": "mf-dp-portal: full Phase-1 build — tile dashboard, consent list, approve/deny/revoke, post-signup dp-link call. See plan §8, §7a, §14.",
+      "tasks": [
+        { "title": "Scaffold mf-dp-portal Vite + Module Federation remote (port 5174)", "body": "- [ ] vite.config.ts federation exposes" },
+        { "title": "auth-kit integration: Keycloak login via OTP flow", "body": "- [ ] keycloak-js wrapper, shared auth context" },
+        { "title": "api-client: orval-generated typed clients from cns-qry/cns-cmd OpenAPI", "body": "- [ ] react-query hooks" },
+        { "title": "DpDashboard.tsx + DfConsentTile.tsx (tile-per-DF dashboard)", "body": "- [ ] consumes GET /api/cns-qry/dp-dashboard" },
+        { "title": "CnsReqList.tsx + CnsReqApproveBtn.tsx (approve/deny/revoke)", "body": "- [ ] wired to cm-cns-cmd-svc endpoints" },
+        { "title": "PostSignupDpLink.tsx (auto-link call after signup/first login)", "body": "- [ ] calls POST /api/cns-cmd/dp-links with the DP's verified email/phone" }
+      ],
+      "stories": [
+        { "title": "Story: DP Portal Shell Integration & Auth", "body": "Module Federation scaffold, OTP auth, and the typed API client.", "taskTitles": ["Scaffold mf-dp-portal Vite + Module Federation remote (port 5174)", "auth-kit integration: Keycloak login via OTP flow", "api-client: orval-generated typed clients from cns-qry/cns-cmd OpenAPI"] },
+        { "title": "Story: DP Dashboard & Consent Actions", "body": "The tile dashboard, consent list, and approve/deny/revoke/link actions.", "taskTitles": ["DpDashboard.tsx + DfConsentTile.tsx (tile-per-DF dashboard)", "CnsReqList.tsx + CnsReqApproveBtn.tsx (approve/deny/revoke)", "PostSignupDpLink.tsx (auto-link call after signup/first login)"] }
+      ]
+    },
+    {
+      "key": "df-app-mf",
+      "title": "DF App Microfrontend",
+      "labels": ["epic", "phase-1", "frontend"],
+      "milestone": "Phase 1 — Vertical Slice MVP",
+      "body": "mf-df-app: minimal Phase-1 build — raise a consent request (incl. unlinked DP by email/phone) and list requests.",
+      "tasks": [
+        { "title": "Scaffold mf-df-app Vite + Module Federation remote (port 5175)", "body": "- [ ] vite.config.ts federation exposes" },
+        { "title": "auth-kit integration (OTP login)", "body": "- [ ] shared auth context" },
+        { "title": "Raise-consent-request form (dpId or extDpRefTyp/extDpRefVal)", "body": "- [ ] posts to cm-cns-cmd-svc" },
+        { "title": "Consent request list view", "body": "- [ ] reads from cm-cns-qry-svc" }
+      ],
+      "stories": [
+        { "title": "Story: DF App Foundation", "body": "Scaffold and auth for the DF App.", "taskTitles": ["Scaffold mf-df-app Vite + Module Federation remote (port 5175)", "auth-kit integration (OTP login)"] },
+        { "title": "Story: Consent Request Flow", "body": "Raising a consent request and viewing its status.", "taskTitles": ["Raise-consent-request form (dpId or extDpRefTyp/extDpRefVal)", "Consent request list view"] }
+      ]
+    },
+    {
+      "key": "cm-admin-mf",
+      "title": "CM Admin Microfrontend",
+      "labels": ["epic", "phase-1", "frontend"],
+      "milestone": "Phase 1 — Vertical Slice MVP",
+      "body": "mf-cm-admin: minimal Phase-1 build — register/activate DF, assign subscription plan, view usage, suspend DF.",
+      "tasks": [
+        { "title": "Scaffold mf-cm-admin Vite + Module Federation remote (port 5176)", "body": "- [ ] vite.config.ts federation exposes" },
+        { "title": "auth-kit integration (OTP login, CM_ADMIN role gate)", "body": "- [ ] shared auth context" },
+        { "title": "Df registration/activation screen", "body": "- [ ] posts to cm-df-reg-svc" },
+        { "title": "DfSubPlnAssign.tsx + DfUsageView.tsx", "body": "- [ ] assign plan, view usage, suspend/reactivate" }
+      ],
+      "stories": [
+        { "title": "Story: CM Admin App Foundation", "body": "Scaffold and role-gated auth for the CM Admin App.", "taskTitles": ["Scaffold mf-cm-admin Vite + Module Federation remote (port 5176)", "auth-kit integration (OTP login, CM_ADMIN role gate)"] },
+        { "title": "Story: DF & Subscription Management", "body": "Onboarding a DF and managing its subscription/usage.", "taskTitles": ["Df registration/activation screen", "DfSubPlnAssign.tsx + DfUsageView.tsx"] }
+      ]
+    },
+    {
+      "key": "e2e-verification",
+      "title": "End-to-End Verification & Phase 1 Demo",
+      "labels": ["epic", "phase-1"],
+      "milestone": "Phase 1 — Vertical Slice MVP",
+      "body": "Runs the full verification plan (§16): gradle build/test/integrationTest, docker-compose up, scripted curl flow, browser walkthrough, expiry sweep check.",
+      "tasks": [
+        { "title": "Scripted end-to-end curl flow (Phase 0–§16 steps 1–9)", "body": "- [ ] scripts/verify-phase1.sh implementing the full curl sequence from the plan" },
+        { "title": "Manual browser walkthrough checklist", "body": "- [ ] OTP login all 3 apps\n- [ ] DP dashboard tile appears post-signup\n- [ ] CM Admin plan/usage/suspend flow" }
+      ],
+      "stories": [
+        { "title": "Story: Phase 1 Demo Readiness", "body": "Prove the whole vertical slice end-to-end, scripted and by hand.", "taskTitles": ["Scripted end-to-end curl flow (Phase 0–§16 steps 1–9)", "Manual browser walkthrough checklist"] }
+      ]
+    }
+  ],
+  "backlogEpics": [
+    { "title": "Notice Template Service (cm-ntc-svc)", "body": "Full notice template lifecycle/versioning/multilingual support." },
+    { "title": "Tamper-Evident Audit Ledger (cm-aud-svc)", "body": "Hash-chained, cryptographically verifiable audit ledger beyond the Phase-1 cns_hst_rd_mdl." },
+    { "title": "Data Processor Registry (cm-dpr-svc)", "body": "Registry for Data Processors acting on behalf of a Data Fiduciary." },
+    { "title": "Policy/Config Service + Full CM Admin App (cm-policy-svc)", "body": "Platform-wide policy/config management, DF verification workflow, monitoring dashboards." },
+    { "title": "Full DF App + DF-hosted PEP/OPA sidecar", "body": "Notice authoring, bulk requests, webhooks, API keys, and a DF-hosted PEP/OPA sidecar for fully offline CnsTkn validation — the whitepaper's federated end-state." },
+    { "title": "W3C Verifiable Credential + DID Identity", "body": "Replace the signed-JWT CnsTkn with a full W3C VC, and subject_did with a real Decentralized Identifier." },
+    { "title": "CnsArtSts=AMENDED support", "body": "Amendment/renewal flow for issued consent artefacts." },
+    { "title": "Cross-CM Interoperability APIs", "body": "DEPA/DPDP Consent Manager interoperability spec support." },
+    { "title": "Full Billing: Invoicing, Payment Gateway, Proration", "body": "Invoice generation, payment gateway integration, proration, dunning, multi-currency, accounting export." },
+    { "title": "AI/Vector-DB Ingestion-Time Purpose Scoping", "body": "PEP integration before vectorization pipelines, per the whitepaper's AI edge case." },
+    { "title": "OPA Policy Bundle CI/CD", "body": "Automated build/versioning/signed distribution of Rego policy bundles." },
+    { "title": "Full Observability Stack", "body": "Grafana/Tempo/Loki/Prometheus, beyond Phase-1's Micrometer/OTel logging." },
+    { "title": "Production Rate-Limiting/mTLS/TLS+ALPN Hardening", "body": "mTLS between services, TLS+HTTP2 ALPN termination at ingress, production-grade rate-limit tuning." },
+    { "title": "DigiLocker/Aadhaar DP Identity Verification", "body": "Real government-ID-backed DP identity verification." },
+    { "title": "Physical Database-per-Service Split", "body": "Move from logical schema-per-service to physically separate database instances." },
+    { "title": "CI/CD + Kubernetes/Helm", "body": "GitHub Actions pipelines, Helm charts, Kubernetes deployment." },
+    { "title": "Real SMS/WhatsApp Gateway Integration", "body": "Wire MockSmsSenderAdapter/MockWhatsAppSenderAdapter to a real paid gateway (Twilio/MSG91/WhatsApp Business API)." },
+    { "title": "Production SMTP Hardening", "body": "SPF/DKIM/DMARC deliverability hardening for the real SMTP path." },
+    { "title": "OTP Anti-Abuse Hardening", "body": "Beyond basic TTL + max-attempts: rate-limiting OTP requests, device fingerprinting, anomaly detection." },
+    { "title": "Notification Channel Preferences", "body": "Per-DP opt-in/opt-out preferences per notification channel." },
+    { "title": "Outbound DF Webhooks", "body": "DF-registered webhook URL; cm-ntf-svc's NotifyDfCmd step also delivers a signed payload with retries on consent lifecycle events. Explicitly deferred by user decision — plan §18." },
+    { "title": "Self-Service DF Signup + Admin Approval Workflow", "body": "Let a DF self-register, pending CM_ADMIN approval, instead of admin-only onboarding." },
+    { "title": "DP Data Export/Erasure (Data-Subject Rights over CM's own records)", "body": "DP self-service export/delete of CM-held metadata (consent history, contact refs, tokens) — distinct from the DF's own data, which CM never holds." },
+    { "title": "Platform Admin Action Audit Log", "body": "SOC2-style audit trail of CM_ADMIN actions (plan changes, DF suspension, etc.)." },
+    { "title": "DF Terms of Service / DPA Acceptance Tracking", "body": "Track DF acceptance of CM's own platform Terms of Service and Data Processing Agreement at onboarding." },
+    { "title": "Usage-Threshold Alerts", "body": "Notify DFs and CM_ADMIN as usage approaches quota (e.g. 80%)." },
+    { "title": "Tenant Offboarding + Data Retention Policy", "body": "DF deactivation/deletion flow and data retention/purge policy when a DF leaves." },
+    { "title": "DF-Facing Analytics Dashboard", "body": "Grant/deny/revoke rate analytics and funnel reporting for DFs." },
+    { "title": "Status Page / Uptime Monitoring", "body": "Public status page and uptime monitoring for the platform." },
+    { "title": "Backup & DR Runbook", "body": "Postgres backup/restore and Pulsar retention/DR runbook." }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "realm": "cm-realm",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "CM_ADMIN",
+        "description": "Consent Manager platform administrator"
+      },
+      {
+        "name": "DF",
+        "description": "Data Fiduciary"
+      },
+      {
+        "name": "DP",
+        "description": "Data Principal"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "cm-shell",
+      "name": "CM Shell (DP Portal / DF App / CM Admin frontends)",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173/*",
+        "http://localhost:5174/*",
+        "http://localhost:5175/*",
+        "http://localhost:5176/*"
+      ],
+      "webOrigins": [
+        "+"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": [
+        "openid",
+        "profile",
+        "email",
+        "roles"
+      ],
+      "protocolMappers": [
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "sub-in-access-token",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "config": {
+            "user.attribute": "id",
+            "claim.name": "sub",
+            "jsonType.label": "String",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin@cm.local",
+      "email": "admin@cm.local",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "CM_ADMIN"
+      ],
+      "requiredActions": [],
+      "firstName": "CM",
+      "lastName": "Admin"
+    },
+    {
+      "username": "df-demo@cm.local",
+      "email": "df-demo@cm.local",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "df-demo",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "DF"
+      ],
+      "requiredActions": [],
+      "firstName": "DF",
+      "lastName": "Demo"
+    },
+    {
+      "username": "dp-demo@cm.local",
+      "email": "dp-demo@cm.local",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "dp-demo",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "DP"
+      ],
+      "requiredActions": [],
+      "firstName": "DP",
+      "lastName": "Demo"
+    }
+  ]
+}

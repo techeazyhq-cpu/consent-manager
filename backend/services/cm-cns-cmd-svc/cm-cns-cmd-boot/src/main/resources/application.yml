@@ -1,0 +1,43 @@
+server:
+  port: 8082
+  http2:
+    enabled: true
+
+spring:
+  application:
+    name: cm-cns-cmd-svc
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/consent_manager?schema=cns_cmd
+    username: cm
+    password: cm
+  flyway:
+    url: jdbc:postgresql://localhost:5432/consent_manager
+    user: cm
+    password: cm
+    schemas: cns_cmd
+    default-schema: cns_cmd
+    locations: classpath:db/migration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/cm-realm
+
+cm:
+  pulsar:
+    service-url: pulsar://localhost:6650
+  service-urls:
+    df-reg: http://localhost:8081
+    bil: http://localhost:8085
+  cnscmd:
+    expiry-sweep:
+      fixed-delay-ms: 60000
+  ntf:
+    obx-relay:
+      fixed-delay-ms: 1000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

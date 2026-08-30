@@ -1,0 +1,19 @@
+# Pragmatic testing workaround, not the Phase-1 intended approach (plan §6: Buildpacks, "no
+# hand-written Dockerfiles"): Spring Boot 3.3.4's bootBuildImage tooling calls a pinned, old
+# Docker Engine API version (v1.24) that this environment's Docker Desktop rejects with a
+# 400 on `images/create` (confirmed: a plain `docker pull` of the same builder image succeeds
+# fine — this is specifically a bootBuildImage/pack-lib incompatibility, not a Docker or
+# network problem). Revisit bootBuildImage once that's resolved (newer Spring Boot, or a
+# Docker Desktop/API config fix) — see docs/architecture/adr-0004 note. Meanwhile: JARs are
+# already built by `./gradlew build` on the host; this Dockerfile just wraps one, unmodified.
+FROM eclipse-temurin:21-jre-alpine
+ARG JAR_PATH
+WORKDIR /app
+COPY ${JAR_PATH} app.jar
+# The JVM caches successful DNS lookups forever by default (no SecurityManager installed).
+# In this docker-compose network, every service restart/rebuild gives its container a new
+# internal IP — without a short TTL, every OTHER already-running service that had previously
+# resolved it keeps calling the stale, now-dead IP until it is itself restarted. Discovered
+# repeatedly during Phase 1 verification (cm-gw, cm-df-reg-svc, and others each hit
+# "Connection refused" against a container's old IP after an unrelated service restart).
+ENTRYPOINT ["java", "-Dnetworkaddress.cache.ttl=10", "-Dnetworkaddress.cache.negative.ttl=0", "-jar", "/app/app.jar"]

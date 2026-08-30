@@ -1,0 +1,23 @@
+server:
+  port: 8084
+  http2:
+    enabled: true
+
+spring:
+  application:
+    name: cm-ntf-svc
+  mail:
+    host: localhost
+    port: 1025 # Mailpit's SMTP port
+
+cm:
+  pulsar:
+    service-url: pulsar://localhost:6650
+  ntf:
+    from-address: no-reply@consent-manager.local
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
