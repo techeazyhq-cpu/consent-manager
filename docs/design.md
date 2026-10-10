@@ -22,6 +22,7 @@ An overview of how the platform fits together. The reasons behind each choice ar
 | `cm-cns-qry-svc` | `cns_qry`: read model, history, projection checkpoints | Pulsar (consumes consent events) |
 | `cm-ntf-svc` | `ntf`: DP push devices | Pulsar (consumes notify commands), notification-service or Mailpit |
 | `cm-bil-svc` | `bil`: plans, subscriptions; usage counters in Redis | Pulsar (consumes fiduciary activation), Redis |
+| `cm-aud-svc` | `aud`: the tamper-evident audit ledger (hash chain, erasable payloads) | Pulsar (consumes every event) |
 | Keycloak + `cm-idn-otp-spi` | Users, clients, sessions | `cm-ntf-svc` (`/internal/otp/send`) |
 | OPA | `cns_authz.rego` | `cm-cns-qry-svc` (`/internal/cns-arts/{id}/status`) |
 | PostgreSQL | One database, one schema per service | |
@@ -52,13 +53,13 @@ Topic names: `persistent://cm/<context>/<evt|cmd>-<name>-v1`.
 
 | Topic | Kind | Producer | Consumers |
 |---|---|---|---|
-| `cm/dfreg/evt-df-activated-v1` | event | `cm-df-reg-svc` (outbox) | `cm-bil-svc` |
-| `cm/cnscmd/evt-cns-req-created-v1` | event | `cm-cns-cmd-svc` (outbox) | `cm-cns-qry-svc`, saga |
-| `cm/cnscmd/evt-cns-granted-v1` | event | `cm-cns-cmd-svc` (outbox) | `cm-cns-qry-svc`, saga |
-| `cm/cnscmd/evt-cns-denied-v1` | event | `cm-cns-cmd-svc` (outbox) | `cm-cns-qry-svc`, saga |
-| `cm/cnscmd/evt-cns-revoked-v1` | event | `cm-cns-cmd-svc` (outbox) | `cm-cns-qry-svc`, saga |
-| `cm/cnscmd/evt-cns-dp-linked-v1` | event | `cm-cns-cmd-svc` (outbox) | `cm-cns-qry-svc` |
-| `cm/cnscmd/evt-cns-expired-v1` | event | `cm-cns-cmd-svc` (outbox) | `cm-cns-qry-svc` |
+| `cm/dfreg/evt-df-activated-v1` | event | `cm-df-reg-svc` (outbox) | `cm-bil-svc`, `cm-aud-svc` |
+| `cm/cnscmd/evt-cns-req-created-v1` | event | `cm-cns-cmd-svc` (outbox) | `cm-cns-qry-svc`, saga, `cm-aud-svc` |
+| `cm/cnscmd/evt-cns-granted-v1` | event | `cm-cns-cmd-svc` (outbox) | `cm-cns-qry-svc`, saga, `cm-aud-svc` |
+| `cm/cnscmd/evt-cns-denied-v1` | event | `cm-cns-cmd-svc` (outbox) | `cm-cns-qry-svc`, saga, `cm-aud-svc` |
+| `cm/cnscmd/evt-cns-revoked-v1` | event | `cm-cns-cmd-svc` (outbox) | `cm-cns-qry-svc`, saga, `cm-aud-svc` |
+| `cm/cnscmd/evt-cns-dp-linked-v1` | event | `cm-cns-cmd-svc` (outbox) | `cm-cns-qry-svc`, `cm-aud-svc` |
+| `cm/cnscmd/evt-cns-expired-v1` | event | `cm-cns-cmd-svc` (outbox) | `cm-cns-qry-svc`, `cm-aud-svc` |
 | `cm/ntf/cmd-notify-dp-v1` | command | saga | `cm-ntf-svc` |
 | `cm/ntf/cmd-notify-df-v1` | command | saga | `cm-ntf-svc` |
 
@@ -75,6 +76,7 @@ Every message carries an `evtId`; consumers are idempotent on it.
 | Saga (orchestration / process manager) | `CnsLifecycleSagaOrchestrator` |
 | Policy enforcement and decision points | `cm-gw` (PEP), OPA (PDP) |
 | Circuit breaker | Synchronous calls between services (`-infra` adapters) |
+| Hash chain (tamper-evident, append-only ledger) | `cm-aud-svc`: `AudChain`, `AudChainVerifier`, `aud.entry` |
 
 ## Glossary
 

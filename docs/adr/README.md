@@ -18,6 +18,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [010](adr-010-notification-delivery-through-notification-service.md) | Deliver notifications through notification-service | Accepted |
 | [011](adr-011-container-images-from-built-jars.md) | Service images wrap the built JAR, and run unprivileged | Accepted |
 | [012](adr-012-quality-gates.md) | Quality gates on every pull request, as notification-service has them | Accepted |
+| [014](adr-014-tamper-evident-audit-ledger.md) | A tamper-evident audit ledger, hash-chained like a blockchain | Accepted |
 
 ## Writing one
 
