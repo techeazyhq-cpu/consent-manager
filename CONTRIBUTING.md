@@ -188,7 +188,7 @@ branch protection described in [docs/branch-protection.md](docs/branch-protectio
 
 | Check | What it verifies |
 |---|---|
-| Backend build and tests | License headers, `./gradlew build` (unit and PostgreSQL integration tests, ArchUnit layering), and line coverage at or above the ratchet in `build.gradle.kts` |
+| Backend build and tests | License headers, the OPA policies (`opa check`, `opa test`), `./gradlew build` (unit and PostgreSQL integration tests, ArchUnit layering), and line coverage at or above the ratchet in `build.gradle.kts` |
 | Frontend build and audit | The three micro-frontends build from the locked dependencies, with no HIGH or CRITICAL advisory in runtime dependencies |
 | Service images build | Every service image builds (its vulnerability scan is reported, and becomes blocking after the dependency upgrade) |
 | Dependency and secret scan | No HIGH or CRITICAL vulnerable dependency, committed secret or misconfiguration (Trivy) |

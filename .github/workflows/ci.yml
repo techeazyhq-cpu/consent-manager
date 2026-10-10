@@ -42,6 +42,10 @@ jobs:
           cache: gradle
       - name: License headers
         run: node scripts/license-headers.mjs
+      - name: Check and unit-test the OPA authorisation policies
+        run: >-
+          docker run --rm -v "$PWD/infra/opa/policies:/policies:ro" openpolicyagent/opa:1.20.1 check /policies
+          && docker run --rm -v "$PWD/infra/opa/policies:/policies:ro" openpolicyagent/opa:1.20.1 test /policies -v
       - name: Build, test (PostgreSQL integration tests need Docker), architecture rules and the coverage ratchet
         run: ./gradlew --no-daemon build coverageVerification
       - name: Upload test and coverage reports

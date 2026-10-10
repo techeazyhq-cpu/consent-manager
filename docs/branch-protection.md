@@ -21,7 +21,7 @@ satisfy a check):
 
 | Workflow | Check | What it verifies |
 |---|---|---|
-| CI | `Backend build and tests` | License headers; `./gradlew build` (compile, unit and PostgreSQL integration tests, each service's ArchUnit layering test); `coverageVerification` (line coverage across all modules at or above the ratchet in `build.gradle.kts`) |
+| CI | `Backend build and tests` | License headers; OPA policy check and tests; `./gradlew build` (compile, unit and PostgreSQL integration tests, each service's ArchUnit layering test); `coverageVerification` (line coverage across all modules at or above the ratchet in `build.gradle.kts`) |
 | CI | `Frontend build and audit` | `pnpm install --frozen-lockfile`, all three micro-frontends build, no HIGH or CRITICAL advisory in runtime dependencies |
 | CI | `Service images build` | Every service image builds. Its Trivy scan is reported but not yet blocking; it becomes a gate on CRITICAL findings with the dependency upgrade |
 | Security | `Dependency and secret scan` | Trivy on the repository: no HIGH or CRITICAL fixable vulnerability, committed secret or misconfiguration |
