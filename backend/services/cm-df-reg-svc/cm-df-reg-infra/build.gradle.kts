@@ -25,7 +25,7 @@ dependencies {
     implementation(project(":cm-evt-kit"))
 
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc:3.5.16")
-    implementation("org.postgresql:r2dbc-postgresql:1.0.5.RELEASE")
+    implementation("org.postgresql:r2dbc-postgresql:1.1.3.RELEASE")
     implementation("org.springframework.boot:spring-boot-starter-webflux:3.5.16")
     implementation("org.apache.pulsar:pulsar-client-reactive-api:0.5.2")
     implementation("org.apache.pulsar:pulsar-client-reactive-adapter:0.5.2")
