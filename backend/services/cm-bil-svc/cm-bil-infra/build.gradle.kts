@@ -24,9 +24,9 @@ dependencies {
     api(project(":cm-bil-app"))
     implementation(project(":cm-evt-kit"))
 
-    implementation("org.springframework.boot:spring-boot-starter-data-r2dbc:3.3.4")
+    implementation("org.springframework.boot:spring-boot-starter-data-r2dbc:3.5.16")
     implementation("org.postgresql:r2dbc-postgresql:1.0.5.RELEASE")
-    implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive:3.3.4")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive:3.5.16")
     implementation("org.apache.pulsar:pulsar-client-reactive-api:0.5.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
     implementation("org.slf4j:slf4j-api:2.0.16")

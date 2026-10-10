@@ -21,8 +21,8 @@ plugins {
 }
 
 dependencies {
-    compileOnly("org.springframework.boot:spring-boot-starter-webflux:3.3.4")
-    compileOnly("org.springframework.boot:spring-boot-autoconfigure:3.3.4")
+    compileOnly("org.springframework.boot:spring-boot-starter-webflux:3.5.16")
+    compileOnly("org.springframework.boot:spring-boot-autoconfigure:3.5.16")
 
     testImplementation(platform("org.junit:junit-bom:5.10.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")

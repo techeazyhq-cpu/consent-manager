@@ -23,7 +23,7 @@ plugins {
 dependencies {
     api(project(":cm-bil-dom"))
     api(project(":cm-web-kit"))
-    compileOnly("org.springframework:spring-tx:6.1.13")
+    compileOnly("org.springframework:spring-tx:6.2.19")
 
     testImplementation(platform("org.junit:junit-bom:5.10.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
