@@ -68,8 +68,9 @@ services:
       - "8080:8080"
     volumes:
       - ./keycloak/realm-export:/opt/keycloak/data/import
-      # cm-idn-otp-spi provider JAR (plan §9a) — built via ./gradlew :cm-idn-otp-spi:build,
-      # copied here before `docker compose up` (see scripts/build-otp-spi.sh, Phase 1 task).
+      # cm-idn-otp-spi provider JAR (plan §9a), built by ./gradlew :cm-idn-otp-spi:build before
+      # `docker compose up`; start-dev picks up providers on every start. cm-realm's browser flow uses it
+      # and sends codes through cm-ntf-svc (http://cm-ntf-svc:8084, authenticator config "cm-otp").
       - ../backend/keycloak-ext/cm-idn-otp-spi/build/libs:/opt/keycloak/providers
 
   opa:
