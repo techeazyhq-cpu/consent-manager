@@ -192,7 +192,7 @@ branch protection described in [docs/branch-protection.md](docs/branch-protectio
 | Frontend build and audit | The three micro-frontends build from the locked dependencies, with no HIGH or CRITICAL advisory in runtime dependencies |
 | Service images build | Every service image builds (its vulnerability scan is reported, and becomes blocking after the dependency upgrade) |
 | Dependency and secret scan | No HIGH or CRITICAL vulnerable dependency, committed secret or misconfiguration (Trivy) |
-| CodeQL (Java, TypeScript) | No new code-scanning alert |
+| CodeQL (Java, TypeScript) | No CodeQL finding (results are checked in the job: the private repository has no code scanning) |
 
 The coverage minimum only goes up: when a pull request raises coverage, raise `coverageMinimum` with it.
 

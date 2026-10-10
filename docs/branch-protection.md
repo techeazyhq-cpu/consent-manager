@@ -25,7 +25,7 @@ satisfy a check):
 | CI | `Frontend build and audit` | `pnpm install --frozen-lockfile`, all three micro-frontends build, no HIGH or CRITICAL advisory in runtime dependencies |
 | CI | `Service images build` | Every service image builds. Its Trivy scan is reported but not yet blocking; it becomes a gate on CRITICAL findings with the dependency upgrade |
 | Security | `Dependency and secret scan` | Trivy on the repository: no HIGH or CRITICAL fixable vulnerability, committed secret or misconfiguration |
-| Security | `CodeQL (java-kotlin)`, `CodeQL (javascript-typescript)` | No new code-scanning alert |
+| Security | `CodeQL (java-kotlin)`, `CodeQL (javascript-typescript)` | No CodeQL finding; results are checked in the job, since the private repository has no code scanning |
 
 ## Steps
 
