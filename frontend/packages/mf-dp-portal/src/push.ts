@@ -1,5 +1,5 @@
-import type { FirebaseApp, FirebaseOptions } from "firebase/app";
-import type { MessagePayload } from "firebase/messaging";
+import type { FirebaseApp, FirebaseOptions } from "@firebase/app";
+import type { MessagePayload } from "@firebase/messaging";
 
 /**
  * Web push for the DP portal. With a Firebase project configured (VITE_FIREBASE_*), the browser gets a real
@@ -70,7 +70,7 @@ export const storeDeviceId = (id: string | null) => write(DEVICE_ID_KEY, id);
 let appPromise: Promise<FirebaseApp> | null = null;
 
 function firebaseApp(): Promise<FirebaseApp> {
-  appPromise ??= import("firebase/app").then(({ getApps, initializeApp }) => getApps()[0] ?? initializeApp(FIREBASE));
+  appPromise ??= import("@firebase/app").then(({ getApps, initializeApp }) => getApps()[0] ?? initializeApp(FIREBASE));
   return appPromise;
 }
 
@@ -85,7 +85,7 @@ export async function obtainToken(): Promise<string> {
     return token;
   }
   if ((await Notification.requestPermission()) !== "granted") throw new PushBlockedError();
-  const [{ getMessaging, getToken }, app] = await Promise.all([import("firebase/messaging"), firebaseApp()]);
+  const [{ getMessaging, getToken }, app] = await Promise.all([import("@firebase/messaging"), firebaseApp()]);
   // The service worker can't read Vite's env, so it gets the (public) web config in its URL.
   const config = new URLSearchParams(FIREBASE as Record<string, string>);
   const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?${config}`);
@@ -95,13 +95,13 @@ export async function obtainToken(): Promise<string> {
 /** Stops Firebase delivering to this browser; the device row is removed separately through the API. */
 export async function releaseToken(): Promise<void> {
   if (pushMode !== "fcm") return;
-  const [{ getMessaging, deleteToken }, app] = await Promise.all([import("firebase/messaging"), firebaseApp()]);
+  const [{ getMessaging, deleteToken }, app] = await Promise.all([import("@firebase/messaging"), firebaseApp()]);
   await deleteToken(getMessaging(app));
 }
 
 /** Pushes that arrive while the portal is open and focused (the browser shows the others itself). */
 export async function onForegroundPush(callback: (payload: MessagePayload) => void): Promise<() => void> {
   if (pushMode !== "fcm" || Notification.permission !== "granted") return () => {};
-  const [{ getMessaging, onMessage }, app] = await Promise.all([import("firebase/messaging"), firebaseApp()]);
+  const [{ getMessaging, onMessage }, app] = await Promise.all([import("@firebase/messaging"), firebaseApp()]);
   return onMessage(getMessaging(app), callback);
 }

@@ -1,4 +1,5 @@
-/* Background web push for the DP portal (see src/push.ts). Keep the SDK version in step with package.json. */
+/* Background web push for the DP portal (see src/push.ts). These are the compat builds of Firebase 10.14.1, the
+   release @firebase/app 0.10.13 and @firebase/messaging 0.12.12 belong to: keep them in step with package.json. */
 /* global importScripts, firebase, clients */
 importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js");
