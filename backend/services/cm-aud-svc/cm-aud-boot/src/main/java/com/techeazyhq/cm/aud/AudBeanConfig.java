@@ -19,11 +19,16 @@
 package com.techeazyhq.cm.aud;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techeazyhq.cm.aud.app.AudAnchoringService;
 import com.techeazyhq.cm.aud.app.AudLedgerService;
+import com.techeazyhq.cm.aud.dom.AudCheckpointPort;
 import com.techeazyhq.cm.aud.dom.AudLedgerPort;
+import com.techeazyhq.cm.aud.dom.TimestampAuthorityPort;
 import com.techeazyhq.cm.aud.infra.AudEvtParser;
 import com.techeazyhq.cm.aud.infra.PulsarAudEvtConsumer;
+import com.techeazyhq.cm.aud.infra.R2dbcAudCheckpointAdapter;
 import com.techeazyhq.cm.aud.infra.R2dbcAudLedgerAdapter;
+import com.techeazyhq.cm.aud.infra.Rfc3161TimestampAuthority;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.reactive.client.adapter.AdaptedReactivePulsarClientFactory;
@@ -33,13 +38,18 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.transaction.reactive.TransactionalOperator;
 
+import java.net.URI;
+import java.net.http.HttpClient;
 import java.time.Clock;
+import java.time.Duration;
 
-/** Composition root (ADR-002) for the audit ledger service. */
+/** Composition root (ADR-002) for the audit ledger service; scheduling drives the anchoring job (ADR-015). */
 @Configuration
+@EnableScheduling
 public class AudBeanConfig {
 
     @Bean
@@ -50,6 +60,26 @@ public class AudBeanConfig {
     @Bean
     public AudLedgerService audLedgerService(AudLedgerPort audLedgerPort) {
         return new AudLedgerService(audLedgerPort, Clock.systemUTC());
+    }
+
+    @Bean
+    public AudCheckpointPort audCheckpointPort(DatabaseClient databaseClient) {
+        return new R2dbcAudCheckpointAdapter(databaseClient);
+    }
+
+    /** The external RFC 3161 timestamp authority checkpoints are anchored with (ADR-015). */
+    @Bean
+    public TimestampAuthorityPort timestampAuthorityPort(@Value("${cm.aud.anchoring.tsa-url}") String tsaUrl,
+                                                         @Value("${cm.aud.anchoring.timeout:10s}") Duration timeout) {
+        return new Rfc3161TimestampAuthority(
+                HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NEVER).build(),
+                URI.create(tsaUrl), timeout);
+    }
+
+    @Bean
+    public AudAnchoringService audAnchoringService(AudLedgerPort audLedgerPort, AudCheckpointPort audCheckpointPort,
+                                                   TimestampAuthorityPort timestampAuthorityPort) {
+        return new AudAnchoringService(audLedgerPort, audCheckpointPort, timestampAuthorityPort, Clock.systemUTC());
     }
 
     @Bean(destroyMethod = "close")

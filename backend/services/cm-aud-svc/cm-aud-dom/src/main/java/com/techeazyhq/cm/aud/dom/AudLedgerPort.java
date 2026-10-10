@@ -33,8 +33,14 @@ public interface AudLedgerPort {
     /** Every entry with its payload, in sequence order, for verification. */
     Flux<AudRecord> records();
 
+    /** Entries {@code fromSeq} to {@code toSeq}, both included, in sequence order. */
+    Flux<AudEntry> range(long fromSeq, long toSeq);
+
     /** Entries matching the query, newest first. */
     Flux<AudEntry> find(AudQuery query);
+
+    /** Whether entry {@code seq} is about principal {@code dpId} (false once their data is erased). */
+    Mono<Boolean> concerns(long seq, String dpId);
 
     /** The last entry, or empty for an empty ledger. */
     Mono<AudEntry> head();

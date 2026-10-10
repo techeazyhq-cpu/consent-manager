@@ -123,6 +123,15 @@ public class R2dbcAudLedgerAdapter implements AudLedgerPort {
     }
 
     @Override
+    public Flux<AudEntry> range(long fromSeq, long toSeq) {
+        return db.sql("select " + ENTRY_COLUMNS + " from aud.entry e where e.seq between :from and :to order by e.seq")
+                .bind("from", fromSeq)
+                .bind("to", toSeq)
+                .map((row, meta) -> toEntry(row))
+                .all();
+    }
+
+    @Override
     public Flux<AudEntry> find(AudQuery query) {
         List<String> where = new ArrayList<>();
         if (query.cnsReqId() != null) where.add("e.cns_req_id = :cnsReqId");
@@ -138,6 +147,15 @@ public class R2dbcAudLedgerAdapter implements AudLedgerPort {
         if (query.dfId() != null) spec = spec.bind("dfId", query.dfId());
         if (query.dpId() != null) spec = spec.bind("dpId", query.dpId());
         return spec.map((row, meta) -> toEntry(row)).all();
+    }
+
+    @Override
+    public Mono<Boolean> concerns(long seq, String dpId) {
+        return db.sql("select exists (select 1 from aud.entry_subject where seq = :seq and dp_id = :dpId) as concerns")
+                .bind("seq", seq)
+                .bind("dpId", dpId)
+                .map((row, meta) -> row.get("concerns", Boolean.class))
+                .one();
     }
 
     @Override

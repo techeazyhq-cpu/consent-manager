@@ -18,6 +18,7 @@
 
 package com.techeazyhq.cm.aud.ifc.rest;
 
+import com.techeazyhq.cm.aud.app.AudAnchoringService;
 import com.techeazyhq.cm.aud.app.AudLedgerService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,12 +30,14 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 public class AudRouterConfig {
 
     @Bean
-    public RouterFunction<ServerResponse> audRoutes(AudLedgerService ledger) {
-        AudHandler handler = new AudHandler(ledger);
+    public RouterFunction<ServerResponse> audRoutes(AudLedgerService ledger, AudAnchoringService anchoring) {
+        AudHandler handler = new AudHandler(ledger, anchoring);
         return RouterFunctions.route()
                 .GET("/api/aud/entries", handler::entries)
                 .GET("/api/aud/chain/head", handler::head)
                 .GET("/api/aud/chain/verify", handler::verify)
+                .GET("/api/aud/entries/{seq}/proof", handler::proof)
+                .GET("/api/aud/checkpoints", handler::checkpoints)
                 .build();
     }
 }
