@@ -78,7 +78,7 @@ public class ApproveCnsCmdHandler implements CmdHandler<ApproveCnsReqCmd, CnsArt
                             ValPrd.of(Instant.now(), DEFAULT_VALIDITY));
 
                     String cnsTkn = cnsTknSigner.sign(new CnsTknClaims(
-                            dpIdOf(cnsReq), cnsReq.dfId(), cnsReq.prps().code(), CnsTknClaims.AccessType.ALLOW,
+                            cnsArt.id(), dpIdOf(cnsReq), cnsReq.dfId(), cnsReq.prps().code(), CnsTknClaims.AccessType.ALLOW,
                             List.of(), cnsArt.valPrd().until()));
                     cnsArt.attachSignedTkn(cnsTkn);
 

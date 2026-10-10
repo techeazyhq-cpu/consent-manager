@@ -1,6 +1,6 @@
 # ADR-006: Signed consent tokens, enforced at the gateway with OPA
 
-- **Status:** Accepted, with a known security gap (token signatures are not verified yet)
+- **Status:** Accepted; its token handling is superseded by [ADR-013](adr-013-verified-consent-tokens.md), which closes the gap below
 - **Date:** 2026-08-30 (Phase 1), recorded 2026-10-10
 
 ## Context
@@ -38,6 +38,5 @@ moment ago. Authorisation rules should be data, reviewable on their own, rather 
   - the policy does not check that `fiduciary_id` is the caller's fiduciary;
   - tokens issued before a restart could not be verified even once verification exists.
 
-  The fix, which supersedes this part of the decision: a persistent signing key with rotation, a JWKS endpoint on
-  `cm-cns-cmd-svc`, `io.jwt.decode_verify` in the policy, and claims checked against the artefact (its id, purpose and
-  fiduciary) and the caller's identity.
+  Fixed by [ADR-013](adr-013-verified-consent-tokens.md): persistent, rotatable signing keys published as a JWKS,
+  `io.jwt.decode_verify` in the policy, and tokens bound to their artefact and to the calling fiduciary.

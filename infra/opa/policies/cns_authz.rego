@@ -13,33 +13,47 @@
 # limitations under the License.
 #
 # @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+# PEP/PDP dynamic enforcement (ADR-006): cm-gw asks whether a fiduciary may act on a consent token. Allowed only when
+#   - the token's signature verifies against cm-cns-cmd-svc's published keys, its issuer is cm-cns-cmd-svc and it
+#     has not expired;
+#   - it was issued for this artefact (cns_art_id) and to the calling fiduciary (fiduciary_id = the caller's df_id);
+#   - it grants (ALLOW) the purpose asked for;
+#   - and the artefact is still ISSUED right now (cm-cns-qry-svc), so a revocation or expiry takes effect at once.
+# Anything missing or unreachable denies: the keys, the live status, the caller's identity.
 
-# PEP/PDP Dynamic Enforcement (plan §9, whitepaper Stage 3) — adapted from the whitepaper's
-# own example policy to this platform's actual CnsTkn claim shape (sub_did/fiduciary_id/
-# purpose_code/access_type/scope/exp, plan §7c step 3, §13).
-#
-# Phase-1 simplification, documented rather than silent: this policy decodes the CnsTkn
-# WITHOUT cryptographic signature verification (io.jwt.decode, not decode_verify) — cm-pdp
-# has no JWKS endpoint to fetch cm-cns-cmd-svc's ephemeral-at-boot RSA public key from yet.
-# The live_status check below (a call to cm-cns-qry-svc, a trusted internal service) is what
-# actually gates the decision, not the token's signature alone. Wiring a JWKS endpoint +
-# io.jwt.decode_verify is a Phase 2 hardening item (docs/adr/adr-006-consent-token-and-pep-pdp.md).
 package consent.authorization
 
-import future.keywords.if
+import rego.v1
 
 default allow := false
 
 allow if {
 	input.action == "READ"
-
-	# io.jwt.decode (unverified) returns [header, payload, signature] — no validity boolean,
-	# since there's no key here to verify against (see the file-level comment above).
-	[_, payload, _] := io.jwt.decode(input.consent_token)
-	payload.purpose_code == input.requested_purpose
-	payload.access_type == "ALLOW"
-	payload.exp > (time.now_ns() / 1000000000)
+	input.caller_df_id != ""
+	[valid, _, token] := io.jwt.decode_verify(input.consent_token, {
+		"cert": signing_keys,
+		"iss": "cm-cns-cmd-svc",
+		"time": time.now_ns(),
+	})
+	valid
+	token.cns_art_id == input.cns_art_id
+	token.fiduciary_id == input.caller_df_id
+	token.purpose_code == input.requested_purpose
+	token.access_type == "ALLOW"
 	live_status == "ISSUED"
+}
+
+# The public JSON Web Key Set cm-cns-cmd-svc signs consent tokens with, cached for five minutes. Put a new key into
+# the set at least that long before it starts signing.
+signing_keys := resp.raw_body if {
+	resp := http.send({
+		"method": "GET",
+		"url": sprintf("%s/api/cns-cmd/.well-known/jwks.json", [cns_cmd_base_url]),
+		"timeout": "2s",
+		"force_cache": true,
+		"force_cache_duration_seconds": 300,
+	})
+	resp.status_code == 200
 }
 
 live_status := status if {
@@ -53,7 +67,9 @@ live_status := status if {
 	status := resp.body.status
 }
 
-# Overridable via OPA's own config/data for docker-compose vs local-dev vs test.
-cns_qry_base_url := opa_env_cns_qry_base_url if {
-	opa_env_cns_qry_base_url := data.config.cns_qry_base_url
-} else := "http://cm-cns-qry-svc:8083"
+# Service addresses, overridable through OPA data for other environments.
+cns_cmd_base_url := data.config.cns_cmd_base_url if data.config.cns_cmd_base_url
+else := "http://cm-cns-cmd-svc:8082"
+
+cns_qry_base_url := data.config.cns_qry_base_url if data.config.cns_qry_base_url
+else := "http://cm-cns-qry-svc:8083"

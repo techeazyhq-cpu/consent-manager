@@ -33,8 +33,6 @@ import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.jose.jwk.RSAKey;
-import com.nimbusds.jose.jwk.gen.RSAKeyGenerator;
 import com.techeazyhq.cm.cnscmd.app.ApproveCnsCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.CnsExpirySweepJob;
 import com.techeazyhq.cm.cnscmd.app.CnsLifecycleSagaOrchestrator;
@@ -57,6 +55,7 @@ import com.techeazyhq.cm.cnscmd.infra.R2dbcCnsReqRepoAdapter;
 import com.techeazyhq.cm.cnscmd.infra.R2dbcObxAdapter;
 import com.techeazyhq.cm.cnscmd.infra.WebClientDfActiveAdapter;
 import com.techeazyhq.cm.cnscmd.infra.WebClientDfSubEligibleAdapter;
+import com.techeazyhq.cm.seckit.CnsTknKeys;
 import com.techeazyhq.cm.seckit.CnsTknSigner;
 
 /**
@@ -92,16 +91,20 @@ public class CnsCmdBeanConfig {
 
     // ---- CnsTkn signing (plan §7c step 3, §9a) ----
 
+    /**
+     * Persistent signing keys (ADR-006): created on first start when allowed, then reused, so tokens stay verifiable
+     * across restarts. Production mounts a managed key set at {@code cm.cns-tkn.keys-path} and turns creation off.
+     */
     @Bean
-    public RSAKey cnsTknSigningKey() throws com.nimbusds.jose.JOSEException {
-        // Phase-1 dev default: ephemeral key generated at boot (plan §7c note: "dev: generated
-        // at boot / stored in a jwks.json in phase 1; real KMS deferred", §16 roadmap).
-        return new RSAKeyGenerator(2048).keyID("cm-cns-cmd-dev").generate();
+    public CnsTknKeys cnsTknKeys(@Value("${cm.cns-tkn.keys-path}") String keysPath,
+                                 @Value("${cm.cns-tkn.create-keys-if-missing:true}") boolean createIfMissing)
+            throws java.io.IOException {
+        return CnsTknKeys.loadOrCreate(java.nio.file.Path.of(keysPath), createIfMissing, java.time.Clock.systemUTC());
     }
 
     @Bean
-    public CnsTknSigner cnsTknSigner(RSAKey cnsTknSigningKey) {
-        return new CnsTknSigner(cnsTknSigningKey);
+    public CnsTknSigner cnsTknSigner(CnsTknKeys cnsTknKeys) {
+        return new CnsTknSigner(cnsTknKeys);
     }
 
     // ---- Circuit-Breaker-wrapped calls to sibling services (plan §7b, §7c step 1) ----
