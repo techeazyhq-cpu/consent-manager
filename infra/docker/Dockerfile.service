@@ -24,8 +24,11 @@
 # already built by `./gradlew build` on the host; this Dockerfile just wraps one, unmodified.
 FROM eclipse-temurin:21-jre-alpine
 ARG JAR_PATH
+# The services need no privileges: run as an unprivileged user so a compromised service is not root in its container.
+RUN addgroup -S cm && adduser -S -G cm -H -s /sbin/nologin cm
 WORKDIR /app
-COPY ${JAR_PATH} app.jar
+COPY --chown=root:root --chmod=0444 ${JAR_PATH} app.jar
+USER cm
 # The JVM caches successful DNS lookups forever by default (no SecurityManager installed).
 # In this docker-compose network, every service restart/rebuild gives its container a new
 # internal IP — without a short TTL, every OTHER already-running service that had previously
