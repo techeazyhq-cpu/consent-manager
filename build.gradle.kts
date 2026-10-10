@@ -27,6 +27,7 @@ allprojects {
 
 subprojects {
     apply(plugin = "java")
+    apply(plugin = "jacoco")
 
     configure<JavaPluginExtension> {
         toolchain {
@@ -36,5 +37,51 @@ subprojects {
 
     tasks.withType<Test> {
         useJUnitPlatform()
+    }
+}
+
+// Quality gate (CONTRIBUTING.md, CI): one coverage figure across every module, since most modules are tested
+// through their service's -boot module or a neighbour rather than by their own tests. `coverageReport` writes
+// build/reports/jacoco/coverageReport (HTML and XML); `coverageVerification` fails the build below the minimum.
+// The minimum is a ratchet: raise it as coverage grows, never lower it.
+apply(plugin = "jacoco")
+
+val coverageMinimum = "0.19".toBigDecimal()
+
+fun JacocoReportBase.coverAllModules() {
+    subprojects.forEach { module ->
+        module.plugins.withType<JavaPlugin> {
+            val main = module.the<SourceSetContainer>()["main"]
+            sourceDirectories.from(main.allJava.srcDirs)
+            classDirectories.from(main.output.classesDirs)
+            executionData.from(module.fileTree(module.layout.buildDirectory.dir("jacoco")) { include("*.exec") })
+            dependsOn(module.tasks.withType<Test>())
+        }
+    }
+}
+
+tasks.register<JacocoReport>("coverageReport") {
+    group = "verification"
+    description = "Line and branch coverage of all modules' tests, in one report."
+    coverAllModules()
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+tasks.register<JacocoCoverageVerification>("coverageVerification") {
+    group = "verification"
+    description = "Fails when line coverage across all modules drops below the ratchet."
+    coverAllModules()
+    dependsOn("coverageReport")
+    violationRules {
+        rule {
+            limit {
+                counter = "LINE"
+                value = "COVEREDRATIO"
+                minimum = coverageMinimum
+            }
+        }
     }
 }

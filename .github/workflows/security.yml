@@ -1,0 +1,95 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies-and-secrets:
+    name: Dependency and secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Scan the repository (dependencies, secrets, misconfiguration)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scanners: vuln,secret,misconfig
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [java-kotlin, javascript-typescript]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        if: matrix.language == 'java-kotlin'
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+      - uses: github/codeql-action/init@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.language == 'java-kotlin' && 'manual' || 'none' }}
+          config-file: ./.github/codeql/codeql-config.yml
+      - name: Build for analysis
+        if: matrix.language == 'java-kotlin'
+        run: ./gradlew --no-daemon --no-build-cache compileJava compileTestJava
+      # The repository is private and has no GitHub Advanced Security, so GitHub's code scanning cannot receive the
+      # results. They are written as SARIF instead and any finding fails the job, which keeps CodeQL a gate. With
+      # Advanced Security (or a public repository), set upload to "always" to get alerts in the Security tab too.
+      - uses: github/codeql-action/analyze@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+        with:
+          upload: never
+          output: codeql-results
+      - name: Fail on any CodeQL finding
+        run: |
+          node -e '
+            const fs = require("fs"), path = require("path");
+            let findings = 0;
+            for (const file of fs.readdirSync("codeql-results").filter(f => f.endsWith(".sarif"))) {
+              const sarif = JSON.parse(fs.readFileSync(path.join("codeql-results", file), "utf8"));
+              for (const run of sarif.runs) for (const result of run.results ?? []) {
+                const where = result.locations?.[0]?.physicalLocation;
+                console.log(`${result.ruleId}: ${where?.artifactLocation?.uri}:${where?.region?.startLine} ${result.message.text}`);
+                findings++;
+              }
+            }
+            console.log(`${findings} CodeQL finding(s)`);
+            process.exit(findings === 0 ? 0 : 1);
+          '
