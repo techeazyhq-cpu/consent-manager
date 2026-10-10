@@ -21,7 +21,7 @@ plugins {
 }
 
 dependencies {
-    api("com.tngtech.archunit:archunit-junit5:1.3.0")
+    api("com.tngtech.archunit:archunit-junit5:1.5.1")
     api(platform("org.testcontainers:testcontainers-bom:1.20.1"))
     api("org.testcontainers:junit-jupiter")
     api("org.testcontainers:postgresql")
