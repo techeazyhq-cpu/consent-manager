@@ -53,3 +53,21 @@ MAILPIT_URL=http://localhost:18025 scripts/verify-phase1.sh
 SMS, WhatsApp and push then land in notification-service's catcher (http://localhost:19000), and every message is
 visible in its client UI (http://localhost:15174 with the key from `cm-client.env`, if you also start `client-ui`).
 Delete `cm-client.env` and recreate `cm-ntf-svc` to go back to the local catchers.
+
+## Web push from the DP portal
+
+A DP turns on **Notify me** in the DP portal; the browser's push token is stored per DP in `cm-ntf-svc`
+(`ntf.push_dvc`, via `POST/GET/DELETE /api/ntf/push-dvcs`, the DP taken from the JWT). When a DF raises a consent
+request for a linked DP, `cm-ntf-svc` pushes "New consent request" with the notice title to each of that DP's
+browsers (`clientReference` `cm-notify-dp-<cnsReqId>-<deviceId>`). Signing out of the portal removes that browser.
+
+The portal gets real Firebase Cloud Messaging tokens when built with a Firebase web app's config:
+
+| Env var (`frontend/packages/mf-dp-portal`) | From the Firebase console |
+|---|---|
+| `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID` | Project settings → Your apps → Web app config |
+| `VITE_FIREBASE_VAPID_KEY` | Project settings → Cloud Messaging → Web Push certificates |
+
+Without them, `pnpm dev` registers a stand-in `dev-web-…` token so the flow can be tried end to end against the
+catchers, and a production build hides the toggle. Delivering to real browsers also needs notification-service to
+have an FCM provider for the `PUSH` channel; its generic `HTTP_JSON` provider only reaches the local catcher.

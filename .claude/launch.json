@@ -8,6 +8,12 @@
       "port": 5174
     },
     {
+      "name": "cm-dp-portal-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-dp-portal", "run", "dev"],
+      "port": 5174
+    },
+    {
       "name": "cm-df-app",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--dir", "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-df-app", "run", "preview"],

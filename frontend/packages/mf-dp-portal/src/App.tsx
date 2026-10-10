@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { cnsCmd, cnsQry, dfReg, type AuthInfo, type CnsArtRdMdl } from "api-client";
 import { Badge, Button, ErrorBanner, PageHeader, Spinner, friendlyError } from "ui-kit/src/index";
+import PushToggle, { forgetThisBrowser } from "./PushToggle";
+import { onForegroundPush } from "./push";
 
 interface Props {
   auth: AuthInfo;
@@ -22,6 +24,7 @@ export default function DpPortalApp({ auth, gwBase }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [selectedDfId, setSelectedDfId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -60,6 +63,23 @@ export default function DpPortalApp({ auth, gwBase }: Props) {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // A push that arrives while the portal is open is shown here rather than as a system notification.
+  useEffect(() => {
+    let unsubscribe = () => {};
+    onForegroundPush((payload) => {
+      setNotice(payload.notification?.body ?? payload.data?.body ?? "New consent request");
+      load();
+    }).then((fn) => (unsubscribe = fn));
+    return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Signing out also stops this browser getting the DP's notifications (it may be a shared computer).
+  const logout = async () => {
+    await forgetThisBrowser(auth, gwBase).catch(() => {});
+    auth.logout();
+  };
 
   const tiles = useMemo<Tile[]>(() => {
     const byDf = new Map<string, Tile>();
@@ -109,11 +129,19 @@ export default function DpPortalApp({ auth, gwBase }: Props) {
     <>
       <div className="cm-topbar">
         <strong>DP Portal</strong>
-        <button onClick={auth.logout}>Log out</button>
+        <div className="cm-topbar-actions">
+          <PushToggle auth={auth} gwBase={gwBase} onError={setError} />
+          <button onClick={logout}>Log out</button>
+        </div>
       </div>
     <div className="cm-page">
       <PageHeader title="My consents" subtitle="One tile per organization you've shared consent with." />
       {error ? <ErrorBanner message={error} /> : null}
+      {notice ? (
+        <div className="cm-notice-banner" role="status">
+          New consent request: {notice}
+        </div>
+      ) : null}
 
       {loading ? (
         <Spinner />

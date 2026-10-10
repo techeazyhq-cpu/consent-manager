@@ -8,6 +8,8 @@ import type {
   DfSubStatusResult,
   ExtDpRefTyp,
   ProblemDetail,
+  PushDvcRespDto,
+  PushPltf,
   SubPln,
   UsageRespDto,
 } from "./types";
@@ -87,6 +89,15 @@ export const cnsQry = {
     request<{ result: string }>(base, `/api/cns-qry/cns-arts/${cnsArtId}/verify?purpose=${encodeURIComponent(purpose)}`, token, {
       headers: { "X-Cns-Tkn": cnsTkn },
     }),
+};
+
+export const ntf = {
+  // Always the caller's own devices: the DP is taken from the JWT, as in cnsQry.listMine.
+  listPushDvcs: (base: string, token: string) => request<PushDvcRespDto[]>(base, "/api/ntf/push-dvcs", token),
+  registerPushDvc: (base: string, token: string, body: { token: string; platform: PushPltf }) =>
+    request<PushDvcRespDto>(base, "/api/ntf/push-dvcs", token, { method: "POST", body: JSON.stringify(body) }),
+  removePushDvc: (base: string, token: string, id: string) =>
+    request<void>(base, `/api/ntf/push-dvcs/${encodeURIComponent(id)}`, token, { method: "DELETE" }),
 };
 
 export const bil = {

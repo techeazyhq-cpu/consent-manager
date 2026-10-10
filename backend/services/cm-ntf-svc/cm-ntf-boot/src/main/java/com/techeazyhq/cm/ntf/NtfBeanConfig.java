@@ -11,6 +11,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.r2dbc.core.DatabaseClient;
+import org.springframework.transaction.reactive.TransactionalOperator;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,8 +20,10 @@ import com.techeazyhq.cm.ntf.app.NotifyDfCmdHandler;
 import com.techeazyhq.cm.ntf.app.NotifyDpCmdHandler;
 import com.techeazyhq.cm.ntf.app.NtfDispatchService;
 import com.techeazyhq.cm.ntf.app.OtpSendCmdHandler;
+import com.techeazyhq.cm.ntf.app.PushDvcCmdHandler;
 import com.techeazyhq.cm.ntf.dom.EmailSenderPort;
 import com.techeazyhq.cm.ntf.dom.NtfChnl;
+import com.techeazyhq.cm.ntf.dom.PushDvcRepoPort;
 import com.techeazyhq.cm.ntf.dom.PushSenderPort;
 import com.techeazyhq.cm.ntf.dom.SmsSenderPort;
 import com.techeazyhq.cm.ntf.dom.WhatsAppSenderPort;
@@ -27,6 +31,7 @@ import com.techeazyhq.cm.ntf.infra.CatcherStore;
 import com.techeazyhq.cm.ntf.infra.NotificationServiceClient;
 import com.techeazyhq.cm.ntf.infra.PulsarNtfCmdConsumer;
 import com.techeazyhq.cm.ntf.infra.PushCatcherAdapter;
+import com.techeazyhq.cm.ntf.infra.R2dbcPushDvcRepoAdapter;
 import com.techeazyhq.cm.ntf.infra.SmsCatcherAdapter;
 import com.techeazyhq.cm.ntf.infra.SmtpEmailSenderAdapter;
 import com.techeazyhq.cm.ntf.infra.WhatsAppCatcherAdapter;
@@ -134,8 +139,18 @@ public class NtfBeanConfig {
     }
 
     @Bean
-    public NotifyDpCmdHandler notifyDpCmdHandler(NtfDispatchService ntfDispatchService) {
-        return new NotifyDpCmdHandler(ntfDispatchService);
+    public NotifyDpCmdHandler notifyDpCmdHandler(NtfDispatchService ntfDispatchService, PushDvcRepoPort pushDvcRepoPort) {
+        return new NotifyDpCmdHandler(ntfDispatchService, pushDvcRepoPort);
+    }
+
+    @Bean
+    public PushDvcRepoPort pushDvcRepoPort(DatabaseClient databaseClient, TransactionalOperator transactionalOperator) {
+        return new R2dbcPushDvcRepoAdapter(databaseClient, transactionalOperator);
+    }
+
+    @Bean
+    public PushDvcCmdHandler pushDvcCmdHandler(PushDvcRepoPort pushDvcRepoPort) {
+        return new PushDvcCmdHandler(pushDvcRepoPort);
     }
 
     @Bean

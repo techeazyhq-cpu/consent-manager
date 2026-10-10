@@ -26,17 +26,27 @@ export interface KeycloakConnectOpts {
 }
 
 let kcInstance: Keycloak | null = null;
+let kcInit: Promise<Keycloak> | null = null;
 
 export function getKeycloak(): Keycloak | null {
   return kcInstance;
 }
 
-export async function initKeycloak(opts: KeycloakConnectOpts): Promise<Keycloak> {
-  if (kcInstance) return kcInstance;
-  const kc = new Keycloak({ url: opts.url, realm: opts.realm, clientId: opts.clientId });
-  await kc.init({ pkceMethod: "S256", onLoad: opts.onLoad });
-  kcInstance = kc;
-  return kc;
+/**
+ * Idempotent while in flight, not just once finished: React StrictMode (every `vite` dev run) mounts effects twice,
+ * and two Keycloak instances racing to redeem the same login code made the loser redirect to login again, forever.
+ */
+export function initKeycloak(opts: KeycloakConnectOpts): Promise<Keycloak> {
+  kcInit ??= (async () => {
+    const kc = new Keycloak({ url: opts.url, realm: opts.realm, clientId: opts.clientId });
+    await kc.init({ pkceMethod: "S256", onLoad: opts.onLoad });
+    kcInstance = kc;
+    return kc;
+  })().catch((err) => {
+    kcInit = null;
+    throw err;
+  });
+  return kcInit;
 }
 
 export function toAuthInfo(kc: Keycloak): AuthInfo | null {

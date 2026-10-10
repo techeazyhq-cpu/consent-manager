@@ -154,8 +154,12 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway" # notification-service runs as its own compose project
     depends_on:
+      postgres:
+        condition: service_healthy
       pulsar:
         condition: service_healthy
+      keycloak:
+        condition: service_started
       mailpit:
         condition: service_started
 

@@ -18,6 +18,9 @@ dependencies {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // Testcontainers 1.20's docker-java asks for Docker API 1.32 by default; Docker Engine 29+ refuses anything
+    // below 1.40 (400 on /info: "Could not find a valid Docker environment"). 1.44 works with Engine 25 and newer.
+    systemProperty("api.version", "1.44")
 }
 
 // Container image name/tag every docker-compose.yml service reference expects (plan §6:

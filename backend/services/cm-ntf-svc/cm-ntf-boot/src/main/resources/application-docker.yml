@@ -1,6 +1,16 @@
 spring:
   mail:
     host: mailpit
+  r2dbc:
+    url: r2dbc:postgresql://postgres:5432/consent_manager?schema=ntf
+  flyway:
+    url: jdbc:postgresql://postgres:5432/consent_manager
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # jwk-set-uri, not issuer-uri — see cm-gw's application-docker.yml for why.
+          jwk-set-uri: http://keycloak:8080/realms/cm-realm/protocol/openid-connect/certs
 
 cm:
   pulsar:
