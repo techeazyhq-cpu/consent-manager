@@ -30,8 +30,8 @@ dependencies {
     compileOnly("org.keycloak:keycloak-server-spi-private:$keycloakVersion")
     compileOnly("org.keycloak:keycloak-services:$keycloakVersion")
     compileOnly("jakarta.ws.rs:jakarta.ws.rs-api:3.1.0")
-    compileOnly("org.jboss.logging:jboss-logging:3.6.0.Final")
-    testImplementation("org.jboss.logging:jboss-logging:3.6.0.Final")
+    compileOnly("org.jboss.logging:jboss-logging:3.6.3.Final")
+    testImplementation("org.jboss.logging:jboss-logging:3.6.3.Final")
 
     testImplementation(platform("org.junit:junit-bom:5.10.3"))
     testImplementation("org.junit.jupiter:junit-jupiter")
