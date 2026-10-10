@@ -89,8 +89,9 @@ The [README](README.md) lists the services, ports and demo sign-ins.
 3. **Run the same checks CI runs** before you push:
 
    ```bash
-   ./gradlew build                     # compile, unit and integration tests, architecture rules, coverage
-   (cd frontend && pnpm install --frozen-lockfile && pnpm build)
+   node scripts/license-headers.mjs              # every source file carries the license header (--fix adds it)
+   ./gradlew build coverageVerification          # compile, unit and integration tests, architecture rules, coverage ratchet
+   (cd frontend && pnpm install --frozen-lockfile && pnpm -r build && pnpm audit --prod --audit-level high)
    ```
 
 4. **Keep static analysis at zero.** Fix what a scan reports (CodeQL, Trivy). Suppress a finding only when it does
@@ -179,6 +180,21 @@ The [pull request template](.github/pull_request_template.md) is filled in autom
   cannot see, such as a screenshot of a UI change.
 - **Risk and rollback:** what could break, who is affected, and how to undo it. This is required for migrations, event
   contract changes and changes to authentication, authorisation, consent lifecycle or the audit ledger.
+
+### Required checks
+
+These must all pass before a pull request can merge. They are defined in `.github/workflows` and enforced by the
+branch protection described in [docs/branch-protection.md](docs/branch-protection.md).
+
+| Check | What it verifies |
+|---|---|
+| Backend build and tests | License headers, `./gradlew build` (unit and PostgreSQL integration tests, ArchUnit layering), and line coverage at or above the ratchet in `build.gradle.kts` |
+| Frontend build and audit | The three micro-frontends build from the locked dependencies, with no HIGH or CRITICAL advisory in runtime dependencies |
+| Service images build | Every service image builds (its vulnerability scan is reported, and becomes blocking after the dependency upgrade) |
+| Dependency and secret scan | No HIGH or CRITICAL vulnerable dependency, committed secret or misconfiguration (Trivy) |
+| CodeQL (Java, TypeScript) | No new code-scanning alert |
+
+The coverage minimum only goes up: when a pull request raises coverage, raise `coverageMinimum` with it.
 
 ## Review and merge
 
