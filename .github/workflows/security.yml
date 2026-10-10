@@ -66,6 +66,7 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.language == 'java-kotlin' && 'manual' || 'none' }}
+          config-file: ./.github/codeql/codeql-config.yml
       - name: Build for analysis
         if: matrix.language == 'java-kotlin'
         run: ./gradlew --no-daemon --no-build-cache compileJava compileTestJava
