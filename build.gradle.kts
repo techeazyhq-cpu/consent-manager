@@ -46,7 +46,7 @@ subprojects {
 // The minimum is a ratchet: raise it as coverage grows, never lower it.
 apply(plugin = "jacoco")
 
-val coverageMinimum = "0.11".toBigDecimal()
+val coverageMinimum = "0.19".toBigDecimal()
 
 fun JacocoReportBase.coverAllModules() {
     subprojects.forEach { module ->

@@ -24,7 +24,7 @@ already runs a proven set of gates; consent-manager adopts the same standard.
    - *Dependency and secret scan*: Trivy on the repository for vulnerabilities, secrets and misconfiguration;
    - *CodeQL* for Java and TypeScript.
 3. **Coverage is a ratchet.** One JaCoCo report across all modules; `coverageVerification` fails below
-   `coverageMinimum` in `build.gradle.kts`, which starts at today's 11 % of lines and is only ever raised.
+   `coverageMinimum` in `build.gradle.kts`, which is only ever raised: 11 % of lines when the gates were added, 19 % once the consent token and audit ledger tests landed.
 4. **Branch protection** from `.github/branch-protection.json` ([runbook](../branch-protection.md)): pull requests
    only, the checks above required, administrators included, no force pushes.
 5. **Actions are pinned to commit SHAs**, the same ones notification-service uses.
@@ -35,5 +35,5 @@ already runs a proven set of gates; consent-manager adopts the same standard.
 - The image scan starts as report-only: blocking on today's CRITICAL findings would also block the dependency
   upgrades that fix them. The Spring Boot and dependency upgrade turns it into a gate on CRITICAL findings, as in
   notification-service.
-- 11 % is low; the Testcontainers tasks (#121, #126, #129, #133) are how it rises.
+- 19 % is still low; the Testcontainers tasks (#121, #126, #129, #133) are how it rises.
 - Sonar is not part of the gate yet; CodeQL and Trivy cover security, and coverage is measured by JaCoCo.
