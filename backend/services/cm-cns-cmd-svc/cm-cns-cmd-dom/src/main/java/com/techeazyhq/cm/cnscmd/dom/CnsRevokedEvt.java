@@ -28,7 +28,7 @@ import com.techeazyhq.cm.domkit.DomainEvt;
  * intentionally carries only artefact/purpose identifiers — no DF-internal purge targets
  * (unlike the whitepaper's illustrative {@code cascade_instructions} payload) since CM has
  * no visibility into a DF's downstream stores; each subscriber owns that mapping itself
- * (docs/architecture/adr-0003-pep-pdp-enforcement.md). The producer serializes this to the
+ * (docs/adr/adr-006-consent-token-and-pep-pdp.md). The producer serializes this to the
  * external wire shape ({@code sub_did}/{@code fiduciary_id}/{@code purpose_code}) — see
  * {@code PulsarCnsEvtProducer} in cm-cns-cmd-infra.
  */

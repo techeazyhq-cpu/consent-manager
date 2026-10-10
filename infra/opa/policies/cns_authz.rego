@@ -23,7 +23,7 @@
 # has no JWKS endpoint to fetch cm-cns-cmd-svc's ephemeral-at-boot RSA public key from yet.
 # The live_status check below (a call to cm-cns-qry-svc, a trusted internal service) is what
 # actually gates the decision, not the token's signature alone. Wiring a JWKS endpoint +
-# io.jwt.decode_verify is a Phase 2 hardening item (docs/architecture/adr-0003).
+# io.jwt.decode_verify is a Phase 2 hardening item (docs/adr/adr-006-consent-token-and-pep-pdp.md).
 package consent.authorization
 
 import future.keywords.if
