@@ -19,6 +19,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [011](adr-011-container-images-from-built-jars.md) | Service images wrap the built JAR, and run unprivileged | Accepted |
 | [012](adr-012-quality-gates.md) | Quality gates on every pull request, as notification-service has them | Accepted |
 | [013](adr-013-verified-consent-tokens.md) | Consent tokens are verified, and bound to their artefact and fiduciary | Accepted |
+| [014](adr-014-tamper-evident-audit-ledger.md) | A tamper-evident audit ledger, hash-chained like a blockchain | Accepted |
 
 ## Writing one
 

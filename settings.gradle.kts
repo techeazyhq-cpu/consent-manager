@@ -88,6 +88,14 @@ project(":cm-bil-infra").projectDir = file("backend/services/cm-bil-svc/cm-bil-i
 project(":cm-bil-if-rest").projectDir = file("backend/services/cm-bil-svc/cm-bil-if-rest")
 project(":cm-bil-boot").projectDir = file("backend/services/cm-bil-svc/cm-bil-boot")
 
+// ---- cm-aud-svc: tamper-evident audit ledger (ADR-014) ----
+include(":cm-aud-dom", ":cm-aud-app", ":cm-aud-infra", ":cm-aud-if-rest", ":cm-aud-boot")
+project(":cm-aud-dom").projectDir = file("backend/services/cm-aud-svc/cm-aud-dom")
+project(":cm-aud-app").projectDir = file("backend/services/cm-aud-svc/cm-aud-app")
+project(":cm-aud-infra").projectDir = file("backend/services/cm-aud-svc/cm-aud-infra")
+project(":cm-aud-if-rest").projectDir = file("backend/services/cm-aud-svc/cm-aud-if-rest")
+project(":cm-aud-boot").projectDir = file("backend/services/cm-aud-svc/cm-aud-boot")
+
 // ---- keycloak extension (plain Java, not a Spring Boot service) ----
 include(":cm-idn-otp-spi")
 project(":cm-idn-otp-spi").projectDir = file("backend/keycloak-ext/cm-idn-otp-spi")

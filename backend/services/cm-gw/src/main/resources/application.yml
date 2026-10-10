@@ -54,6 +54,10 @@ spring:
           uri: http://localhost:8085
           predicates:
             - Path=/api/bil/**
+        - id: aud
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/aud/**
 
 cm:
   pdp:

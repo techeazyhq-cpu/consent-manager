@@ -24,6 +24,7 @@ Notifications are delivered through [notification-service](https://github.com/te
 | `cm-cns-qry-svc` | 8083 | Consent read side: projections of the lifecycle events, the DP dashboard, the status check behind token verification |
 | `cm-ntf-svc` | 8084 | Notifications to data principals and fiduciaries, one-time codes, DP web-push devices |
 | `cm-bil-svc` | 8085 | Subscription plans, usage metering, eligibility checks |
+| `cm-aud-svc` | 8086 | Tamper-evident audit ledger: every platform event in a SHA-256 hash chain, verifiable end to end |
 | `cm-idn-otp-spi` | (Keycloak) | Keycloak provider: passwordless sign-in with an email or SMS code |
 
 Each bounded context owns its schema and talks to the others through Pulsar events published from a transactional

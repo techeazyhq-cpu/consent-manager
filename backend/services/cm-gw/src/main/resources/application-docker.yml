@@ -59,6 +59,10 @@ spring:
           uri: http://cm-bil-svc:8085
           predicates:
             - Path=/api/bil/**
+        - id: aud
+          uri: http://cm-aud-svc:8086
+          predicates:
+            - Path=/api/aud/**
 
 cm:
   pdp:

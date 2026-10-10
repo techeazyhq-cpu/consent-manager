@@ -200,6 +200,24 @@ services:
       redis:
         condition: service_healthy
 
+  cm-aud-svc:
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-aud-svc/cm-aud-boot/build/libs/cm-aud-boot-0.1.0-SNAPSHOT.jar
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pulsar:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
   cm-gw:
     build:
       context: ../
