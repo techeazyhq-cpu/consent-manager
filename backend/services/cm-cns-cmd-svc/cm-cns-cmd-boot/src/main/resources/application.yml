@@ -51,6 +51,11 @@ cm:
   ntf:
     obx-relay:
       fixed-delay-ms: 1000
+  # Consent token signing keys (ADR-006): a JSON Web Key Set file, created on first start when allowed.
+  # Production: mount a managed key set there and set CM_CNS_TKN_CREATE_KEYS=false.
+  cns-tkn:
+    keys-path: ${CM_CNS_TKN_KEYS_PATH:build/cns-tkn-keys/jwks.json}
+    create-keys-if-missing: ${CM_CNS_TKN_CREATE_KEYS:true}
 
 management:
   endpoints:

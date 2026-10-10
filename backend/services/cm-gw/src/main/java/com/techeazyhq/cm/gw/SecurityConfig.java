@@ -22,6 +22,7 @@ import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
@@ -51,6 +52,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeExchange(ex -> ex
                         .pathMatchers("/actuator/health", "/actuator/info").permitAll()
+                        // Consent token public keys (ADR-006), for fiduciaries verifying tokens themselves.
+                        .pathMatchers(HttpMethod.GET, "/api/cns-cmd/.well-known/jwks.json").permitAll()
                         .pathMatchers("/api/df-reg/dfs", "/api/df-reg/dfs/*/activate").hasRole("CM_ADMIN")
                         .pathMatchers("/api/bil/**").hasRole("CM_ADMIN")
                         .anyExchange().authenticated())

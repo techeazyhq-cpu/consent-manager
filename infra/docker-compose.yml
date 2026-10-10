@@ -90,7 +90,7 @@ services:
       - ../backend/keycloak-ext/cm-idn-otp-spi/build/libs:/opt/keycloak/providers
 
   opa:
-    image: openpolicyagent/opa:latest-envoy
+    image: openpolicyagent/opa:1.20.1
     command: ["run", "--server", "--addr=0.0.0.0:8181", "/policies"]
     ports:
       - "8282:8181" # cm-pdp's real port is 8181 inside the network; host-mapped to 8282 to avoid clashing with Pulsar's 8181 mapping above
@@ -127,6 +127,8 @@ services:
       - "8082:8082"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+    volumes:
+      - cns-tkn-keys:/var/lib/cm/keys # consent token signing keys, kept across restarts (ADR-006)
     depends_on:
       postgres:
         condition: service_healthy
@@ -219,5 +221,6 @@ services:
       - cm-bil-svc
 
 volumes:
+  cns-tkn-keys:
   pg-data:
   pulsar-data:

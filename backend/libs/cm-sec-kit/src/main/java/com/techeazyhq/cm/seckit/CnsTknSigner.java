@@ -38,21 +38,26 @@ import com.nimbusds.jwt.SignedJWT;
  * Signs and verifies the {@code CnsTkn} (Consent Token) — a self-contained, offline-verifiable
  * JWS a Data Fiduciary can validate without calling back to CM (plan §7c step 3, §9a). Deliberately
  * independent of Keycloak's own signing key: Keycloak's JWT answers "who is calling"; this one
- * answers "what has been consented". The signing key itself is a boot-level/composition-root
- * concern (plan §5's Clean Architecture layering) — this class just signs/verifies with whatever
- * {@link RSAKey} it is given.
+ * answers "what has been consented". Tokens are signed with the first key of {@link CnsTknKeys} and name it in
+ * {@code kid}, so any key still in the set verifies the tokens it signed; the issuer is {@value #ISSUER}.
  */
 public class CnsTknSigner {
 
-    private final RSAKey signingKey;
+    public static final String ISSUER = "cm-cns-cmd-svc";
 
-    public CnsTknSigner(RSAKey signingKey) {
-        this.signingKey = signingKey;
+    private final CnsTknKeys keys;
+
+    public CnsTknSigner(CnsTknKeys keys) {
+        this.keys = keys;
     }
 
     public String sign(CnsTknClaims claims) {
         try {
+            RSAKey signingKey = keys.signingKey();
             JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder()
+                    .issuer(ISSUER)
+                    .issueTime(new Date())
+                    .claim("cns_art_id", claims.consentArtefactId())
                     .claim("sub_did", claims.subDid())
                     .claim("fiduciary_id", claims.fiduciaryId())
                     .claim("purpose_code", claims.purposeCode())
@@ -75,16 +80,27 @@ public class CnsTknSigner {
     public CnsTknClaims verify(String compactJws) {
         try {
             SignedJWT signedJwt = SignedJWT.parse(compactJws);
-            JWSVerifier verifier = new RSASSAVerifier(signingKey.toRSAPublicKey());
+            if (!JWSAlgorithm.RS256.equals(signedJwt.getHeader().getAlgorithm())) {
+                throw new IllegalArgumentException("CnsTkn must be signed with RS256");
+            }
+            RSAKey publicKey = keys.publicKey(signedJwt.getHeader().getKeyID());
+            if (publicKey == null) {
+                throw new IllegalArgumentException("CnsTkn signed with an unknown key");
+            }
+            JWSVerifier verifier = new RSASSAVerifier(publicKey.toRSAPublicKey());
             if (!signedJwt.verify(verifier)) {
                 throw new IllegalArgumentException("CnsTkn signature verification failed");
             }
 
             JWTClaimsSet claims = signedJwt.getJWTClaimsSet();
+            if (!ISSUER.equals(claims.getIssuer())) {
+                throw new IllegalArgumentException("CnsTkn has the wrong issuer");
+            }
             @SuppressWarnings("unchecked")
             List<String> scope = (List<String>) (List<?>) claims.getStringListClaim("scope");
 
             return new CnsTknClaims(
+                    claims.getStringClaim("cns_art_id"),
                     claims.getStringClaim("sub_did"),
                     claims.getStringClaim("fiduciary_id"),
                     claims.getStringClaim("purpose_code"),
