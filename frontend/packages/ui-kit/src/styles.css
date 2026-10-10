@@ -249,3 +249,57 @@ body {
 .cm-topbar strong {
   font-size: 15px;
 }
+
+.cm-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cm-push-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--cm-border);
+  border-radius: 999px;
+  background: var(--cm-surface-2);
+  color: var(--cm-text-dim);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.cm-push-toggle::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--cm-text-dim);
+}
+
+.cm-push-toggle[aria-pressed="true"] {
+  border-color: var(--cm-success);
+  color: var(--cm-text);
+}
+
+.cm-push-toggle[aria-pressed="true"]::before {
+  background: var(--cm-success);
+}
+
+.cm-push-toggle:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+span.cm-push-toggle {
+  cursor: help;
+}
+
+.cm-notice-banner {
+  background: rgba(79, 140, 255, 0.12);
+  border: 1px solid var(--cm-primary);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}

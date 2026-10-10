@@ -9,6 +9,22 @@ spring:
   mail:
     host: localhost
     port: 1025 # Mailpit's SMTP port
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/consent_manager?schema=ntf
+    username: cm
+    password: cm
+  flyway:
+    url: jdbc:postgresql://localhost:5432/consent_manager
+    user: cm
+    password: cm
+    schemas: ntf
+    default-schema: ntf
+    locations: classpath:db/migration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/cm-realm
 
 cm:
   pulsar:

@@ -9,17 +9,18 @@
     "preview": "vite preview --port 5174 --strictPort"
   },
   "dependencies": {
+    "api-client": "workspace:*",
+    "auth-kit": "workspace:*",
+    "firebase": "10.14.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "auth-kit": "workspace:*",
-    "api-client": "workspace:*",
     "ui-kit": "workspace:*"
   },
   "devDependencies": {
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.2",
     "typescript": "^5.6.2",
-    "vite": "^5.4.8",
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.0"
+    "vite": "^5.4.8"
   }
 }

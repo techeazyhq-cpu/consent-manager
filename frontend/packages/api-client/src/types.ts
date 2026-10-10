@@ -88,6 +88,16 @@ export interface UsageRespDto {
   currentPeriodUsage: number;
 }
 
+export type PushPltf = "WEB";
+
+/** One of the calling DP's push devices. The token itself is never returned. */
+export interface PushDvcRespDto {
+  id: string;
+  platform: PushPltf;
+  registeredAt: string;
+  lastSeenAt: string;
+}
+
 /** Shape passed from shell-app into the DP Portal / CM Admin remotes (props, not context —
  * avoids the classic Module-Federation problem of a custom React Context object being a
  * different instance in the host's bundle vs. a remote's own bundle). */
