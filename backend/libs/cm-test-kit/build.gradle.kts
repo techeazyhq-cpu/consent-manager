@@ -27,6 +27,6 @@ dependencies {
     api("org.testcontainers:postgresql")
     api("org.testcontainers:pulsar")
 
-    api(platform("org.junit:junit-bom:5.10.3"))
+    api(platform("org.junit:junit-bom:5.14.4"))
     api("org.junit.jupiter:junit-jupiter")
 }
