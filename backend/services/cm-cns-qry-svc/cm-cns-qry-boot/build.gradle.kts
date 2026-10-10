@@ -32,7 +32,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation("org.postgresql:r2dbc-postgresql:1.0.5.RELEASE")
+    implementation("org.postgresql:r2dbc-postgresql:1.1.3.RELEASE")
     implementation("org.postgresql:postgresql:42.7.4")
     implementation("org.flywaydb:flyway-core:10.17.3")
     implementation("org.flywaydb:flyway-database-postgresql:10.17.3")
