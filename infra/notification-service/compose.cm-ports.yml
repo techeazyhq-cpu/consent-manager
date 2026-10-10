@@ -1,0 +1,27 @@
+# Overlay for notification-service's own docker-compose.yml so it runs next to the consent-manager stack.
+# Both stacks use the same well-known ports (Postgres, Redis, Pulsar, Mailpit, 8080-8082, 9000, 5174), so every
+# notification-service port is moved up by 10000. See README.md in this directory for the full sequence.
+#
+#   docker compose -f ../notification-service/docker-compose.yml -f infra/notification-service/compose.cm-ports.yml \
+#     up -d --build client-api admin-api dispatcher
+services:
+  postgres:
+    ports: !override ["15432:5432"]
+  redis:
+    ports: !override ["16379:6379"]
+  pulsar:
+    ports: !override ["16650:6650", "18088:8080"]
+  mailpit:
+    ports: !override ["11025:1025", "18025:8025"]
+  catcher:
+    ports: !override ["19000:9000"]
+  client-api:
+    ports: !override ["18080:8080", "127.0.0.1:19080:9080"]
+  admin-api:
+    ports: !override ["18081:8081", "127.0.0.1:19081:9081"]
+  dispatcher:
+    ports: !override ["127.0.0.1:18082:8082"]
+  admin-ui:
+    ports: !override ["15173:8080"]
+  client-ui:
+    ports: !override ["15174:8080"]

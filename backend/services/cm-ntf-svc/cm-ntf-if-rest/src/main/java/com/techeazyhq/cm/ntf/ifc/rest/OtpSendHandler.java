@@ -5,8 +5,11 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 
 import com.techeazyhq.cm.ntf.app.OtpSendCmd;
 import com.techeazyhq.cm.ntf.app.OtpSendCmdHandler;
+import com.techeazyhq.cm.ntf.dom.NtfDeliveryRejectedException;
 
 import reactor.core.publisher.Mono;
+
+import java.util.Map;
 
 /**
  * Functional-endpoint handler (plan §10's preference) for {@code POST /internal/otp/send} —
@@ -24,6 +27,9 @@ public class OtpSendHandler {
     public Mono<ServerResponse> send(ServerRequest request) {
         return request.bodyToMono(OtpSendReqDto.class)
                 .flatMap(body -> otpSendCmdHandler.handle(new OtpSendCmd(body.channel(), body.destination(), body.code())))
-                .then(ServerResponse.ok().build());
+                .then(ServerResponse.ok().build())
+                // e.g. an invalid phone number: the caller has to ask the user again, retrying won't help
+                .onErrorResume(NtfDeliveryRejectedException.class, err ->
+                        ServerResponse.unprocessableEntity().bodyValue(Map.of("code", err.code())));
     }
 }

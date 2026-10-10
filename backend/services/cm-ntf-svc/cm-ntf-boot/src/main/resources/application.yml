@@ -15,6 +15,18 @@ cm:
     service-url: pulsar://localhost:6650
   ntf:
     from-address: no-reply@consent-manager.local
+    # local: Mailpit + in-memory SMS/WhatsApp/push catchers (no other stack needed).
+    # notification-service: every channel through https://github.com/techeazyhq-cpu/notification-service
+    provider: ${CM_NTF_PROVIDER:local}
+    notification-service:
+      base-url: ${NTF_SVC_BASE_URL:http://localhost:18080}
+      api-key: ${NTF_SVC_API_KEY:}
+      signing-secret: ${NTF_SVC_SIGNING_SECRET:}
+      from-address: ${NTF_SVC_FROM_ADDRESS:} # a sender verified in notification-service; empty = its default sender
+      otp-validity-seconds: 300
+      timeout: 5s
+      max-retries: 3
+      retry-backoff: 500ms
 
 management:
   endpoints:

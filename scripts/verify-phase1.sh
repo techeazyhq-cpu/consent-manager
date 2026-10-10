@@ -92,7 +92,7 @@ echo "== 14. Billing: usage + eligibility =="
 curl -s "$GW_BASE/api/bil/dfs/$DF_ID/usage" -H "Authorization: Bearer $ADMIN_TOKEN"; echo
 
 echo "== 15. Mailpit: confirm the consent-initiated notification was sent =="
-curl -s "http://localhost:8025/api/v1/messages" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const m=JSON.parse(d).messages||[];console.log('  '+m.length+' message(s) captured; latest subject: '+(m[0]?m[0].Subject:'(none)'))})"
+curl -s "${MAILPIT_URL:-http://localhost:8025}/api/v1/messages" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const m=JSON.parse(d).messages||[];console.log('  '+m.length+' message(s) captured; latest subject: '+(m[0]?m[0].Subject:'(none)'))})"
 
 echo
 echo "Done."
