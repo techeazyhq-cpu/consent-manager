@@ -1,4 +1,22 @@
 #!/usr/bin/env node
+/*
+ * Copyright 2026 Vasantha Kumar
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+ */
+
 // Phase 0 GitHub Project/Epic/Milestone/Backlog/Task/Sub-task setup.
 // Idempotent and re-runnable: every step checks for existing state before creating anything.
 // Reads scripts/github-pm-manifest.json. Requires `gh` CLI authenticated with repo+project scopes.
