@@ -10,6 +10,7 @@ import com.techeazyhq.cm.ntf.app.NotifyDfCmd;
 import com.techeazyhq.cm.ntf.app.NotifyDfCmdHandler;
 import com.techeazyhq.cm.ntf.app.NotifyDpCmd;
 import com.techeazyhq.cm.ntf.app.NotifyDpCmdHandler;
+import com.techeazyhq.cm.ntf.dom.NtfDeliveryRejectedException;
 
 import reactor.core.publisher.Mono;
 
@@ -57,6 +58,13 @@ public class PulsarNtfCmdConsumer {
                 .consumeMany(messageFlux -> messageFlux.flatMap(message ->
                         handler.apply(message.getValue())
                                 .thenReturn(MessageResult.acknowledge(message.getMessageId(), message.getValue()))
+                                .onErrorResume(NtfDeliveryRejectedException.class, err -> {
+                                    // Refused for good (bad recipient, channel not allowed, out of credit): a
+                                    // redelivery would be refused the same way, so drop it rather than loop.
+                                    org.slf4j.LoggerFactory.getLogger(PulsarNtfCmdConsumer.class)
+                                            .warn("Delivery rejected for message on {}, acknowledging: {}", topic, err.getMessage());
+                                    return Mono.just(MessageResult.acknowledge(message.getMessageId(), message.getValue()));
+                                })
                                 .onErrorResume(err -> {
                                     org.slf4j.LoggerFactory.getLogger(PulsarNtfCmdConsumer.class)
                                             .warn("Failed to handle message on {}, negatively acknowledging", topic, err);

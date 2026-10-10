@@ -5,3 +5,7 @@ spring:
 cm:
   pulsar:
     service-url: pulsar://pulsar:6650
+  ntf:
+    notification-service:
+      # notification-service runs as its own compose project (infra/notification-service/README.md)
+      base-url: ${NTF_SVC_BASE_URL:http://host.docker.internal:18080}

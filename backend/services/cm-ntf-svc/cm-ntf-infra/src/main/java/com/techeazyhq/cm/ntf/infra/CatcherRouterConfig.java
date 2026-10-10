@@ -20,10 +20,12 @@ public class CatcherRouterConfig {
 
     @Bean
     public RouterFunction<ServerResponse> catcherRoutes(@Qualifier("smsCatcherStore") CatcherStore smsStore,
-                                                          @Qualifier("whatsAppCatcherStore") CatcherStore whatsAppStore) {
+                                                          @Qualifier("whatsAppCatcherStore") CatcherStore whatsAppStore,
+                                                          @Qualifier("pushCatcherStore") CatcherStore pushStore) {
         return RouterFunctions.route()
                 .GET("/dev/sms-catcher", req -> list(smsStore))
                 .GET("/dev/whatsapp-catcher", req -> list(whatsAppStore))
+                .GET("/dev/push-catcher", req -> list(pushStore))
                 .build();
     }
 

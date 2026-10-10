@@ -146,6 +146,13 @@ services:
       - "8084:8084"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+    # Written by notification-service/register-cm-client.mjs: switches delivery to notification-service
+    # (cm.ntf.provider). Without it, cm-ntf-svc keeps using Mailpit and its in-memory catchers.
+    env_file:
+      - path: notification-service/cm-client.env
+        required: false
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # notification-service runs as its own compose project
     depends_on:
       pulsar:
         condition: service_healthy
