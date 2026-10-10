@@ -25,8 +25,11 @@ import java.util.List;
  * The {@code CnsTkn} payload — external wire contract, field names taken verbatim from the
  * user's whitepaper's HL7-FHIR-inspired schema (plan §13), NOT the internal abbreviation
  * glossary, since this crosses organizational boundaries (a Data Fiduciary validates it).
+ * {@code consentArtefactId} ({@code cns_art_id}) binds the token to one artefact, so a token cannot be replayed
+ * against another artefact's live status (ADR-006).
  */
 public record CnsTknClaims(
+        String consentArtefactId,
         String subDid,
         String fiduciaryId,
         String purposeCode,

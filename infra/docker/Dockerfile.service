@@ -25,7 +25,8 @@
 FROM eclipse-temurin:21-jre-alpine
 ARG JAR_PATH
 # The services need no privileges: run as an unprivileged user so a compromised service is not root in its container.
-RUN addgroup -S cm && adduser -S -G cm -H -s /sbin/nologin cm
+# /var/lib/cm is the one place a service may write (e.g. cm-cns-cmd-svc's consent token keys, on a volume).
+RUN addgroup -S cm && adduser -S -G cm -H -s /sbin/nologin cm && mkdir -p /var/lib/cm/keys && chown -R cm:cm /var/lib/cm
 WORKDIR /app
 COPY --chown=root:root --chmod=0444 ${JAR_PATH} app.jar
 USER cm

@@ -32,3 +32,5 @@ cm:
   service-urls:
     df-reg: http://cm-df-reg-svc:8081
     bil: http://cm-bil-svc:8085
+  cns-tkn:
+    keys-path: ${CM_CNS_TKN_KEYS_PATH:/var/lib/cm/keys/jwks.json}
