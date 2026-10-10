@@ -20,7 +20,7 @@
 # 400 on `images/create` (confirmed: a plain `docker pull` of the same builder image succeeds
 # fine — this is specifically a bootBuildImage/pack-lib incompatibility, not a Docker or
 # network problem). Revisit bootBuildImage once that's resolved (newer Spring Boot, or a
-# Docker Desktop/API config fix) — see docs/architecture/adr-0004 note. Meanwhile: JARs are
+# Docker Desktop/API config fix) — see docs/adr/adr-011-container-images-from-built-jars.md. Meanwhile: JARs are
 # already built by `./gradlew build` on the host; this Dockerfile just wraps one, unmodified.
 FROM eclipse-temurin:21-jre-alpine
 ARG JAR_PATH
