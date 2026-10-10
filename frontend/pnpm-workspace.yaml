@@ -19,4 +19,3 @@ packages:
   - "packages/*"
 allowBuilds:
   esbuild: true
-  protobufjs: false # firebase dependency; its install script isn't needed
