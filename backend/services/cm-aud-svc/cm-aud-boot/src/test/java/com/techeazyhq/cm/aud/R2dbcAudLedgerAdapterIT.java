@@ -79,9 +79,14 @@ class R2dbcAudLedgerAdapterIT extends PgIntegrationTestBase {
 
     @BeforeEach
     void startEmpty() {
-        sql("alter table aud.entry disable trigger entry_no_truncate");
-        sql("truncate aud.entry_subject, aud.entry_payload, aud.entry cascade");
-        sql("alter table aud.entry enable trigger entry_no_truncate");
+        List<String> appendOnly = List.of("checkpoint_anchor", "checkpoint", "entry");
+        appendOnly.forEach(table -> sql("alter table aud." + table + " disable trigger all"));
+        sql("delete from aud.checkpoint_anchor");
+        sql("delete from aud.checkpoint");
+        sql("delete from aud.entry_subject");
+        sql("delete from aud.entry_payload");
+        sql("delete from aud.entry");
+        appendOnly.forEach(table -> sql("alter table aud." + table + " enable trigger all"));
         sql("update aud.chain_head set seq = 0, entry_hash = repeat('0', 64)");
     }
 
@@ -129,7 +134,7 @@ class R2dbcAudLedgerAdapterIT extends PgIntegrationTestBase {
 
         assertThrows(RuntimeException.class, () -> sql("update aud.entry set evt_type = 'CnsDeniedEvt' where seq = 1"));
         assertThrows(RuntimeException.class, () -> sql("delete from aud.entry where seq = 1"));
-        assertThrows(RuntimeException.class, () -> sql("truncate aud.entry cascade"));
+        assertThrows(RuntimeException.class, () -> sql("truncate aud.entry_subject, aud.entry_payload, aud.entry"));
     }
 
     @Test

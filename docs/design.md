@@ -22,7 +22,7 @@ An overview of how the platform fits together. The reasons behind each choice ar
 | `cm-cns-qry-svc` | `cns_qry`: read model, history, projection checkpoints | Pulsar (consumes consent events) |
 | `cm-ntf-svc` | `ntf`: DP push devices | Pulsar (consumes notify commands), notification-service or Mailpit |
 | `cm-bil-svc` | `bil`: plans, subscriptions; usage counters in Redis | Pulsar (consumes fiduciary activation), Redis |
-| `cm-aud-svc` | `aud`: the tamper-evident audit ledger (hash chain, erasable payloads) | Pulsar (consumes every event) |
+| `cm-aud-svc` | `aud`: the tamper-evident audit ledger (hash chain, erasable payloads, checkpoints and their timestamps) | Pulsar (consumes every event), an RFC 3161 timestamp authority |
 | Keycloak + `cm-idn-otp-spi` | Users, clients, sessions | `cm-ntf-svc` (`/internal/otp/send`) |
 | OPA | `cns_authz.rego` | `cm-cns-qry-svc` (`/internal/cns-arts/{id}/status`) |
 | PostgreSQL | One database, one schema per service | |
@@ -77,6 +77,7 @@ Every message carries an `evtId`; consumers are idempotent on it.
 | Policy enforcement and decision points | `cm-gw` (PEP), OPA (PDP) |
 | Circuit breaker | Synchronous calls between services (`-infra` adapters) |
 | Hash chain (tamper-evident, append-only ledger) | `cm-aud-svc`: `AudChain`, `AudChainVerifier`, `aud.entry` |
+| Merkle checkpoints anchored by an RFC 3161 timestamp authority | `cm-aud-svc`: `AudMerkle`, `AudCheckpoint`, `Rfc3161TimestampAuthority`; how to verify: [audit-ledger.md](audit-ledger.md) |
 
 ## Glossary
 

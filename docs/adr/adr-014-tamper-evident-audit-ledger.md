@@ -47,7 +47,8 @@ of personal data would make impossible.
 - Rewriting history is detectable by anyone who verifies: the chain breaks at the first altered entry.
 - **The chain alone does not stop the operator.** Someone with full database rights can drop the trigger and rewrite
   the whole chain consistently from the altered entry onwards. Detecting that needs a copy of a past chain head held
-  by someone else: ADR-015 signs periodic checkpoints and anchors them with an external RFC 3161 timestamp authority.
+  by someone else: ADR-015 summarises the chain in periodic checkpoints and has an external RFC 3161 timestamp
+  authority sign each one.
 - History starts when the ledger first subscribes: Pulsar does not keep acknowledged messages, so events from before
   its deployment are not in it. A one-off backfill from the services' outboxes can add them, in their original order,
   before the ledger goes live.

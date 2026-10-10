@@ -42,6 +42,13 @@ spring:
 cm:
   pulsar:
     service-url: pulsar://localhost:6650
+  aud:
+    # Checkpoints of the ledger, timestamped by an external RFC 3161 authority (ADR-015).
+    anchoring:
+      enabled: ${CM_AUD_ANCHORING_ENABLED:true}
+      interval-ms: ${CM_AUD_ANCHORING_INTERVAL_MS:3600000}
+      tsa-url: ${CM_AUD_TSA_URL:http://timestamp.digicert.com}
+      timeout: 10s
 
 management:
   endpoints:

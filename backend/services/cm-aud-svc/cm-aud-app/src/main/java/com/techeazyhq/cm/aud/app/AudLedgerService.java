@@ -52,6 +52,10 @@ public class AudLedgerService {
         return ledger.head();
     }
 
+    public Mono<Boolean> concerns(long seq, String dpId) {
+        return ledger.concerns(seq, dpId);
+    }
+
     /** Recomputes every link from the first entry; the answer names the first entry that does not hold. */
     public Mono<AudChainVerifier.Verdict> verify() {
         return Mono.defer(() -> {
