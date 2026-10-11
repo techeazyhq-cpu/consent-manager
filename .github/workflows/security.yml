@@ -62,7 +62,7 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: gradle
-      - uses: github/codeql-action/init@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.language == 'java-kotlin' && 'manual' || 'none' }}
@@ -73,7 +73,7 @@ jobs:
       # The repository is private and has no GitHub Advanced Security, so GitHub's code scanning cannot receive the
       # results. They are written as SARIF instead and any finding fails the job, which keeps CodeQL a gate. With
       # Advanced Security (or a public repository), set upload to "always" to get alerts in the Security tab too.
-      - uses: github/codeql-action/analyze@1190a975f95ce23525efb6a3fc21ea29567c1b52 # v3
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           upload: never
           output: codeql-results

@@ -42,3 +42,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
+    groups:
+      # init and analyze must be the same release: CodeQL refuses a configuration written by another version, so
+      # updating them in separate pull requests fails both.
+      codeql: { patterns: ["github/codeql-action*"] }

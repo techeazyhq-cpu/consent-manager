@@ -26,12 +26,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc:3.5.16")
     implementation("org.postgresql:r2dbc-postgresql:1.1.3.RELEASE")
     implementation("org.apache.pulsar:pulsar-client-reactive-api:0.5.2")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.3")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.2")
     implementation("org.slf4j:slf4j-api:2.0.16")
     implementation("org.bouncycastle:bcpkix-jdk18on:1.86")
 
-    testImplementation(platform("org.junit:junit-bom:5.10.3"))
+    testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

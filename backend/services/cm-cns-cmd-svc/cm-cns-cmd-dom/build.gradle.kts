@@ -28,7 +28,7 @@ dependencies {
     // signatures to be implementable by the reactive -infra adapters.
     api("io.projectreactor:reactor-core:3.6.10")
 
-    testImplementation(platform("org.junit:junit-bom:5.10.3"))
+    testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
