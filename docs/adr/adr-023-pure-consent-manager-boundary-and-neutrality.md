@@ -62,6 +62,20 @@ path of fiduciaries' data.
    with counsel]**.
 6. **Its own incidents only:** the platform responds to breaches of its own data with an incident runbook using the
    regime profile's clocks (ADR-020). There is no tenant breach register.
+7. **Its own duties as a data fiduciary or controller.** For what it holds about its users (account, contact points,
+   representatives, consent records), the platform is itself a data fiduciary or controller. So:
+   - **Its own privacy notice** (DPDPA s.5; GDPR Arts. 13-14), shown at sign-up and kept in the DP portal, in the
+     principal's language. It states:
+     - what it holds and why
+     - its lawful basis: its contract with the user, and its legal obligations (the consent-record retention of B4, and
+       HIPAA documentation); never consent to its own core service
+     - retention and legal holds
+     - recipients: its processors for hosting and delivery
+     - rights, and how to complain
+   - **A published contact** for principals' questions about its own processing (DPDPA s.8(10)): a grievance officer
+     or DPO. It appears on the disclosure page (B11), in every receipt, and in the platform's own notice.
+   - **Its own records of processing** for that data (GDPR Art. 30 as a controller), kept with its ISO/IEC 27701
+     management system. These are records about the platform, not a service to tenants.
 
 ## Options considered
 

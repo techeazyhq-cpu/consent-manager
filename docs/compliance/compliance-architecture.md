@@ -3,7 +3,8 @@
 - **Status:** Proposed, for review
 - **Date:** 2026-10-11
 - **Decisions:** [ADR-018](../adr/adr-018-regional-cells-for-data-residency.md) to
-  [ADR-026](../adr/adr-026-consent-validity-requested-maximum-principal-adjustable.md)
+  [ADR-031](../adr/adr-031-purpose-versions-re-consent-and-sharing-consent.md); what still needs people outside
+  engineering is in the [counsel and certification register](counsel-and-certification-register.md)
 
 > This is an architecture input, not legal advice. Every statutory figure (ages, deadlines, retention periods) is held
 > as versioned data in a regime profile, so counsel can correct it without a code change. Figures marked
@@ -55,6 +56,11 @@ the data the consents govern.
 | **GDPR Art. 7 and EDPB Guidelines 05/2020 on consent** | Freely given, specific, informed, unambiguous; demonstrable; as easy to withdraw as to give | Granular, unbundled requests; proof in the record |
 | **HIPAA §164.508** | The core elements and statements of an authorisation | Authorisation as a consent type; [ADR-024](../adr/adr-024-hipaa-authorisations-and-fhir-consent.md) |
 | **HL7 FHIR R4 `Consent`**, and India's DEPA consent artefact | Exchanging consent with health ecosystems and India's account-aggregator and ABDM networks | Mappings at the boundary, never in the domain |
+| **WCAG 2.2 AA**, EN 301 549, Section 508, GIGW | An accessible platform (DPDPA s.2(g)) | DP portal, notices and receipts; [ADR-028](../adr/adr-028-accessible-consent-without-deceptive-design.md) |
+| **EDPB Guidelines 03/2022** and India's 2023 dark-pattern guidelines | Consent freely given, no deceptive design | Platform-rendered decision screens with enforced rules; ADR-028 |
+| **W3C Bitstring Status List** | Offline checking of consent status without per-token queries | Per-fiduciary status lists; [ADR-027](../adr/adr-027-short-lived-tokens-status-list-and-verification-availability.md) |
+| **US ESIGN Act and state UETA** | Electronic signatures on HIPAA authorisations | Signing ceremony; ADR-024 **[confirm]** |
+| **OpenAPI 3.1, AsyncAPI 3** | The contracts fiduciaries build against | Contract-first, signed webhooks; [ADR-030](../adr/adr-030-contracts-interoperability-and-portability.md) |
 | **ISO/IEC 27001 and ISO/IEC 27701** | Information security and privacy management of the operator | Certification target for the operating company |
 | **Board-published interoperability standards** | Part A item 9's certification | To adopt when the Board publishes them **[confirm status]** |
 
@@ -236,40 +242,57 @@ C4Context
 
 ### 6.1 Consent records and receipts ([ADR-025](../adr/adr-025-iso-27560-consent-records-and-receipts.md))
 
-- **Every consent produces an ISO/IEC TS 27560 record**, assembled by the read side from the write side's events and
-  the purpose definition.
+- **Every consent has an ISO/IEC TS 27560 record, owned by the Consent write side.** It is an append-only document,
+  extended in the same transaction as each state change. The read side serves copies only.
   - **Header:** schema version, record id, subject (`dpId`).
-  - **Notice:** notice version id, its hash, its language.
-  - **Processing:** purposes, personal data categories with DPV types, sensitivity, recipients, controller (the
-    fiduciary), legal basis (consent), jurisdiction, storage and retention, transfers, how to withdraw, rights.
-  - **Parties:** principal (pseudonymous), representative, fiduciary, the platform.
-  - **Events:** time, actor, type (expressed or explicit), state (given, refused, renewed, modified, withdrawn, lapsed,
-    terminated by the controller), validity.
-- **Serialisation:** JSON-LD with DPV, validated in CI.
+  - **Notice:** notice version id, its hash, its language; the purpose version (ADR-031).
+  - **Processing:** purposes, personal data categories with DPV types, sensitivity, `necessary` flags with consequence
+    text, recipients (including a transferee, ADR-031), controller (the fiduciary), legal basis (consent), the
+    applicable jurisdictions (ADR-020), storage and retention, transfers, how to withdraw, rights.
+  - **Parties:** principal (pseudonymous), representative and authority, fiduciaries, the platform.
+  - **Events:** time; who expressed it, the method and the assurance level (ADR-028); type (expressed or explicit);
+    state (given, refused, renewed, modified, withdrawn, lapsed, terminated by the controller, invalidated by an
+    authority); validity as a date or an event (ADR-026).
+- **Serialisation:** JSON-LD with DPV, validated in CI against the schema.
 - **Receipts:**
-  - issued to the principal on every state change, and downloadable
-  - offered to the fiduciary through the API
-  - signed with the platform's key, the same JWKS as consent tokens (ADR-013)
-- **Retention:** records live in the ledger (tamper-proof, B3) for the regime's retention: 7 years for DPDPA consent
-  managers **[confirm]**, 6 years for HIPAA authorisation documentation. Erasure of the subject shreds the
-  identifying parts only (ADR-019).
-- **Export:** the principal can download all their records and receipts as machine-readable JSON-LD, and as PDF (B4).
+  - issued to the principal on every state change, in their language, as JSON-LD and as accessible PDF/UA (ADR-028),
+    and offered to the fiduciary
+  - signed with a **dedicated receipt key**, separate from the token key; retired keys stay published
+  - trusted time through the anchored ledger checkpoint, with an inclusion proof
+  - every receipt names the platform's own grievance contact (ADR-023)
+- **Retention:**
+  - every version of a record is hashed into the audit ledger
+  - records are kept for the strictest applicable retention (7 years for DPDPA consent managers **[confirm]**, 6
+    years for HIPAA authorisation documentation), then moved to an in-cell, object-locked archive
+  - erasure of the subject shreds only the identifying parts (ADR-019)
+- **Export and portability:** the principal can download all their records and receipts (B4), or have them transferred
+  to another consent manager (ADR-030).
 
 ### 6.2 Asking for consent properly
 
-- **Purpose definitions:** a fiduciary registers each purpose.
+- **Purpose definitions** ([ADR-031](../adr/adr-031-purpose-versions-re-consent-and-sharing-consent.md)): an
+  aggregate with immutable versions.
   - Contents: description, data categories (DPV-mapped, with sensitivity `ORDINARY` / `SENSITIVE` / `PHI` / `CHILD`),
-    mandatory or optional, retention, recipients, transfers, and flags (`TRACKING`, `BEHAVIOURAL_MONITORING`,
-    `TARGETED_ADVERTISING`).
-  - A request must name registered purposes and may only ask for their categories (purpose limitation).
+    the `necessary` flag and consequence text, retention, recipients, transfers, requested and maximum validity, and
+    flags (`TRACKING`, `BEHAVIOURAL_MONITORING`, `TARGETED_ADVERTISING`).
+  - A request names exact purpose versions, and may only ask for their categories (purpose limitation).
+  - A material change (more data, new recipients or transfers, longer retention or validity, higher sensitivity) needs
+    re-consent; existing consents keep their old scope. A non-material change notifies principals. The platform
+    classifies each change.
 - **Notice versions:** immutable and hashed, one per language. Any DPDPA Eighth Schedule language at the principal's
-  choice, Arabic with RTL, EU languages. Notice content follows ISO/IEC 29184 (who, what, why, how long, to whom, how
-  to withdraw, rights, how to complain).
+  choice, Arabic with RTL, EU languages. Notice content follows ISO/IEC 29184 (who, what, why, how long, to whom, the
+  consequences of refusing, how to withdraw, rights, how to complain).
 - **No bundling:**
   - each purpose is consented to separately
-  - optional purposes are never pre-ticked
-  - a request that bundles an optional purpose into a mandatory one is refused
+  - optional purposes and categories are never pre-ticked
+  - a request that bundles an optional purpose into a necessary one is refused
   - partial consent records exactly the categories granted
+- **Decision screen** ([ADR-028](../adr/adr-028-accessible-consent-without-deceptive-design.md)):
+  - always the platform's own components, never styled by the fiduciary
+  - WCAG 2.2 AA
+  - refusing as easy as accepting, withdrawing as easy as giving
+  - no confirm-shaming or false urgency
+  - no re-asking after a refusal within the profile's period
 - **Validity, renewal and modification
   ([ADR-026](../adr/adr-026-consent-validity-requested-maximum-principal-adjustable.md)):**
   - **Validity:** each purpose in a request carries a requested and a maximum validity, as a date or an event, capped
@@ -282,17 +305,40 @@ C4Context
   - **Categories:** changing which categories a purpose covers is partial consent or withdrawal.
 
   All of these are 27560 events.
-- **Sharing consent:** a principal can consent to fiduciary A sharing named categories with onboarded fiduciary B for
-  a purpose. The platform records the consent and issues a token both can verify. The data moves A to B directly,
-  never through the platform (B1, B2, B3).
+- **Sharing consent** (ADR-031):
+  - A principal can consent to fiduciary A sharing named categories with onboarded fiduciary B, for B's named purpose
+    version, after seeing B's notice.
+  - Both A and B are on the record, and each verifies its own token.
+  - Every change reaches both of them.
+  - The data moves A to B directly, never through the platform (B1, B2, B3).
+  - Sharing stays within a cell unless a lawful transfer is recorded.
+- **Applicable law** ([ADR-020](../adr/adr-020-regime-profiles-as-versioned-data.md)):
+  - Each request carries the set of regimes that apply: the fiduciary's establishment, the principal's residence or
+    the targeted markets, and the sector. GDPR has member-state overlays, and UAE federal, DIFC and ADGM are separate.
+  - The strictest rule wins, item by item.
+  - A request relying on an unconfirmed figure is refused.
 
-### 6.3 Withdrawal and change propagation
+### 6.3 Withdrawal, verification and change propagation ([ADR-027](../adr/adr-027-short-lived-tokens-status-list-and-verification-availability.md))
 
-- **The status check reads the write side** (or a revocation set written in the same transaction as the revoke),
-  behind a fail-closed breaker. That closes G4; it is the task already filed, which records its own ADR.
-- **Fiduciaries get a signed webhook** on every state change of their consents (granted, modified, renewed,
-  withdrawn, expired, lapsed), with at-least-once delivery from the outbox, retries and a delivery record (G5). The
-  webhook carries ids and states, never personal data.
+- **The write side is the authority on status.** A revoke, a shortened validity, a lapse, a termination or an
+  invalidation is written to a revocation set in the same transaction. The gateway's live check reads that set, not
+  the projection, so a withdrawal takes effect on the next check.
+- **Tokens are short-lived** (a lifetime from the regime profile; proposed 15 minutes, 5 for `PHI` and `CHILD`), never
+  outliving the consent's validity, and refreshed by the fiduciary through the API.
+- **Offline verifiers** check a signed **W3C Bitstring Status List** per fiduciary, cached no longer than a token's
+  lifetime. The token lifetime is the stated maximum staleness.
+- **Availability:**
+  - live verification targets 99.95% per cell (an estimate to validate), served from replicas
+  - the regime profile sets fail-closed or fail-open when status can't be determined
+  - `PHI` and `CHILD` purposes always fail closed
+- **Fiduciaries get a signed webhook** on every state change of their consents, and of consents shared with them
+  (granted, modified, renewed, withdrawn, lapsed, terminated, invalidated).
+  - Delivery is at least once from the outbox, with retries, a dead-letter queue and a delivery record.
+  - The webhook carries ids and states, never personal data, and is specified in AsyncAPI (ADR-030).
+  - The fiduciary's terms still require a check before each use.
+- **Ending by the fiduciary or an authority** ([ADR-029](../adr/adr-029-fiduciary-assurance-and-consent-termination.md)):
+  a fiduciary leaving, a suspension or a regulator's order ends consents with their own 27560 state and reason, a
+  receipt and a webhook.
 
 ### 6.4 Consent on behalf of others ([ADR-022](../adr/adr-022-children-guardians-and-representatives.md))
 
@@ -302,12 +348,23 @@ C4Context
   Parties.
 - **Children:** requests for a child are refused when a purpose is flagged `TRACKING`, `BEHAVIOURAL_MONITORING` or
   `TARGETED_ADVERTISING` (DPDPA s.9(3)), within the exemptions the profile lists.
+- **When representation ends:** coming of age is a scheduled event. The now-adult principal confirms or withdraws each
+  consent given for them, and an unconfirmed one lapses after the profile's period. Representations carry an end or
+  review date, and a court order or regained capacity ends them, with the same confirmation flow.
 
 ### 6.5 HIPAA authorisations ([ADR-024](../adr/adr-024-hipaa-authorisations-and-fhir-consent.md))
 
 - **When:** a PHI purpose under the HIPAA regime makes the request an authorisation.
-- **What it must carry:** the §164.508(c) elements and statements, an expiry date or event, and a step-up signing
-  ceremony.
+- **What it must carry:** the §164.508(c) elements and statements, and an expiry date or event.
+- **Signing:** an electronic-signature ceremony designed to the US ESIGN Act and state UETA **[confirm]**:
+  - disclosure and consent to sign electronically
+  - the exact text shown
+  - a distinct act of intent
+  - the signature bound to the text's hash and the signer
+  - step-up authentication
+  - a copy to the patient at once
+
+  Compound authorisations are refused.
 - **FHIR:** `cm-fhir-svc` exposes records as FHIR R4 `Consent`, and maps the DEPA consent artefact for India. FHIR and
   DEPA stay at the boundary.
 
@@ -317,14 +374,14 @@ C4Context
 |---|---|---|
 | B1 | Enable consent to onboarded fiduciaries, directly or through a fiduciary holding the data | Consent lifecycle; sharing consent (§6.2) |
 | B2 | Personal data flowing through is not readable by the consent manager | No API accepts governed data; tokens carry ids and categories only; fitness function on API schemas |
-| B3 | Record consents given, denied and withdrawn, notices, and sharing | 27560 records in the hash-chained ledger (§6.1) |
+| B3 | Record consents given, denied and withdrawn, notices, and sharing | 27560 records owned by the write side, every version hashed into the ledger, then archived write-once (§6.1); sharing consent names both fiduciaries (ADR-031) |
 | B4 | Principal access, machine-readable copies, at least 7 years | Export and receipts; retention in the regime profile |
 | B5 | A website or app as the primary means of access | DP portal (web; mobile app later) |
 | B6 | No subcontracting or assignment of obligations | Every obligation is met by the platform's own services. Hosting and delivery vendors are processors under contract, not delegates of the obligation **[confirm with counsel]**. |
 | B7 | Reasonable security safeguards | §6.8 baseline; ISO/IEC 27001 |
-| B8 | Fiduciary capacity towards principals | The product acts only on the principal's instruction; no feature serves a fiduciary against a principal |
+| B8 | Fiduciary capacity towards principals | The product acts only on the principal's instruction; no feature serves a fiduciary against a principal. Fiduciaries are verified against their cell's registries before they can ask anyone for consent, and requests show the verified legal name (ADR-029). |
 | B9, B10 | No conflicts of interest with fiduciaries, their promoters or key people | Fiduciaries get no cross-fiduciary data, no analytics on principals, no ranking or advertising. Staff declare interests, kept in `cm-stf-svc`. Billing is per transaction, never per consent outcome. |
-| B11 | Public disclosure of ownership and interests | A public "About this consent manager" page, generated from a reviewed disclosure file |
+| B11 | Public disclosure of ownership and interests | A public "About this consent manager" page, generated from a reviewed disclosure file, with the platform's own grievance contact (ADR-023) |
 | B12 | Audit mechanisms, periodic report to the Board | A Board report generated from the ledger and controls evidence; scheduled per the regime profile |
 | B13 | No change of control without Board approval | Corporate, not product; noted in the operating runbook |
 
@@ -339,6 +396,14 @@ C4Context
   - **Relay:** a principal's request about a fiduciary's data is passed to that fiduciary (webhook and DF app) and
     recorded, never fulfilled by the platform.
   - **Grievances:** grievances about the platform itself are handled to the regime deadline.
+- **Its own notice and contact** ([ADR-023](../adr/adr-023-pure-consent-manager-boundary-and-neutrality.md)): for its
+  users' account data the platform is a data fiduciary or controller itself (DPDPA s.5 and s.8(10); GDPR Arts.
+  13-14). So it has:
+  - **Its own privacy notice,** at sign-up and in the DP portal, in the principal's language. It states what the
+    platform holds and why, and its lawful basis: the contract with the user, and its legal obligations to keep consent
+    records; never consent to its own service. It also states retention, its processors, rights and how to complain.
+  - **A published grievance officer or DPO contact,** on the disclosure page, in every receipt and in that notice.
+  - **Its own records of processing,** in its ISO/IEC 27701 management system.
 - **Its own breaches:** an internal incident runbook with the regime profile's clocks, for breaches of the platform's
   own data only.
 
@@ -373,7 +438,13 @@ sequenceDiagram
 - **Cells:** a cell per jurisdiction (IN, EU, SA, AE, US; Qatar, Bahrain and Oman when needed). A cell is every
   service, store, key, backup and provider in one region. Only images, IaC, regime data, anonymous counts and
   timestamp hashes cross cells.
+- **Durability per cell:**
+  - RPO at most 5 minutes and RTO at most 4 hours (estimates)
+  - an object-locked consent-record archive in a second zone, or a second in-country region where one exists
+  - restore drills at least quarterly, re-applying the shredded-subjects list
 - **Security baseline:**
+  - token and receipt keys separate, each with its own crypto-period; retired receipt keys published permanently
+    (ADR-025, ADR-027)
   - mTLS between services; encryption at rest
   - staff MFA (passkey, or TOTP fallback)
   - step-up for HIPAA signing
@@ -404,12 +475,12 @@ sequenceDiagram
 | Clear PII left somewhere | Medium | Critical | Fitness functions, log deny-list, PII scans in staging |
 | Cost of several cells | High | Medium | Identical IaC; add cells only for a tenant who needs one |
 
-**Open questions for counsel or the DPO:**
-- every **[confirm]**
-- whether DPDPA Rule 14 lets principals exercise rights through the consent manager, and how
-- B6 and vendors
-- whether the UK shares the EU cell
-- per-cell health implementation guides
+**Open questions for counsel, the DPO, regulators and auditors** are kept in one place, the
+[counsel and certification register](counsel-and-certification-register.md):
+- 20 legal confirmations (L1-L20), including every **[confirm]** in this design and its ADRs
+- external standards still to obtain or be published (E1-E4)
+- certifications and audits, with the evidence the platform produces for each (C1-C6)
+- a field-by-field check of the consent record against the purchased ISO/IEC TS 27560 text
 
 ## 8. Plan
 
@@ -468,8 +539,25 @@ A second pass over this design, read against:
 - WCAG 2.2
 - India's 2023 guidelines on dark patterns
 
-Each finding is something the design above gets wrong or leaves out. Resolutions are folded into the plan (§8);
-R1 and R2 and R4 to R9 go into Phase 0. Findings are ranked by severity.
+Each finding is something the design above got wrong or left out. Every finding is now decided, and the body of the
+design (§6) reflects the decisions:
+
+| Findings | Decided in |
+|---|---|
+| R1, R2 | [ADR-027](../adr/adr-027-short-lived-tokens-status-list-and-verification-availability.md) (supersedes the token lifetime of ADR-006 and ADR-013) |
+| R3 | [ADR-020](../adr/adr-020-regime-profiles-as-versioned-data.md), decisions 5 and 6 |
+| R4, R10 | [ADR-031](../adr/adr-031-purpose-versions-re-consent-and-sharing-consent.md) |
+| R5, R8 | [ADR-025](../adr/adr-025-iso-27560-consent-records-and-receipts.md), decisions 1 to 3 |
+| R6, R7, R17 | [ADR-028](../adr/adr-028-accessible-consent-without-deceptive-design.md) |
+| R9 | [ADR-026](../adr/adr-026-consent-validity-requested-maximum-principal-adjustable.md) |
+| R11, R16 | [ADR-029](../adr/adr-029-fiduciary-assurance-and-consent-termination.md) |
+| R12 | [ADR-022](../adr/adr-022-children-guardians-and-representatives.md), decision 6 |
+| R13 | [ADR-024](../adr/adr-024-hipaa-authorisations-and-fhir-consent.md), decision 6 |
+| R14, R15 | [ADR-030](../adr/adr-030-contracts-interoperability-and-portability.md) |
+| R18 | [ADR-018](../adr/adr-018-regional-cells-for-data-residency.md), decision 6 |
+| The platform's own notice and contact (found later) | [ADR-023](../adr/adr-023-pure-consent-manager-boundary-and-neutrality.md), decision 7 |
+
+The findings below are kept as found. Findings are ranked by severity.
 
 ### Critical
 

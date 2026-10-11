@@ -25,16 +25,29 @@ recipients, jurisdiction, rights, withdrawal method or event states, and no rece
 
 ## Decision
 
-1. **Every consent has an ISO/IEC TS 27560 record**, built by `cm-cns-qry-svc` from the consent events and the purpose
-   definition: Header, Notice (version id, hash, language), Processing (purposes and data categories mapped to DPV,
-   sensitivity, recipients, controller, legal basis `consent`, jurisdiction, retention, transfers, withdrawal method,
-   rights), Parties and Events.
-   - **States:** requested, given, refused, renewed, modified, withdrawn, lapsed, terminated by the controller.
+1. **Every consent has an ISO/IEC TS 27560 record, owned by the Consent write side** (`cm-cns-cmd-svc`, finding R5).
+   - **Content:** Header, Notice (version id, hash, language), Processing (purposes and data categories mapped to DPV,
+     sensitivity, recipients including transferees, controller, legal basis `consent`, the applicable jurisdictions
+     (ADR-020), retention, transfers, withdrawal method, rights), Parties and Events.
+   - **How it's kept:** an append-only document, extended in the same transaction as each state change, so it can never
+     disagree with the consent's state.
+   - **The read side** (`cm-cns-qry-svc`) serves copies only, and can be rebuilt from the write side.
+   - **States:** requested, given, refused, renewed, modified, withdrawn, lapsed, terminated by the controller,
+     invalidated by an authority (ADR-029).
    - **Form:** JSON-LD with DPV, validated against a JSON schema in CI.
-2. **A receipt is issued** to the principal on every state change, and offered to the fiduciary. It is signed with the
-   platform's key (the JWKS of ADR-013) and downloadable with all of the principal's records (export, B4).
-3. **Records are anchored in the audit ledger's hash chain** (ADR-014, ADR-015): tamper-proof, with erasable
-   identifying payloads (ADR-019), and kept for the regime profile's retention (ADR-020).
+2. **A receipt is issued** to the principal on every state change, and offered to the fiduciary, downloadable with all
+   of the principal's records (export, B4). It is signed with a **dedicated receipt key**, separate from the token key
+   (finding R8):
+   - Receipt keys rotate on their own crypto-period. Retired public keys stay published for as long as any receipt
+     they signed is retained, so verification works for 7 years and more.
+   - Each receipt gets **trusted time**. Its hash goes into the next audit-ledger checkpoint, which an RFC 3161
+     authority timestamps (ADR-015), and the receipt can be fetched with its inclusion proof.
+   - Algorithm migration: when an algorithm weakens, retained receipts are re-timestamped under a stronger one before
+     the old one is retired.
+3. **Every version of every record is hashed into the audit ledger's chain** (ADR-014, ADR-015). That makes records
+   tamper-evident, with erasable identifying payloads (ADR-019). Records are kept for the regime profile's retention
+   (ADR-020). After their active period they move to an **in-cell, object-locked (WORM) archive**, still covered by
+   the chain.
 4. **The domain model stays neutral.** 27560, FHIR R4 `Consent` (ADR-024) and India's DEPA consent artefact are
    mappings at the boundary. When the Board publishes its interoperability standard (Part A item 9), it becomes one
    more mapping.

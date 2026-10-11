@@ -35,6 +35,14 @@ partitioned correctly, forever, and proven so.
    enforces it, and a CI isolation probe tests it.
 5. **Initial cells:** IN, EU (with the UK unless counsel decides otherwise), US, SA, AE (with DIFC and ADGM tenants
    under their own regime profiles). Qatar, Bahrain and Oman get cells when a tenant needs them.
+6. **Durability and recovery, per cell** (finding R18):
+   - **Targets:** RPO at most 5 minutes and RTO at most 4 hours. These are estimates to validate against the
+     verification SLO (ADR-027).
+   - **Within the cell:** backups, replicas and the object-locked (WORM) archive of consent records (ADR-025) stay in
+     the cell's jurisdiction. The archive lives in a second availability zone, or a second in-country region where
+     one exists.
+   - **Restore drills:** at least quarterly. Every restore re-applies the list of shredded subjects (ADR-019) before
+     serving.
 
 ## Options considered
 

@@ -28,6 +28,15 @@ DPDPA also forbids tracking, behavioural monitoring and targeted advertising dir
 4. **Purpose definitions carry flags** (`TRACKING`, `BEHAVIOURAL_MONITORING`, `TARGETED_ADVERTISING`). A request for
    a child under DPDPA is refused if any is set, with the exemptions the profile lists.
 5. **Nominees act only once their trigger is recorded** (death or incapacity), with evidence.
+6. **A representation ends; consents given under it are confirmed** (finding R12).
+   - **Coming of age:** reaching the regime's age of digital consent (from the date of birth in the vault, the strictest
+     applicable age, ADR-020) is a scheduled event. The now-adult principal is asked to confirm or withdraw each
+     consent a parent or guardian gave for them, and the parent's authority over the account ends.
+   - **If they don't respond:** an unconfirmed consent lapses at the end of a period the regime profile sets, and is
+     never silently carried over.
+   - **End dates:** every representation carries an end date or a review date, and is re-verified then. A guardianship
+     ended by a court or by the principal regaining capacity is recorded with evidence, with the same confirmation
+     flow.
 
 ## Consequences
 

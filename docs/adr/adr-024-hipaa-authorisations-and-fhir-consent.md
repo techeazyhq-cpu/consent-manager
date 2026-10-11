@@ -37,6 +37,17 @@ US covered entities will use the platform to record patients' authorisations, ma
    transit, mTLS, staff MFA, a record of every access to principal-level data, and 6-year retention of authorisation
    documentation.
 5. **Events never carry PHI or FHIR payloads.** They carry ids; consumers fetch through authorised APIs.
+6. **An electronic-signature ceremony for authorisations** (finding R13), designed to the US ESIGN Act and state UETA
+   **[confirm with counsel]**:
+   1. disclosure, and the patient's consent to sign and receive records electronically, with how to get a paper copy
+   2. the full authorisation text and version, shown before signing
+   3. a distinct act of intent ("Sign authorisation"), separate from any other consent
+   4. the signature bound to the hash of the exact text, version and signer (patient or personal representative), with
+      the step-up authentication level
+   5. a copy to the patient at once (§164.508(c)(4)), as the receipt (ADR-025)
+
+   Compound authorisations are refused, except where §164.508(b)(3) allows them: an authorisation is never combined
+   with another consent or document.
 
 ## Consequences
 
