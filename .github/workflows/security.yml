@@ -73,7 +73,7 @@ jobs:
       # The repository is private and has no GitHub Advanced Security, so GitHub's code scanning cannot receive the
       # results. They are written as SARIF instead and any finding fails the job, which keeps CodeQL a gate. With
       # Advanced Security (or a public repository), set upload to "always" to get alerts in the Security tab too.
-      - uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           upload: never
           output: codeql-results
