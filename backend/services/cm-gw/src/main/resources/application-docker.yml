@@ -63,6 +63,10 @@ spring:
           uri: http://cm-aud-svc:8086
           predicates:
             - Path=/api/aud/**
+        - id: stf
+          uri: http://cm-stf-svc:8087
+          predicates:
+            - Path=/api/stf/**
 
 cm:
   pdp:

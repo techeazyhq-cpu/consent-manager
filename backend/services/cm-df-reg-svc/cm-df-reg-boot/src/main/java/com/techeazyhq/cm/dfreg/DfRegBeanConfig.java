@@ -43,7 +43,7 @@ import com.techeazyhq.cm.dfreg.dom.DfLogoRepoPort;
 import com.techeazyhq.cm.dfreg.dom.DfRepoPort;
 import com.techeazyhq.cm.dfreg.dom.ObxPort;
 import com.techeazyhq.cm.dfreg.dom.SubPlnCatalogPort;
-import com.techeazyhq.cm.dfreg.infra.KeycloakAdminAuthFilter;
+import com.techeazyhq.cm.kckit.KeycloakAdminAuthFilter;
 import com.techeazyhq.cm.dfreg.infra.KeycloakDfApiClientProvisionAdapter;
 import com.techeazyhq.cm.dfreg.infra.ObxRelay;
 import com.techeazyhq.cm.dfreg.infra.PulsarDfEvtProducer;

@@ -43,6 +43,8 @@ import reactor.core.publisher.Mono;
 @EnableWebFluxSecurity
 public class SecurityConfig {
 
+    private static final String[] STAFF = {"CM_ADMIN", "CM_OPERATOR"};
+
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(
             ServerHttpSecurity http, Converter<Jwt, Mono<AbstractAuthenticationToken>> jwtAuthenticationConverter,
@@ -54,11 +56,18 @@ public class SecurityConfig {
                         .pathMatchers("/actuator/health", "/actuator/info").permitAll()
                         // Consent token public keys (ADR-006), for fiduciaries verifying tokens themselves.
                         .pathMatchers(HttpMethod.GET, "/api/cns-cmd/.well-known/jwks.json").permitAll()
+                        // Platform staff (ADR-017): operators view, onboard and activate tenants; changing a
+                        // tenant's plan or suspending it, and managing staff, stays with administrators.
+                        .pathMatchers(HttpMethod.GET, "/api/df-reg/dfs", "/api/df-reg/dfs/*/profile").hasAnyRole(STAFF)
+                        .pathMatchers(HttpMethod.POST, "/api/df-reg/dfs", "/api/df-reg/dfs/*/activate").hasAnyRole(STAFF)
+                        // Any signed-in user may see a fiduciary's logo (DP portal tiles too); only staff set it.
+                        .pathMatchers(HttpMethod.PUT, "/api/df-reg/dfs/*/logo").hasAnyRole(STAFF)
                         .pathMatchers("/api/df-reg/dfs", "/api/df-reg/dfs/*/activate", "/api/df-reg/dfs/*/profile")
                                 .hasRole("CM_ADMIN")
-                        // Any signed-in user may see a fiduciary's logo (DP portal tiles too); only staff set it.
-                        .pathMatchers(HttpMethod.PUT, "/api/df-reg/dfs/*/logo").hasRole("CM_ADMIN")
+                        .pathMatchers(HttpMethod.GET, "/api/bil/**").hasAnyRole(STAFF)
                         .pathMatchers("/api/bil/**").hasRole("CM_ADMIN")
+                        // cm-stf-svc decides which staff may do what (only administrators manage staff).
+                        .pathMatchers("/api/stf/**").hasAnyRole(STAFF)
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
                 .build();

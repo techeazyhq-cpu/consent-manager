@@ -218,6 +218,22 @@ services:
       keycloak:
         condition: service_started
 
+  cm-stf-svc:
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-stf-svc/cm-stf-boot/build/libs/cm-stf-boot-0.1.0-SNAPSHOT.jar
+    ports:
+      - "8087:8087"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      CM_KEYCLOAK_ADMIN-USERNAME: admin
+      CM_KEYCLOAK_ADMIN-PASSWORD: admin
+    depends_on:
+      keycloak:
+        condition: service_started
+
   cm-gw:
     build:
       context: ../
@@ -237,6 +253,7 @@ services:
       - cm-cns-qry-svc
       - cm-ntf-svc
       - cm-bil-svc
+      - cm-stf-svc
 
 volumes:
   cns-tkn-keys:

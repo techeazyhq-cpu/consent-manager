@@ -21,6 +21,7 @@ package com.techeazyhq.cm.reskit;
 import java.util.function.Function;
 
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /** Circuit breaker fallbacks shared by every service's outbound adapters (ADR-016). */
@@ -35,8 +36,17 @@ public final class DependencyFallbacks {
      * was raised.
      */
     public static <T> Function<Throwable, Mono<T>> unavailable(String dependency) {
-        return error -> error instanceof CallNotPermittedException || RemoteFailures.isRemoteFailure(error)
-                ? Mono.error(new DependencyUnavailableException(dependency, error))
-                : Mono.error(error);
+        return error -> Mono.error(translate(dependency, error));
+    }
+
+    /** {@link #unavailable(String)} for a call that answers with many items. */
+    public static <T> Function<Throwable, Flux<T>> unavailableMany(String dependency) {
+        return error -> Flux.error(translate(dependency, error));
+    }
+
+    private static Throwable translate(String dependency, Throwable error) {
+        return error instanceof CallNotPermittedException || RemoteFailures.isRemoteFailure(error)
+                ? new DependencyUnavailableException(dependency, error)
+                : error;
     }
 }

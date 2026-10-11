@@ -20,7 +20,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-for module in cm-df-reg-boot cm-cns-cmd-boot cm-cns-qry-boot cm-ntf-boot cm-bil-boot cm-gw; do
+for module in cm-df-reg-boot cm-cns-cmd-boot cm-cns-qry-boot cm-ntf-boot cm-bil-boot cm-aud-boot cm-stf-boot cm-gw; do
   echo "== bootBuildImage :$module =="
   ./gradlew ":$module:bootBuildImage"
 done
