@@ -40,7 +40,9 @@ inwards. The decisions are recorded in [docs/adr](docs/adr).
 The platform is a consent manager only: it never processes the data its consents govern. How it will meet DPDPA (as a
 registered Consent Manager), GDPR, HIPAA, the Gulf data protection laws and ISO/IEC TS 27560 consent records, with the
 gaps today, the proposed architecture and the phased plan, is in
-[docs/compliance](docs/compliance/compliance-architecture.md).
+[docs/compliance](docs/compliance/compliance-architecture.md). What the product offers each audience (principals on
+web and mobile, fiduciaries through the Console, the API and a developer portal with a sandbox and playground) is in
+[docs/product](docs/product/product-architecture.md).
 
 | Frontend | Port | Users |
 |---|---|---|

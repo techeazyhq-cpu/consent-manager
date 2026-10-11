@@ -14,7 +14,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [006](adr-006-consent-token-and-pep-pdp.md) | Signed consent tokens, enforced at the gateway with OPA | Accepted, token handling superseded by 013, token lifetime by 027 (proposed) |
 | [007](adr-007-reactive-stack-and-schema-per-service.md) | Reactive services on R2DBC, one PostgreSQL schema per service | Accepted |
 | [008](adr-008-identity-keycloak-and-passwordless-sign-in.md) | Keycloak for identity, passwordless sign-in by one-time code | Accepted |
-| [009](adr-009-independent-micro-frontends.md) | Three independent micro-frontends, no shared shell | Accepted |
+| [009](adr-009-independent-micro-frontends.md) | Three independent micro-frontends, no shared shell | Accepted; channels extended by 032, DF sign-in superseded by 033 (proposed) |
 | [010](adr-010-notification-delivery-through-notification-service.md) | Deliver notifications through notification-service | Accepted |
 | [011](adr-011-container-images-from-built-jars.md) | Service images wrap the built JAR, and run unprivileged | Accepted |
 | [012](adr-012-quality-gates.md) | Quality gates on every pull request, as notification-service has them | Accepted |
@@ -37,6 +37,9 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [029](adr-029-fiduciary-assurance-and-consent-termination.md) | Fiduciaries are verified at onboarding; termination by a fiduciary or an authority | Proposed |
 | [030](adr-030-contracts-interoperability-and-portability.md) | Contract-first interfaces, interoperability, and moving to another consent manager | Proposed |
 | [031](adr-031-purpose-versions-re-consent-and-sharing-consent.md) | Purpose definitions are versioned; a material change needs re-consent; sharing consent binds both parties | Proposed |
+| [032](adr-032-channels-per-audience-web-mobile-console-developer-portal.md) | Channels per audience: DP web and mobile, DF Console, developer portal | Proposed |
+| [033](adr-033-fiduciary-staff-accounts-separate-from-api-clients.md) | Fiduciaries' people have their own accounts; API clients are for systems only | Proposed |
+| [034](adr-034-sandbox-and-api-playground.md) | A sandbox with synthetic principals, and an API playground in the developer portal | Proposed |
 
 ## Writing one
 

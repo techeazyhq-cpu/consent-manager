@@ -1,6 +1,6 @@
 # ADR-009: Three independent micro-frontends, no shared shell
 
-- **Status:** Accepted
+- **Status:** Accepted; the set of apps is extended by [ADR-032](adr-032-channels-per-audience-web-mobile-console-developer-portal.md) and decision 4 (the DF app signs in as the API client) is superseded by [ADR-033](adr-033-fiduciary-staff-accounts-separate-from-api-clients.md), both proposed
 - **Date:** 2026-08-30 (Phase 1), recorded 2026-10-10
 
 ## Context
