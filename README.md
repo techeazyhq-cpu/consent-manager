@@ -26,6 +26,7 @@ Notifications are delivered through [notification-service](https://github.com/te
 | `cm-bil-svc` | 8085 | Subscription plans, usage metering, eligibility checks |
 | `cm-aud-svc` | 8086 | Tamper-evident audit ledger: every platform event in a SHA-256 hash chain, with Merkle checkpoints timestamped by an external RFC 3161 authority ([how to verify](docs/audit-ledger.md)) |
 | `cm-idn-otp-spi` | (Keycloak) | Keycloak provider: passwordless sign-in with an email or SMS code |
+| `cm-idn-theme` | (Keycloak) | Keycloak login themes: one sign-in page per audience (data principal, fiduciary, admin) |
 
 Each bounded context owns its schema and talks to the others through Pulsar events published from a transactional
 outbox. Writes and reads are separate services (CQRS), and the consent lifecycle across services is coordinated by a
@@ -46,7 +47,7 @@ packages at source level.
 Requires JDK 21, Docker, Node 20+ and pnpm.
 
 ```bash
-./gradlew build                                       # services, Keycloak provider, tests
+./gradlew build                                       # services, Keycloak providers, tests
 docker compose -f infra/docker-compose.yml up -d --build
 bash infra/pulsar/init-tenant-namespaces.sh           # once, after Pulsar first starts
 cd frontend && pnpm install && pnpm dev:dp-portal     # or dev:df-app, dev:cm-admin
@@ -82,6 +83,7 @@ node scripts/verify-otp-login.mjs        # passwordless sign-in: wrong code, exi
 | `backend/libs` | Shared kernels: domain building blocks, events, web and security helpers, test base classes |
 | `backend/build-logic` | Gradle convention plugins |
 | `backend/keycloak-ext/cm-idn-otp-spi` | Keycloak authenticator for one-time-code sign-in |
+| `backend/keycloak-ext/cm-idn-theme` | Keycloak login themes, `cm-base` and one per audience |
 | `frontend/packages` | The three micro-frontends and their shared packages |
 | `infra` | Docker Compose stack, Keycloak realm, OPA policies, Pulsar setup |
 | `docs/adr` | Architecture decision records |

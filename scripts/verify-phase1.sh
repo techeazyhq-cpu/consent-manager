@@ -23,13 +23,15 @@ set -euo pipefail
 KC_BASE="http://localhost:8080"
 GW_BASE="http://localhost:9000"
 REALM="cm-realm"
-CLIENT="cm-shell"
+# Each login uses its own frontend's client, the two that keep the password grant for this script.
+ADMIN_CLIENT="cm-cm-admin"
+DP_CLIENT="cm-dp-portal"
 
 jget() { node -e "let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{try{console.log(JSON.parse(d)$1)}catch(e){console.error('PARSE FAIL:',d);process.exit(1)}})"; }
 
 echo "== 1. CM_ADMIN password-grant login =="
 ADMIN_TOKEN=$(curl -s -X POST "$KC_BASE/realms/$REALM/protocol/openid-connect/token" \
-  -d "grant_type=password&client_id=$CLIENT&username=admin@cm.local&password=admin" | jget '.access_token')
+  -d "grant_type=password&client_id=$ADMIN_CLIENT&username=admin@cm.local&password=admin" | jget '.access_token')
 echo "  got admin token (${#ADMIN_TOKEN} chars)"
 
 echo "== 2. Register DF =="
@@ -61,7 +63,7 @@ echo "  cnsReqId=$CNS_REQ_ID"
 
 echo "== 6. DP password-grant login =="
 DP_TOKEN=$(curl -s -X POST "$KC_BASE/realms/$REALM/protocol/openid-connect/token" \
-  -d "grant_type=password&client_id=$CLIENT&username=dp-demo@cm.local&password=dp-demo" | jget '.access_token')
+  -d "grant_type=password&client_id=$DP_CLIENT&username=dp-demo@cm.local&password=dp-demo" | jget '.access_token')
 echo "  got DP token (${#DP_TOKEN} chars)"
 DP_SUB=$(echo "$DP_TOKEN" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const p=JSON.parse(Buffer.from(d.split('.')[1],'base64url').toString());console.log(p.sub)})")
 echo "  dpSub=$DP_SUB"

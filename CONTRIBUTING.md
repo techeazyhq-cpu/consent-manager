@@ -63,7 +63,7 @@ You need:
 ```bash
 git clone https://github.com/techeazyhq-cpu/consent-manager.git
 cd consent-manager
-./gradlew build                                  # every service, the Keycloak provider and their tests
+./gradlew build                                  # every service, the Keycloak providers and their tests
 docker compose -f infra/docker-compose.yml up -d --build
 bash infra/pulsar/init-tenant-namespaces.sh      # once, after the first start
 (cd frontend && pnpm install && pnpm dev:dp-portal)

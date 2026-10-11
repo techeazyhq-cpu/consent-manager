@@ -18,7 +18,7 @@
 
 // Keycloak provider JAR (plan §9a), not a Spring Boot service: Keycloak supplies its own SPI classes at runtime,
 // so they are compileOnly and the JAR carries only this module's classes, templates and messages.
-// infra/docker-compose.yml mounts build/libs into Keycloak's providers directory.
+// The JAR goes to ../build/providers, shared with cm-idn-theme, which infra/docker-compose.yml mounts into Keycloak.
 plugins {
     id("java-library")
 }
@@ -41,4 +41,8 @@ dependencies {
 
 tasks.withType<JavaCompile> {
     options.release.set(21)
+}
+
+tasks.jar {
+    destinationDirectory.set(layout.projectDirectory.dir("../build/providers"))
 }
