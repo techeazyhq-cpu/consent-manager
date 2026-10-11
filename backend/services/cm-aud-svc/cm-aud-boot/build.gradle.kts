@@ -38,7 +38,7 @@ dependencies {
     implementation("org.flywaydb:flyway-core:10.17.3")
     implementation("org.flywaydb:flyway-database-postgresql:10.17.3")
     implementation("org.apache.pulsar:pulsar-client-reactive-adapter:0.5.2")
-    implementation("org.apache.pulsar:pulsar-client:3.3.1")
+    implementation("org.apache.pulsar:pulsar-client:3.3.9")
 
     testImplementation(project(":cm-test-kit"))
     testImplementation("org.springframework.boot:spring-boot-starter-test")
