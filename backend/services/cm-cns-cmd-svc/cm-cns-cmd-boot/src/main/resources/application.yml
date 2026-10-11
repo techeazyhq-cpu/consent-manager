@@ -56,6 +56,9 @@ cm:
   cns-tkn:
     keys-path: ${CM_CNS_TKN_KEYS_PATH:build/cns-tkn-keys/jwks.json}
     create-keys-if-missing: ${CM_CNS_TKN_CREATE_KEYS:true}
+    # How long a consent token lives (ADR-027): the longest an offline verifier can keep honouring a withdrawn consent.
+    # Never longer than the consent itself. Interim setting until regime profiles (ADR-020) supply it per law and purpose.
+    lifetime: ${CM_CNS_TKN_LIFETIME:PT15M}
 
 # Circuit breakers on calls to other services (ADR-016). One breaker per dependency: it opens when at least half of
 # the last 20 calls failed because the dependency is unhealthy (cm-res-kit's RemoteFailures: unreachable, timed out,

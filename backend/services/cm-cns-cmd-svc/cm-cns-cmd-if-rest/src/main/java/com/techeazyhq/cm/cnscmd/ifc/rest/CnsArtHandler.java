@@ -18,11 +18,17 @@
 
 package com.techeazyhq.cm.cnscmd.ifc.rest;
 
+import java.time.Instant;
+
+import org.springframework.http.CacheControl;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import com.techeazyhq.cm.cnscmd.app.GetCnsArtLiveStatusQryHandler;
+import com.techeazyhq.cm.cnscmd.app.RefreshCnsTknCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.RevokeCnsArtCmd;
 import com.techeazyhq.cm.cnscmd.app.RevokeCnsArtCmdHandler;
+import com.techeazyhq.cm.seckit.AuthCtx;
 
 import reactor.core.publisher.Mono;
 
@@ -30,14 +36,46 @@ import reactor.core.publisher.Mono;
 public class CnsArtHandler {
 
     private final RevokeCnsArtCmdHandler revokeHandler;
+    private final RefreshCnsTknCmdHandler refreshTknHandler;
+    private final GetCnsArtLiveStatusQryHandler liveStatusHandler;
 
-    public CnsArtHandler(RevokeCnsArtCmdHandler revokeHandler) {
+    public CnsArtHandler(RevokeCnsArtCmdHandler revokeHandler, RefreshCnsTknCmdHandler refreshTknHandler,
+                         GetCnsArtLiveStatusQryHandler liveStatusHandler) {
         this.revokeHandler = revokeHandler;
+        this.refreshTknHandler = refreshTknHandler;
+        this.liveStatusHandler = liveStatusHandler;
     }
 
     public Mono<ServerResponse> revoke(ServerRequest request) {
         String id = request.pathVariable("id");
         return revokeHandler.handle(new RevokeCnsArtCmd(id))
                 .flatMap(cnsArt -> ServerResponse.ok().bodyValue(CnsArtRespDto.of(cnsArt)));
+    }
+
+    /** {@code POST /api/cns-cmd/cns-arts/{id}/token}: a fresh short-lived token for the fiduciary the artefact names. */
+    public Mono<ServerResponse> refreshToken(ServerRequest request) {
+        String id = request.pathVariable("id");
+        return CnsReqHandler.authCtx(request)
+                .map(AuthCtx::dfId)
+                .defaultIfEmpty("")
+                .flatMap(dfId -> refreshTknHandler.handle(new RefreshCnsTknCmdHandler.Cmd(id, dfId)))
+                .flatMap(issued -> ServerResponse.ok()
+                        .cacheControl(CacheControl.noStore())
+                        .bodyValue(new TokenRespDto(issued.token(), issued.exp())));
+    }
+
+    /** {@code GET /internal/cns-arts/{id}/status}: the PDP's live check, from the write side (ADR-027). */
+    public Mono<ServerResponse> liveStatus(ServerRequest request) {
+        return liveStatusHandler.handle(request.pathVariable("id"))
+                .flatMap(status -> ServerResponse.ok()
+                        .cacheControl(CacheControl.noStore())
+                        .bodyValue(new StatusRespDto(status.name())))
+                .switchIfEmpty(ServerResponse.notFound().build());
+    }
+
+    record TokenRespDto(String cnsTkn, Instant exp) {
+    }
+
+    record StatusRespDto(String status) {
     }
 }

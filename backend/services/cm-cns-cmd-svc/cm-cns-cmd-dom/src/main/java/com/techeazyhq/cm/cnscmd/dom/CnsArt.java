@@ -111,6 +111,14 @@ public final class CnsArt extends Agg<String> {
         raise(CnsRevokedEvt.of(id(), dpRef, dfId, prps));
     }
 
+    /**
+     * The status that governs verification now (ADR-027): an {@code ISSUED} artefact past its validity is already
+     * {@code EXPIRED}, whether or not {@code CnsExpirySweepJob} has recorded it yet.
+     */
+    public CnsArtSts liveStatus(Instant now) {
+        return sts == CnsArtSts.ISSUED && valPrd.isExpiredAt(now) ? CnsArtSts.EXPIRED : sts;
+    }
+
     /** Applied by the scheduled {@code CnsExpirySweepJob} (plan §8) for ValPrd-lapsed artefacts. */
     public void expire(Instant now) {
         requireSts(CnsArtSts.ISSUED, "expire");

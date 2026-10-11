@@ -20,7 +20,6 @@ package com.techeazyhq.cm.cnscmd.app;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,8 +33,6 @@ import com.techeazyhq.cm.cnscmd.dom.CnsReqRepoPort;
 import com.techeazyhq.cm.cnscmd.dom.ObxPort;
 import com.techeazyhq.cm.cnscmd.dom.ValPrd;
 import com.techeazyhq.cm.domkit.Spec;
-import com.techeazyhq.cm.seckit.CnsTknClaims;
-import com.techeazyhq.cm.seckit.CnsTknSigner;
 import com.techeazyhq.cm.webkit.DomRuleViolation;
 
 import reactor.core.publisher.Mono;
@@ -54,15 +51,15 @@ public class ApproveCnsCmdHandler implements CmdHandler<ApproveCnsReqCmd, CnsArt
     private final CnsReqRepoPort cnsReqRepo;
     private final CnsArtRepoPort cnsArtRepo;
     private final ObxPort obxPort;
-    private final CnsTknSigner cnsTknSigner;
+    private final CnsTknIssuer cnsTknIssuer;
     private final CnsReqDecidablePolicy decidablePolicy = new CnsReqDecidablePolicy();
 
     public ApproveCnsCmdHandler(CnsReqRepoPort cnsReqRepo, CnsArtRepoPort cnsArtRepo, ObxPort obxPort,
-                                 CnsTknSigner cnsTknSigner) {
+                                 CnsTknIssuer cnsTknIssuer) {
         this.cnsReqRepo = cnsReqRepo;
         this.cnsArtRepo = cnsArtRepo;
         this.obxPort = obxPort;
-        this.cnsTknSigner = cnsTknSigner;
+        this.cnsTknIssuer = cnsTknIssuer;
     }
 
     @Override
@@ -77,9 +74,8 @@ public class ApproveCnsCmdHandler implements CmdHandler<ApproveCnsReqCmd, CnsArt
                             cnsReq.id(), cnsReq.dfId(), cnsReq.dpRef(), cnsReq.prps(), cnsReq.scp(),
                             ValPrd.of(Instant.now(), DEFAULT_VALIDITY));
 
-                    String cnsTkn = cnsTknSigner.sign(new CnsTknClaims(
-                            cnsArt.id(), dpIdOf(cnsReq), cnsReq.dfId(), cnsReq.prps().code(), CnsTknClaims.AccessType.ALLOW,
-                            List.of(), cnsArt.valPrd().until()));
+                    // A short-lived token (ADR-027): the fiduciary refreshes it while the consent is valid.
+                    String cnsTkn = cnsTknIssuer.issue(cnsArt).token();
                     cnsArt.attachSignedTkn(cnsTkn);
 
                     return cnsReqRepo.save(cnsReq)
@@ -98,13 +94,5 @@ public class ApproveCnsCmdHandler implements CmdHandler<ApproveCnsReqCmd, CnsArt
             return Mono.error(new DomRuleViolation(409, result.reasonCode(), "CnsReq " + cnsReq.id() + " cannot be decided"));
         }
         return Mono.just(cnsReq);
-    }
-
-    private String dpIdOf(CnsReq cnsReq) {
-        return switch (cnsReq.dpRef()) {
-            case com.techeazyhq.cm.cnscmd.dom.DpRef.LnkdDpRef lnkd -> lnkd.dpId();
-            case com.techeazyhq.cm.cnscmd.dom.DpRef.UnlnkDpRef unlnk ->
-                    throw new IllegalStateException("Cannot approve a CnsReq whose DP is still unlinked");
-        };
     }
 }
