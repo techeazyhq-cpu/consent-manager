@@ -1,6 +1,6 @@
 # ADR-013: Consent tokens are verified, and bound to their artefact and fiduciary
 
-- **Status:** Accepted; supersedes the token handling in [ADR-006](adr-006-consent-token-and-pep-pdp.md)
+- **Status:** Accepted; supersedes the token handling in [ADR-006](adr-006-consent-token-and-pep-pdp.md). Offline verification by fiduciaries is superseded by [ADR-027](adr-027-short-lived-tokens-status-list-and-verification-availability.md) (proposed): short-lived tokens and a revocation status list
 - **Date:** 2026-10-10
 
 ## Context

@@ -1,7 +1,8 @@
 # consent-manager design
 
 An overview of how the platform fits together. The reasons behind each choice are in the
-[architecture decision records](adr/README.md).
+[architecture decision records](adr/README.md). How it meets DPDPA, GDPR, HIPAA and the Gulf data protection laws, and
+the planned changes for that, are in the [compliance architecture](compliance/compliance-architecture.md).
 
 ## Context
 

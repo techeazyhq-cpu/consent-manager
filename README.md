@@ -37,6 +37,11 @@ saga. Every synchronous call to another service, and every gateway route, goes t
 into domain, application, infrastructure and interface modules, and an ArchUnit test keeps the dependencies pointing
 inwards. The decisions are recorded in [docs/adr](docs/adr).
 
+The platform is a consent manager only: it never processes the data its consents govern. How it will meet DPDPA (as a
+registered Consent Manager), GDPR, HIPAA, the Gulf data protection laws and ISO/IEC TS 27560 consent records, with the
+gaps today, the proposed architecture and the phased plan, is in
+[docs/compliance](docs/compliance/compliance-architecture.md).
+
 | Frontend | Port | Users |
 |---|---|---|
 | `mf-dp-portal` | 5174 | Data principals |

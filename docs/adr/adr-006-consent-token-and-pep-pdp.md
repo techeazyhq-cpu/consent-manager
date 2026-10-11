@@ -1,6 +1,6 @@
 # ADR-006: Signed consent tokens, enforced at the gateway with OPA
 
-- **Status:** Accepted; its token handling is superseded by [ADR-013](adr-013-verified-consent-tokens.md), which closes the gap below
+- **Status:** Accepted; its token handling is superseded by [ADR-013](adr-013-verified-consent-tokens.md), which closes the gap below, and its token lifetime (`exp` = the artefact's validity) by [ADR-027](adr-027-short-lived-tokens-status-list-and-verification-availability.md) (proposed)
 - **Date:** 2026-08-30 (Phase 1), recorded 2026-10-10
 
 ## Context
