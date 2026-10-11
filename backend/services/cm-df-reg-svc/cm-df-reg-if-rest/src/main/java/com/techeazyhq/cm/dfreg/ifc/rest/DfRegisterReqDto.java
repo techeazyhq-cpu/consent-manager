@@ -18,5 +18,25 @@
 
 package com.techeazyhq.cm.dfreg.ifc.rest;
 
-public record DfRegisterReqDto(String name, String contactEmail) {
+import com.techeazyhq.cm.dfreg.app.RegisterDfCmd;
+
+/** {@code POST /api/df-reg/dfs}: only {@code name} and {@code contactEmail} are required. */
+public record DfRegisterReqDto(
+        String name,
+        String contactEmail,
+        String subPlnName,
+        String legalName,
+        String contactPhone,
+        String website,
+        String registeredAddress,
+        String industry,
+        String cin,
+        String gstin,
+        String dpoName,
+        String dpoEmail) {
+
+    RegisterDfCmd toCmd() {
+        return new RegisterDfCmd(name, contactEmail, new RegisterDfCmd.PrflFields(legalName, contactPhone, website,
+                registeredAddress, industry, cin, gstin, dpoName, dpoEmail), subPlnName);
+    }
 }

@@ -58,6 +58,12 @@ public class BilHandler {
         return ServerResponse.ok().body(listSubPlnsHandler.handle(), SubPln.class);
     }
 
+    public Mono<ServerResponse> subPln(ServerRequest request) {
+        return listSubPlnsHandler.byName(request.pathVariable("name"))
+                .flatMap(plan -> ServerResponse.ok().bodyValue(plan))
+                .switchIfEmpty(ServerResponse.notFound().build());
+    }
+
     public Mono<ServerResponse> subStatus(ServerRequest request) {
         return getDfSubStatusHandler.handle(request.pathVariable("id"))
                 .flatMap(result -> ServerResponse.ok().bodyValue(result));

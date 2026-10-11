@@ -26,9 +26,11 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 
 import com.techeazyhq.cm.dfreg.app.ActivateDfCmdHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfActiveQryHandler;
+import com.techeazyhq.cm.dfreg.app.GetDfLogoQryHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfQryHandler;
 import com.techeazyhq.cm.dfreg.app.ListDfsQryHandler;
 import com.techeazyhq.cm.dfreg.app.RegisterDfCmdHandler;
+import com.techeazyhq.cm.dfreg.app.UploadDfLogoCmdHandler;
 
 @Configuration
 public class DfRegRouterConfig {
@@ -38,13 +40,19 @@ public class DfRegRouterConfig {
                                                         ActivateDfCmdHandler activateHandler,
                                                         GetDfActiveQryHandler getActiveHandler,
                                                         ListDfsQryHandler listHandler,
-                                                        GetDfQryHandler getDfHandler) {
-        DfHandler dfHandler = new DfHandler(registerHandler, activateHandler, getActiveHandler, listHandler, getDfHandler);
+                                                        GetDfQryHandler getDfHandler,
+                                                        UploadDfLogoCmdHandler uploadLogoHandler,
+                                                        GetDfLogoQryHandler getLogoHandler) {
+        DfHandler dfHandler = new DfHandler(registerHandler, activateHandler, getActiveHandler, listHandler, getDfHandler,
+                uploadLogoHandler, getLogoHandler);
         return RouterFunctions.route()
                 .GET("/api/df-reg/dfs", dfHandler::list)
                 .POST("/api/df-reg/dfs", dfHandler::register)
                 .POST("/api/df-reg/dfs/{id}/activate", dfHandler::activate)
                 .GET("/api/df-reg/dfs/{id}", dfHandler::getOne)
+                .GET("/api/df-reg/dfs/{id}/profile", dfHandler::profile)
+                .PUT("/api/df-reg/dfs/{id}/logo", dfHandler::uploadLogo)
+                .GET("/api/df-reg/dfs/{id}/logo", dfHandler::logo)
                 .GET("/internal/dfs/{id}/active", dfHandler::isActive)
                 .build();
     }

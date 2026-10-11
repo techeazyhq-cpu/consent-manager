@@ -54,7 +54,10 @@ public class SecurityConfig {
                         .pathMatchers("/actuator/health", "/actuator/info").permitAll()
                         // Consent token public keys (ADR-006), for fiduciaries verifying tokens themselves.
                         .pathMatchers(HttpMethod.GET, "/api/cns-cmd/.well-known/jwks.json").permitAll()
-                        .pathMatchers("/api/df-reg/dfs", "/api/df-reg/dfs/*/activate").hasRole("CM_ADMIN")
+                        .pathMatchers("/api/df-reg/dfs", "/api/df-reg/dfs/*/activate", "/api/df-reg/dfs/*/profile")
+                                .hasRole("CM_ADMIN")
+                        // Any signed-in user may see a fiduciary's logo (DP portal tiles too); only staff set it.
+                        .pathMatchers(HttpMethod.PUT, "/api/df-reg/dfs/*/logo").hasRole("CM_ADMIN")
                         .pathMatchers("/api/bil/**").hasRole("CM_ADMIN")
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))

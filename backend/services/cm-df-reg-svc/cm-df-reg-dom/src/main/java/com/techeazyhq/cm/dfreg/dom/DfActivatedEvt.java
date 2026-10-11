@@ -23,10 +23,14 @@ import java.util.UUID;
 
 import com.techeazyhq.cm.domkit.DomainEvt;
 
-/** Consumed by cm-bil-svc to auto-create a FREE-tier DfSub (plan §7c, §11). */
-public record DfActivatedEvt(UUID evtId, Instant occurredAt, String dfId, String name) implements DomainEvt {
+/**
+ * Consumed by cm-bil-svc to subscribe the fiduciary (plan §7c, §11), to {@code subPlnName}, the plan chosen at
+ * onboarding; null (events from before plans were chosen) means FREE.
+ */
+public record DfActivatedEvt(UUID evtId, Instant occurredAt, String dfId, String name, String subPlnName)
+        implements DomainEvt {
 
-    public static DfActivatedEvt of(String dfId, String name) {
-        return new DfActivatedEvt(UUID.randomUUID(), Instant.now(), dfId, name);
+    public static DfActivatedEvt of(String dfId, String name, String subPlnName) {
+        return new DfActivatedEvt(UUID.randomUUID(), Instant.now(), dfId, name, subPlnName);
     }
 }

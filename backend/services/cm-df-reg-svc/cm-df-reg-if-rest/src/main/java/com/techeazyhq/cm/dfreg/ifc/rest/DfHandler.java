@@ -18,17 +18,25 @@
 
 package com.techeazyhq.cm.dfreg.ifc.rest;
 
+import java.time.Duration;
+
+import org.springframework.core.io.buffer.DataBufferLimitException;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
 import com.techeazyhq.cm.dfreg.app.ActivateDfCmd;
 import com.techeazyhq.cm.dfreg.app.ActivateDfCmdHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfActiveQryHandler;
+import com.techeazyhq.cm.dfreg.app.GetDfLogoQryHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfQryHandler;
 import com.techeazyhq.cm.dfreg.app.ListDfsQryHandler;
-import com.techeazyhq.cm.dfreg.app.RegisterDfCmd;
 import com.techeazyhq.cm.dfreg.app.RegisterDfCmdHandler;
+import com.techeazyhq.cm.dfreg.app.UploadDfLogoCmd;
+import com.techeazyhq.cm.dfreg.app.UploadDfLogoCmdHandler;
+import com.techeazyhq.cm.webkit.DomRuleViolation;
 
 import reactor.core.publisher.Mono;
 
@@ -40,14 +48,19 @@ public class DfHandler {
     private final GetDfActiveQryHandler getActiveHandler;
     private final ListDfsQryHandler listHandler;
     private final GetDfQryHandler getDfHandler;
+    private final UploadDfLogoCmdHandler uploadLogoHandler;
+    private final GetDfLogoQryHandler getLogoHandler;
 
     public DfHandler(RegisterDfCmdHandler registerHandler, ActivateDfCmdHandler activateHandler,
-                      GetDfActiveQryHandler getActiveHandler, ListDfsQryHandler listHandler, GetDfQryHandler getDfHandler) {
+                      GetDfActiveQryHandler getActiveHandler, ListDfsQryHandler listHandler, GetDfQryHandler getDfHandler,
+                      UploadDfLogoCmdHandler uploadLogoHandler, GetDfLogoQryHandler getLogoHandler) {
         this.registerHandler = registerHandler;
         this.activateHandler = activateHandler;
         this.getActiveHandler = getActiveHandler;
         this.listHandler = listHandler;
         this.getDfHandler = getDfHandler;
+        this.uploadLogoHandler = uploadLogoHandler;
+        this.getLogoHandler = getLogoHandler;
     }
 
     public Mono<ServerResponse> list(ServerRequest request) {
@@ -60,9 +73,15 @@ public class DfHandler {
                 .switchIfEmpty(ServerResponse.notFound().build());
     }
 
+    public Mono<ServerResponse> profile(ServerRequest request) {
+        return getDfHandler.handle(request.pathVariable("id"))
+                .flatMap(df -> ServerResponse.ok().bodyValue(DfProfileRespDto.of(df)))
+                .switchIfEmpty(ServerResponse.notFound().build());
+    }
+
     public Mono<ServerResponse> register(ServerRequest request) {
         return request.bodyToMono(DfRegisterReqDto.class)
-                .flatMap(body -> registerHandler.handle(new RegisterDfCmd(body.name(), body.contactEmail())))
+                .flatMap(body -> registerHandler.handle(body.toCmd()))
                 .flatMap(df -> ServerResponse.status(HttpStatus.CREATED).bodyValue(DfRespDto.of(df)));
     }
 
@@ -70,6 +89,32 @@ public class DfHandler {
         String id = request.pathVariable("id");
         return activateHandler.handle(new ActivateDfCmd(id))
                 .flatMap(df -> ServerResponse.ok().bodyValue(DfRespDto.of(df)));
+    }
+
+    /** The request body is the image itself, with its {@code Content-Type}; anything over the codec's limit is 413. */
+    public Mono<ServerResponse> uploadLogo(ServerRequest request) {
+        String dfId = request.pathVariable("id");
+        String contentType = request.headers().contentType()
+                .map(type -> type.getType() + "/" + type.getSubtype())
+                .orElse(null);
+        return request.bodyToMono(byte[].class)
+                .onErrorMap(DataBufferLimitException.class,
+                        e -> new DomRuleViolation(413, "logo-too-large", "The logo is larger than allowed"))
+                .defaultIfEmpty(new byte[0])
+                .flatMap(bytes -> uploadLogoHandler.handle(new UploadDfLogoCmd(dfId, contentType, bytes)))
+                .then(ServerResponse.noContent().build());
+    }
+
+    /** Served with {@code nosniff}, so a browser only ever renders it as the image type it was checked to be. */
+    public Mono<ServerResponse> logo(ServerRequest request) {
+        return getLogoHandler.handle(request.pathVariable("id"))
+                .flatMap(logo -> ServerResponse.ok()
+                        .contentType(MediaType.parseMediaType(logo.contentType()))
+                        .header("X-Content-Type-Options", "nosniff")
+                        .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePrivate())
+                        .lastModified(logo.updatedAt())
+                        .bodyValue(logo.bytes()))
+                .switchIfEmpty(ServerResponse.notFound().build());
     }
 
     public Mono<ServerResponse> isActive(ServerRequest request) {
