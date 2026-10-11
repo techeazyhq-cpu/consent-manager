@@ -29,7 +29,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux:3.5.16")
     implementation("org.apache.pulsar:pulsar-client-reactive-api:0.5.2")
     implementation("org.apache.pulsar:pulsar-client-reactive-adapter:0.5.2")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.3")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
