@@ -23,9 +23,15 @@ import java.time.Instant;
 import com.techeazyhq.cm.dfreg.dom.Df;
 import com.techeazyhq.cm.dfreg.dom.DfSts;
 
-/** List-view shape for {@code GET /api/df-reg/dfs} — omits {@code cmDfApiClientSecret}, shown only once at activation. */
-public record DfListItemRespDto(String id, String name, String contactEmail, DfSts sts, Instant registeredAt) {
+/**
+ * List-view shape for {@code GET /api/df-reg/dfs}, one dashboard tile per fiduciary — omits {@code cmDfApiClientSecret},
+ * shown only once at activation. The logo is fetched separately, from {@code /api/df-reg/dfs/{id}/logo}.
+ */
+public record DfListItemRespDto(String id, String name, String contactEmail, DfSts sts, Instant registeredAt,
+                                String legalName, String industry, String subPlnName) {
+
     public static DfListItemRespDto of(Df df) {
-        return new DfListItemRespDto(df.id(), df.name(), df.contactEmail(), df.sts(), df.registeredAt());
+        return new DfListItemRespDto(df.id(), df.name(), df.contactEmail(), df.sts(), df.registeredAt(),
+                df.prfl().legalName(), df.prfl().industry(), df.subPlnName());
     }
 }

@@ -26,6 +26,7 @@ import org.springframework.r2dbc.core.DatabaseClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techeazyhq.cm.dfreg.dom.Df;
 import com.techeazyhq.cm.dfreg.dom.DfFactory;
+import com.techeazyhq.cm.dfreg.dom.DfPrfl;
 import com.techeazyhq.cm.dfreg.dom.DfRepoPort;
 import com.techeazyhq.cm.dfreg.dom.DfSts;
 import com.techeazyhq.cm.domkit.DomainEvt;
@@ -46,8 +47,12 @@ public class R2dbcDfRepoAdapter implements DfRepoPort {
     @Override
     public Mono<Df> save(Df df) {
         DatabaseClient.GenericExecuteSpec spec = db.sql("""
-                        insert into df_reg.df (id, name, contact_email, sts, registered_at, cm_df_api_client_secret, activated_at)
-                        values (:id, :name, :contactEmail, :sts, :registeredAt, :clientSecret, :activatedAt)
+                        insert into df_reg.df (id, name, contact_email, sts, registered_at, cm_df_api_client_secret, activated_at,
+                                               legal_name, contact_phone, website, registered_address, industry, cin,
+                                               gstin, dpo_name, dpo_email, sub_pln_name)
+                        values (:id, :name, :contactEmail, :sts, :registeredAt, :clientSecret, :activatedAt,
+                                :legalName, :contactPhone, :website, :registeredAddress, :industry, :cin,
+                                :gstin, :dpoName, :dpoEmail, :subPlnName)
                         on conflict (id) do update set
                             sts = excluded.sts,
                             cm_df_api_client_secret = excluded.cm_df_api_client_secret,
@@ -60,6 +65,17 @@ public class R2dbcDfRepoAdapter implements DfRepoPort {
                 .bind("registeredAt", df.registeredAt());
         spec = bindNullable(spec, "clientSecret", df.cmDfApiClientSecret());
         spec = bindNullableInstant(spec, "activatedAt", df.activatedAt());
+        DfPrfl prfl = df.prfl();
+        spec = bindNullable(spec, "legalName", prfl.legalName());
+        spec = bindNullable(spec, "contactPhone", prfl.contactPhone());
+        spec = bindNullable(spec, "website", prfl.website());
+        spec = bindNullable(spec, "registeredAddress", prfl.registeredAddress());
+        spec = bindNullable(spec, "industry", prfl.industry());
+        spec = bindNullable(spec, "cin", prfl.cin());
+        spec = bindNullable(spec, "gstin", prfl.gstin());
+        spec = bindNullable(spec, "dpoName", prfl.dpoName());
+        spec = bindNullable(spec, "dpoEmail", prfl.dpoEmail());
+        spec = bindNullable(spec, "subPlnName", df.subPlnName());
 
         Mono<Void> upsert = spec.then();
         List<DomainEvt> pending = df.pullEvts();
@@ -86,6 +102,17 @@ public class R2dbcDfRepoAdapter implements DfRepoPort {
                 row.get("id", String.class),
                 row.get("name", String.class),
                 row.get("contact_email", String.class),
+                new DfPrfl(
+                        row.get("legal_name", String.class),
+                        row.get("contact_phone", String.class),
+                        row.get("website", String.class),
+                        row.get("registered_address", String.class),
+                        row.get("industry", String.class),
+                        row.get("cin", String.class),
+                        row.get("gstin", String.class),
+                        row.get("dpo_name", String.class),
+                        row.get("dpo_email", String.class)),
+                row.get("sub_pln_name", String.class),
                 DfSts.valueOf(row.get("sts", String.class)),
                 row.get("registered_at", Instant.class),
                 row.get("cm_df_api_client_secret", String.class),

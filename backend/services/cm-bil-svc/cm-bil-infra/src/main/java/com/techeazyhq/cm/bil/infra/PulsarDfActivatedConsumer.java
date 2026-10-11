@@ -30,7 +30,7 @@ import com.techeazyhq.cm.evtkit.PulsarTopics;
 
 import reactor.core.publisher.Mono;
 
-/** Choreography (plan §7c): auto-creates a FREE DfSub whenever cm-df-reg-svc activates a DF. */
+/** Choreography (plan §7c): auto-creates a DfSub, on the plan chosen at onboarding, whenever cm-df-reg-svc activates a DF. */
 public class PulsarDfActivatedConsumer {
 
     private final ReactivePulsarClient reactivePulsarClient;
@@ -56,17 +56,23 @@ public class PulsarDfActivatedConsumer {
                 // silently missed the DfActivatedEvt from the very activation that triggered it.
                 .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
                 .build()
-                .consumeMany(messageFlux -> messageFlux.flatMap(message -> {
-                    try {
-                        JsonNode node = objectMapper.readTree(message.getValue());
-                        return handler.handle(node.get("dfId").asText())
-                                .thenReturn(MessageResult.acknowledge(message.getMessageId(), message.getValue()));
-                    } catch (Exception e) {
-                        org.slf4j.LoggerFactory.getLogger(PulsarDfActivatedConsumer.class)
-                                .warn("Failed to handle DfActivatedEvt, negatively acknowledging", e);
-                        return Mono.just(MessageResult.negativeAcknowledge(message.getMessageId(), message.getValue()));
-                    }
-                }))
+                .consumeMany(messageFlux -> messageFlux.flatMap(message -> Mono
+                        .fromCallable(() -> objectMapper.readTree(message.getValue()))
+                        .flatMap(node -> handler.handle(node.get("dfId").asText(), textOrNull(node, "subPlnName")))
+                        .thenReturn(MessageResult.acknowledge(message.getMessageId(), message.getValue()))
+                        // An error from the handler's Mono, not only one thrown while parsing, must nack this
+                        // message for redelivery: left unhandled, it would end the whole consumer stream.
+                        .onErrorResume(e -> {
+                            org.slf4j.LoggerFactory.getLogger(PulsarDfActivatedConsumer.class)
+                                    .warn("Failed to handle DfActivatedEvt, negatively acknowledging", e);
+                            return Mono.just(MessageResult.negativeAcknowledge(message.getMessageId(),
+                                    message.getValue()));
+                        })))
                 .subscribe();
+    }
+
+    private static String textOrNull(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        return value == null || value.isNull() ? null : value.asText();
     }
 }

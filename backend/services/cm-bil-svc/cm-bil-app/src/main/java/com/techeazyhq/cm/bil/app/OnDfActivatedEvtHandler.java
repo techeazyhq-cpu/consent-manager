@@ -27,7 +27,7 @@ import com.techeazyhq.cm.webkit.DomRuleViolation;
 
 import reactor.core.publisher.Mono;
 
-/** Choreography (plan §7c): consumed from cm-df-reg-svc's evt-df-activated topic, auto-creates a FREE DfSub. Idempotent. */
+/** Choreography (plan §7c): consumed from cm-df-reg-svc's evt-df-activated topic, auto-creates the DfSub, on the plan chosen at onboarding. Idempotent. */
 public class OnDfActivatedEvtHandler {
 
     private static final String FREE_PLAN_NAME = "FREE";
@@ -40,12 +40,19 @@ public class OnDfActivatedEvtHandler {
         this.subPlnRepo = subPlnRepo;
     }
 
+    /**
+     * @param subPlnName the plan chosen at onboarding, checked by cm-df-reg-svc then; null (an event from before plans
+     *                   were chosen) means FREE. A plan that has since disappeared fails the event, which is
+     *                   redelivered, rather than quietly subscribing the fiduciary to something else.
+     */
     @Transactional
-    public Mono<Void> handle(String dfId) {
+    public Mono<Void> handle(String dfId, String subPlnName) {
+        String planName = subPlnName == null || subPlnName.isBlank() ? FREE_PLAN_NAME : subPlnName;
         return dfSubRepo.findByDfId(dfId)
-                .switchIfEmpty(subPlnRepo.findByName(FREE_PLAN_NAME)
-                        .switchIfEmpty(Mono.error(new DomRuleViolation(500, "free-plan-missing", "FREE SubPln not seeded")))
-                        .flatMap(freePlan -> dfSubRepo.save(DfSubFactory.createFree(dfId, freePlan.id()))))
+                .switchIfEmpty(subPlnRepo.findByName(planName)
+                        .switchIfEmpty(Mono.error(new DomRuleViolation(500, "sub-pln-missing",
+                                "SubPln " + planName + " not found for DF " + dfId)))
+                        .flatMap(plan -> dfSubRepo.save(DfSubFactory.create(dfId, plan.id()))))
                 .then();
     }
 }

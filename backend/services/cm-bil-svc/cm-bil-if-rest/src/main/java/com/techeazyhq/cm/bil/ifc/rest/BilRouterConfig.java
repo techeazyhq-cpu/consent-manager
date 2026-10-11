@@ -50,6 +50,7 @@ public class BilRouterConfig {
                 .GET("/api/bil/dfs/{id}/usage", handler::usage)
                 .GET("/api/bil/dfs/{id}/sub-status", handler::subStatus)
                 .GET("/internal/dfs/{id}/sub-eligibility", handler::eligibility)
+                .GET("/internal/sub-plns/{name}", handler::subPln)
                 .build();
     }
 }

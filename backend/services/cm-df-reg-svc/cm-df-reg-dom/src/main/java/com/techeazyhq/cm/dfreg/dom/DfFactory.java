@@ -26,18 +26,27 @@ public final class DfFactory {
     private DfFactory() {
     }
 
-    public static Df register(String name, String contactEmail) {
+    /**
+     * @param name       the display name data principals see
+     * @param prfl       the rest of the fiduciary's profile, validated as it was built
+     * @param subPlnName the plan to subscribe the fiduciary to on activation, null or blank for FREE; checked
+     *                   against cm-bil-svc's catalogue by the caller, which knows it
+     */
+    public static Df register(String name, String contactEmail, DfPrfl prfl, String subPlnName) {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("name must not be blank");
         }
-        if (contactEmail == null || contactEmail.isBlank()) {
-            throw new IllegalArgumentException("contactEmail must not be blank");
+        if (name.trim().length() > 255) {
+            throw new IllegalArgumentException("name must be at most 255 characters");
         }
-        return new Df(UUID.randomUUID().toString(), name, contactEmail, DfSts.PENDING, Instant.now(), null, null);
+        String email = DfPrfl.email(contactEmail, "contactEmail");
+        String plan = subPlnName == null || subPlnName.isBlank() ? null : subPlnName.trim();
+        return new Df(UUID.randomUUID().toString(), name.trim(), email, prfl, plan, DfSts.PENDING, Instant.now(),
+                null, null);
     }
 
-    public static Df rehydrate(String id, String name, String contactEmail, DfSts sts, Instant registeredAt,
-                                String cmDfApiClientSecret, Instant activatedAt) {
-        return new Df(id, name, contactEmail, sts, registeredAt, cmDfApiClientSecret, activatedAt);
+    public static Df rehydrate(String id, String name, String contactEmail, DfPrfl prfl, String subPlnName,
+                                DfSts sts, Instant registeredAt, String cmDfApiClientSecret, Instant activatedAt) {
+        return new Df(id, name, contactEmail, prfl, subPlnName, sts, registeredAt, cmDfApiClientSecret, activatedAt);
     }
 }

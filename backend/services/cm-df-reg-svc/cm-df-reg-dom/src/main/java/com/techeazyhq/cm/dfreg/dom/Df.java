@@ -27,16 +27,20 @@ public final class Df extends Agg<String> {
 
     private final String name;
     private final String contactEmail;
+    private final DfPrfl prfl;
+    private final String subPlnName;
     private final Instant registeredAt;
     private DfSts sts;
     private String cmDfApiClientSecret;
     private Instant activatedAt;
 
-    Df(String id, String name, String contactEmail, DfSts sts, Instant registeredAt,
+    Df(String id, String name, String contactEmail, DfPrfl prfl, String subPlnName, DfSts sts, Instant registeredAt,
        String cmDfApiClientSecret, Instant activatedAt) {
         super(id);
         this.name = name;
         this.contactEmail = contactEmail;
+        this.prfl = prfl == null ? DfPrfl.EMPTY : prfl;
+        this.subPlnName = subPlnName;
         this.sts = sts;
         this.registeredAt = registeredAt;
         this.cmDfApiClientSecret = cmDfApiClientSecret;
@@ -49,6 +53,15 @@ public final class Df extends Agg<String> {
 
     public String contactEmail() {
         return contactEmail;
+    }
+
+    public DfPrfl prfl() {
+        return prfl;
+    }
+
+    /** The plan chosen at onboarding, which cm-bil-svc subscribes the fiduciary to on activation; null means FREE. */
+    public String subPlnName() {
+        return subPlnName;
     }
 
     public DfSts sts() {
@@ -75,6 +88,6 @@ public final class Df extends Agg<String> {
         this.sts = DfSts.ACTIVE;
         this.cmDfApiClientSecret = clientSecret;
         this.activatedAt = Instant.now();
-        raise(DfActivatedEvt.of(id(), name));
+        raise(DfActivatedEvt.of(id(), name, subPlnName));
     }
 }

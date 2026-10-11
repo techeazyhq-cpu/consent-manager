@@ -18,5 +18,22 @@
 
 package com.techeazyhq.cm.dfreg.app;
 
-public record RegisterDfCmd(String name, String contactEmail) {
+import com.techeazyhq.cm.dfreg.dom.DfPrfl;
+
+/**
+ * @param prfl       the profile as entered, not yet validated: {@link RegisterDfCmdHandler} builds the {@link DfPrfl}
+ * @param subPlnName the plan to subscribe the fiduciary to on activation; null or blank for FREE
+ */
+public record RegisterDfCmd(String name, String contactEmail, PrflFields prfl, String subPlnName) {
+
+    public record PrflFields(String legalName, String contactPhone, String website, String registeredAddress,
+                             String industry, String cin, String gstin, String dpoName, String dpoEmail) {
+
+        public static final PrflFields NONE = new PrflFields(null, null, null, null, null, null, null, null, null);
+
+        DfPrfl toPrfl() {
+            return new DfPrfl(legalName, contactPhone, website, registeredAddress, industry, cin, gstin, dpoName,
+                    dpoEmail);
+        }
+    }
 }

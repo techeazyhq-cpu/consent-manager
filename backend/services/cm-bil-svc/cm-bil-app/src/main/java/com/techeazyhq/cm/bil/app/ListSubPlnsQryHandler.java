@@ -22,6 +22,7 @@ import com.techeazyhq.cm.bil.dom.SubPln;
 import com.techeazyhq.cm.bil.dom.SubPlnRepoPort;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /** Backs {@code GET /api/bil/sub-plns} — lets mf-cm-admin populate the plan-assignment dropdown. */
 public class ListSubPlnsQryHandler {
@@ -34,5 +35,10 @@ public class ListSubPlnsQryHandler {
 
     public Flux<SubPln> handle() {
         return subPlnRepo.findAll();
+    }
+
+    /** Backs {@code GET /internal/sub-plns/{name}}: cm-df-reg-svc checks the plan chosen at onboarding exists. */
+    public Mono<SubPln> byName(String name) {
+        return subPlnRepo.findByName(name);
     }
 }

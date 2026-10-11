@@ -33,18 +33,24 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techeazyhq.cm.dfreg.app.ActivateDfCmdHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfActiveQryHandler;
+import com.techeazyhq.cm.dfreg.app.GetDfLogoQryHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfQryHandler;
 import com.techeazyhq.cm.dfreg.app.ListDfsQryHandler;
 import com.techeazyhq.cm.dfreg.app.RegisterDfCmdHandler;
+import com.techeazyhq.cm.dfreg.app.UploadDfLogoCmdHandler;
 import com.techeazyhq.cm.dfreg.dom.DfApiClientProvisionPort;
+import com.techeazyhq.cm.dfreg.dom.DfLogoRepoPort;
 import com.techeazyhq.cm.dfreg.dom.DfRepoPort;
 import com.techeazyhq.cm.dfreg.dom.ObxPort;
+import com.techeazyhq.cm.dfreg.dom.SubPlnCatalogPort;
 import com.techeazyhq.cm.dfreg.infra.KeycloakAdminAuthFilter;
 import com.techeazyhq.cm.dfreg.infra.KeycloakDfApiClientProvisionAdapter;
 import com.techeazyhq.cm.dfreg.infra.ObxRelay;
 import com.techeazyhq.cm.dfreg.infra.PulsarDfEvtProducer;
+import com.techeazyhq.cm.dfreg.infra.R2dbcDfLogoAdapter;
 import com.techeazyhq.cm.dfreg.infra.R2dbcDfRepoAdapter;
 import com.techeazyhq.cm.dfreg.infra.R2dbcObxAdapter;
+import com.techeazyhq.cm.dfreg.infra.WebClientSubPlnCatalogAdapter;
 
 @Configuration
 @EnableConfigurationProperties(DfRegBeanConfig.KeycloakProps.class)
@@ -53,6 +59,17 @@ public class DfRegBeanConfig {
     @Bean
     public DfRepoPort dfRepoPort(DatabaseClient db, ObjectMapper objectMapper) {
         return new R2dbcDfRepoAdapter(db, objectMapper);
+    }
+
+    @Bean
+    public DfLogoRepoPort dfLogoRepoPort(DatabaseClient db) {
+        return new R2dbcDfLogoAdapter(db);
+    }
+
+    @Bean
+    public SubPlnCatalogPort subPlnCatalogPort(WebClient.Builder builder, ReactiveCircuitBreakerFactory<?, ?> cbFactory,
+                                               @Value("${cm.service-urls.bil}") String bilBaseUrl) {
+        return new WebClientSubPlnCatalogAdapter(builder, cbFactory, bilBaseUrl);
     }
 
     @Bean
@@ -96,8 +113,18 @@ public class DfRegBeanConfig {
     }
 
     @Bean
-    public RegisterDfCmdHandler registerDfCmdHandler(DfRepoPort dfRepo) {
-        return new RegisterDfCmdHandler(dfRepo);
+    public RegisterDfCmdHandler registerDfCmdHandler(DfRepoPort dfRepo, SubPlnCatalogPort subPlnCatalog) {
+        return new RegisterDfCmdHandler(dfRepo, subPlnCatalog);
+    }
+
+    @Bean
+    public UploadDfLogoCmdHandler uploadDfLogoCmdHandler(DfRepoPort dfRepo, DfLogoRepoPort logoRepo) {
+        return new UploadDfLogoCmdHandler(dfRepo, logoRepo);
+    }
+
+    @Bean
+    public GetDfLogoQryHandler getDfLogoQryHandler(DfLogoRepoPort logoRepo) {
+        return new GetDfLogoQryHandler(logoRepo);
     }
 
     @Bean

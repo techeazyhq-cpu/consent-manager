@@ -23,5 +23,7 @@ spring:
 cm:
   pulsar:
     service-url: pulsar://pulsar:6650
+  service-urls:
+    bil: http://cm-bil-svc:8085
   keycloak:
     base-url: http://keycloak:8080

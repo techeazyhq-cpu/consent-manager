@@ -26,10 +26,10 @@ public final class DfSubFactory {
     private DfSubFactory() {
     }
 
-    /** Auto-created on {@code DfActivatedEvt} (plan §7c, §11) — always starts on the FREE plan. */
-    public static DfSub createFree(String dfId, String freeSubPlnId) {
+    /** Auto-created on {@code DfActivatedEvt} (plan §7c, §11), on the plan chosen at onboarding (FREE by default). */
+    public static DfSub create(String dfId, String subPlnId) {
         Instant now = Instant.now();
-        return new DfSub(dfId, freeSubPlnId, DfSubSts.ACTIVE, now, now.plus(30, ChronoUnit.DAYS));
+        return new DfSub(dfId, subPlnId, DfSubSts.ACTIVE, now, now.plus(30, ChronoUnit.DAYS));
     }
 
     public static DfSub rehydrate(String dfId, String subPlnId, DfSubSts sts, Instant curPeriodFrom, Instant curPeriodTo) {

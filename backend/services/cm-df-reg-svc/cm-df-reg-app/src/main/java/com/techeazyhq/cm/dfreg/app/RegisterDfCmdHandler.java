@@ -23,21 +23,46 @@ import org.springframework.transaction.annotation.Transactional;
 import com.techeazyhq.cm.dfreg.dom.Df;
 import com.techeazyhq.cm.dfreg.dom.DfFactory;
 import com.techeazyhq.cm.dfreg.dom.DfRepoPort;
+import com.techeazyhq.cm.dfreg.dom.SubPlnCatalogPort;
+import com.techeazyhq.cm.webkit.DomRuleViolation;
 
 import reactor.core.publisher.Mono;
 
+/**
+ * Onboards a Data Fiduciary as PENDING, with its profile and the plan it will be subscribed to on activation. An
+ * invalid profile (400 {@code invalid-df-profile}) or a plan cm-bil-svc doesn't offer (400 {@code unknown-sub-pln})
+ * is refused before anything is written.
+ */
 public class RegisterDfCmdHandler implements CmdHandler<RegisterDfCmd, Df> {
 
     private final DfRepoPort dfRepo;
+    private final SubPlnCatalogPort subPlnCatalog;
 
-    public RegisterDfCmdHandler(DfRepoPort dfRepo) {
+    public RegisterDfCmdHandler(DfRepoPort dfRepo, SubPlnCatalogPort subPlnCatalog) {
         this.dfRepo = dfRepo;
+        this.subPlnCatalog = subPlnCatalog;
     }
 
     @Override
     @Transactional
     public Mono<Df> handle(RegisterDfCmd cmd) {
-        Df df = DfFactory.register(cmd.name(), cmd.contactEmail());
-        return dfRepo.save(df);
+        RegisterDfCmd.PrflFields prfl = cmd.prfl() == null ? RegisterDfCmd.PrflFields.NONE : cmd.prfl();
+        return Mono.fromCallable(() -> DfFactory.register(cmd.name(), cmd.contactEmail(), prfl.toPrfl(), cmd.subPlnName()))
+                .onErrorMap(IllegalArgumentException.class,
+                        e -> new DomRuleViolation(400, "invalid-df-profile", e.getMessage()))
+                // Mono.defer: save() starts its work when called, not when subscribed, so calling it directly
+                // here would run it before the plan check had a chance to refuse the registration.
+                .flatMap(df -> requireKnownPlan(df).then(Mono.defer(() -> dfRepo.save(df))));
+    }
+
+    private Mono<Void> requireKnownPlan(Df df) {
+        if (df.subPlnName() == null) {
+            return Mono.empty();
+        }
+        return subPlnCatalog.exists(df.subPlnName())
+                .flatMap(exists -> exists
+                        ? Mono.<Void>empty()
+                        : Mono.error(new DomRuleViolation(400, "unknown-sub-pln",
+                                "There is no subscription plan named " + df.subPlnName())));
     }
 }
