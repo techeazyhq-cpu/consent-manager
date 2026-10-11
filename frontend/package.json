@@ -7,6 +7,13 @@
     "dev:df-app": "pnpm --filter mf-df-app dev",
     "dev:cm-admin": "pnpm --filter mf-cm-admin dev",
     "build": "pnpm -r build",
-    "preview:all": "pnpm -r --parallel preview"
+    "preview:all": "pnpm -r --parallel preview",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "10.4.0",
+    "@testing-library/react": "16.1.0",
+    "jsdom": "25.0.1",
+    "vitest": "2.1.9"
   }
 }

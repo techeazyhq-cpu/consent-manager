@@ -18,7 +18,7 @@
 
 import { useEffect, useState } from "react";
 import { initKeycloak, toAuthInfo, type AuthInfo } from "auth-kit";
-import { ErrorBanner, Spinner } from "ui-kit/src/index";
+import { ErrorBanner, Spinner, WrongAccountNotice } from "ui-kit/src/index";
 import DpPortalApp from "./App";
 
 const KC_BASE = import.meta.env.VITE_KC_BASE_URL ?? "http://localhost:8080";
@@ -68,7 +68,12 @@ export default function AppRoot() {
   if (!auth || !auth.roles.includes("DP")) {
     return (
       <div className="cm-page">
-        <ErrorBanner message="Your account does not have the DP role." />
+        <WrongAccountNotice
+          appName="the DP portal"
+          requiredAccount="a data principal account"
+          username={auth?.username}
+          onSignOut={() => (auth ? auth.logout() : window.location.reload())}
+        />
       </div>
     );
   }

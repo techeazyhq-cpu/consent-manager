@@ -175,6 +175,27 @@ body {
   color: var(--cm-text-dim);
 }
 
+.cm-wrong-account {
+  max-width: 520px;
+  margin: 48px auto 0;
+}
+
+.cm-wrong-account h1 {
+  margin: 0 0 10px;
+  font-size: 20px;
+}
+
+.cm-wrong-account p {
+  margin: 0 0 10px;
+  overflow-wrap: anywhere;
+}
+
+.cm-wrong-account .cm-wrong-account-hint {
+  margin-bottom: 18px;
+  color: var(--cm-text-dim);
+  font-size: 13px;
+}
+
 .cm-error-banner {
   background: rgba(239, 90, 111, 0.12);
   border: 1px solid var(--cm-danger);
