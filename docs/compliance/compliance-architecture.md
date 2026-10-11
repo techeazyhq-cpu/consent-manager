@@ -3,7 +3,7 @@
 - **Status:** Proposed, for review
 - **Date:** 2026-10-11
 - **Decisions:** [ADR-018](../adr/adr-018-regional-cells-for-data-residency.md) to
-  [ADR-025](../adr/adr-025-iso-27560-consent-records-and-receipts.md)
+  [ADR-026](../adr/adr-026-consent-validity-requested-maximum-principal-adjustable.md)
 
 > This is an architecture input, not legal advice. Every statutory figure (ages, deadlines, retention periods) is held
 > as versioned data in a regime profile, so counsel can correct it without a code change. Figures marked
@@ -270,8 +270,18 @@ C4Context
   - optional purposes are never pre-ticked
   - a request that bundles an optional purpose into a mandatory one is refused
   - partial consent records exactly the categories granted
-- **Renewal and modification:** a principal can renew before a consent lapses, or change which categories it covers.
-  Both are 27560 events.
+- **Validity, renewal and modification
+  ([ADR-026](../adr/adr-026-consent-validity-requested-maximum-principal-adjustable.md)):**
+  - **Validity:** each purpose in a request carries a requested and a maximum validity, as a date or an event, capped
+    by the strictest applicable law.
+  - **Granting:** the principal may accept the requested validity, choose a shorter one, or choose a longer one up to
+    the maximum. The screen opens on the requested validity.
+  - **Later:** the principal may shorten at any time. Extending is only by renewal, prompted before a lapse.
+  - **Necessary categories:** a fiduciary may mark a category necessary and state the consequence of refusing it. It
+    can never lock a category against refusal, withdrawal or an earlier end.
+  - **Categories:** changing which categories a purpose covers is partial consent or withdrawal.
+
+  All of these are 27560 events.
 - **Sharing consent:** a principal can consent to fiduciary A sharing named categories with onboarded fiduciary B for
   a purpose. The platform records the consent and issues a token both can verify. The data moves A to B directly,
   never through the platform (B1, B2, B3).
@@ -478,7 +488,7 @@ R1 and R2 and R4 to R9 go into Phase 0. Findings are ranked by severity.
 | R6 | **Accessibility is missing.** DPDPA defines the consent manager as an **accessible** platform, and principals include persons with disabilities. | DPDPA s.2(g); WCAG 2.2 AA; EN 301 549 (EU); Section 508 (US); India's GIGW | WCAG 2.2 AA for the DP portal, notices and receipts (receipts as tagged PDF/UA as well as JSON-LD), screen-reader-tested consent flows, automated checks (axe) in CI plus manual audits, and an assisted channel. |
 | R7 | **Deceptive design isn't addressed** beyond pre-ticked boxes and bundling. | India's CCPA Guidelines on Dark Patterns (2023); EDPB Guidelines 03/2022; GDPR Art. 7(4) "freely given"; ISO/IEC 29184 | The consent decision is always rendered by the platform's own components, never styled by the fiduciary. Rules: accept and refuse have equal prominence and effort; withdrawal takes no more steps than giving; no confirm-shaming; no repeated asking (a refused request can't be re-raised for a period the regime profile sets); no false urgency. UI tests enforce the rules. |
 | R8 | **Receipts and records must verify for 7 years or more,** but receipts are signed with the token key (ADR-025), keys rotate (ADR-013), and receipts carry no trusted time. | 27560 §10.1; DPDPA B3, B4; GDPR Art. 7(1) | A separate receipt-signing key. Retired public keys stay published, so the key history is permanent. Each receipt gets trusted time, by RFC 3161, or by inclusion in an anchored ledger checkpoint with a proof (ADR-015). A crypto-period and algorithm-migration plan. |
-| R9 | **Consent validity is a fixed 365 days in code.** 27560 treats endless duration as invalid in several jurisdictions and expects renewal; validity should follow the purpose and the law. | 27560 §8.5 duration; GDPR Art. 5(1)(e); HIPAA §164.508(c)(1)(v) (expiry date or event) | Duration comes from the purpose definition, bounded by the strictest applicable regime's maximum (R3). Lapse becomes a recorded event. Principals are prompted to renew before a lapse. HIPAA authorisations may expire on an event. |
+| R9 | **Consent validity is a fixed 365 days in code.** 27560 treats endless duration as invalid in several jurisdictions and expects renewal; validity should follow the purpose and the law. | 27560 §8.5 duration; GDPR Art. 5(1)(e); HIPAA §164.508(c)(1)(v) (expiry date or event) | Duration comes from the purpose definition, bounded by the strictest applicable regime's maximum (R3). Lapse becomes a recorded event. Principals are prompted to renew before a lapse. HIPAA authorisations may expire on an event. Decided in ADR-026: requested and maximum validity per purpose; the principal chooses at grant, shortens at any time, extends only by renewal. |
 | R10 | **Withdrawing a sharing consent doesn't name who must stop.** §6.2 lets A share with B, and §6.3 webhooks "fiduciaries", but B, the recipient, also holds the data. Sharing across cells is undefined. | DPDPA First Schedule B1, B3; DPDPA s.6(6); GDPR Art. 17(2), 19 | Both A and B are recipients on the 27560 record and get change webhooks and status. Sharing is within a cell unless a lawful transfer mechanism is recorded on the purpose. |
 | R11 | **Fiduciaries are onboarded without verification.** Principals rely on the platform for who is asking; an unverified requester is a phishing route against the people the platform acts for. | DPDPA First Schedule B8 (fiduciary capacity), Part A item 8 | Verify each fiduciary's legal identity at onboarding, with registry checks by cell: CIN and GSTIN in India, trade licence in the UAE, CR in Saudi Arabia, EIN and NPI for US covered entities. Requests show "verified". Suspension on fraud terminates its pending requests (R16). |
 | R12 | **The representative lifecycle stops at the grant.** A child turning 18 (or the GDPR age) should confirm consents a parent gave; a guardianship can end; a nominee's trigger needs evidence. | DPDPA s.9; GDPR Art. 8; EDPB Guidelines 05/2020 on consent (reaching the age of consent) | Majority is a scheduled event from the date of birth held in the vault. It asks the now-adult principal to confirm or withdraw each consent given for them. Representations carry an end date and are re-checked. |

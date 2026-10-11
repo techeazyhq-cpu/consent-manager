@@ -31,6 +31,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [023](adr-023-pure-consent-manager-boundary-and-neutrality.md) | A pure consent manager: its boundary, neutrality and First Schedule duties | Proposed |
 | [024](adr-024-hipaa-authorisations-and-fhir-consent.md) | HIPAA authorisations in the consent model; FHIR Consent at the boundary | Proposed |
 | [025](adr-025-iso-27560-consent-records-and-receipts.md) | Consent records and receipts to ISO/IEC TS 27560, in DPV | Proposed |
+| [026](adr-026-consent-validity-requested-maximum-principal-adjustable.md) | Consent validity: requested and maximum per purpose, adjustable by the principal | Proposed |
 
 ## Writing one
 
