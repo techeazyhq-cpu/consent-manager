@@ -28,6 +28,8 @@ import Keycloak from "keycloak-js";
 export interface AuthInfo {
   token: string;
   subject: string;
+  /** What the person signed in with: their email address or, for a phone-only account, their mobile number. */
+  username?: string;
   roles: string[];
   dpId?: string;
   email?: string;
@@ -74,6 +76,7 @@ export function toAuthInfo(kc: Keycloak): AuthInfo | null {
   return {
     token: kc.token,
     subject: kc.subject ?? "",
+    username: typeof parsed.preferred_username === "string" ? parsed.preferred_username : undefined,
     roles,
     dpId: roles.includes("DP") ? kc.subject ?? undefined : undefined,
     email: typeof parsed.email === "string" ? parsed.email : undefined,

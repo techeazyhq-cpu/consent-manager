@@ -60,6 +60,44 @@ export function ErrorBanner({ message }: { message: string }) {
   return <div className="cm-error-banner">{message}</div>;
 }
 
+/**
+ * Shown when the signed-in account is the wrong kind for this app. Keycloak signs a browser in once for every
+ * Consent Manager app, so signing in to one app as, say, an administrator signs the next app in as that administrator
+ * too; this names the account and lets the person sign out and choose another.
+ */
+export function WrongAccountNotice({
+  appName,
+  requiredAccount,
+  username,
+  onSignOut,
+}: {
+  appName: string;
+  requiredAccount: string;
+  username?: string;
+  onSignOut: () => void;
+}) {
+  return (
+    <Card className="cm-wrong-account">
+      <h1>This account can't use {appName}</h1>
+      <p>
+        {username ? (
+          <>
+            You're signed in as <strong>{username}</strong>, which isn't {requiredAccount}.
+          </>
+        ) : (
+          <>The account you're signed in with isn't {requiredAccount}.</>
+        )}
+      </p>
+      <p className="cm-wrong-account-hint">
+        This usually means you signed in to another Consent Manager app in this browser.
+      </p>
+      <Button variant="primary" onClick={onSignOut}>
+        Sign out and use another account
+      </Button>
+    </Card>
+  );
+}
+
 export function Field({ label, children }: PropsWithChildren<{ label: string }>) {
   return (
     <div className="cm-field">
