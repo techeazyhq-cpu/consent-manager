@@ -28,6 +28,7 @@ dependencies {
     implementation(project(":cm-cns-cmd-if-rest"))
     implementation(project(":cm-sec-kit"))
     implementation(project(":cm-web-kit"))
+    implementation(project(":cm-res-kit"))
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")

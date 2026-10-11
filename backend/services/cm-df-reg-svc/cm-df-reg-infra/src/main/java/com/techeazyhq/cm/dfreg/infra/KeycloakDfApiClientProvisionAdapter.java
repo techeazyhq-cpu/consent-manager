@@ -21,9 +21,12 @@ package com.techeazyhq.cm.dfreg.infra;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreaker;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.techeazyhq.cm.dfreg.dom.DfApiClientProvisionPort;
+import com.techeazyhq.cm.reskit.DependencyFallbacks;
 
 import reactor.core.publisher.Mono;
 
@@ -33,14 +36,20 @@ import reactor.core.publisher.Mono;
  * hardcoded-claim mapper emitting {@code df_id}, and returns its generated secret. This is
  * the piece most likely to need adjustment against a real Keycloak instance during
  * end-to-end verification — the exact Admin REST payload shapes are version-sensitive.
+ * <p>
+ * Behind a circuit breaker (ADR-016): with Keycloak unreachable or its breaker open, activation fails with 503 and the
+ * fiduciary stays PENDING, so the administrator can activate it again; a refusal from Keycloak (4xx) is passed on.
  */
 public class KeycloakDfApiClientProvisionAdapter implements DfApiClientProvisionPort {
 
     private final WebClient adminWebClient;
+    private final ReactiveCircuitBreaker circuitBreaker;
     private final String realm;
 
-    public KeycloakDfApiClientProvisionAdapter(WebClient adminWebClient, String realm) {
+    public KeycloakDfApiClientProvisionAdapter(WebClient adminWebClient, ReactiveCircuitBreakerFactory<?, ?> cbFactory,
+                                               String realm) {
         this.adminWebClient = adminWebClient;
+        this.circuitBreaker = cbFactory.create("keycloak-admin");
         this.realm = realm;
     }
 
@@ -71,7 +80,7 @@ public class KeycloakDfApiClientProvisionAdapter implements DfApiClientProvision
                                 "jsonType.label", "String",
                                 "access.token.claim", "true"))));
 
-        return adminWebClient.post()
+        Mono<String> provision = adminWebClient.post()
                 .uri("/admin/realms/{realm}/clients", realm)
                 .bodyValue(clientRepresentation)
                 .retrieve()
@@ -82,6 +91,7 @@ public class KeycloakDfApiClientProvisionAdapter implements DfApiClientProvision
                         .retrieve()
                         .bodyToMono(ClientSecretResp.class))
                 .map(ClientSecretResp::value);
+        return circuitBreaker.run(provision, DependencyFallbacks.unavailable("keycloak"));
     }
 
     private record ClientSecretResp(String type, String value) {

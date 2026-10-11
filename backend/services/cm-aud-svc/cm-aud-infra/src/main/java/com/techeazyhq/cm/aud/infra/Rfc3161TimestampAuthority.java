@@ -20,6 +20,7 @@ package com.techeazyhq.cm.aud.infra;
 
 import com.techeazyhq.cm.aud.dom.AudAnchor;
 import com.techeazyhq.cm.aud.dom.TimestampAuthorityPort;
+import com.techeazyhq.cm.reskit.DependencyFallbacks;
 import org.bouncycastle.asn1.nist.NISTObjectIdentifiers;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cms.CMSSignedData;
@@ -29,6 +30,8 @@ import org.bouncycastle.tsp.TimeStampRequest;
 import org.bouncycastle.tsp.TimeStampRequestGenerator;
 import org.bouncycastle.tsp.TimeStampResponse;
 import org.bouncycastle.tsp.TimeStampToken;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreaker;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
 
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -50,6 +53,9 @@ import java.util.HexFormat;
  * the request, answers exactly this hash and nonce, and carries a token whose signature verifies against the signing
  * certificate in it, valid at the time it gives and marked for timestamping. The token is stored as returned (DER), so
  * anyone can check it later with {@code openssl ts -verify} and the authority's CA certificate.
+ * <p>
+ * Requests go through a circuit breaker (ADR-016): while the authority is down, the anchoring job's attempts fail at
+ * once instead of each waiting out the timeout, and the checkpoints are anchored once it is back.
  */
 public class Rfc3161TimestampAuthority implements TimestampAuthorityPort {
 
@@ -58,17 +64,22 @@ public class Rfc3161TimestampAuthority implements TimestampAuthorityPort {
     private final HttpClient http;
     private final URI url;
     private final Duration timeout;
+    private final ReactiveCircuitBreaker circuitBreaker;
     private final SecureRandom random = new SecureRandom();
 
-    public Rfc3161TimestampAuthority(HttpClient http, URI url, Duration timeout) {
+    public Rfc3161TimestampAuthority(HttpClient http, URI url, Duration timeout,
+                                     ReactiveCircuitBreakerFactory<?, ?> cbFactory) {
         this.http = http;
         this.url = url;
         this.timeout = timeout;
+        this.circuitBreaker = cbFactory.create("timestamp-authority");
     }
 
     @Override
     public Mono<AudAnchor> timestamp(long checkpointId, String sha256Hex) {
-        return Mono.fromCallable(() -> request(checkpointId, sha256Hex)).subscribeOn(Schedulers.boundedElastic());
+        Mono<AudAnchor> request = Mono.fromCallable(() -> request(checkpointId, sha256Hex))
+                .subscribeOn(Schedulers.boundedElastic());
+        return circuitBreaker.run(request, DependencyFallbacks.unavailable("timestamp-authority"));
     }
 
     private AudAnchor request(long checkpointId, String sha256Hex) throws Exception {

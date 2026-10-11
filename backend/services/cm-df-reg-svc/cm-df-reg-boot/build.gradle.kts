@@ -27,10 +27,12 @@ dependencies {
     implementation(project(":cm-df-reg-infra"))
     implementation(project(":cm-df-reg-if-rest"))
     implementation(project(":cm-web-kit"))
+    implementation(project(":cm-res-kit"))
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:3.3.3")
     implementation("org.postgresql:r2dbc-postgresql:1.1.3.RELEASE")
     implementation("org.postgresql:postgresql:42.7.14")
     implementation("org.flywaydb:flyway-core:10.22.0")

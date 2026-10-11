@@ -23,10 +23,15 @@ import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFac
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.techeazyhq.cm.cnscmd.dom.DfActivePort;
+import com.techeazyhq.cm.reskit.DependencyFallbacks;
 
 import reactor.core.publisher.Mono;
 
-/** {@link DfActivePort} adapter (plan §7c step 1): Circuit-Breaker-wrapped call to cm-df-reg-svc. */
+/**
+ * {@link DfActivePort} adapter (plan §7c step 1): Circuit-Breaker-wrapped call to cm-df-reg-svc (ADR-016). An
+ * unreachable cm-df-reg-svc fails closed with 503: no consent request is accepted from a fiduciary that cannot be
+ * checked, and the fiduciary is told to retry rather than that it is inactive.
+ */
 public class WebClientDfActiveAdapter implements DfActivePort {
 
     private final WebClient webClient;
@@ -34,7 +39,7 @@ public class WebClientDfActiveAdapter implements DfActivePort {
 
     public WebClientDfActiveAdapter(WebClient.Builder builder, ReactiveCircuitBreakerFactory cbFactory, String dfRegBaseUrl) {
         this.webClient = builder.baseUrl(dfRegBaseUrl).build();
-        this.circuitBreaker = cbFactory.create("df-active");
+        this.circuitBreaker = cbFactory.create("cm-df-reg-svc");
     }
 
     @Override
@@ -44,9 +49,7 @@ public class WebClientDfActiveAdapter implements DfActivePort {
                 .retrieve()
                 .bodyToMono(DfActiveResp.class)
                 .map(DfActiveResp::active);
-        // Fail closed: if cm-df-reg-svc is unreachable, treat the DF as not-active rather
-        // than silently allowing a consent request from an unverifiable DF.
-        return circuitBreaker.run(call, throwable -> Mono.just(false));
+        return circuitBreaker.run(call, DependencyFallbacks.unavailable("cm-df-reg-svc"));
     }
 
     private record DfActiveResp(boolean active) {

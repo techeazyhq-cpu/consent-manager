@@ -21,13 +21,19 @@ package com.techeazyhq.cm.cnscmd.infra;
 import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreaker;
 import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import com.techeazyhq.cm.cnscmd.dom.DfSubEligiblePolicy;
 import com.techeazyhq.cm.domkit.Spec;
+import com.techeazyhq.cm.reskit.DependencyFallbacks;
 
 import reactor.core.publisher.Mono;
 
-/** {@link DfSubEligiblePolicy} adapter (plan §7b, §11): Circuit-Breaker-wrapped call to cm-bil-svc's internal eligibility endpoint. */
+/**
+ * {@link DfSubEligiblePolicy} adapter (plan §7b, §11): Circuit-Breaker-wrapped call to cm-bil-svc's internal eligibility
+ * endpoint (ADR-016). A fiduciary without a subscription (404) is ineligible; an unreachable cm-bil-svc fails closed with
+ * 503, so quota enforcement is never bypassed during an outage, and the fiduciary is not told its subscription lapsed.
+ */
 public class WebClientDfSubEligibleAdapter implements DfSubEligiblePolicy {
 
     private final WebClient webClient;
@@ -35,7 +41,7 @@ public class WebClientDfSubEligibleAdapter implements DfSubEligiblePolicy {
 
     public WebClientDfSubEligibleAdapter(WebClient.Builder builder, ReactiveCircuitBreakerFactory cbFactory, String bilBaseUrl) {
         this.webClient = builder.baseUrl(bilBaseUrl).build();
-        this.circuitBreaker = cbFactory.create("df-sub-eligible");
+        this.circuitBreaker = cbFactory.create("cm-bil-svc");
     }
 
     @Override
@@ -44,11 +50,10 @@ public class WebClientDfSubEligibleAdapter implements DfSubEligiblePolicy {
                 .uri("/internal/dfs/{id}/sub-eligibility", dfId)
                 .retrieve()
                 .bodyToMono(SubEligibilityResp.class)
-                .map(this::toSpecResult);
-        // Fail closed: cm-bil-svc unreachable -> treat as ineligible (402) rather than let
-        // billing/quota enforcement be silently bypassed during an outage.
-        return circuitBreaker.run(call, throwable ->
-                Mono.just(Spec.SpecResult.violated("subscription-inactive")));
+                .map(this::toSpecResult)
+                .onErrorResume(WebClientResponseException.NotFound.class,
+                        notFound -> Mono.just(Spec.SpecResult.violated("subscription-inactive")));
+        return circuitBreaker.run(call, DependencyFallbacks.unavailable("cm-bil-svc"));
     }
 
     private Spec.SpecResult toSpecResult(SubEligibilityResp resp) {

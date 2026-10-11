@@ -26,9 +26,16 @@ import com.techeazyhq.cm.ntf.dom.NtfChnl;
 import com.techeazyhq.cm.ntf.dom.NtfCtg;
 import com.techeazyhq.cm.ntf.dom.NtfDeliveryRejectedException;
 import com.techeazyhq.cm.ntf.dom.NtfMsg;
+import com.techeazyhq.cm.reskit.DependencyUnavailableException;
+import com.techeazyhq.cm.reskit.RemoteFailures;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.cloud.circuitbreaker.resilience4j.ReactiveResilience4JCircuitBreakerFactory;
+import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JConfigurationProperties;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.io.IOException;
@@ -95,8 +102,20 @@ class NotificationServiceClientTest {
 
     private NotificationServiceClient client(String signingSecret, String fromAddress) {
         String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort() + "/";
-        return new NotificationServiceClient(WebClient.builder(), JSON, new NotificationServiceClient.Settings(
+        return new NotificationServiceClient(WebClient.builder(), JSON, breakers(), new NotificationServiceClient.Settings(
                 baseUrl, "ntf_test", signingSecret, fromAddress, 120, Duration.ofSeconds(5), 2, Duration.ofMillis(10)));
+    }
+
+    /** As configured in cm-ntf-svc (ADR-016), but opening after two sends so a test can trip it. */
+    private static ReactiveResilience4JCircuitBreakerFactory breakers() {
+        CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(CircuitBreakerConfig.custom()
+                .slidingWindowSize(2).minimumNumberOfCalls(2).failureRateThreshold(50)
+                .recordException(new RemoteFailures())
+                .build());
+        Resilience4JConfigurationProperties properties = new Resilience4JConfigurationProperties();
+        properties.setDisableTimeLimiter(true);
+        return new ReactiveResilience4JCircuitBreakerFactory(registry, TimeLimiterRegistry.ofDefaults(),
+                null /* no bulkhead */, properties);
     }
 
     @Test
@@ -175,7 +194,42 @@ class NotificationServiceClientTest {
         RuntimeException failure = assertThrows(RuntimeException.class, () ->
                 client(null, null).send(NtfChnl.SMS, new NtfMsg("+919800000001", null, "Hi")).block());
 
-        assertTrue(failure instanceof NotificationServiceClient.TransientFailure, failure.toString());
+        assertTrue(failure instanceof DependencyUnavailableException, failure.toString());
+        assertTrue(failure.getCause() instanceof NotificationServiceClient.TransientFailure, failure.toString());
+        assertEquals(3, requests.size());
+    }
+
+    @Test
+    void onceNotificationServiceKeepsFailingSendsFailAtOnceWithoutCallingIt() {
+        for (int i = 0; i < 6; i++) {
+            respond(503, "{\"code\":\"UNAVAILABLE\",\"retryable\":true}");
+        }
+        NotificationServiceClient client = client(null, null);
+        NtfMsg msg = new NtfMsg("+919800000001", null, "Hi");
+        for (int i = 0; i < 2; i++) {
+            assertThrows(DependencyUnavailableException.class, () -> client.send(NtfChnl.SMS, msg).block());
+        }
+        int callsBeforeOpen = requests.size();
+
+        assertThrows(DependencyUnavailableException.class, () -> client.send(NtfChnl.SMS, msg).block());
+
+        assertEquals(6, callsBeforeOpen);
+        assertEquals(callsBeforeOpen, requests.size());
+    }
+
+    @Test
+    void refusalsDoNotOpenTheBreaker() {
+        for (int i = 0; i < 3; i++) {
+            respond(403, "{\"code\":\"CHANNEL_NOT_ALLOWED\",\"retryable\":false}");
+        }
+        NotificationServiceClient client = client(null, null);
+        NtfMsg msg = new NtfMsg("+919800000001", null, "Hi");
+        for (int i = 0; i < 2; i++) {
+            assertThrows(NtfDeliveryRejectedException.class, () -> client.send(NtfChnl.SMS, msg).block());
+        }
+
+        client.send(NtfChnl.SMS, msg).onErrorComplete(NtfDeliveryRejectedException.class).block();
+
         assertEquals(3, requests.size());
     }
 

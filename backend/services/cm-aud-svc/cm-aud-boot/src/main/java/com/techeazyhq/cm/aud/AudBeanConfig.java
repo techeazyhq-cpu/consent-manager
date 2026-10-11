@@ -35,6 +35,7 @@ import org.apache.pulsar.reactive.client.adapter.AdaptedReactivePulsarClientFact
 import org.apache.pulsar.reactive.client.api.ReactivePulsarClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
@@ -70,10 +71,11 @@ public class AudBeanConfig {
     /** The external RFC 3161 timestamp authority checkpoints are anchored with (ADR-015). */
     @Bean
     public TimestampAuthorityPort timestampAuthorityPort(@Value("${cm.aud.anchoring.tsa-url}") String tsaUrl,
-                                                         @Value("${cm.aud.anchoring.timeout:10s}") Duration timeout) {
+                                                         @Value("${cm.aud.anchoring.timeout:10s}") Duration timeout,
+                                                         ReactiveCircuitBreakerFactory<?, ?> cbFactory) {
         return new Rfc3161TimestampAuthority(
                 HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).followRedirects(HttpClient.Redirect.NEVER).build(),
-                URI.create(tsaUrl), timeout);
+                URI.create(tsaUrl), timeout, cbFactory);
     }
 
     @Bean

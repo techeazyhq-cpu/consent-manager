@@ -38,11 +38,13 @@ include(":cm-evt-kit")
 include(":cm-web-kit")
 include(":cm-sec-kit")
 include(":cm-test-kit")
+include(":cm-res-kit")
 project(":cm-dom-kit").projectDir = file("backend/libs/cm-dom-kit")
 project(":cm-evt-kit").projectDir = file("backend/libs/cm-evt-kit")
 project(":cm-web-kit").projectDir = file("backend/libs/cm-web-kit")
 project(":cm-sec-kit").projectDir = file("backend/libs/cm-sec-kit")
 project(":cm-test-kit").projectDir = file("backend/libs/cm-test-kit")
+project(":cm-res-kit").projectDir = file("backend/libs/cm-res-kit")
 
 // ---- gateway (single module) ----
 include(":cm-gw")

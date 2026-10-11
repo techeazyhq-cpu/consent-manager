@@ -23,6 +23,8 @@ plugins {
 dependencies {
     api(project(":cm-ntf-dom"))
     implementation(project(":cm-ntf-app"))
+    implementation(project(":cm-res-kit"))
+    implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:3.3.3")
     implementation("org.springframework.boot:spring-boot-starter-mail:3.5.16")
     implementation("org.springframework.boot:spring-boot-starter-webflux:3.5.16")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc:3.5.16")

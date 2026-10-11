@@ -33,6 +33,13 @@ spring:
       port: 6379
   cloud:
     gateway:
+      # Every route gets its own circuit breaker, named after the route id (ADR-016). An unreachable, timed-out or
+      # open-circuit service is answered 503 by RouteFallbackController; a response from the service, 5xx included,
+      # passes through as it is, so a 503 a service gives for its own dependency doesn't open this one too.
+      default-filters:
+        - name: CircuitBreaker
+          args:
+            fallbackUri: forward:/fallback
       routes:
         - id: df-reg
           uri: http://localhost:8081
@@ -64,6 +71,33 @@ cm:
     base-url: http://localhost:8181
   service-urls:
     bil: http://localhost:8085
+
+# Circuit breakers on calls to other services (ADR-016). One breaker per dependency: it opens when at least half of
+# the last 20 calls failed because the dependency is unhealthy (cm-res-kit's RemoteFailures: unreachable, timed out,
+# 5xx or 429; any other 4xx is the dependency working), refuses calls for 30s, then lets 3 trial calls through.
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-failure-predicate: com.techeazyhq.cm.reskit.RemoteFailures
+  timelimiter:
+    configs:
+      default:
+        # A route's whole request: longer than any one service's own budget for its dependencies.
+        timeout-duration: 10s
+    instances:
+      # Calls the gateway makes itself on the request path, before routing.
+      pdp:
+        timeout-duration: 2s
+      bil-quota:
+        timeout-duration: 2s
 
 management:
   endpoints:

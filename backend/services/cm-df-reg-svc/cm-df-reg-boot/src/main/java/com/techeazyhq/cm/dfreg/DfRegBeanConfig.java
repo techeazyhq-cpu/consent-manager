@@ -24,6 +24,7 @@ import org.apache.pulsar.reactive.client.api.ReactivePulsarClient;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.r2dbc.core.DatabaseClient;
@@ -72,8 +73,10 @@ public class DfRegBeanConfig {
     }
 
     @Bean
-    public DfApiClientProvisionPort dfApiClientProvisionPort(WebClient keycloakAdminWebClient, KeycloakProps props) {
-        return new KeycloakDfApiClientProvisionAdapter(keycloakAdminWebClient, props.realm());
+    public DfApiClientProvisionPort dfApiClientProvisionPort(WebClient keycloakAdminWebClient,
+                                                             ReactiveCircuitBreakerFactory<?, ?> cbFactory,
+                                                             KeycloakProps props) {
+        return new KeycloakDfApiClientProvisionAdapter(keycloakAdminWebClient, cbFactory, props.realm());
     }
 
     @Bean(destroyMethod = "close")

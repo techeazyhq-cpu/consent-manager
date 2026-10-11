@@ -23,6 +23,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreaker;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -50,9 +52,12 @@ public class PepVerifyGatewayFilter implements GlobalFilter, Ordered {
     private static final String CNS_TKN_HEADER = "X-Cns-Tkn";
 
     private final WebClient opaWebClient;
+    private final ReactiveCircuitBreaker pdpCircuitBreaker;
 
-    public PepVerifyGatewayFilter(WebClient.Builder builder, @Value("${cm.pdp.base-url}") String pdpBaseUrl) {
+    public PepVerifyGatewayFilter(WebClient.Builder builder, ReactiveCircuitBreakerFactory<?, ?> cbFactory,
+                                  @Value("${cm.pdp.base-url}") String pdpBaseUrl) {
         this.opaWebClient = builder.baseUrl(pdpBaseUrl).build();
+        this.pdpCircuitBreaker = cbFactory.create("pdp");
     }
 
     @Override
@@ -78,20 +83,31 @@ public class PepVerifyGatewayFilter implements GlobalFilter, Ordered {
         }
 
         return callerDfId(exchange)
-                .flatMap(dfId -> opaWebClient.post()
-                        .uri("/v1/data/consent/authorization/allow")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .bodyValue(Map.of("input", Map.of(
-                                "action", "READ",
-                                "cns_art_id", cnsArtId,
-                                "consent_token", cnsTkn,
-                                "caller_df_id", dfId,
-                                "requested_purpose", purpose == null ? "" : purpose,
-                                "requested_attribute", attribute == null ? "" : attribute)))
-                        .retrieve()
-                        .bodyToMono(OpaResp.class))
-                .flatMap(resp -> Boolean.TRUE.equals(resp.result()) ? chain.filter(exchange) : deny(exchange))
-                .onErrorResume(err -> deny(exchange)); // fail closed: PDP unreachable -> deny
+                .flatMap(dfId -> allowed(cnsArtId, cnsTkn, dfId, purpose, attribute))
+                .flatMap(allowed -> allowed ? chain.filter(exchange) : deny(exchange));
+    }
+
+    /**
+     * The PDP's decision, behind a circuit breaker (ADR-016). Fails closed: an unreachable, failing or open-circuit
+     * PDP is a deny. Only the decision is guarded, so an error from the service behind the gateway after an allow
+     * reaches the caller as that error, not as a deny.
+     */
+    private Mono<Boolean> allowed(String cnsArtId, String cnsTkn, String dfId, String purpose, String attribute) {
+        Mono<Boolean> decision = opaWebClient.post()
+                .uri("/v1/data/consent/authorization/allow")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(Map.of("input", Map.of(
+                        "action", "READ",
+                        "cns_art_id", cnsArtId,
+                        "consent_token", cnsTkn,
+                        "caller_df_id", dfId,
+                        "requested_purpose", purpose == null ? "" : purpose,
+                        "requested_attribute", attribute == null ? "" : attribute)))
+                .retrieve()
+                .bodyToMono(OpaResp.class)
+                .map(resp -> Boolean.TRUE.equals(resp.result()))
+                .defaultIfEmpty(false);
+        return pdpCircuitBreaker.run(decision, err -> Mono.just(false));
     }
 
     /**
@@ -101,7 +117,7 @@ public class PepVerifyGatewayFilter implements GlobalFilter, Ordered {
     private static Mono<String> callerDfId(ServerWebExchange exchange) {
         return exchange.getPrincipal()
                 .filter(JwtAuthenticationToken.class::isInstance)
-                .map(principal -> ((JwtAuthenticationToken) principal).getToken().getClaimAsString("df_id"))
+                .flatMap(principal -> Mono.justOrEmpty(((JwtAuthenticationToken) principal).getToken().getClaimAsString("df_id")))
                 .defaultIfEmpty("");
     }
 

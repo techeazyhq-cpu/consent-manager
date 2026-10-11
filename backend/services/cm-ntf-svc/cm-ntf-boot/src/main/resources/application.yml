@@ -20,6 +20,13 @@ server:
     enabled: true
 
 spring:
+  cloud:
+    circuitbreaker:
+      resilience4j:
+        # The notification-service client times out each attempt itself and retries (cm.ntf.notification-service);
+        # a time limit on the whole send would cut its retries short.
+        disable-time-limiter-map:
+          notification-service: true
   application:
     name: cm-ntf-svc
   mail:
@@ -59,6 +66,26 @@ cm:
       timeout: 5s
       max-retries: 3
       retry-backoff: 500ms
+
+# Circuit breakers on calls to other services (ADR-016). One breaker per dependency: it opens when at least half of
+# the last 20 calls failed because the dependency is unhealthy (cm-res-kit's RemoteFailures: unreachable, timed out,
+# 5xx or 429; any other 4xx is the dependency working), refuses calls for 30s, then lets 3 trial calls through.
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 20
+        minimum-number-of-calls: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+        record-failure-predicate: com.techeazyhq.cm.reskit.RemoteFailures
+  timelimiter:
+    configs:
+      default:
+        timeout-duration: 3s
 
 management:
   endpoints:

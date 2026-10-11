@@ -25,6 +25,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
@@ -109,6 +110,7 @@ public class NtfBeanConfig {
         @Bean
         NotificationServiceClient notificationServiceClient(
                 WebClient.Builder webClientBuilder, ObjectMapper objectMapper,
+                ReactiveCircuitBreakerFactory<?, ?> cbFactory,
                 @Value("${cm.ntf.notification-service.base-url}") String baseUrl,
                 @Value("${cm.ntf.notification-service.api-key}") String apiKey,
                 @Value("${cm.ntf.notification-service.signing-secret:}") String signingSecret,
@@ -120,7 +122,7 @@ public class NtfBeanConfig {
             if (apiKey.isBlank()) {
                 throw new IllegalStateException("cm.ntf.notification-service.api-key must be set when cm.ntf.provider=notification-service");
             }
-            return new NotificationServiceClient(webClientBuilder, objectMapper, new NotificationServiceClient.Settings(
+            return new NotificationServiceClient(webClientBuilder, objectMapper, cbFactory, new NotificationServiceClient.Settings(
                     baseUrl, apiKey, signingSecret, fromAddress, otpValiditySeconds, timeout, maxRetries, retryBackoff));
         }
 
