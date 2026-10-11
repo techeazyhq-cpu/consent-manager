@@ -96,6 +96,8 @@ project(":cm-aud-infra").projectDir = file("backend/services/cm-aud-svc/cm-aud-i
 project(":cm-aud-if-rest").projectDir = file("backend/services/cm-aud-svc/cm-aud-if-rest")
 project(":cm-aud-boot").projectDir = file("backend/services/cm-aud-svc/cm-aud-boot")
 
-// ---- keycloak extension (plain Java, not a Spring Boot service) ----
+// ---- keycloak extensions (plain Java provider JARs, not Spring Boot services) ----
 include(":cm-idn-otp-spi")
 project(":cm-idn-otp-spi").projectDir = file("backend/keycloak-ext/cm-idn-otp-spi")
+include(":cm-idn-theme")
+project(":cm-idn-theme").projectDir = file("backend/keycloak-ext/cm-idn-theme")

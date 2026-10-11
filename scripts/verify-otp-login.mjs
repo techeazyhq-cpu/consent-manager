@@ -18,8 +18,9 @@
  */
 
 // Scripted check of the passwordless browser sign-in (cm-idn-otp-spi, plan §9a): drives cm-realm's login pages the
-// way a browser would for cm-shell — the client CM Admin, the DF app and the DP portal all sign in through — reading
-// each code from Mailpit, and checks:
+// way a browser would for each frontend's client (cm-dp-portal, cm-df-app, cm-cm-admin), reading each code from
+// Mailpit, and checks:
+//   0. each client's sign-in page shows its own audience theme (cm-idn-theme), and keeps it on the code page;
 //   1. an invalid address is refused on the first page;
 //   2. a wrong code is refused;
 //   3. the right code ends in an authorization code, and the token carries the account's role (a seeded user);
@@ -27,14 +28,19 @@
 //
 //   node scripts/verify-otp-login.mjs
 //
-// Env: KC_BASE (http://localhost:8080), MAILPIT_URL (http://localhost:8025, where cm-ntf-svc's codes land),
-//      REDIRECT_URI (http://localhost:5174/, any of cm-shell's redirect URIs).
+// Env: KC_BASE (http://localhost:8080), MAILPIT_URL (http://localhost:8025, where cm-ntf-svc's codes land).
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
 const KC = process.env.KC_BASE || 'http://localhost:8080';
 const MAILPIT = process.env.MAILPIT_URL || 'http://localhost:8025';
-const REDIRECT_URI = process.env.REDIRECT_URI || 'http://localhost:5174/';
 const REALM = `${KC}/realms/cm-realm`;
+
+/** Each frontend's client in cm-realm, where it sends people back to, and the audience its login theme shows. */
+const CLIENTS = {
+  dpPortal: { clientId: 'cm-dp-portal', redirectUri: 'http://localhost:5174/', audience: 'dp' },
+  dfApp: { clientId: 'cm-df-app', redirectUri: 'http://localhost:5175/', audience: 'df' },
+  cmAdmin: { clientId: 'cm-cm-admin', redirectUri: 'http://localhost:5176/', audience: 'admin' },
+};
 
 let failures = 0;
 const check = (ok, what) => {
@@ -82,22 +88,29 @@ async function latestCode(address, after) {
   throw new Error(`No code reached ${address} in Mailpit`);
 }
 
-/** Signs in as `address`; returns the decoded access token, or null if signing in did not complete. */
-async function signIn(address, { tryWrongCode = false } = {}) {
+const authorizationUrl = (client, challenge) => `${REALM}/protocol/openid-connect/auth?${new URLSearchParams({
+  client_id: client.clientId, redirect_uri: client.redirectUri, response_type: 'code', scope: 'openid',
+  state: randomUUID(), code_challenge: challenge, code_challenge_method: 'S256',
+})}`;
+
+const audienceOf = (html) => html.match(/<body[^>]*data-audience="([^"]+)"/)?.[1];
+
+/** Signs in as `address` through `client`; returns the decoded access token, or null if signing in did not complete. */
+async function signIn(address, client, { tryWrongCode = false } = {}) {
   const go = browser();
   const verifier = randomBytes(32).toString('base64url');
   const challenge = createHash('sha256').update(verifier).digest('base64url');
-  const authUrl = `${REALM}/protocol/openid-connect/auth?${new URLSearchParams({
-    client_id: 'cm-shell', redirect_uri: REDIRECT_URI, response_type: 'code', scope: 'openid',
-    state: randomUUID(), code_challenge: challenge, code_challenge_method: 'S256',
-  })}`;
-  const identifyPage = await (await go(authUrl)).text();
+  const identifyPage = await (await go(authorizationUrl(client, challenge))).text();
   const sentAfter = new Date(Date.now() - 1000);
   const codePage = await (await post(go, formAction(identifyPage), { identifier: address })).text();
   if (!codePage.includes('cm-otp-code-form')) {
     check(false, `${address}: code page shown after Send code`);
     return null;
   }
+  check(audienceOf(codePage) === client.audience,
+    `${client.clientId}: the code page keeps the ${client.audience} theme`);
+  check(identifyPage.includes('class="cm-intro"') && !codePage.includes('class="cm-intro"'),
+    `${client.clientId}: the audience intro shows on the first step only`);
   let action = formAction(codePage);
   const code = await latestCode(address, sentAfter);
   if (tryWrongCode) {
@@ -109,26 +122,37 @@ async function signIn(address, { tryWrongCode = false } = {}) {
   const done = await post(go, action, { code });
   const location = done.headers.get('location') ?? '';
   const authCode = new URL(location, KC).searchParams.get('code');
-  check(done.status === 302 && location.startsWith(REDIRECT_URI) && authCode, `${address}: the right code signs in`);
+  check(done.status === 302 && location.startsWith(client.redirectUri) && authCode,
+    `${address}: the right code signs in`);
   if (!authCode) return null;
   const tokens = await (await fetch(`${REALM}/protocol/openid-connect/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'authorization_code', client_id: 'cm-shell', code: authCode, redirect_uri: REDIRECT_URI, code_verifier: verifier }),
+    body: new URLSearchParams({
+      grant_type: 'authorization_code', client_id: client.clientId, code: authCode,
+      redirect_uri: client.redirectUri, code_verifier: verifier,
+    }),
   })).json();
   return JSON.parse(Buffer.from(tokens.access_token.split('.')[1], 'base64url').toString());
 }
 
+for (const client of Object.values(CLIENTS)) {
+  const signInPage = await (await browser()(authorizationUrl(client, 'x'.repeat(43)))).text();
+  check(audienceOf(signInPage) === client.audience,
+    `${client.clientId}: the sign-in page shows the ${client.audience} theme`);
+}
+
 const go = browser();
-const firstPage = await (await go(`${REALM}/protocol/openid-connect/auth?${new URLSearchParams({ client_id: 'cm-shell', redirect_uri: REDIRECT_URI, response_type: 'code', scope: 'openid', code_challenge: 'x'.repeat(43), code_challenge_method: 'S256' })}`)).text();
+const firstPage = await (await go(authorizationUrl(CLIENTS.dpPortal, 'x'.repeat(43)))).text();
 const refused = await (await post(go, formAction(firstPage), { identifier: 'not an address' })).text();
 check(refused.includes('Enter a valid email address'), 'an invalid address is refused');
+check(audienceOf(refused) === 'dp', 'the refusal stays on the dp theme');
 
-const admin = await signIn('admin@cm.local', { tryWrongCode: true });
+const admin = await signIn('admin@cm.local', CLIENTS.cmAdmin, { tryWrongCode: true });
 check(admin?.roles?.includes('CM_ADMIN'), 'the seeded admin signs in with a code and keeps CM_ADMIN');
 
 const newcomer = `dp-${Date.now()}@example.com`;
-const created = await signIn(newcomer);
+const created = await signIn(newcomer, CLIENTS.dpPortal);
 check(created?.roles?.includes('DP') && created?.email === newcomer, `${newcomer} became a DP account by signing in`);
 
 console.log(failures === 0 ? '\nAll OTP sign-in checks passed.' : `\n${failures} check(s) failed.`);

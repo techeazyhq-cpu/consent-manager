@@ -23,7 +23,7 @@ An overview of how the platform fits together. The reasons behind each choice ar
 | `cm-ntf-svc` | `ntf`: DP push devices | Pulsar (consumes notify commands), notification-service or Mailpit |
 | `cm-bil-svc` | `bil`: plans, subscriptions; usage counters in Redis | Pulsar (consumes fiduciary activation), Redis |
 | `cm-aud-svc` | `aud`: the tamper-evident audit ledger (hash chain, erasable payloads, checkpoints and their timestamps) | Pulsar (consumes every event), an RFC 3161 timestamp authority |
-| Keycloak + `cm-idn-otp-spi` | Users, clients, sessions | `cm-ntf-svc` (`/internal/otp/send`) |
+| Keycloak + `cm-idn-otp-spi`, `cm-idn-theme` | Users, clients, sessions | `cm-ntf-svc` (`/internal/otp/send`) |
 | OPA | `cns_authz.rego` | `cm-cns-qry-svc` (`/internal/cns-arts/{id}/status`) |
 | PostgreSQL | One database, one schema per service | |
 | Apache Pulsar | Tenant `cm`, one namespace per context | |

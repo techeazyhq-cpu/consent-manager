@@ -1,0 +1,8 @@
+{
+  "themes": [
+    { "name": "cm-base", "types": ["login"] },
+    { "name": "cm-dp", "types": ["login"] },
+    { "name": "cm-df", "types": ["login"] },
+    { "name": "cm-admin", "types": ["login"] }
+  ]
+}
