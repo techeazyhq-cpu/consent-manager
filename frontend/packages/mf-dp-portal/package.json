@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@firebase/app": "0.16.3",
-    "@firebase/messaging": "0.12.12",
+    "@firebase/messaging": "0.13.3",
     "api-client": "workspace:*",
     "auth-kit": "workspace:*",
     "react": "^18.3.1",
