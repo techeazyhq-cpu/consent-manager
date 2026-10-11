@@ -403,15 +403,15 @@ sequenceDiagram
 
 ## 8. Plan
 
-The core domain comes first. India's date sets Phase 0.
+The core domain comes first. India's date sets Phase 0. Findings from the design review (Appendix B) are folded in.
 
 | Phase | Scope | Closes |
 |---|---|---|
-| **0: Registration readiness (India)** | Immediate withdrawal; fiduciary webhooks; purpose definitions, multilingual versioned notices, no bundling; 27560 records, receipts and export; partial consent; 7-year retention with legal hold; pseudonymous events; disclosure page; Board report v1 | G4, G5, G6, G3, G9 (partly), G1 (partly), G11 |
-| **1: Own data** | Identity Vault with crypto-shredding; Principal Requests (own-data rights, relay, grievances); regime profiles in `cm-reg-kit` and OPA | G1, G12 |
-| **2: Cells** | Cell IaC, cell directory, second cell (EU), isolation probe | G2 |
-| **3: Health** | HIPAA authorisations, PHI sensitivity, `cm-fhir-svc` (FHIR R4 Consent), staff MFA and access audit, mTLS; US cell | G8, G13 |
-| **4: Representatives, sharing, Gulf** | Parents, guardians, nominees; sharing consent; Arabic and RTL; SA and AE cells | G7, G10 |
+| **0: Registration readiness (India)** | Short-lived tokens, revocation status list and live status (R1, R2); immediate withdrawal; fiduciary webhooks; immutable purpose versions with re-consent (R4); multilingual versioned notices, no bundling, deceptive-design rules (R7); accessible DP portal (R6); write-side 27560 records, receipts with their own key and trusted time, export (R5, R8); duration from purpose and renewal (R9); partial consent; 7-year retention with legal hold; pseudonymous events; disclosure page; Board report v1 | G1 (partly), G3, G4, G5, G6, G9, G11; R1, R2, R4-R9 |
+| **1: Own data** | Identity Vault with crypto-shredding; Principal Requests (own-data rights, relay, grievances); regime profiles in `cm-reg-kit` and OPA, with applicable-regime sets (R3); fiduciary verification at onboarding (R11); contracts (R15); termination flows (R16) | G1, G12; R3, R11, R15, R16 |
+| **2: Cells** | Cell IaC, cell directory, second cell (EU, with member-state profiles), isolation probe; WORM archive, RPO and RTO, restore drills (R18) | G2; R18 |
+| **3: Health** | HIPAA authorisations with an e-signature ceremony (R13), PHI sensitivity, `cm-fhir-svc` (FHIR R4 Consent), staff MFA and access audit, mTLS; US cell | G8, G13; R13 |
+| **4: Representatives, sharing, Gulf** | Parents, guardians, nominees, majority re-confirmation (R12); sharing consent with both parties notified (R10); evidence of expression (R17); consent-manager portability (R14); Arabic and RTL; SA and AE cells | G7, G10; R10, R12, R14, R17 |
 
 **First spike:** a 27560 record and signed receipt for one consent, generated from today's events and validated
 against the schema, plus a pseudonymous `CnsReqCreatedEvt`. It proves the record model and the hardest data change on
@@ -446,3 +446,59 @@ Only figures a consent manager needs are listed.
 - [HIPAA Security Rule overhaul status (Alston & Bird)](https://www.alston.com/en/insights/publications/2025/11/hipaa-security-rule-overhaul)
 - [Saudi cross-border transfers (King & Spalding)](https://www.kslaw.com/news-and-insights/international-personal-data-transfers-under-saudi-arabias-data-protection-law)
 - [UAE data protection law (DLA Piper)](https://www.dlapiperdataprotection.com/countries/uae-general/law.html)
+
+## Appendix B: Design review against the standards (2026-10-11)
+
+A second pass over this design, read against:
+- the DPDPA definition and First Schedule
+- ISO/IEC TS 27560 (as profiled by W3C DPV)
+- ISO/IEC 29184
+- GDPR Art. 7 and 8 with EDPB guidance
+- HIPAA §164.508
+- WCAG 2.2
+- India's 2023 guidelines on dark patterns
+
+Each finding is something the design above gets wrong or leaves out. Resolutions are folded into the plan (§8);
+R1 and R2 and R4 to R9 go into Phase 0. Findings are ranked by severity.
+
+### Critical
+
+| # | Finding | Standard | Resolution |
+|---|---|---|---|
+| R1 | **A withdrawn consent stays verifiable offline for up to a year.** Tokens carry the artefact's validity as `exp` (365 days by default, `ApproveCnsCmdHandler.DEFAULT_VALIDITY`), and the JWKS is published for fiduciaries to verify tokens themselves (ADR-013). §6.3 fixes the live status check, but not a fiduciary that checks only the signature. | DPDPA s.6(4), (6); GDPR Art. 7(3); HIPAA §164.508(b)(5); MeitY CMS BRD (instant propagation) | Separate **token lifetime** (short: minutes to hours, from the regime profile) from **consent validity**. Tokens are refreshed through the status API. Publish a per-cell **revocation status list** (W3C Bitstring Status List) with a bounded cache age for offline checks. The onboarding terms oblige a status check before each use; webhooks speed things up, they don't replace the check. A new ADR supersedes the token lifetime in ADR-006 and ADR-013. |
+| R2 | **The trade-off between availability and immediate withdrawal is not designed.** Verification sits on every fiduciary's data path, and §6.3 fails closed, so an outage of a cell's consent manager stops its fiduciaries processing. No SLO, topology or staleness bound is stated. | DPDPA s.6(4) against B7 (reasonable safeguards); ISO/IEC 25010 availability | State a verification SLO (99.95% per cell is an estimate to validate). Serve status from a replicated revocation set, updated in the revoke's transaction, with read replicas per availability zone. Staleness is bounded by the token lifetime and status-list age from R1. The fail-closed or fail-open choice per regime and purpose is recorded in the regime profile; health defaults to closed. |
+| R3 | **The applicable law is assumed to be the cell's.** One consent can fall under several regimes at once: GDPR reaches an EU resident dealing with an Indian fiduciary; HIPAA sits beside US state law; DIFC and ADGM tenants sit inside the UAE. GDPR is not one profile either: the digital-consent age varies by member state, 13 to 16. 27560 allows several jurisdictions on a record (Jurisdiction is 1..*). | GDPR Art. 3 and 8(1); 27560 §8.3 Jurisdiction | Each consent gets a set of **applicable regimes**, derived from the fiduciary's establishment, the principal's residence or targeting, and the purpose's sector. Rules compose **strictest wins** per item (age, duration, withdrawal, retention). Member-state profiles (`GDPR_DE`, `GDPR_FR`, …) and `UK_GDPR` are separate. The set is recorded on the 27560 record. ADR-020 is amended. |
+| R4 | **No rule for changing a purpose after consent.** Notices are versioned, but the design doesn't say what happens to existing consents when a purpose's description, categories, recipients, retention or transfers change. | GDPR Art. 5(1)(b), 6(4), 7; DPDPA s.6(1) (specified purpose); ISO/IEC 29184 (notice of changes) | Purpose definitions are **immutable versions**. A consent stays bound to the version it was given for. A material change (new purpose, more categories, new recipients, longer retention, a new transfer) needs **re-consent**: the old consent keeps covering only what it covered. A non-material change (wording) notifies principals. The version is on the 27560 record. |
+| R5 | **Where the authoritative consent record lives is inconsistent.** §6.1 has the read side (eventually consistent, rebuildable) assemble records, and says records "live in the ledger". But the ledger holds hashes of events and erasable payloads, not 27560 records. A 7-year, tamper-proof record store isn't designed. | DPDPA First Schedule B3, B4; 27560 §10.1 (integrity); GDPR Art. 7(1) | The **consent record is owned by the Consent write side**: an append-only document updated in the same transaction as each state change, its every version hashed into the ledger. The read side serves copies only. Long-term retention moves to an in-cell, object-locked (WORM) archive. ADR-025 is amended. |
+
+### High
+
+| # | Finding | Standard | Resolution |
+|---|---|---|---|
+| R6 | **Accessibility is missing.** DPDPA defines the consent manager as an **accessible** platform, and principals include persons with disabilities. | DPDPA s.2(g); WCAG 2.2 AA; EN 301 549 (EU); Section 508 (US); India's GIGW | WCAG 2.2 AA for the DP portal, notices and receipts (receipts as tagged PDF/UA as well as JSON-LD), screen-reader-tested consent flows, automated checks (axe) in CI plus manual audits, and an assisted channel. |
+| R7 | **Deceptive design isn't addressed** beyond pre-ticked boxes and bundling. | India's CCPA Guidelines on Dark Patterns (2023); EDPB Guidelines 03/2022; GDPR Art. 7(4) "freely given"; ISO/IEC 29184 | The consent decision is always rendered by the platform's own components, never styled by the fiduciary. Rules: accept and refuse have equal prominence and effort; withdrawal takes no more steps than giving; no confirm-shaming; no repeated asking (a refused request can't be re-raised for a period the regime profile sets); no false urgency. UI tests enforce the rules. |
+| R8 | **Receipts and records must verify for 7 years or more,** but receipts are signed with the token key (ADR-025), keys rotate (ADR-013), and receipts carry no trusted time. | 27560 §10.1; DPDPA B3, B4; GDPR Art. 7(1) | A separate receipt-signing key. Retired public keys stay published, so the key history is permanent. Each receipt gets trusted time, by RFC 3161, or by inclusion in an anchored ledger checkpoint with a proof (ADR-015). A crypto-period and algorithm-migration plan. |
+| R9 | **Consent validity is a fixed 365 days in code.** 27560 treats endless duration as invalid in several jurisdictions and expects renewal; validity should follow the purpose and the law. | 27560 §8.5 duration; GDPR Art. 5(1)(e); HIPAA §164.508(c)(1)(v) (expiry date or event) | Duration comes from the purpose definition, bounded by the strictest applicable regime's maximum (R3). Lapse becomes a recorded event. Principals are prompted to renew before a lapse. HIPAA authorisations may expire on an event. |
+| R10 | **Withdrawing a sharing consent doesn't name who must stop.** §6.2 lets A share with B, and §6.3 webhooks "fiduciaries", but B, the recipient, also holds the data. Sharing across cells is undefined. | DPDPA First Schedule B1, B3; DPDPA s.6(6); GDPR Art. 17(2), 19 | Both A and B are recipients on the 27560 record and get change webhooks and status. Sharing is within a cell unless a lawful transfer mechanism is recorded on the purpose. |
+| R11 | **Fiduciaries are onboarded without verification.** Principals rely on the platform for who is asking; an unverified requester is a phishing route against the people the platform acts for. | DPDPA First Schedule B8 (fiduciary capacity), Part A item 8 | Verify each fiduciary's legal identity at onboarding, with registry checks by cell: CIN and GSTIN in India, trade licence in the UAE, CR in Saudi Arabia, EIN and NPI for US covered entities. Requests show "verified". Suspension on fraud terminates its pending requests (R16). |
+| R12 | **The representative lifecycle stops at the grant.** A child turning 18 (or the GDPR age) should confirm consents a parent gave; a guardianship can end; a nominee's trigger needs evidence. | DPDPA s.9; GDPR Art. 8; EDPB Guidelines 05/2020 on consent (reaching the age of consent) | Majority is a scheduled event from the date of birth held in the vault. It asks the now-adult principal to confirm or withdraw each consent given for them. Representations carry an end date and are re-checked. |
+| R13 | **Electronic signatures on HIPAA authorisations aren't designed** beyond step-up sign-in. A valid authorisation needs a signature, and in the US an electronic one has its own conditions. | HIPAA §164.508(c)(1)(vi); US ESIGN Act and state UETA **[confirm]** | A signing ceremony: disclosure and consent to electronic records, a clear act of intent, the signature bound to the exact authorisation text and version, and a copy to the patient (§164.508(c)(4)). |
+
+### Medium
+
+| # | Finding | Standard | Resolution |
+|---|---|---|---|
+| R14 | **No way for a principal to move to another consent manager.** DPDPA requires an interoperable platform; export exists, but there's no import or transfer. | DPDPA s.2(g), First Schedule Part A item 9 | Transfer and import based on 27560 receipts. Adopt the Board's standard when published. |
+| R15 | **No contract strategy for the APIs, events and webhooks fiduciaries build against.** | Interoperability (Part A item 9); 27560 schema versioning | Contract-first. OpenAPI for APIs, AsyncAPI for webhooks and events. A pinned JSON-LD context version for 27560. A signed-webhook specification. A deprecation policy, and consumer-driven contract tests. |
+| R16 | **"Terminated by controller" and "invalidated by authority" are listed (ADR-025) but have no flows:** a fiduciary leaves or is suspended, or a regulator orders consents void. | 27560 §8.5 states; DPDPA ss.27-28 (Board directions) | Define both flows: mass termination, principals told, webhooks sent, and the reason on each record. |
+| R17 | **What evidence of the expression is captured isn't defined.** The record requires who expressed consent and recommends recording how. The device and IP address are personal data. | 27560 §8.5 (expression by entity, method); data minimisation | Record the consent component and its version, the channel, the authentication assurance level and the representative. Capture IP or device only where a regime requires it, encrypted in the vault. |
+| R18 | **Durability and recovery are unquantified** for 7-year records. | DPDPA B4, B7; HIPAA §164.308(a)(7) | RPO and RTO per cell (estimates to validate: RPO ≤ 5 min, RTO ≤ 4 h). An in-cell WORM archive. Restore drills that re-apply the shredded-subjects list. |
+
+### What the review didn't change
+
+- The boundary of a pure consent manager (ADR-023).
+- Regional cells (ADR-018).
+- The vault with crypto-shredding (ADR-019).
+- Regime profiles as reviewed data (ADR-020, amended by R3).
+- Representatives (ADR-022, extended by R12).
+- HIPAA and FHIR at the boundary (ADR-024, extended by R13).
