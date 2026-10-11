@@ -24,6 +24,10 @@ import com.techeazyhq.cm.ntf.dom.NtfChnl;
 import com.techeazyhq.cm.ntf.dom.NtfCtg;
 import com.techeazyhq.cm.ntf.dom.NtfDeliveryRejectedException;
 import com.techeazyhq.cm.ntf.dom.NtfMsg;
+import com.techeazyhq.cm.reskit.DependencyFallbacks;
+import com.techeazyhq.cm.reskit.RemoteServerError;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreaker;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -50,7 +54,10 @@ import java.util.concurrent.TimeoutException;
  *   <li>429, 5xx, timeouts and connection failures are retried with backoff (re-signed each attempt); any other
  *       refusal is final and surfaces as {@link NtfDeliveryRejectedException};</li>
  *   <li>OTPs go as {@code category: OTP}, so they are delivered ahead of other traffic and never after
- *       {@code otpValiditySeconds}.</li>
+ *       {@code otpValiditySeconds};</li>
+ *   <li>a send, retries included, runs behind a circuit breaker (ADR-016): once notification-service keeps failing,
+ *       sends fail at once with {@code DependencyUnavailableException} instead of each waiting out its retries, and
+ *       the Pulsar command is redelivered later. A refusal does not count against the breaker.</li>
  * </ul>
  */
 public class NotificationServiceClient {
@@ -61,9 +68,12 @@ public class NotificationServiceClient {
     private final ObjectMapper objectMapper;
     private final URI sendUri;
     private final Settings settings;
+    private final ReactiveCircuitBreaker circuitBreaker;
 
-    public NotificationServiceClient(WebClient.Builder webClientBuilder, ObjectMapper objectMapper, Settings settings) {
+    public NotificationServiceClient(WebClient.Builder webClientBuilder, ObjectMapper objectMapper,
+                                     ReactiveCircuitBreakerFactory<?, ?> cbFactory, Settings settings) {
         this.webClient = webClientBuilder.build();
+        this.circuitBreaker = cbFactory.create("notification-service");
         this.objectMapper = objectMapper;
         this.sendUri = URI.create(settings.baseUrl().replaceAll("/+$", "") + SEND_PATH);
         this.settings = settings;
@@ -83,9 +93,10 @@ public class NotificationServiceClient {
         }
         byte[] body = toJson(channel, msg);
         String idempotencyKey = msg.ref() != null ? msg.ref() : UUID.randomUUID().toString();
-        return Mono.defer(() -> post(body, idempotencyKey))
+        Mono<Void> retried = Mono.defer(() -> post(body, idempotencyKey))
                 .retryWhen(Retry.backoff(settings.maxRetries(), settings.retryBackoff()).filter(this::isTransient))
                 .onErrorMap(Exceptions::isRetryExhausted, Throwable::getCause);
+        return circuitBreaker.run(retried, DependencyFallbacks.unavailable("notification-service"));
     }
 
     private Mono<Void> post(byte[] body, String idempotencyKey) {
@@ -160,7 +171,7 @@ public class NotificationServiceClient {
     }
 
     /** A failure the same request may get past later; left to the caller (e.g. a Pulsar redelivery) once retries run out. */
-    static final class TransientFailure extends RuntimeException {
+    static final class TransientFailure extends RemoteServerError {
         TransientFailure(String message) {
             super(message);
         }

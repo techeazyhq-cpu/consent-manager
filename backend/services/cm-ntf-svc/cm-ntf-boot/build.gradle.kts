@@ -28,6 +28,7 @@ dependencies {
     implementation(project(":cm-ntf-if-rest"))
     implementation(project(":cm-sec-kit"))
     implementation(project(":cm-web-kit"))
+    implementation(project(":cm-res-kit"))
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
@@ -38,6 +39,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:10.22.0")
     implementation("org.springframework.boot:spring-boot-starter-mail")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:3.3.3")
     implementation("org.apache.pulsar:pulsar-client-reactive-adapter:0.5.2")
     implementation("org.apache.pulsar:pulsar-client:3.3.9")
 

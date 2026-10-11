@@ -21,6 +21,11 @@ package com.techeazyhq.cm.aud.infra;
 import com.sun.net.httpserver.HttpServer;
 import com.techeazyhq.cm.aud.dom.AudAnchor;
 import com.techeazyhq.cm.aud.dom.AudChain;
+import com.techeazyhq.cm.reskit.DependencyUnavailableException;
+import com.techeazyhq.cm.reskit.RemoteFailures;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.oiw.OIWObjectIdentifiers;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -42,6 +47,8 @@ import org.bouncycastle.tsp.TimeStampTokenGenerator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.cloud.circuitbreaker.resilience4j.ReactiveResilience4JCircuitBreakerFactory;
+import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JConfigurationProperties;
 
 import java.math.BigInteger;
 import java.net.InetAddress;
@@ -55,6 +62,7 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -67,6 +75,7 @@ class Rfc3161TimestampAuthorityTest {
     private enum Mode { HONEST, WRONG_HASH, REJECT, HTTP_ERROR }
 
     private final AtomicReference<Mode> mode = new AtomicReference<>(Mode.HONEST);
+    private final AtomicInteger requests = new AtomicInteger();
     private HttpServer server;
     private TimeStampTokenGenerator tokens;
     private Rfc3161TimestampAuthority authority;
@@ -90,6 +99,7 @@ class Rfc3161TimestampAuthorityTest {
 
         server = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         server.createContext("/tsa", exchange -> {
+            requests.incrementAndGet();
             try {
                 TimeStampRequest request = new TimeStampRequest(exchange.getRequestBody().readAllBytes());
                 byte[] body = switch (mode.get()) {
@@ -118,7 +128,20 @@ class Rfc3161TimestampAuthorityTest {
         });
         server.start();
         authority = new Rfc3161TimestampAuthority(HttpClient.newHttpClient(),
-                URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/tsa"), Duration.ofSeconds(5));
+                URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/tsa"), Duration.ofSeconds(5),
+                breakers());
+    }
+
+    /** As configured in cm-aud-svc (ADR-016), but opening after two attempts so a test can trip it. */
+    private static ReactiveResilience4JCircuitBreakerFactory breakers() {
+        CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(CircuitBreakerConfig.custom()
+                .slidingWindowSize(2).minimumNumberOfCalls(2).failureRateThreshold(50)
+                .recordException(new RemoteFailures())
+                .build());
+        Resilience4JConfigurationProperties properties = new Resilience4JConfigurationProperties();
+        properties.setDisableTimeLimiter(true);
+        return new ReactiveResilience4JCircuitBreakerFactory(registry, TimeLimiterRegistry.ofDefaults(),
+                null /* no bulkhead */, properties);
     }
 
     @AfterEach
@@ -161,5 +184,19 @@ class Rfc3161TimestampAuthorityTest {
         assertThrows(Exception.class, () -> authority.timestamp(1, AudChain.sha256Hex("checkpoint 1")).block());
         mode.set(Mode.HTTP_ERROR);
         assertThrows(Exception.class, () -> authority.timestamp(1, AudChain.sha256Hex("checkpoint 1")).block());
+    }
+
+    @Test
+    void whileTheAuthorityIsDownAttemptsFailWithoutContactingIt() {
+        mode.set(Mode.HTTP_ERROR);
+        for (int i = 0; i < 2; i++) {
+            assertThrows(DependencyUnavailableException.class,
+                    () -> authority.timestamp(1, AudChain.sha256Hex("checkpoint 1")).block());
+        }
+
+        assertThrows(DependencyUnavailableException.class,
+                () -> authority.timestamp(1, AudChain.sha256Hex("checkpoint 1")).block());
+
+        assertEquals(2, requests.get());
     }
 }

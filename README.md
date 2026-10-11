@@ -30,8 +30,10 @@ Notifications are delivered through [notification-service](https://github.com/te
 
 Each bounded context owns its schema and talks to the others through Pulsar events published from a transactional
 outbox. Writes and reads are separate services (CQRS), and the consent lifecycle across services is coordinated by a
-saga. Inside each service, the code is split into domain, application, infrastructure and interface modules, and an
-ArchUnit test keeps the dependencies pointing inwards. The decisions are recorded in [docs/adr](docs/adr).
+saga. Every synchronous call to another service, and every gateway route, goes through a circuit breaker
+([ADR-016](docs/adr/adr-016-circuit-breakers-on-every-synchronous-call.md)). Inside each service, the code is split
+into domain, application, infrastructure and interface modules, and an ArchUnit test keeps the dependencies pointing
+inwards. The decisions are recorded in [docs/adr](docs/adr).
 
 | Frontend | Port | Users |
 |---|---|---|

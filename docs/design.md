@@ -75,7 +75,7 @@ Every message carries an `evtId`; consumers are idempotent on it.
 | Transactional outbox, idempotent consumer | `ObxWriter`, `ObxRelay`, `prj_ckpt`, idempotency keys |
 | Saga (orchestration / process manager) | `CnsLifecycleSagaOrchestrator` |
 | Policy enforcement and decision points | `cm-gw` (PEP), OPA (PDP) |
-| Circuit breaker | Synchronous calls between services (`-infra` adapters) |
+| Circuit breaker | Every synchronous call to another service, in its `-infra` adapter or gateway filter, and every gateway route; `cm-res-kit` ([ADR-016](adr/adr-016-circuit-breakers-on-every-synchronous-call.md)) |
 | Hash chain (tamper-evident, append-only ledger) | `cm-aud-svc`: `AudChain`, `AudChainVerifier`, `aud.entry` |
 | Merkle checkpoints anchored by an RFC 3161 timestamp authority | `cm-aud-svc`: `AudMerkle`, `AudCheckpoint`, `Rfc3161TimestampAuthority`; how to verify: [audit-ledger.md](audit-ledger.md) |
 

@@ -23,6 +23,7 @@ plugins {
 dependencies {
     implementation(project(":cm-web-kit"))
     implementation(project(":cm-sec-kit"))
+    implementation(project(":cm-res-kit"))
 
     implementation("org.springframework.cloud:spring-cloud-starter-gateway:4.3.5")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
@@ -32,4 +33,5 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind")
 
     testImplementation("io.projectreactor:reactor-test")
+    testImplementation("org.springframework.security:spring-security-test")
 }

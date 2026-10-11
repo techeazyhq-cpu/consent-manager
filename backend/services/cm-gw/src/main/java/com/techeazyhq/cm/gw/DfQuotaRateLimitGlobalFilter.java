@@ -26,6 +26,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreaker;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -55,12 +57,15 @@ public class DfQuotaRateLimitGlobalFilter implements GlobalFilter, Ordered {
     private static final DateTimeFormatter USAGE_PERIOD_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM");
 
     private final WebClient bilWebClient;
+    private final ReactiveCircuitBreaker bilCircuitBreaker;
     private final ReactiveStringRedisTemplate redisTemplate;
     private final ConcurrentHashMap<String, CachedQuota> quotaCache = new ConcurrentHashMap<>();
 
-    public DfQuotaRateLimitGlobalFilter(WebClient.Builder builder, ReactiveStringRedisTemplate redisTemplate,
+    public DfQuotaRateLimitGlobalFilter(WebClient.Builder builder, ReactiveCircuitBreakerFactory<?, ?> cbFactory,
+                                         ReactiveStringRedisTemplate redisTemplate,
                                          @Value("${cm.service-urls.bil}") String bilBaseUrl) {
         this.bilWebClient = builder.baseUrl(bilBaseUrl).build();
+        this.bilCircuitBreaker = cbFactory.create("bil-quota");
         this.redisTemplate = redisTemplate;
     }
 
@@ -104,15 +109,18 @@ public class DfQuotaRateLimitGlobalFilter implements GlobalFilter, Ordered {
         if (cached != null && cached.fetchedAt().plus(QUOTA_CACHE_TTL).isAfter(Instant.now())) {
             return Mono.just(cached.reqPerSecQta());
         }
-        return bilWebClient.get()
+        Mono<Long> lookup = bilWebClient.get()
                 .uri("/internal/dfs/{id}/sub-eligibility", dfId)
                 .retrieve()
                 .bodyToMono(SubEligResp.class)
                 .map(resp -> {
                     quotaCache.put(dfId, new CachedQuota(resp.reqPerSecQta(), Instant.now()));
                     return resp.reqPerSecQta();
-                })
-                .onErrorReturn(Long.MAX_VALUE); // cm-bil-svc unreachable -> don't block traffic on a resilience dependency's outage
+                });
+        // Fails open (ADR-016): the burst limit protects capacity, it is not an authorisation, so an unreachable,
+        // failing or open-circuit cm-bil-svc must not block traffic. Keep the last quota known for this DF, if any;
+        // cm-cns-cmd-svc still enforces the monthly quota itself, failing closed.
+        return bilCircuitBreaker.run(lookup, err -> Mono.just(cached != null ? cached.reqPerSecQta() : Long.MAX_VALUE));
     }
 
     private Mono<Void> tooManyRequests(ServerWebExchange exchange) {

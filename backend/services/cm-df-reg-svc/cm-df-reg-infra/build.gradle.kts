@@ -23,6 +23,8 @@ plugins {
 dependencies {
     api(project(":cm-df-reg-app"))
     implementation(project(":cm-evt-kit"))
+    implementation(project(":cm-res-kit"))
+    implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:3.3.3")
 
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc:3.5.16")
     implementation("org.postgresql:r2dbc-postgresql:1.1.3.RELEASE")
