@@ -8,9 +8,10 @@
 
 The regimes differ in figures and switches, and several of those figures are still moving or disputed:
 
-- **Figures that differ:** the age of digital consent, notice languages, the elements a consent must carry, lawful
-  bases, deadlines for each right, breach notification clocks, retention, legal holds, transfer rules and who may act
-  for a person.
+- **Figures that differ:** the age of digital consent, notice languages, the elements a consent must carry, how
+  withdrawal must work, deadlines for the platform's own users' rights and grievances, clocks for breaches of the
+  platform's own data, retention of consent records, legal holds, transfer rules and who may act for a person. Only
+  figures a consent manager needs are held (ADR-023).
 - **Still moving or disputed:** DPDP Rules commencing in stages through 2027; Gulf executive regulations whose status
   couldn't be confirmed from official sources.
 

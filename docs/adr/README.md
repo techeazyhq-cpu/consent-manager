@@ -26,10 +26,11 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [018](adr-018-regional-cells-for-data-residency.md) | Regional cells for data residency | Proposed |
 | [019](adr-019-identity-vault-and-crypto-shredding.md) | An Identity Vault holds personal data; erasure by crypto-shredding | Proposed |
 | [020](adr-020-regime-profiles-as-versioned-data.md) | Regime profiles as versioned, reviewed data | Proposed |
-| [021](adr-021-data-principal-rights-and-erasure-saga.md) | A Data Principal Rights context, with an orchestrated erasure saga | Proposed |
+| [021](adr-021-principal-requests-own-data-and-relay.md) | Principal requests: rights over the platform's own data, and relay to fiduciaries | Proposed |
 | [022](adr-022-children-guardians-and-representatives.md) | Children, guardians and other representatives | Proposed |
-| [023](adr-023-breach-response-and-privacy-governance.md) | Breach response and privacy governance in their own context | Proposed |
+| [023](adr-023-pure-consent-manager-boundary-and-neutrality.md) | A pure consent manager: its boundary, neutrality and First Schedule duties | Proposed |
 | [024](adr-024-hipaa-authorisations-and-fhir-consent.md) | HIPAA authorisations in the consent model; FHIR Consent at the boundary | Proposed |
+| [025](adr-025-iso-27560-consent-records-and-receipts.md) | Consent records and receipts to ISO/IEC TS 27560, in DPV | Proposed |
 
 ## Writing one
 

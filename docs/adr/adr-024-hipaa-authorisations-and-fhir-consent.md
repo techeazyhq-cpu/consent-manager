@@ -29,6 +29,8 @@ US covered entities will use the platform to record patients' authorisations, ma
    - It records reads as `AuditEvent` and lineage as `Provenance`, and is authorised with SMART on FHIR scopes.
    - R4 is chosen because it is what the target ecosystems deploy.
    - The domain model never holds FHIR types.
+   - It exchanges consent only. It is not a clinical data repository, and never receives the health data an
+     authorisation governs (ADR-023).
    - Resources are validated in CI with the FHIR validator against the chosen implementation guides **[confirm IGs per
      cell]**.
 4. **The US cell runs the HIPAA safeguards whether or not the proposal becomes final:** encryption at rest and in

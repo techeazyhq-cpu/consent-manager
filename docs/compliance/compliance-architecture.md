@@ -1,212 +1,205 @@
-# Privacy compliance architecture: DPDPA, GDPR, HIPAA and the Middle East
+# A pure consent manager, to DPDPA, GDPR, HIPAA, the Gulf laws and ISO/IEC TS 27560
 
 - **Status:** Proposed, for review
 - **Date:** 2026-10-11
 - **Decisions:** [ADR-018](../adr/adr-018-regional-cells-for-data-residency.md) to
-  [ADR-024](../adr/adr-024-hipaa-authorisations-and-fhir-consent.md)
+  [ADR-025](../adr/adr-025-iso-27560-consent-records-and-receipts.md)
 
-> This is an architecture input, not legal advice. Every statutory figure below (ages, deadlines, retention periods)
-> is held as versioned data in a regime profile so counsel can correct it without a code change. Figures marked
+> This is an architecture input, not legal advice. Every statutory figure (ages, deadlines, retention periods) is held
+> as versioned data in a regime profile, so counsel can correct it without a code change. Figures marked
 > **[confirm]** came from secondary sources or are disputed, and must be checked against the primary text by counsel
 > or the DPO before go-live.
 
-## 1. Problem
+## 1. What the platform is, and is not
 
-The platform has to operate lawfully in four regimes at once:
+**The platform is a consent manager, and only that.** DPDPA s.2(g) defines a consent manager as the principal's
+single point of contact to give, manage, review and withdraw consent through an accessible, transparent and
+interoperable platform.
 
-- **India:** as a Consent Manager registered with the Data Protection Board.
-- **The EU/UK:** as a consent-management platform for controllers.
-- **The US:** as a HIPAA business associate holding patients' authorisations.
-- **The Gulf:** as a processor for controllers in the UAE (federal, DIFC, ADGM), Saudi Arabia, Qatar, Bahrain and
-  Oman.
+- **India:** it applies for registration with the Data Protection Board under Rule 4 and meets the First Schedule.
+- **The EU/UK, the US and the Gulf:** it is the consent-management platform that controllers, fiduciaries and covered
+  entities use to collect and prove consent.
 
-It must hold each principal's data where their law wants it and honour their rights in every regime, without forking
-the product per country.
+The same product does both, in one role. It acts for the principal, holds no stake in the fiduciaries, and never sees
+the data the consents govern.
+
+| In scope: consent management | Out of scope: not a consent manager's job |
+|---|---|
+| Showing a fiduciary's notice (versioned, in the principal's language) and recording that it was shown | Writing the fiduciary's notice or privacy policy |
+| Consent requested, given, refused, partly given, renewed, modified, withdrawn, expired, for each purpose, never bundled | Processing, storing or routing the personal data the consent governs (DPDPA First Schedule Part B, item 2) |
+| Consent for data to be shared between fiduciaries onboarded on the platform, and the record of that sharing | Moving the data itself between fiduciaries |
+| Consent on behalf of a child or a person with a disability, by a verified parent or lawful guardian; HIPAA authorisations by a patient or personal representative | Any lawful basis other than consent: contract, legal obligation, legitimate interest, DPDPA "legitimate uses" |
+| Tamper-proof consent records and receipts (ISO/IEC TS 27560), kept at least 7 years, given to the principal in machine-readable form | A fiduciary's records of processing, DPIAs, sub-processor or transfer registers |
+| Telling fiduciaries at once when consent changes, and verifying a consent token's live status | A fiduciary's own breach response |
+| The platform's own duties as a data fiduciary for its users' account data: their rights, its grievances, its breaches | Fulfilling access, erasure or correction of data a fiduciary holds |
+| Relaying a principal's request about a fiduciary's data to that fiduciary, and recording it, where the law lets the principal use the consent manager for this **[confirm DPDPA Rule 14]** | Being the fiduciary's ticketing system for those requests |
 
 **Success criteria:**
 
-1. **India first:** the platform can apply for Consent Manager registration when Rule 4 opens (13/14 November 2026
-   **[confirm date]**).
-2. **No personal data crosses a residency boundary** it must not cross, including in events, logs and backups.
-3. **Every data-principal right** in scope can be fulfilled end to end within the strictest applicable deadline, with
-   evidence.
-4. **Erasure is complete:** after erasure, no copy of a principal's contact data remains readable anywhere, including
-   immutable logs and backups, except what a law requires to be kept, and that is pseudonymised.
-5. **A change in a law's figures** (an age, a deadline, a retention period) ships as reviewed data, not code.
+1. **Registration:** India's consent-manager registration can be applied for when Rule 4 opens (13/14 November 2026
+   **[confirm]**), and the independent certification Part A item 9 requires can be passed.
+2. **Records:** every consent record conforms to ISO/IEC TS 27560 and is issued to the principal as a receipt.
+3. **Data-blind:** the platform can't read the personal data it consents about; its own data on principals is held in
+   their jurisdiction and is erasable, subject to legal holds.
+4. **Withdrawal:** withdrawing is as easy as giving, and takes effect on the next check.
+5. **Variance:** a change in a law's figures ships as reviewed data, not code.
 
-**Stakeholders:**
-- Data principals and data subjects (they are also patients under HIPAA).
-- Data fiduciaries, controllers and covered entities (the platform's tenants).
-- Platform operations and the DPO.
-- Regulators: Data Protection Board of India, EU and UK supervisory authorities, HHS OCR, SDAIA, the UAE Data Office,
-  DIFC and ADGM commissioners, Qatar's NCGAA, Bahrain's PDPA and Oman's MTCIT **[confirm authorities]**.
+## 2. The standards it is built to
 
-**Out of scope:**
-- Processing the data the consents govern. The platform never receives it, and must not (DPDPA First Schedule,
-  Part B: a consent manager must not be able to read the data it routes).
-- Legal registration filings themselves.
-- Being a FHIR clinical data repository.
+| Standard | What it governs here | Conformance |
+|---|---|---|
+| **DPDPA 2023 and DPDP Rules 2025**, First Schedule Parts A and B | The consent manager's role, registration conditions, its 13 obligations | Mapped item by item in §6.6 |
+| **ISO/IEC TS 27560:2023**, consent record information structure | The consent record and receipt: Header, Notice, Processing, Parties, Events | Records and receipts conform; [ADR-025](../adr/adr-025-iso-27560-consent-records-and-receipts.md) |
+| **W3C Data Privacy Vocabulary (DPV)** | The vocabulary of purposes, data categories, legal bases and consent states, and the JSON-LD form of 27560 records | Purposes and data categories map to DPV concepts |
+| **ISO/IEC 29184:2020**, online privacy notices and consent | What a notice must say, and how consent is asked (clear, separate per purpose, no pre-ticked boxes) | DP portal and notice model follow it |
+| **GDPR Art. 7 and EDPB Guidelines 05/2020 on consent** | Freely given, specific, informed, unambiguous; demonstrable; as easy to withdraw as to give | Granular, unbundled requests; proof in the record |
+| **HIPAA §164.508** | The core elements and statements of an authorisation | Authorisation as a consent type; [ADR-024](../adr/adr-024-hipaa-authorisations-and-fhir-consent.md) |
+| **HL7 FHIR R4 `Consent`**, and India's DEPA consent artefact | Exchanging consent with health ecosystems and India's account-aggregator and ABDM networks | Mappings at the boundary, never in the domain |
+| **ISO/IEC 27001 and ISO/IEC 27701** | Information security and privacy management of the operator | Certification target for the operating company |
+| **Board-published interoperability standards** | Part A item 9's certification | To adopt when the Board publishes them **[confirm status]** |
 
-## 2. Where the platform stands today
+Out of scope on purpose: IAB TCF (advertising consent strings), because a pure consent manager acting for the
+principal doesn't serve ad-tech consent chains.
 
-The consent core, identity, audit and resilience patterns are strong. The gaps are in data-subject rights, data
-location and what the platform's events and stores carry. Ranked by severity:
+## 3. Where the platform stands today
 
-| # | Gap | Regimes | Severity | Evidence in the code |
+Ranked by severity:
+
+| # | Gap | Standard or law | Severity | Evidence |
 |---|---|---|---|---|
-| G1 | **Principals' contact data in events and outbox rows.** `CnsReqCreatedEvt`, `CnsDeniedEvt` and `CnsNotificationFailedEvt` carry `dpRef` with the raw email or phone. Pulsar retains them, and the audit ledger copies payloads. Erasure can't reach them. | All | Critical | `cm-cns-cmd-dom` events, `cns_cmd.outbox_evt.payload_json` |
-| G2 | **No data-principal rights workflow** (access, correction, erasure, portability, nomination, grievance, objection, restriction) and no deadline tracking. The ledger supports erasure; nothing triggers it across services. | All | Critical | Only `cm-aud-svc` knows erasure |
-| G3 | **No residency model.** One database, one event bus and one Keycloak realm hold every principal, whatever their law. | DPDPA s.16, KSA PDPL transfers, UAE health data, GDPR Ch. V | Critical | `infra/docker-compose.yml` |
-| G4 | **A revoked consent can still verify** for about a second (status read from an eventually consistent projection). | DPDPA s.6(4), GDPR Art. 7(3), HIPAA §164.508(b)(5) | High | Seen in `scripts/verify-phase1.sh` step 13; task already filed |
-| G5 | **Notices are unversioned and single-language.** The artefact doesn't record which text, in which language, the principal saw. | DPDPA s.5 and the Eighth Schedule languages, GDPR Art. 7(1) proof, Arabic for the Gulf | High | `cns_req.ntc_text` |
-| G6 | **No retention schedule.** Nothing expires records by law. DPDPA needs 7-year consent records for a consent manager; HIPAA 6 years for authorisations; GDPR storage limitation the reverse. | All | High | No retention job |
-| G7 | **No children, guardians or representatives.** No age threshold, no verifiable parental consent, no lawful guardian for persons with disabilities, no HIPAA personal representative. | DPDPA s.9, GDPR Art. 8, HIPAA §164.502(g), UAE and KSA PDPL | High | None |
-| G8 | **No HIPAA authorisation elements** (recipient, expiry event, statements, signature) and no PHI classification of data categories. | HIPAA §164.508 | High | `Scp`/`DCat` are plain codes |
-| G9 | **Consent is the only lawful basis.** Purposes aren't registered, so purpose limitation can't be enforced, and processing under contract, legal obligation or legitimate uses can't be shown to principals. | GDPR Art. 6, DPDPA s.7, UAE and KSA PDPL | Medium | `prps_code` is free text |
-| G10 | **No breach register or notification clock.** | GDPR Art. 33/34, DPDPA s.8(6), HIPAA §164.400-414, KSA, UAE, DIFC, ADGM | Medium | None |
-| G11 | **Transport and staff authentication fall short of the health baseline:** plain HTTP between services, single-factor staff sign-in, no record of staff reads. | HIPAA §164.312, the proposed Security Rule (encryption, MFA) | Medium | docker-compose, Keycloak flow |
-| G12 | **No records of processing, sub-processor register or transfer register.** | GDPR Art. 28/30, KSA, DIFC | Low | None |
+| G1 | **Principals' contact data in events and outbox rows.** `CnsReqCreatedEvt`, `CnsDeniedEvt` and `CnsNotificationFailedEvt` carry `dpRef` with the raw email or phone; Pulsar retains them, and the ledger copies payloads. | Erasure in every law; data minimisation | Critical | `cm-cns-cmd-dom` events, `cns_cmd.outbox_evt` |
+| G2 | **No residency model.** One deployment holds every jurisdiction's principals. | DPDPA s.16, KSA PDPL transfers, UAE health data, GDPR Ch. V | Critical | `infra/docker-compose.yml` |
+| G3 | **Records are not 27560 records.** Missing: notice version and language, controller and recipients, jurisdiction, rights, withdrawal method, event states such as renewed or lapsed. No receipt is issued. No machine-readable export for the principal. | ISO/IEC TS 27560, DPDPA First Schedule B3 and B4, GDPR Art. 7(1) | Critical | `cns_art` and the read model |
+| G4 | **A revoked consent can still verify** for about a second (status read from an eventually consistent projection). | DPDPA s.6(4), GDPR Art. 7(3), HIPAA §164.508(b)(5) | High | `scripts/verify-phase1.sh` step 13; task filed |
+| G5 | **Fiduciaries aren't told when consent changes.** They learn only if they verify. | DPDPA s.6(6) (fiduciary must stop on withdrawal), MeitY CMS BRD (propagation) | High | No webhook or event to fiduciaries |
+| G6 | **Notices are unversioned and single-language;** purposes are free text, so purpose limitation isn't enforced, and requests aren't checked for bundling. | DPDPA s.5 and the Eighth Schedule, ISO/IEC 29184, GDPR Art. 7(2) | High | `cns_req.ntc_text`, `prps_code` |
+| G7 | **No consent on behalf of others:** no parent, lawful guardian or HIPAA personal representative; no age threshold. | DPDPA s.9 and Rule 10, GDPR Art. 8, HIPAA §164.502(g) | High | None |
+| G8 | **No HIPAA authorisation elements;** data categories have no sensitivity. | HIPAA §164.508(c) | High | `Scp`, `DCat` |
+| G9 | **No renewal or re-confirmation, and no modification** (partial consent is planned). | 27560 event states, MeitY CMS BRD | Medium | Lifecycle has no renew or modify |
+| G10 | **No consent for sharing between onboarded fiduciaries,** and no record of that sharing. | DPDPA First Schedule B1 and B3 | Medium | None |
+| G11 | **The platform's own obligations aren't visible:** no public disclosure page (B11), no Board audit report (B12), no conflict-of-interest controls in the product (B9, B10). | DPDPA First Schedule | Medium | None |
+| G12 | **Rights over the platform's own data:** principals can't download their records, correct their contact, or close their account with erasure; their requests to fiduciaries can't be relayed. | DPDPA ss.11-14, GDPR Arts. 15-20, Gulf laws | Medium | Only the ledger knows erasure |
+| G13 | **Health-grade security baseline:** plain HTTP between services, single-factor staff sign-in, no record of staff reads. | HIPAA §164.312; proposed Security Rule | Medium | docker-compose, Keycloak flow |
 
 Already aligned, and kept:
-- Purpose-bound signed consent artefacts, enforced at a PEP/PDP.
-- A tamper-evident ledger with erasable payloads and RFC 3161 anchoring (ADR-014, ADR-015). Only hashes leave the
-  platform.
+- Signed, purpose-bound consent artefacts verified at a PEP/PDP.
+- A tamper-evident ledger with erasable payloads and RFC 3161 anchoring, which is what "tamper-proof records" needs
+  (B3).
 - Passwordless principals.
-- Principals pseudonymised to staff (`DpPseudonym`).
-- Least-privilege staff roles (ADR-017).
+- Principals masked from staff.
+- Least-privilege staff (ADR-017).
 - Circuit breakers (ADR-016).
+- No path by which the platform receives governed data.
 
-## 3. Domain analysis
+## 4. Domain
 
 ### Subdomains
 
-- **Core:** Consent (lifecycle, artefacts, verification) and Data Principal Rights. Rights fulfilment is what a
-  registered consent manager is judged on.
-- **Supporting:** Purpose and Notice catalogue, Identity Vault (contact data, representatives), Regime Profiles,
-  Privacy Governance (breaches, records of processing, sub-processors), Notifications, Billing, Audit.
-- **Generic:** authentication (Keycloak), message delivery (notification-service), timestamping (TSA).
+- **Core:** Consent: notices shown, requests, decisions, artefacts, records and receipts, verification, propagation.
+  This is the whole product.
+- **Supporting:**
+  - Identity Vault (the platform's own data about principals and representatives)
+  - Principal Requests (own-data rights, relayed requests, grievances about the platform)
+  - Regime Profiles
+  - Notifications
+  - Billing
+  - Audit ledger
+  - Fiduciary registration
+  - Platform staff
+- **Generic:** authentication (Keycloak), delivery (notification-service), timestamping (TSA).
 
 ### Ubiquitous language (additions)
 
 | Term | Meaning |
 |---|---|
-| **Regime** | A body of data protection law with its own rules: `DPDPA`, `GDPR`, `UK_GDPR`, `HIPAA`, `UAE_PDPL`, `DIFC_DPL`, `ADGM_DPR`, `KSA_PDPL`, `QA_PDPPL`, `BH_PDPL`, `OM_PDPL`. |
-| **Regime profile** | The versioned, effective-dated figures and switches of one regime: digital-consent age, notice languages, right deadlines, breach clocks, retention, transfer rules, required consent elements. |
-| **Cell** | One complete, independent deployment of the platform's data plane in one jurisdiction. Personal data never leaves its cell. |
-| **Subject** | A data principal, data subject or patient, as held by the Identity Vault: a pseudonymous `dpId` with encrypted contact points. |
-| **Subject key** | The data-encryption key that seals one subject's personal data wherever it is stored. Destroying it erases the data (crypto-shredding). |
-| **Representative** | A person who may act for a subject, with evidence and scope: a parent or lawful guardian, a DPDPA nominee, a HIPAA personal representative. |
-| **Purpose definition** | A fiduciary's registered purpose: lawful basis per regime, data categories with sensitivity, retention, recipients, transfers, and localised notice versions. |
-| **Lawful basis** | Why processing is lawful: consent, contract, legal obligation, vital interests, public task, legitimate interests (GDPR), or a "certain legitimate use" (DPDPA s.7). Only consent needs the principal's act. |
-| **Rights request** | A subject's request to access, correct, erase, port, nominate, object, restrict or complain, with a deadline from the regime profile. |
-| **Legal hold** | A reason a record must be kept despite erasure: DPDPA consent records for 7 years, HIPAA authorisation documentation for 6 years, or a legal claim. What is held is pseudonymised. |
-| **HIPAA authorisation** | A consent whose purpose definition is health-related and requires the §164.508(c) elements. |
-| **Incident** | A suspected or confirmed personal data breach, with one notification clock per regime and recipient. |
+| **Consent record** | The ISO/IEC TS 27560 record of one consent: header, notice, processing, parties, events. The legal evidence. |
+| **Consent receipt** | A copy of the consent record issued to the principal (and to the fiduciary), signed by the platform. |
+| **Purpose definition** | A fiduciary's registered purpose: description, data categories with sensitivity and DPV mapping, retention, recipients, transfers, mandatory or optional, and localised notice versions. |
+| **Notice version** | An immutable, hashed text of a purpose's notice in one language. |
+| **Renewal** | The principal re-confirming a consent before it lapses (27560 "re-confirmed"). |
+| **Sharing consent** | Consent for one onboarded fiduciary to share data with another; the data moves between them, never through the platform. |
+| **Representative** | A parent, a lawful guardian, a HIPAA personal representative, or a DPDPA nominee, with verified authority. |
+| **Regime, regime profile, cell, subject, subject key** | As in [ADR-018](../adr/adr-018-regional-cells-for-data-residency.md) to [ADR-020](../adr/adr-020-regime-profiles-as-versioned-data.md). |
+| **Relayed request** | A principal's rights request about a fiduciary's data, passed to that fiduciary and recorded, but never fulfilled by the platform. |
 
-### Bounded contexts and context map
+### Bounded contexts
 
-| Context | New or changed | Service | Holds personal data? |
+| Context | New or changed | Service | Personal data |
 |---|---|---|---|
-| Consent (write) | Changed: purpose catalogue, notice versions, representatives, authorisation elements, pseudonymous refs only | `cm-cns-cmd-svc` | Pseudonymous only |
-| Consent (read) | Changed: projects new events | `cm-cns-qry-svc` | Pseudonymous only |
-| **Identity Vault** | **New** | `cm-vlt-svc` | **Yes**, encrypted per subject |
-| **Data Principal Rights** | **New** | `cm-dsr-svc` | Pseudonymous, plus encrypted request text |
-| **Privacy Governance** | **New** | `cm-gov-svc` | Counts and pseudonyms; no contact data |
-| Regime Profiles | New, as versioned data (`cm-reg-kit` and an OPA bundle), not a service | n/a | No |
-| Fiduciary registration | Changed: home cell, regimes served | `cm-df-reg-svc` | Fiduciary contact persons only |
-| Notifications | Changed: resolves contact points through the vault at send time | `cm-ntf-svc` | Transient only |
-| Audit | Unchanged design; records the new events | `cm-aud-svc` | Erasable payloads |
-| Platform staff | Changed: MFA, access logging | `cm-stf-svc` | Staff only |
-| Health interoperability | **New**, an anti-corruption layer | `cm-fhir-svc` | Pseudonymous; maps to FHIR |
+| Consent (write) | Changed: purpose definitions, notice versions, representatives, renewal, sharing consent, authorisation elements, 27560 records and receipts, change propagation | `cm-cns-cmd-svc` | Pseudonymous only |
+| Consent (read) | Changed: projects new events, serves records and receipts, live status | `cm-cns-qry-svc` | Pseudonymous only |
+| **Identity Vault** | **New** | `cm-vlt-svc` | Yes, encrypted per subject |
+| **Principal Requests** | **New**, narrow | `cm-dsr-svc` | Pseudonymous, plus encrypted request text |
+| Regime Profiles | New, as versioned data (`cm-reg-kit` and an OPA bundle) | n/a | No |
+| Health interoperability | **New**, an anti-corruption layer | `cm-fhir-svc` | Pseudonymous; maps to FHIR `Consent` |
+| Fiduciary registration | Changed: home cell; conflict-of-interest declarations | `cm-df-reg-svc` | Fiduciary contact persons only |
+| Notifications | Changed: resolves contact from the vault at send time; fiduciary webhooks | `cm-ntf-svc` | Transient only |
+| Audit, Platform staff, Billing | Small changes (staff MFA and access audit) | as today | as today |
 
 ```mermaid
 flowchart LR
   subgraph Cell["One cell (for example IN, EU, SA, AE, US)"]
     VLT["Identity Vault<br/>(upstream, OHS)"]
     CNS["Consent<br/>(core)"]
-    DSR["Data Principal Rights<br/>(core)"]
-    GOV["Privacy Governance"]
-    NTF["Notifications"]
+    REQ["Principal Requests"]
+    NTF["Notifications<br/>(principals and fiduciary webhooks)"]
     AUD["Audit ledger"]
-    FHIR["Health interop<br/>(ACL to FHIR)"]
+    FHIR["Health interop<br/>(ACL to FHIR Consent)"]
     DFR["Fiduciary registration"]
   end
   REG["Regime Profiles<br/>(published language, versioned data)"]
-  REG -. conformist .-> CNS & DSR & GOV & VLT
+  REG -. conformist .-> CNS & REQ & VLT
   VLT -- "pseudonymous dpId (OHS)" --> CNS
-  VLT -- "contact point at send time" --> NTF
-  DSR -- "erasure / access saga (orchestrator)" --> CNS & VLT & NTF & AUD
-  CNS -- events (no PII) --> AUD & DSR & GOV
+  VLT -- "contact at send time" --> NTF
+  REQ -- "own-data erasure saga" --> CNS & VLT & NTF & AUD
+  CNS -- "events (ids only)" --> AUD & NTF
   CNS -- "read via ACL" --> FHIR
-  DFR -- "home cell, regimes" --> CNS
+  DFR -- "home cell, onboarding" --> CNS
 ```
 
-### Key domain events (all carry pseudonymous ids only)
+### Key domain events (pseudonymous ids only)
 
+- **Consent:**
+  - `PurposeDefined`, `NoticeVersionPublished`
+  - `CnsReqCreated` (`dpId`, `noticeVersionId`, `language`, `representativeId?`)
+  - `CnsGranted`, `CnsPartiallyGranted`, `CnsDenied`, `CnsRenewed`, `CnsModified`, `CnsRevoked`, `CnsExpired`,
+    `CnsNotificationFailed`
+  - `SharingConsentGranted` / `Revoked`
+  - `ReceiptIssued`
 - **Vault:** `SubjectRegistered`, `ContactPointVerified`, `RepresentationGranted` / `Revoked`, `SubjectShredded`.
-- **Consent:** `PurposeDefined` / `Versioned`, `NoticeVersionPublished`, `CnsReqCreated` (now `dpId`, `noticeVersion`,
-  `language`, `representativeId?`), `CnsGranted`, `CnsPartiallyGranted`, `CnsDenied`, `CnsRevoked`, `CnsExpired`,
-  `CnsNotificationFailed`.
-- **Rights:** `RightsRequestReceived`, `IdentityVerified`, `RequestRoutedToFiduciary`, `RequestFulfilled` /
-  `Refused` / `Extended`, `ErasureCompleted`.
-- **Governance:** `IncidentOpened`, `IncidentClassifiedAsBreach`, `NotificationDue`, `NotificationSent`,
-  `IncidentClosed`.
+- **Requests:** `RequestReceived`, `RequestRelayedToFiduciary`, `OwnDataRequestFulfilled`, `ErasureCompleted`.
 
-## 4. Requirements and drivers
-
-**Functional:** everything in G1 to G12, plus partial consent (already planned), which GDPR's granularity and HIPAA's
-"description of the information" need anyway.
+## 5. Drivers and options
 
 **Quality attribute scenarios** (ISO/IEC 25010):
 
 | Attribute | Scenario | Measure |
 |---|---|---|
-| Security: confidentiality | An operator in cell IN queries any store, log, event or backup of cell EU | 0 records reachable; enforced by network and IAM, tested in CI with a cross-cell probe |
-| Compliance: erasure | A subject's erasure is approved | Contact data unreadable in every store within 24 h of approval (estimate; the strictest regime figure governs); evidence record produced |
-| Compliance: withdrawal | A subject revokes a consent | The next verification after the revoke call returns DENY: 0 ms stale window |
-| Compliance: timeliness | A rights request is received | 100% fulfilled or extended with notice before the regime deadline; alert at 50% and 80% of the window |
-| Maintainability | Counsel changes a regime figure | Shipped as a reviewed data change, no code change; effective-dated |
-| Availability | A cell's region fails | Other cells unaffected; recovery within the cell's RPO and RTO, without leaving the jurisdiction |
+| Compliance: withdrawal | A principal withdraws | The next verification returns DENY: 0 ms stale window; the fiduciary's webhook is delivered or retried, with evidence |
+| Compliance: records | Any consent event | A 27560 record exists, validates against the schema in CI, and is in the hash chain |
+| Security: confidentiality | Any store, log, event or backup of a cell, queried from another cell | 0 records reachable; CI isolation probe |
+| Compliance: erasure (own data) | A principal closes their account | Contact data unreadable everywhere within 24 h (estimate; the strictest regime figure governs); legal-hold records stay pseudonymised |
+| Maintainability | Counsel changes a regime figure | A reviewed data change, no code change |
+| Neutrality | A fiduciary asks for principals' data or analytics beyond their own consents | Impossible by API design; nothing exposes cross-fiduciary data |
 
-**Top three drivers:**
+**Top drivers:**
+1. Conformance of consent records (27560 and the DPDPA First Schedule).
+2. Residency.
+3. Erasability of the platform's own data, with legal holds.
 
-1. **Residency and sovereignty:** personal data stays in its jurisdiction, including events, logs and backups.
-2. **Erasability with retention:** rights must work across immutable logs while legal holds keep pseudonymised
-   records.
-3. **Regime variance without forks:** one codebase whose behaviour follows versioned regime data.
-
-**Fitness functions (CI):**
-- An ArchUnit rule: no class outside `cm-vlt-*` may declare contact-data types.
-- An event-schema test: no event schema contains `email`, `phone`, `name` or `ExtDpRef` fields.
-- A cross-cell isolation probe.
-- A rights-deadline monitor in staging.
+**Fitness functions:**
+- 27560 JSON-schema validation of every record type in CI.
+- An event-schema test: no contact fields.
+- ArchUnit: contact-data types only in `cm-vlt-*`.
+- The cross-cell isolation probe.
 - The existing clean-architecture rules.
 
-## 5. Options
-
-| | **A. Regional cells + Identity Vault + regime profiles** | B. One global deployment, geo-partitioned data | C. A product per jurisdiction |
-|---|---|---|---|
-| Residency (driver 1) | Strong: everything, including the event bus, logs, backups and IdP, is in-region | Weak: the event bus, logs, IdP and backups stay global unless each is also partitioned; hard to prove | Strong |
-| Erasure with retention (2) | Strong: crypto-shredding with a per-subject key, in-cell KMS | Possible, but key management spans regions | Strong, if each fork does it |
-| Regime variance (3) | One codebase plus regime data | One codebase plus regime data | Copies diverge |
-| Complexity | Medium: N copies of one stack, run by IaC | High: geo-partitioned DB and bus, cross-region consistency | Very high over time |
-| Cost | N times the infrastructure floor (estimate: each cell is a minimal HA footprint) | Lowest infrastructure | Highest people cost |
-| Operability | Deploy and observe N cells; a failure stays in its cell | One blast radius | N teams |
-| Lock-in | Low: any cloud with an in-country region | High: needs a geo-partitioned database product | Low |
-| Compliance fit | Best fit for DPDPA consent-manager registration and Gulf health localisation | Fails Gulf health localisation; weak for India | Good, but costly |
-
-**Recommendation: A.** It is the only option where residency holds for every byte by construction, not by
-configuration of each store.
-
-**What would change it:** if the platform served only regimes with an adequacy or SCC route and no localisation, for
-example EU, UK and US only, B's lower cost would win.
-
-**Best case for B:** cells multiply fixed cost and operational toil. A tenant serving principals in two regimes needs
-two tenancies, and a person with relationships in two cells has two accounts. B gives one account per person and one
-place to operate.
-
-These are real costs. We accept them because a breach of localisation is unrecoverable, and the duplication is
-bounded: cells are identical, built by the same IaC and pipeline.
+**Options for residency.** The same comparison as before applies: regional cells beat a geo-partitioned global
+deployment, and a product per country.
+- **Why cells win:** residency holds for every store, topic, log and backup by construction, and India's registration
+  expects an Indian operator.
+- **The strongest case for the runner-up:** one global deployment is cheaper and gives one account per person.
+- **What would change the recommendation:** serving only regimes with no localisation.
 
 ## 6. Design
 
@@ -217,175 +210,133 @@ The views are drawn twice:
   - [C4 containers of one cell](diagrams/c4-container-cell.drawio)
   - [context map](diagrams/context-map.drawio)
   - [cell deployment](diagrams/deployment-cells.drawio)
-  - [erasure saga](diagrams/erasure-saga.drawio)
+  - [own-data erasure saga](diagrams/erasure-saga.drawio)
 
 ```mermaid
 C4Context
   title Consent Manager, one cell (system context)
-  Person(dp, "Data principal / patient", "Gives, refuses, withdraws consent; exercises rights")
-  Person(rep, "Representative", "Parent, guardian, nominee, personal representative")
-  Person(stf, "Platform staff", "Admins, operators, DPO")
-  System_Ext(df, "Fiduciary / controller / covered entity", "Registers purposes, raises requests, verifies tokens, answers rights tasks")
-  System(cm, "Consent Manager (cell)", "Consent, rights, identity vault, governance, audit")
-  System_Ext(ntf, "notification-service", "In-region email, SMS, push providers")
+  Person(dp, "Data principal / patient", "Gives, refuses, renews, withdraws consent; reviews records")
+  Person(rep, "Representative", "Parent, guardian, personal representative, nominee")
+  Person(stf, "Platform staff", "Admins, operators")
+  System_Ext(df, "Onboarded fiduciary / controller / covered entity", "Registers purposes and notices, requests consent, verifies tokens, receives change webhooks")
+  System(cm, "Consent Manager (cell)", "Notices, consent lifecycle, ISO 27560 records and receipts, verification")
+  System_Ext(ntf, "notification-service", "In-region email, SMS, push")
   System_Ext(tsa, "RFC 3161 TSA", "Timestamps checkpoint hashes")
-  System_Ext(hie, "Health ecosystems", "FHIR R4 Consent: US Core, ABDM, NPHIES, Malaffi, NABIDH")
-  System_Ext(reg, "Regulators", "DPB, EU SAs, HHS OCR, SDAIA, UAE Data Office, DIFC, ADGM")
+  System_Ext(hie, "Health ecosystems", "FHIR R4 Consent")
+  System_Ext(dpb, "Data Protection Board and other regulators", "Registration, audit reports")
   Rel(dp, cm, "HTTPS")
   Rel(rep, cm, "HTTPS, verified authority")
   Rel(stf, cm, "HTTPS, MFA")
-  Rel(df, cm, "HTTPS, OAuth2")
+  Rel(df, cm, "HTTPS, OAuth2; webhooks back")
   Rel(cm, ntf, "contact resolved from the vault")
   Rel(cm, tsa, "hashes only")
   Rel(hie, cm, "SMART on FHIR")
-  Rel(cm, reg, "breach notifications")
+  Rel(cm, dpb, "audit reports")
 ```
 
-### 6.1 Regional cells ([ADR-018](../adr/adr-018-regional-cells-for-data-residency.md))
+### 6.1 Consent records and receipts ([ADR-025](../adr/adr-025-iso-27560-consent-records-and-receipts.md))
 
-```mermaid
-flowchart TB
-  subgraph Global["Global control plane (no personal data)"]
-    DIR["Cell directory<br/>tenantId → cell, public keys"]
-    CI["CI/CD, images, IaC"]
-    OBS["Fleet metrics<br/>(aggregate, anonymous)"]
-  end
-  subgraph IN["Cell IN (India)"]
-    INs["All services, Postgres, Pulsar,<br/>Keycloak realm, KMS, backups,<br/>notification-service, logs"]
-  end
-  subgraph EU["Cell EU"]
-    EUs["same stack"]
-  end
-  subgraph SA["Cell SA (Saudi)"]
-    SAs["same stack"]
-  end
-  subgraph AE["Cell AE (UAE)"]
-    AEs["same stack"]
-  end
-  subgraph US["Cell US (HIPAA)"]
-    USs["same stack, BAA-covered"]
-  end
-  CI --> IN & EU & SA & AE & US
-  IN & EU & SA & AE & US -- "counts only" --> OBS
-  DIR -. "routing hints" .- IN & EU & SA & AE & US
-  TSA["RFC 3161 TSA"] <-- "hashes only" --> IN & EU & SA & AE & US
-```
+- **Every consent produces an ISO/IEC TS 27560 record**, assembled by the read side from the write side's events and
+  the purpose definition.
+  - **Header:** schema version, record id, subject (`dpId`).
+  - **Notice:** notice version id, its hash, its language.
+  - **Processing:** purposes, personal data categories with DPV types, sensitivity, recipients, controller (the
+    fiduciary), legal basis (consent), jurisdiction, storage and retention, transfers, how to withdraw, rights.
+  - **Parties:** principal (pseudonymous), representative, fiduciary, the platform.
+  - **Events:** time, actor, type (expressed or explicit), state (given, refused, renewed, modified, withdrawn, lapsed,
+    terminated by the controller), validity.
+- **Serialisation:** JSON-LD with DPV, validated in CI.
+- **Receipts:**
+  - issued to the principal on every state change, and downloadable
+  - offered to the fiduciary through the API
+  - signed with the platform's key, the same JWKS as consent tokens (ADR-013)
+- **Retention:** records live in the ledger (tamper-proof, B3) for the regime's retention: 7 years for DPDPA consent
+  managers **[confirm]**, 6 years for HIPAA authorisation documentation. Erasure of the subject shreds the
+  identifying parts only (ADR-019).
+- **Export:** the principal can download all their records and receipts as machine-readable JSON-LD, and as PDF (B4).
 
-- **A cell is the whole data plane:** every service, Postgres, Pulsar, the Keycloak realm, KMS keys, the
-  notification-service instance and its providers, logs, traces and backups, all in one jurisdiction's region. Gulf
-  health data goes to in-country regions.
-- **A tenant (a fiduciary) is created in one cell** and serves the principals of that cell's regimes. A multinational
-  has one tenancy per cell; the cell directory maps the tenant to its cells.
-- **A principal belongs to a cell.** Their DP portal URL and identity are per cell. A person with relationships in two
-  cells has two accounts (the accepted cost in §5).
-- **What crosses cells:** images, IaC, regime-profile data, aggregate anonymous metrics, and RFC 3161 hash anchoring.
-  Nothing else; enforced by network policy and tested in CI.
-- **Cell map (initial):**
-  - IN: DPDPA.
-  - EU: GDPR. The UK can share the EU cell via the UK adequacy route **[confirm]**, or have its own.
-  - SA: KSA PDPL.
-  - AE: UAE PDPL. DIFC and ADGM tenants also run here, with their regime profiles.
-  - US: HIPAA.
-  - Qatar, Bahrain and Oman: their own cells when a tenant needs them; until then, no principals from those countries.
+### 6.2 Asking for consent properly
 
-### 6.2 Identity Vault and crypto-shredding ([ADR-019](../adr/adr-019-identity-vault-and-crypto-shredding.md))
+- **Purpose definitions:** a fiduciary registers each purpose.
+  - Contents: description, data categories (DPV-mapped, with sensitivity `ORDINARY` / `SENSITIVE` / `PHI` / `CHILD`),
+    mandatory or optional, retention, recipients, transfers, and flags (`TRACKING`, `BEHAVIOURAL_MONITORING`,
+    `TARGETED_ADVERTISING`).
+  - A request must name registered purposes and may only ask for their categories (purpose limitation).
+- **Notice versions:** immutable and hashed, one per language. Any DPDPA Eighth Schedule language at the principal's
+  choice, Arabic with RTL, EU languages. Notice content follows ISO/IEC 29184 (who, what, why, how long, to whom, how
+  to withdraw, rights, how to complain).
+- **No bundling:**
+  - each purpose is consented to separately
+  - optional purposes are never pre-ticked
+  - a request that bundles an optional purpose into a mandatory one is refused
+  - partial consent records exactly the categories granted
+- **Renewal and modification:** a principal can renew before a consent lapses, or change which categories it covers.
+  Both are 27560 events.
+- **Sharing consent:** a principal can consent to fiduciary A sharing named categories with onboarded fiduciary B for
+  a purpose. The platform records the consent and issues a token both can verify. The data moves A to B directly,
+  never through the platform (B1, B2, B3).
 
-- `cm-vlt-svc` is the only holder of subjects' contact points (email, phone), names, dates of birth and
-  representatives. Everyone else holds `dpId`.
-- A fiduciary raising a request "by email" calls the vault (through the gateway). The vault returns, or creates, a
-  pseudonymous `dpId` for that contact point, in the fiduciary's cell.
-- Each subject has a **subject key** (a DEK), wrapped by the cell's KMS key. Personal fields are encrypted with it in
-  the vault, and wherever any other store must keep a personal value. The value then travels as ciphertext plus key id,
-  never in clear.
-- **Erasure destroys the subject key.** Every ciphertext copy becomes unreadable: outbox rows, Pulsar topics, audit
-  payloads, backups. Live rows are deleted as well.
-- Notifications resolve contact points from the vault at send time, so the notify command carries `dpId` only (fixes
-  G1).
-- Keycloak keeps its login identity (email or phone), because sign-in needs it. Erasure deletes the Keycloak user, and
-  Keycloak's own backups are covered by the cell's backup-expiry policy (§6.6).
+### 6.3 Withdrawal and change propagation
 
-### 6.3 Regime profiles ([ADR-020](../adr/adr-020-regime-profiles-as-versioned-data.md))
+- **The status check reads the write side** (or a revocation set written in the same transaction as the revoke),
+  behind a fail-closed breaker. That closes G4; it is the task already filed, which records its own ADR.
+- **Fiduciaries get a signed webhook** on every state change of their consents (granted, modified, renewed,
+  withdrawn, expired, lapsed), with at-least-once delivery from the outbox, retries and a delivery record (G5). The
+  webhook carries ids and states, never personal data.
 
-- **What it is:** a versioned, effective-dated document per regime in `cm-reg-kit` (JSON plus a typed Java API),
-  also published as an OPA data bundle for the PDP.
-- **What it holds:**
-  - digital-consent age
-  - accepted notice languages
-  - required consent elements
-  - lawful bases offered
-  - each right's deadline and extension rule
-  - breach clocks per recipient
-  - retention per record class, and legal holds
-  - transfer rules
-  - representative types
-- Code asks the profile, for example `profile(KSA_PDPL, at).rightDeadline(ACCESS)`, and never hard-codes a figure.
-- Changes are pull requests reviewed by the DPO (CODEOWNERS), with a CI check that every figure cites its source and
-  carries a `confirmed` flag.
+### 6.4 Consent on behalf of others ([ADR-022](../adr/adr-022-children-guardians-and-representatives.md))
 
-**Starting figures:** every one needs counsel's confirmation before it is relied on. Appendix A lists them with their
-sources and confidence.
+- **Who:** a parent or lawful guardian for a child, or for a person with a disability; a HIPAA personal
+  representative; a DPDPA nominee on death or incapacity.
+- **What is recorded:** verified authority from the regime profile's accepted methods, recorded on the record's
+  Parties.
+- **Children:** requests for a child are refused when a purpose is flagged `TRACKING`, `BEHAVIOURAL_MONITORING` or
+  `TARGETED_ADVERTISING` (DPDPA s.9(3)), within the exemptions the profile lists.
 
-### 6.4 Consent changes
+### 6.5 HIPAA authorisations ([ADR-024](../adr/adr-024-hipaa-authorisations-and-fhir-consent.md))
 
-- **Purpose definitions:** a new aggregate in the Consent context. A fiduciary registers purposes (code, description,
-  lawful basis per regime, data categories with sensitivity `ORDINARY` / `SENSITIVE` / `PHI` / `CHILD`, retention,
-  recipients, cross-border transfers). A consent request must name a registered purpose, and may only ask for that
-  purpose's categories (purpose limitation, G9).
-- **Notice versions:** each purpose has immutable, hashed notice versions per language (any of the DPDPA Eighth
-  Schedule languages, Arabic with RTL, EU languages). The artefact records `noticeVersionId`, `language` and the hash
-  of what was shown (G5).
-- **Non-consent bases:** a purpose registered under contract, legal obligation, legitimate interest or a DPDPA
-  legitimate use needs no request. It is shown to the principal in the DP portal ("Acme processes your … because …"),
-  and the rights in §6.5 apply to it.
-- **Withdrawal takes effect at once (G4):** the verification status check reads the write side, or a revocation set
-  written in the same transaction as the revoke, behind a fail-closed breaker. This is the task already filed, and
-  it records its own ADR.
-- **Partial consent:** already planned. The artefact records the categories granted.
-- **Representatives (G7, [ADR-022](../adr/adr-022-children-guardians-and-representatives.md)):**
-  - If the subject is under the regime's digital-consent age, or has a lawful guardian on record, the request goes to
-    the representative.
-  - Their verified authority (method, evidence reference, scope, validity) is recorded on the artefact.
-  - Under DPDPA, verification can use identity and age details the fiduciary already holds, a virtual token from an
-    authorised entity, or a DigiLocker credential **[confirm against Rule 10]**.
-  - Requests for children are refused when they involve tracking, behavioural monitoring or targeted advertising
-    (DPDPA s.9(3)), enforced by purpose-definition flags.
-- **HIPAA authorisations (G8, [ADR-024](../adr/adr-024-hipaa-authorisations-and-fhir-consent.md)):** a PHI purpose
-  makes the request a HIPAA authorisation. It must carry the §164.508(c) core elements and statements:
-  - description of the information
-  - who discloses it, and to whom
-  - the purpose
-  - an expiry date or event
-  - the right to revoke, and how
-  - whether treatment is conditioned on signing
-  - the potential for redisclosure
-  - signature and date, or a representative's authority
+- **When:** a PHI purpose under the HIPAA regime makes the request an authorisation.
+- **What it must carry:** the §164.508(c) elements and statements, an expiry date or event, and a step-up signing
+  ceremony.
+- **FHIR:** `cm-fhir-svc` exposes records as FHIR R4 `Consent`, and maps the DEPA consent artefact for India. FHIR and
+  DEPA stay at the boundary.
 
-  These are validated by the regime profile. `cm-fhir-svc` exposes artefacts as FHIR R4 `Consent` resources (and
-  accepts them) at the boundary; the domain model stays FHIR-free.
+### 6.6 DPDPA First Schedule, Part B, item by item ([ADR-023](../adr/adr-023-pure-consent-manager-boundary-and-neutrality.md))
 
-### 6.5 Data principal rights ([ADR-021](../adr/adr-021-data-principal-rights-and-erasure-saga.md))
+| Item | Obligation | How the platform meets it |
+|---|---|---|
+| B1 | Enable consent to onboarded fiduciaries, directly or through a fiduciary holding the data | Consent lifecycle; sharing consent (§6.2) |
+| B2 | Personal data flowing through is not readable by the consent manager | No API accepts governed data; tokens carry ids and categories only; fitness function on API schemas |
+| B3 | Record consents given, denied and withdrawn, notices, and sharing | 27560 records in the hash-chained ledger (§6.1) |
+| B4 | Principal access, machine-readable copies, at least 7 years | Export and receipts; retention in the regime profile |
+| B5 | A website or app as the primary means of access | DP portal (web; mobile app later) |
+| B6 | No subcontracting or assignment of obligations | Every obligation is met by the platform's own services. Hosting and delivery vendors are processors under contract, not delegates of the obligation **[confirm with counsel]**. |
+| B7 | Reasonable security safeguards | §6.8 baseline; ISO/IEC 27001 |
+| B8 | Fiduciary capacity towards principals | The product acts only on the principal's instruction; no feature serves a fiduciary against a principal |
+| B9, B10 | No conflicts of interest with fiduciaries, their promoters or key people | Fiduciaries get no cross-fiduciary data, no analytics on principals, no ranking or advertising. Staff declare interests, kept in `cm-stf-svc`. Billing is per transaction, never per consent outcome. |
+| B11 | Public disclosure of ownership and interests | A public "About this consent manager" page, generated from a reviewed disclosure file |
+| B12 | Audit mechanisms, periodic report to the Board | A Board report generated from the ledger and controls evidence; scheduled per the regime profile |
+| B13 | No change of control without Board approval | Corporate, not product; noted in the operating runbook |
 
-- **`cm-dsr-svc`** owns `RightsRequest`.
-- **Invariants:**
-  - The deadline is fixed from the regime profile at receipt.
-  - Fulfilment needs a verified identity: the signed-in principal, or a representative with authority.
-  - Every refusal cites a legal ground.
-  - Extensions are only those the regime allows, and the principal is told.
-- **Access and portability:** assembles what the platform holds (consents, history, notices shown, representatives)
-  as JSON and PDF, and as FHIR `Consent` for health. It routes a request for the fiduciary's own data to that
-  fiduciary as a task (DF app and API webhook) and tracks the answer to the deadline.
-- **Correction:** of contact points, in the vault, after re-verification.
-- **Nomination (DPDPA s.14):** a nominee is a representative effective on death or incapacity.
-- **Grievance:** a first-class request with the regime's deadline **[confirm DPDPA figure]**, and escalation
-  information (the Board, the supervisory authority).
-- **Erasure saga** (orchestrated, forward-recovering: shredding can't be undone, so every reversible step happens
-  first):
+### 6.7 The platform's own data about principals ([ADR-019](../adr/adr-019-identity-vault-and-crypto-shredding.md), [ADR-021](../adr/adr-021-principal-requests-own-data-and-relay.md))
+
+- **Identity Vault:** contact points, names, dates of birth and representatives live only in `cm-vlt-svc`, encrypted
+  with a per-subject key. Everything else uses `dpId`. Notifications resolve contact at send time.
+- **Principal Requests (`cm-dsr-svc`):**
+  - **Own-data rights:** access (all records and receipts), correction (contact points), erasure (close the account).
+  - **Erasure:** an ordered saga that ends with shredding the subject key. Legal holds keep the pseudonymised consent
+    records.
+  - **Relay:** a principal's request about a fiduciary's data is passed to that fiduciary (webhook and DF app) and
+    recorded, never fulfilled by the platform.
+  - **Grievances:** grievances about the platform itself are handled to the regime deadline.
+- **Its own breaches:** an internal incident runbook with the regime profile's clocks, for breaches of the platform's
+  own data only.
 
 ```mermaid
 sequenceDiagram
   autonumber
   participant P as Principal (DP portal)
-  participant DSR as cm-dsr-svc (orchestrator)
+  participant REQ as cm-dsr-svc (orchestrator)
   participant REG as Regime profile
   participant CNS as Consent
   participant DF as Fiduciaries
@@ -393,142 +344,105 @@ sequenceDiagram
   participant KC as Keycloak
   participant AUD as cm-aud-svc
   participant VLT as cm-vlt-svc
-  P->>DSR: request erasure
-  DSR->>REG: deadline, legal holds
-  DSR->>P: notice of erasure (DPDPA 48 h notice [confirm])
-  DSR->>CNS: revoke active consents (withdrawal), keep pseudonymised records under hold
-  DSR->>DF: notify each fiduciary to erase its copies (DPDPA s.8(7), GDPR Art. 17(2), 19)
-  DSR->>NTF: delete push devices
-  DSR->>AUD: erase entry payloads and subject links
-  DSR->>KC: delete login account
-  Note over DSR: point of no return
-  DSR->>VLT: shred subject key
-  VLT-->>DSR: SubjectShredded
-  DSR->>P: confirmation (to a contact captured before shredding, then discarded)
+  P->>REQ: close my account and erase my data
+  REQ->>REG: deadline, legal holds
+  REQ->>P: notice of erasure (DPDPA 48 h [confirm])
+  REQ->>CNS: withdraw active consents; keep pseudonymised records under hold
+  CNS-->>DF: change webhooks (withdrawn)
+  REQ->>NTF: delete push devices
+  REQ->>AUD: erase payloads and subject links
+  REQ->>KC: delete login account
+  Note over REQ: point of no return
+  REQ->>VLT: shred subject key
+  VLT-->>REQ: SubjectShredded
+  REQ->>P: confirmation (contact captured before shredding, then discarded)
 ```
 
-- **Saga behaviour:**
-  - Each step is idempotent and retried with backoff. A step that can't complete puts the request in `STUCK` with an
-    alert; it never silently skips.
-  - Legal holds (DPDPA's 7-year consent records, HIPAA's 6-year documentation, a legal claim) keep the pseudonymised
-    consent record and stop at removing contact data. The principal is told which records are held, why and until
-    when.
-  - Fiduciaries' confirmations are tracked separately, so their delay doesn't block the platform's own erasure.
+### 6.8 Residency and security ([ADR-018](../adr/adr-018-regional-cells-for-data-residency.md))
 
-### 6.6 Retention and deletion
+- **Cells:** a cell per jurisdiction (IN, EU, SA, AE, US; Qatar, Bahrain and Oman when needed). A cell is every
+  service, store, key, backup and provider in one region. Only images, IaC, regime data, anonymous counts and
+  timestamp hashes cross cells.
+- **Security baseline:**
+  - mTLS between services; encryption at rest
+  - staff MFA (passkey, or TOTP fallback)
+  - step-up for HIPAA signing
+  - every staff read of principal-level data written to the ledger
+  - scoped Keycloak service accounts
+  - OWASP ASVS L2 (L3 for the vault)
+  - ISO/IEC 27001 and 27701 as the operator's management systems
 
-- **One retention job per context** reads the regime profile: record class → period → action (delete, pseudonymise,
-  shred).
-- **Pulsar:** topic retention is shortened to what replay needs (days), and since events carry no clear PII after G1,
-  what remains is pseudonymous.
-- **Backups:** in-cell, encrypted, and expiring by the strictest erasure period. Restores re-apply a "shredded subjects"
-  tombstone list before serving.
-- **Logs:** no PII by policy (structured logging with a deny-list filter). DPDPA Rule 8(3)'s one-year minimum log
-  retention applies **[confirm]**.
-
-### 6.7 Privacy Governance ([ADR-023](../adr/adr-023-breach-response-and-privacy-governance.md))
-
-- **`cm-gov-svc`** keeps the incident register. An incident has clocks per regime and recipient, computed from the
-  regime profile:
-  - GDPR Art. 33: 72 h to the authority.
-  - DPDPA Rule 7: the Board without delay, a detailed report within 72 h **[confirm]**; CERT-In within 6 h.
-  - HIPAA: individuals without unreasonable delay, at most 60 days; HHS within 60 days if 500 or more people;
-    business associate to covered entity per the BAA.
-  - Saudi, UAE, DIFC, ADGM, Qatar, Bahrain, Oman: per their profiles **[confirm]**.
-- It produces notification drafts per recipient, and tracks sent evidence and closure.
-- **It also keeps:**
-  - records of processing (from purpose definitions and the platform's own processing)
-  - the sub-processor register (cloud, notification providers, TSA)
-  - transfer impact records (Saudi risk assessments)
-  - DPIAs
-- Tenants' breaches, which they report to the platform as their processor, and the platform's own breaches flow
-  through the same register.
-
-### 6.8 Security baseline (G11)
-
-- **mTLS between services.** Service mesh or Spring SSL bundles, cell-scoped CA.
-- **TLS at the edge.** Encrypted volumes and database at rest, plus application-level encryption of personal fields
-  (vault).
-- **Staff sign-in gets a second factor:** WebAuthn passkey, or TOTP as fallback. That satisfies HIPAA's proposed MFA
-  requirement and good practice either way.
-- **Principals keep one-time-code sign-in.** For HIPAA health consents, step-up to a passkey or a verified second
-  channel before signing an authorisation.
-- **Every staff read of principal-level data** (the masked consent list, rights requests) is written to the audit
-  ledger as an access event (HIPAA §164.312(b)).
-- **Keycloak admin calls move to scoped service accounts** (follow-up from ADR-017).
-- **OWASP ASVS L2** as the verification baseline, L3 for the vault.
-
-### 6.9 Threat model, critical flows (STRIDE, summary)
+### 6.9 Threats (STRIDE, summary)
 
 | Flow | Threat | Control |
 |---|---|---|
-| Fiduciary resolves "by email" to `dpId` | **I**nformation disclosure: enumerating whether a person has an account | The vault returns a `dpId` whether or not the person is known (creates on first use), rate-limited per fiduciary, audited |
-| Erasure | **R**epudiation by the platform, **T**ampering with evidence | Every step is written to the ledger; RFC 3161-anchored completion record |
-| Representative consent | **S**poofing a parent | Verification method and evidence reference recorded; regime-defined acceptable methods only |
-| Cross-cell | **I**nformation disclosure through shared services | No shared data plane; probe in CI |
-| Staff console | **E**levation | Role split (ADR-017), MFA, access audit |
+| Fiduciary resolves "by email" to `dpId` | **I**nformation disclosure (account enumeration) | Always returns a `dpId`; rate-limited; audited |
+| Receipts | **T**ampering, **R**epudiation | Signed receipts; records in the anchored hash chain |
+| Representative consent | **S**poofing a parent | Profile-defined verification methods; evidence by reference |
+| Fiduciary webhooks | **S**poofing the platform; replay | Signed payloads with timestamp and id; fiduciary verifies against the JWKS |
+| Neutrality | A fiduciary obtaining others' data through the platform | No cross-fiduciary API; per-tenant authorisation at the PEP |
 
 ## 7. Risks
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Regime figures wrong or outdated | Medium | High | Profiles as data with source and `confirmed` flag; DPO review; quarterly legal refresh |
-| India registration timing (Rule 4, mid-November 2026) | High | High | Phase 0 below targets registration evidence first; the Board's readiness is outside our control **[confirm Board status]** |
-| Erasure saga stuck at a step | Medium | High | `STUCK` state, alerts at 50% and 80% of the deadline, runbook, manual completion with evidence |
-| Crypto-shredding misses a clear copy | Medium | Critical | Event-schema and ArchUnit fitness functions; log deny-list; periodic PII scan of stores and topics |
-| Cost and toil of five or more cells | High | Medium | Identical IaC, one pipeline, fleet dashboards; add cells only when a tenant needs one |
-| Person with accounts in two cells confused | Medium | Low | Clear per-cell portals; DP portal states its jurisdiction |
-| FHIR mapping drift | Low | Medium | FHIR validator in CI against the chosen IGs |
-| Vault becomes a bottleneck or single point of failure | Medium | High | Stateless API, HA Postgres, read cache of `dpId` existence only; circuit breaker with fail-closed for writes |
+| The Board's interoperability standard (Part A item 9) differs from 27560 | Medium | High | Records are built from a neutral domain model; 27560, FHIR and DEPA are mappings, and another can be added |
+| Regime figures wrong or outdated | Medium | High | Profiles as data with source and `confirmed`; DPO review |
+| Registration timing (mid-November 2026) and Board readiness | High | High | Phase 0 below first; the Board's state is outside our control **[confirm]** |
+| Hosting or delivery vendors read as subcontracting obligations (B6) | Low | High | Counsel's opinion; vendors contracted as processors only |
+| Erasure saga stuck | Medium | High | `STUCK` state, alerts, runbook, evidence |
+| Clear PII left somewhere | Medium | Critical | Fitness functions, log deny-list, PII scans in staging |
+| Cost of several cells | High | Medium | Identical IaC; add cells only for a tenant who needs one |
 
 **Open questions for counsel or the DPO:**
-- Every **[confirm]** figure, and Appendix A.
-- Whether the UK shares the EU cell.
-- Whether Saudi principals' non-health data may be served from the AE cell under Saudi transfer safeguards. The
-  default is no: a separate SA cell.
-- HIPAA: whether the platform signs BAAs as a business associate only, or also acts for health plans.
+- every **[confirm]**
+- whether DPDPA Rule 14 lets principals exercise rights through the consent manager, and how
+- B6 and vendors
+- whether the UK shares the EU cell
+- per-cell health implementation guides
 
 ## 8. Plan
 
-The core domain comes first. India's deadline sets Phase 0.
+The core domain comes first. India's date sets Phase 0.
 
 | Phase | Scope | Closes |
 |---|---|---|
-| **0: India consent-manager readiness** | Immediate withdrawal; purpose definitions and versioned, multilingual notices; 7-year consent-record retention with legal hold; DP portal history of every consent and notice; pseudonymous events (vault-lite: `dpId` in events, contact data encrypted); breach register v1 | G4, G5, G1 (partly), G9, G10 (partly), part of G6 |
-| **1: Rights** | `cm-dsr-svc` with access, correction, grievance, nomination, erasure saga; regime profiles in `cm-reg-kit` and OPA; full Identity Vault with crypto-shredding | G2, G1, G6 |
-| **2: Cells** | IaC for a cell; cell directory; second cell (EU); isolation probe | G3 |
-| **3: Health** | HIPAA authorisations, PHI classification, `cm-fhir-svc` (FHIR R4 Consent), MFA and access audit, mTLS; US cell | G8, G11 |
-| **4: Gulf and children** | Representatives and verifiable parental consent; Arabic and RTL in all three frontends; SA and AE cells | G7, rest of G3 |
-| **5: Governance completeness** | Records of processing, sub-processor and transfer registers, DPIA records | G12 |
+| **0: Registration readiness (India)** | Immediate withdrawal; fiduciary webhooks; purpose definitions, multilingual versioned notices, no bundling; 27560 records, receipts and export; partial consent; 7-year retention with legal hold; pseudonymous events; disclosure page; Board report v1 | G4, G5, G6, G3, G9 (partly), G1 (partly), G11 |
+| **1: Own data** | Identity Vault with crypto-shredding; Principal Requests (own-data rights, relay, grievances); regime profiles in `cm-reg-kit` and OPA | G1, G12 |
+| **2: Cells** | Cell IaC, cell directory, second cell (EU), isolation probe | G2 |
+| **3: Health** | HIPAA authorisations, PHI sensitivity, `cm-fhir-svc` (FHIR R4 Consent), staff MFA and access audit, mTLS; US cell | G8, G13 |
+| **4: Representatives, sharing, Gulf** | Parents, guardians, nominees; sharing consent; Arabic and RTL; SA and AE cells | G7, G10 |
 
-**First spike:** a pseudonymous `CnsReqCreatedEvt` with the contact point resolved by a minimal vault, end to end
-through notification. It proves the hardest structural change (G1) on the existing stack before building the rest.
+**First spike:** a 27560 record and signed receipt for one consent, generated from today's events and validated
+against the schema, plus a pseudonymous `CnsReqCreatedEvt`. It proves the record model and the hardest data change on
+the existing stack.
 
 ## Appendix A: Regime starting figures
 
-Starting figures only, for counsel to confirm. Each becomes a regime-profile entry with source and `confirmed: false`
-until signed off.
+For counsel to confirm. Each becomes a regime-profile entry with its source, and `confirmed: false` until signed off.
+Only figures a consent manager needs are listed.
 
 | Item | DPDPA | GDPR | HIPAA | KSA PDPL | UAE PDPL | DIFC / ADGM | QA / BH / OM |
 |---|---|---|---|---|---|---|---|
-| Platform's role | Consent Manager (registered) | Processor for controllers; controller for its account data | Business associate | Processor | Processor | Processor | Processor |
-| Digital-consent age | Under 18 is a child (s.2(f)) | 16, member states may lower to 13 (Art. 8) | Personal representative per state law | Guardian for those lacking capacity **[confirm]** | **[confirm]** | **[confirm]** | **[confirm]** |
-| Access request | Rules: **[confirm]** | 1 month, +2 (Art. 12(3)) | 30 days, +30 (§164.524) | **[confirm]** | **[confirm]** | **[confirm]** | **[confirm]** |
-| Grievance | 90 days **[confirm, Rule numbering disputed]** | n/a (complaint to the authority) | n/a | **[confirm]** | **[confirm]** | **[confirm]** | **[confirm]** |
-| Breach to regulator | Without delay; detail within 72 h **[confirm]**; CERT-In 6 h | 72 h (Art. 33) | ≤ 60 days (500 or more), else annually | 72 h **[confirm]** | **[confirm]** | DIFC as soon as practicable; ADGM 72 h **[confirm]** | **[confirm]** |
-| Consent records kept | 7 years (consent manager, First Schedule Part B) **[confirm]** | As long as needed to prove consent | 6 years (§164.530(j)) | **[confirm]** | **[confirm]** | **[confirm]** | **[confirm]** |
-| Erasure notice | 48 h before erasure (Rule 8(2)) **[confirm]** | n/a | n/a | **[confirm]** | **[confirm]** | n/a | **[confirm]** |
-| Cross-border | Negative list (s.16, Rule 15) | Adequacy, SCCs, BCRs (Ch. V) | No restriction; BAA flow-down | Adequacy or safeguards; risk assessment for sensitive data | **[confirm]**; UAE health data localised (Federal Law 2 of 2019) **[confirm]** | Adequacy or safeguards | **[confirm]** |
-| Notice languages | English or any Eighth Schedule language, at the principal's choice | Clear and plain, in the subject's language | Plain language | Arabic **[confirm]** | Arabic **[confirm]** | English | Arabic **[confirm]** |
+| Platform's role | Registered Consent Manager | Consent platform; processor for controllers, controller of its account data | Business associate | Processor | Processor | Processor | Processor |
+| Child / capacity | Under 18 (s.2(f)) | Under 16; member states may lower to 13 (Art. 8) | Personal representative per state law | **[confirm]** | **[confirm]** | **[confirm]** | **[confirm]** |
+| Consent records kept | At least 7 years (First Schedule B4) | As long as needed to prove consent | 6 years (§164.530(j)) | **[confirm]** | **[confirm]** | **[confirm]** | **[confirm]** |
+| Withdrawal | As easy as giving (s.6(4)) | As easy as giving (Art. 7(3)) | In writing; effective except where relied on (§164.508(b)(5)) | **[confirm]** | **[confirm]** | **[confirm]** | **[confirm]** |
+| Own-data access request | **[confirm Rule 14]** | 1 month, +2 (Art. 12(3)) | n/a (BA) | **[confirm]** | **[confirm]** | **[confirm]** | **[confirm]** |
+| Grievance about the platform | 90 days **[confirm]** | n/a (complaint to the authority) | n/a | **[confirm]** | **[confirm]** | **[confirm]** | **[confirm]** |
+| Own breach to regulator | Without delay; detail within 72 h **[confirm]**; CERT-In 6 h | 72 h (Art. 33) | To the covered entity per the BAA | 72 h **[confirm]** | **[confirm]** | **[confirm]** | **[confirm]** |
+| Erasure notice | 48 h before (Rule 8(2)) **[confirm]** | n/a | n/a | **[confirm]** | **[confirm]** | n/a | **[confirm]** |
+| Notice languages | English or any Eighth Schedule language, the principal's choice | The subject's language, plainly | Plain language | Arabic **[confirm]** | Arabic **[confirm]** | English | Arabic **[confirm]** |
+| Cross-border | Negative list (s.16) | Ch. V | BAA flow-down | Adequacy or safeguards; risk assessment for sensitive data | **[confirm]**; health data localised **[confirm]** | Adequacy or safeguards | **[confirm]** |
 
 **Sources consulted (secondary unless stated; for orientation only):**
-- [DPDP Rules 2025, all rules and effective dates](https://dpdpa.dcomply.in/rules/)
-- [Consent managers under the DPDP Rules 2025 (Mondaq)](https://www.mondaq.com/india/data-protection/1832140/building-the-consent-layer-consent-managers-under-the-dpdp-rules-2025)
-- [Schedule 1, DPDP Rules 2025](https://www.dpdpa.com/schedule/schedule1.html)
-- [Data breach reporting timeline of the DPDP Rules (MediaNama)](https://www.medianama.com/2025/11/223-data-breach-reporting-timeline-of-dpdp-rules-2025-explained/)
-- [KPMG: DPDP Rules 2025 guidance](https://assets.kpmg.com/content/dam/kpmgsites/in/pdf/2025/11/dpdp-rules-2025-guidance-to-dpdp-act-implementation.pdf)
+- [DPDP Rules 2025, First Schedule (dpdpa.com)](https://www.dpdpa.com/schedule/schedule1.html)
+- [DPDP Rules 2025, all rules and dates](https://dpdpa.dcomply.in/rules/)
+- [Consent managers under the DPDP Rules (Mondaq)](https://www.mondaq.com/india/data-protection/1832140/building-the-consent-layer-consent-managers-under-the-dpdp-rules-2025)
+- [MeitY's BRD for consent management (PwC)](https://www.pwc.in/research-insights/news_alert/regulatory-insights/business-requirement-document-for-consent-management-under-the-dpdp-act.html)
+- [Designing consent management systems under the DPDP Act (Lexology)](https://www.lexology.com/library/detail.aspx?g=ced020a3-8c96-4401-a00e-bc4feab1c812)
+- [ISO/IEC TS 27560 with DPV (W3C DPV Community Group)](https://w3c-cg.github.io/dpv/guides/consent-27560)
+- [Implementing ISO/IEC TS 27560 for GDPR and DGA](https://arxiv.org/pdf/2405.04528)
 - [HIPAA Security Rule overhaul status (Alston & Bird)](https://www.alston.com/en/insights/publications/2025/11/hipaa-security-rule-overhaul)
-- [HIPAA updates 2026 (HIPAA Journal)](https://www.hipaajournal.com/hipaa-updates-hipaa-changes/)
 - [Saudi cross-border transfers (King & Spalding)](https://www.kslaw.com/news-and-insights/international-personal-data-transfers-under-saudi-arabias-data-protection-law)
-- [Saudi transfer framework (Dentons)](https://www.dentons.com/en/insights/alerts/2025/may/15/saudi-arabias-framework-for-cross-border-data-transfers)
 - [UAE data protection law (DLA Piper)](https://www.dlapiperdataprotection.com/countries/uae-general/law.html)
