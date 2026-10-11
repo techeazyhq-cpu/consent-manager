@@ -16,7 +16,7 @@
  * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
  */
 
-package com.techeazyhq.cm.dfreg.infra;
+package com.techeazyhq.cm.kckit;
 
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicReference;
@@ -31,8 +31,9 @@ import reactor.core.publisher.Mono;
  * Attaches a bearer token to every Keycloak Admin API call (plan §10) — obtained via the
  * password grant against the {@code master} realm's {@code admin-cli} client, using the
  * bootstrap admin credentials docker-compose provisions Keycloak with. Cached until near
- * expiry. Fine for Phase 1 local dev; a dedicated service-account client with a scoped
- * {@code manage-clients} role is the Phase 2 hardening (plan §16).
+ * expiry. Fine for Phase 1 local dev; a dedicated service-account client per caller, scoped to
+ * {@code manage-clients} (cm-df-reg-svc) or {@code manage-users} (cm-stf-svc), is the Phase 2
+ * hardening (plan §16).
  */
 public class KeycloakAdminAuthFilter {
 

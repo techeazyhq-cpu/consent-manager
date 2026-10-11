@@ -9,7 +9,8 @@ fiduciary's systems check before they touch the data.
   revoke consent. They are notified by email, SMS or web push, and sign in with a one-time code; no password.
 - **Data Fiduciaries** use the **DF app** and the **DF integration API** to raise consent requests and verify a
   consent token before processing.
-- **Platform administrators** use **CM Admin** to onboard and activate fiduciaries and manage their subscriptions.
+- **Platform administrators** use **CM Admin** to onboard and activate fiduciaries, manage their subscriptions and
+  add **operators**, who can view and onboard fiduciaries but not change plans or manage staff.
 
 Built with Spring Boot WebFlux and R2DBC, Apache Pulsar, PostgreSQL, Keycloak, Open Policy Agent and React.
 Notifications are delivered through [notification-service](https://github.com/techeazyhq-cpu/notification-service).
@@ -25,6 +26,7 @@ Notifications are delivered through [notification-service](https://github.com/te
 | `cm-ntf-svc` | 8084 | Notifications to data principals and fiduciaries, one-time codes, DP web-push devices |
 | `cm-bil-svc` | 8085 | Subscription plans, usage metering, eligibility checks |
 | `cm-aud-svc` | 8086 | Tamper-evident audit ledger: every platform event in a SHA-256 hash chain, with Merkle checkpoints timestamped by an external RFC 3161 authority ([how to verify](docs/audit-ledger.md)) |
+| `cm-stf-svc` | 8087 | Platform staff: administrators add and disable operators; everyone on staff sees their account and sessions, and can sign out everywhere ([ADR-017](docs/adr/adr-017-platform-staff-and-operator-role.md)) |
 | `cm-idn-otp-spi` | (Keycloak) | Keycloak provider: passwordless sign-in with an email or SMS code |
 | `cm-idn-theme` | (Keycloak) | Keycloak login themes: one sign-in page per audience (data principal, fiduciary, admin) |
 
@@ -58,7 +60,7 @@ cd frontend && pnpm install && pnpm dev:dp-portal     # or dev:df-app, dev:cm-ad
 | What | URL | Sign-in |
 |---|---|---|
 | DP portal | http://localhost:5174 | `dp-demo@cm.local`: the code arrives in Mailpit |
-| CM Admin | http://localhost:5176 | `admin@cm.local`: the code arrives in Mailpit |
+| CM Admin | http://localhost:5176 | `admin@cm.local` (administrator) or `operator@cm.local` (operator): the code arrives in Mailpit |
 | DF app | http://localhost:5175 | the fiduciary's API client secret, issued at activation |
 | Mailpit (captured email) | http://localhost:8025 | none |
 | Keycloak admin console | http://localhost:8080 | `admin` / `admin` |

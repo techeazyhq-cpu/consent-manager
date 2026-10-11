@@ -19,6 +19,10 @@
         "description": "Consent Manager platform administrator"
       },
       {
+        "name": "CM_OPERATOR",
+        "description": "Consent Manager platform operator: views tenants and onboards them"
+      },
+      {
         "name": "DF",
         "description": "Data Fiduciary"
       },
@@ -211,6 +215,25 @@
       "requiredActions": [],
       "firstName": "CM",
       "lastName": "Admin"
+    },
+    {
+      "username": "operator@cm.local",
+      "email": "operator@cm.local",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "operator",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "CM_OPERATOR"
+      ],
+      "requiredActions": [],
+      "firstName": "CM",
+      "lastName": "Operator"
     },
     {
       "username": "df-demo@cm.local",

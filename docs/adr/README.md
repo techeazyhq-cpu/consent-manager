@@ -22,6 +22,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [014](adr-014-tamper-evident-audit-ledger.md) | A tamper-evident audit ledger, hash-chained like a blockchain | Accepted |
 | [015](adr-015-ledger-checkpoints-anchored-by-a-timestamp-authority.md) | Ledger checkpoints, anchored by an external RFC 3161 timestamp authority | Accepted |
 | [016](adr-016-circuit-breakers-on-every-synchronous-call.md) | A circuit breaker on every synchronous call to another service | Accepted |
+| [017](adr-017-platform-staff-and-operator-role.md) | Platform staff in their own service, with an operator role | Accepted |
 
 ## Writing one
 

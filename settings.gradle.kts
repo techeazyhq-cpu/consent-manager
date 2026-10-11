@@ -39,16 +39,25 @@ include(":cm-web-kit")
 include(":cm-sec-kit")
 include(":cm-test-kit")
 include(":cm-res-kit")
+include(":cm-kc-kit")
 project(":cm-dom-kit").projectDir = file("backend/libs/cm-dom-kit")
 project(":cm-evt-kit").projectDir = file("backend/libs/cm-evt-kit")
 project(":cm-web-kit").projectDir = file("backend/libs/cm-web-kit")
 project(":cm-sec-kit").projectDir = file("backend/libs/cm-sec-kit")
 project(":cm-test-kit").projectDir = file("backend/libs/cm-test-kit")
 project(":cm-res-kit").projectDir = file("backend/libs/cm-res-kit")
+project(":cm-kc-kit").projectDir = file("backend/libs/cm-kc-kit")
 
 // ---- gateway (single module) ----
 include(":cm-gw")
 project(":cm-gw").projectDir = file("backend/services/cm-gw")
+// ---- cm-stf-svc ----
+include(":cm-stf-dom", ":cm-stf-app", ":cm-stf-infra", ":cm-stf-if-rest", ":cm-stf-boot")
+project(":cm-stf-dom").projectDir = file("backend/services/cm-stf-svc/cm-stf-dom")
+project(":cm-stf-app").projectDir = file("backend/services/cm-stf-svc/cm-stf-app")
+project(":cm-stf-infra").projectDir = file("backend/services/cm-stf-svc/cm-stf-infra")
+project(":cm-stf-if-rest").projectDir = file("backend/services/cm-stf-svc/cm-stf-if-rest")
+project(":cm-stf-boot").projectDir = file("backend/services/cm-stf-svc/cm-stf-boot")
 
 // ---- cm-df-reg-svc ----
 include(":cm-df-reg-dom", ":cm-df-reg-app", ":cm-df-reg-infra", ":cm-df-reg-if-rest", ":cm-df-reg-boot")
