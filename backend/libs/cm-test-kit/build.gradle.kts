@@ -22,7 +22,7 @@ plugins {
 
 dependencies {
     api("com.tngtech.archunit:archunit-junit5:1.5.1")
-    api(platform("org.testcontainers:testcontainers-bom:1.20.1"))
+    api(platform("org.testcontainers:testcontainers-bom:1.21.4"))
     api("org.testcontainers:junit-jupiter")
     api("org.testcontainers:postgresql")
     api("org.testcontainers:pulsar")
