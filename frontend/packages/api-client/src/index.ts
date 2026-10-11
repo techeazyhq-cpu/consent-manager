@@ -86,6 +86,9 @@ export const cnsCmd = {
     request<CnsReqRespDto>(base, `/api/cns-cmd/cns-reqs/${cnsReqId}/deny`, token, { method: "POST" }),
   revoke: (base: string, token: string, cnsArtId: string) =>
     request<CnsArtRespDto>(base, `/api/cns-cmd/cns-arts/${cnsArtId}/revoke`, token, { method: "POST" }),
+  // A fresh short-lived consent token for the calling fiduciary, while the consent is valid (ADR-027).
+  refreshToken: (base: string, token: string, cnsArtId: string) =>
+    request<{ cnsTkn: string; exp: string }>(base, `/api/cns-cmd/cns-arts/${cnsArtId}/token`, token, { method: "POST" }),
   linkDp: (base: string, token: string, body: { extDpRefTyp: ExtDpRefTyp; extDpRefVal: string }) =>
     request<{ linkedCount: number }>(base, "/api/cns-cmd/dp-links", token, {
       method: "POST",

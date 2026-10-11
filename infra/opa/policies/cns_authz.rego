@@ -18,7 +18,8 @@
 #     has not expired;
 #   - it was issued for this artefact (cns_art_id) and to the calling fiduciary (fiduciary_id = the caller's df_id);
 #   - it grants (ALLOW) the purpose asked for;
-#   - and the artefact is still ISSUED right now (cm-cns-qry-svc), so a revocation or expiry takes effect at once.
+#   - and the artefact is still ISSUED right now, as recorded by cm-cns-cmd-svc, the write side: a revocation or a
+#     lapse takes effect on the very next check (ADR-027). The read model lags a revoke, so it never decides this.
 # Anything missing or unreachable denies: the keys, the live status, the caller's identity.
 
 package consent.authorization
@@ -59,7 +60,7 @@ signing_keys := resp.raw_body if {
 live_status := status if {
 	resp := http.send({
 		"method": "GET",
-		"url": sprintf("%s/internal/cns-arts/%s/status", [cns_qry_base_url, input.cns_art_id]),
+		"url": sprintf("%s/internal/cns-arts/%s/status", [cns_cmd_base_url, input.cns_art_id]),
 		"headers": {"Accept": "application/json"},
 		"timeout": "2s",
 	})
@@ -70,6 +71,3 @@ live_status := status if {
 # Service addresses, overridable through OPA data for other environments.
 cns_cmd_base_url := data.config.cns_cmd_base_url if data.config.cns_cmd_base_url
 else := "http://cm-cns-cmd-svc:8082"
-
-cns_qry_base_url := data.config.cns_qry_base_url if data.config.cns_qry_base_url
-else := "http://cm-cns-qry-svc:8083"

@@ -40,6 +40,8 @@ public class SecurityConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(ex -> ex
                         .pathMatchers("/actuator/health", "/actuator/info", CnsCmdRouterConfig.JWKS_PATH).permitAll()
+                        // The PDP calls the live status check without a token, on the service network only (ADR-027).
+                        .pathMatchers(CnsCmdRouterConfig.INTERNAL_PATHS).permitAll()
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {
                 }))

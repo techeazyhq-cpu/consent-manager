@@ -35,6 +35,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techeazyhq.cm.cnscmd.app.ApproveCnsCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.CnsExpirySweepJob;
+import com.techeazyhq.cm.cnscmd.app.CnsTknIssuer;
+import com.techeazyhq.cm.cnscmd.app.GetCnsArtLiveStatusQryHandler;
+import com.techeazyhq.cm.cnscmd.app.RefreshCnsTknCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.CnsLifecycleSagaOrchestrator;
 import com.techeazyhq.cm.cnscmd.app.CreateCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.DenyCnsReqCmdHandler;
@@ -153,9 +156,25 @@ public class CnsCmdBeanConfig {
     }
 
     @Bean
+    public CnsTknIssuer cnsTknIssuer(CnsTknSigner cnsTknSigner,
+                                     @Value("${cm.cns-tkn.lifetime:PT15M}") java.time.Duration lifetime) {
+        return new CnsTknIssuer(cnsTknSigner, lifetime, java.time.Clock.systemUTC());
+    }
+
+    @Bean
+    public RefreshCnsTknCmdHandler refreshCnsTknCmdHandler(CnsArtRepoPort cnsArtRepo, CnsTknIssuer cnsTknIssuer) {
+        return new RefreshCnsTknCmdHandler(cnsArtRepo, cnsTknIssuer, java.time.Clock.systemUTC());
+    }
+
+    @Bean
+    public GetCnsArtLiveStatusQryHandler getCnsArtLiveStatusQryHandler(CnsArtRepoPort cnsArtRepo) {
+        return new GetCnsArtLiveStatusQryHandler(cnsArtRepo, java.time.Clock.systemUTC());
+    }
+
+    @Bean
     public ApproveCnsCmdHandler approveCnsCmdHandler(CnsReqRepoPort cnsReqRepo, CnsArtRepoPort cnsArtRepo,
-                                                       ObxPort obxPort, CnsTknSigner cnsTknSigner) {
-        return new ApproveCnsCmdHandler(cnsReqRepo, cnsArtRepo, obxPort, cnsTknSigner);
+                                                       ObxPort obxPort, CnsTknIssuer cnsTknIssuer) {
+        return new ApproveCnsCmdHandler(cnsReqRepo, cnsArtRepo, obxPort, cnsTknIssuer);
     }
 
     @Bean
