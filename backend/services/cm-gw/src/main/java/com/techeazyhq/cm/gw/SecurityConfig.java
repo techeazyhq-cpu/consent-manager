@@ -59,7 +59,8 @@ public class SecurityConfig {
                         // Platform staff (ADR-017): operators view, onboard and activate tenants; changing a
                         // tenant's plan or suspending it, and managing staff, stays with administrators.
                         .pathMatchers(HttpMethod.GET, "/api/df-reg/dfs", "/api/df-reg/dfs/*/profile").hasAnyRole(STAFF)
-                        .pathMatchers(HttpMethod.POST, "/api/df-reg/dfs", "/api/df-reg/dfs/*/activate").hasAnyRole(STAFF)
+                        .pathMatchers(HttpMethod.POST, "/api/df-reg/dfs", "/api/df-reg/dfs/*/activate", "/api/df-reg/dfs/*/members")
+                                .hasAnyRole(STAFF)
                         // Any signed-in user may see a fiduciary's logo (DP portal tiles too); only staff set it.
                         .pathMatchers(HttpMethod.PUT, "/api/df-reg/dfs/*/logo").hasAnyRole(STAFF)
                         .pathMatchers("/api/df-reg/dfs", "/api/df-reg/dfs/*/activate", "/api/df-reg/dfs/*/profile")

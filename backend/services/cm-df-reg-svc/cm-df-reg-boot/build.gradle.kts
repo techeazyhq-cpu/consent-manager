@@ -29,8 +29,10 @@ dependencies {
     implementation(project(":cm-web-kit"))
     implementation(project(":cm-res-kit"))
     implementation(project(":cm-kc-kit"))
+    implementation(project(":cm-sec-kit"))
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:3.3.3")

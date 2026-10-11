@@ -19,11 +19,9 @@
 import Keycloak from "keycloak-js";
 
 /**
- * Keycloak PKCE session helper (plan §6/§9a) — used independently by whichever standalone app
- * needs an interactive human login (CM Admin, DP Portal). The DF Console deliberately does NOT
- * use this: a DF's own client-credentials secret (issued at activation, plan §10) is the
- * already-proven auth path for the DF Integration API, so it authenticates itself directly
- * against Keycloak's token endpoint instead of an interactive PKCE session.
+ * Keycloak PKCE session helper (plan §6/§9a) — used independently by each standalone app with
+ * an interactive human login: CM Admin, the DP Portal and the DF Console, where a fiduciary's
+ * people sign in as themselves (ADR-033); API client secrets are for systems only.
  */
 export interface AuthInfo {
   token: string;
@@ -32,6 +30,8 @@ export interface AuthInfo {
   username?: string;
   roles: string[];
   dpId?: string;
+  /** The fiduciary a DF Console member belongs to, from the {@code df_id} claim (ADR-033). */
+  dfId?: string;
   email?: string;
   logout: () => void;
 }
@@ -79,6 +79,7 @@ export function toAuthInfo(kc: Keycloak): AuthInfo | null {
     username: typeof parsed.preferred_username === "string" ? parsed.preferred_username : undefined,
     roles,
     dpId: roles.includes("DP") ? kc.subject ?? undefined : undefined,
+    dfId: typeof parsed.df_id === "string" ? parsed.df_id : undefined,
     email: typeof parsed.email === "string" ? parsed.email : undefined,
     logout: () => kc.logout({ redirectUri: window.location.origin }),
   };

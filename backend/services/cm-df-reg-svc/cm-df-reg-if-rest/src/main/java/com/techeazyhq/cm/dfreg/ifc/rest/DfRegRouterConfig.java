@@ -25,6 +25,7 @@ import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
 import com.techeazyhq.cm.dfreg.app.ActivateDfCmdHandler;
+import com.techeazyhq.cm.dfreg.app.DfTeamHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfActiveQryHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfLogoQryHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfQryHandler;
@@ -42,9 +43,11 @@ public class DfRegRouterConfig {
                                                         ListDfsQryHandler listHandler,
                                                         GetDfQryHandler getDfHandler,
                                                         UploadDfLogoCmdHandler uploadLogoHandler,
-                                                        GetDfLogoQryHandler getLogoHandler) {
+                                                        GetDfLogoQryHandler getLogoHandler,
+                                                        DfTeamHandler teamHandler) {
         DfHandler dfHandler = new DfHandler(registerHandler, activateHandler, getActiveHandler, listHandler, getDfHandler,
                 uploadLogoHandler, getLogoHandler);
+        DfTeamHttpHandler team = new DfTeamHttpHandler(teamHandler);
         return RouterFunctions.route()
                 .GET("/api/df-reg/dfs", dfHandler::list)
                 .POST("/api/df-reg/dfs", dfHandler::register)
@@ -53,6 +56,11 @@ public class DfRegRouterConfig {
                 .GET("/api/df-reg/dfs/{id}/profile", dfHandler::profile)
                 .PUT("/api/df-reg/dfs/{id}/logo", dfHandler::uploadLogo)
                 .GET("/api/df-reg/dfs/{id}/logo", dfHandler::logo)
+                .POST("/api/df-reg/dfs/{id}/members", team::inviteOwner)
+                .GET("/api/df-reg/me/members", team::list)
+                .POST("/api/df-reg/me/members", team::invite)
+                .PUT("/api/df-reg/me/members/{memberId}", team::changeRole)
+                .DELETE("/api/df-reg/me/members/{memberId}", team::remove)
                 .GET("/internal/dfs/{id}/active", dfHandler::isActive)
                 .build();
     }

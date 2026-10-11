@@ -22,6 +22,11 @@ server:
 spring:
   application:
     name: cm-df-reg-svc
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8080/realms/cm-realm
   r2dbc:
     url: r2dbc:postgresql://localhost:5432/consent_manager?schema=df_reg
     username: cm
@@ -68,7 +73,7 @@ resilience4j:
       default:
         timeout-duration: 3s
     instances:
-      # Activation makes three calls: an admin token, the client, its secret.
+      # Activation makes three calls: an admin token, the client, its secret; inviting a member up to six.
       keycloak-admin:
         timeout-duration: 10s
 

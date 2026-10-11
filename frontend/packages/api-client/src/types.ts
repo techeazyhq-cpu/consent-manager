@@ -51,6 +51,16 @@ export interface DfNameRespDto {
   name: string;
 }
 
+/** What a person at a fiduciary may do (ADR-033). */
+export type DfRole = "OWNER" | "ADMIN" | "CONSENT_MANAGER" | "DEVELOPER" | "AUDITOR";
+
+export interface DfMemberRespDto {
+  id: string;
+  email: string;
+  name: string;
+  role: DfRole;
+}
+
 export interface CnsReqRespDto {
   id: string;
   dfId: string;

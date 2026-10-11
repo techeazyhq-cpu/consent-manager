@@ -44,3 +44,10 @@ describe("toAuthInfo", () => {
     expect(toAuthInfo(signedIn({ roles: ["DP"] }))?.username).toBeUndefined();
   });
 });
+
+describe("toAuthInfo for a DF Console member", () => {
+  it("exposes the fiduciary from the df_id claim", () => {
+    expect(toAuthInfo(signedIn({ roles: ["DF", "DF_OWNER"], df_id: "df-1" }))?.dfId).toBe("df-1");
+    expect(toAuthInfo(signedIn({ roles: ["DP"] }))?.dfId).toBeUndefined();
+  });
+});

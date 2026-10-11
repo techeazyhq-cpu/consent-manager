@@ -21,8 +21,10 @@ import type {
   CnsArtRespDto,
   CnsReqRespDto,
   DfListItemRespDto,
+  DfMemberRespDto,
   DfNameRespDto,
   DfRespDto,
+  DfRole,
   DfSubStatusResult,
   ExtDpRefTyp,
   ProblemDetail,
@@ -64,6 +66,26 @@ export const dfReg = {
     request<DfRespDto>(base, "/api/df-reg/dfs", token, { method: "POST", body: JSON.stringify(body) }),
   activate: (base: string, token: string, id: string) =>
     request<DfRespDto>(base, `/api/df-reg/dfs/${id}/activate`, token, { method: "POST" }),
+  /** Platform staff inviting the first Owner of an active fiduciary that has none (ADR-033). */
+  inviteOwner: (base: string, token: string, id: string, body: { email: string; name: string }) =>
+    request<DfMemberRespDto>(base, `/api/df-reg/dfs/${id}/members`, token, {
+      method: "POST",
+      body: JSON.stringify({ ...body, role: "OWNER" }),
+    }),
+};
+
+/** The signed-in member's own fiduciary's team (ADR-033). */
+export const dfTeam = {
+  list: (base: string, token: string) => request<DfMemberRespDto[]>(base, "/api/df-reg/me/members", token),
+  invite: (base: string, token: string, body: { email: string; name: string; role: DfRole }) =>
+    request<DfMemberRespDto>(base, "/api/df-reg/me/members", token, { method: "POST", body: JSON.stringify(body) }),
+  changeRole: (base: string, token: string, memberId: string, role: DfRole) =>
+    request<DfMemberRespDto>(base, `/api/df-reg/me/members/${encodeURIComponent(memberId)}`, token, {
+      method: "PUT",
+      body: JSON.stringify({ role }),
+    }),
+  remove: (base: string, token: string, memberId: string) =>
+    request<void>(base, `/api/df-reg/me/members/${encodeURIComponent(memberId)}`, token, { method: "DELETE" }),
 };
 
 export const cnsCmd = {
@@ -138,29 +160,3 @@ export const bil = {
       body: JSON.stringify({ active }),
     }),
 };
-
-/**
- * DF Integration API auth (plan §10): a DF operator authenticates directly against Keycloak's
- * token endpoint with the client-credentials secret issued at activation — the same grant type
- * already proven end-to-end in scripts/verify-phase1.sh, reused here so mf-df-app needs no
- * Keycloak realm changes to support interactive DF staff logins.
- */
-export async function fetchDfClientCredentialsToken(
-  kcBase: string,
-  realm: string,
-  dfId: string,
-  clientSecret: string,
-): Promise<string> {
-  const res = await fetch(`${kcBase}/realms/${realm}/protocol/openid-connect/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: `df-api-${dfId}`,
-      client_secret: clientSecret,
-    }),
-  });
-  if (!res.ok) throw new ApiError(res.status, null);
-  const body = (await res.json()) as { access_token: string };
-  return body.access_token;
-}

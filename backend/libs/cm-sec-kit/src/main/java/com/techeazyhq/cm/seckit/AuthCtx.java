@@ -65,6 +65,18 @@ public record AuthCtx(String subject, String dfId, String dpId, Set<String> role
         return dfId != null;
     }
 
+    /**
+     * Whether this fiduciary caller may raise consent requests (ADR-033): a system with an API client (no member
+     * role), or a person whose role is Owner, Administrator or Consent manager; not a Developer or an Auditor.
+     */
+    public boolean mayRaiseCnsReqs() {
+        if (!isDf()) {
+            return false;
+        }
+        boolean person = roles.stream().anyMatch(role -> role.startsWith("DF_"));
+        return !person || roles.contains("DF_OWNER") || roles.contains("DF_ADMIN") || roles.contains("DF_CONSENT_MANAGER");
+    }
+
     public boolean isDp() {
         return dpId != null;
     }
