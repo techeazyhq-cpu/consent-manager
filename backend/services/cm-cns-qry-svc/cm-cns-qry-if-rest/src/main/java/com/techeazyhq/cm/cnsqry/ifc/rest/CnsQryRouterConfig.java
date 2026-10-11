@@ -24,6 +24,7 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import com.techeazyhq.cm.cnsqry.app.AdminCnsQryHandler;
 import com.techeazyhq.cm.cnsqry.app.DpDashboardQryHandler;
 import com.techeazyhq.cm.cnsqry.app.GetCnsArtQryHandler;
 import com.techeazyhq.cm.cnsqry.app.GetCnsHstQryHandler;
@@ -36,9 +37,13 @@ public class CnsQryRouterConfig {
     public RouterFunction<ServerResponse> cnsQryRoutes(GetCnsArtQryHandler getCnsArtHandler,
                                                          GetCnsHstQryHandler getCnsHstHandler,
                                                          DpDashboardQryHandler dpDashboardHandler,
-                                                         InternalStatusQryHandler internalStatusHandler) {
+                                                         InternalStatusQryHandler internalStatusHandler,
+                                                         AdminCnsQryHandler adminCnsQryHandler) {
         CnsQryHandler handler = new CnsQryHandler(getCnsArtHandler, getCnsHstHandler, dpDashboardHandler, internalStatusHandler);
+        AdminCnsHandler adminHandler = new AdminCnsHandler(adminCnsQryHandler);
         return RouterFunctions.route()
+                .GET("/api/cns-qry/admin/dfs/{dfId}/stats", adminHandler::stats)
+                .GET("/api/cns-qry/admin/dfs/{dfId}/cns-reqs", adminHandler::requests)
                 .GET("/api/cns-qry/cns-arts", handler::listCnsArts)
                 .GET("/api/cns-qry/cns-arts/{id}", handler::getCnsArt)
                 .GET("/api/cns-qry/cns-arts/{id}/history", handler::getCnsHst)

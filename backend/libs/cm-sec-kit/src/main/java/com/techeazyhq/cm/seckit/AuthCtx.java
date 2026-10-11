@@ -56,6 +56,11 @@ public record AuthCtx(String subject, String dfId, String dpId, Set<String> role
         return roles.contains("CM_ADMIN");
     }
 
+    /** Platform administrators and operators: the people who run the Consent Manager, not its tenants or users. */
+    public boolean isPlatformStaff() {
+        return isCmAdmin() || roles.contains("CM_OPERATOR");
+    }
+
     public boolean isDf() {
         return dfId != null;
     }

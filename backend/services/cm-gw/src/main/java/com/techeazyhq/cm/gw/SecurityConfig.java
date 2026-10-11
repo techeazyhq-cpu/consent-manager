@@ -56,6 +56,8 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.GET, "/api/cns-cmd/.well-known/jwks.json").permitAll()
                         .pathMatchers("/api/df-reg/dfs", "/api/df-reg/dfs/*/activate").hasRole("CM_ADMIN")
                         .pathMatchers("/api/bil/**").hasRole("CM_ADMIN")
+                        // A tenant's consent counts and masked requests, for CM Admin's tenant detail.
+                        .pathMatchers("/api/cns-qry/admin/**").hasAnyRole("CM_ADMIN", "CM_OPERATOR")
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
                 .build();

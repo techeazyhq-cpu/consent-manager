@@ -112,6 +112,7 @@ public final class CnsReq extends Agg<String> {
     public void markNotificationFailed() {
         requireSts(CnsReqSts.PENDING, "markNotificationFailed");
         this.sts = CnsReqSts.NOTIFICATION_FAILED;
+        raise(CnsNotificationFailedEvt.of(id(), dfId, dpRef));
     }
 
     private void requireSts(CnsReqSts required, String action) {

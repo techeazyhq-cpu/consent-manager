@@ -54,6 +54,16 @@ public class CnsLifecycleSagaOrchestrator {
                         .onErrorResume(err -> markNotificationFailed(cnsReq)));
     }
 
+    /**
+     * Step 2's other outcome: cm-ntf-svc could not reach the DP (their email or SMS was refused for good). A request
+     * the DP has meanwhile decided, after signing up and finding it on their dashboard, keeps its decision.
+     */
+    public Mono<Void> onDpDeliveryFailed(String cnsReqId) {
+        return cnsReqRepo.findById(cnsReqId)
+                .filter(cnsReq -> cnsReq.sts() == CnsReqSts.PENDING)
+                .flatMap(this::markNotificationFailed);
+    }
+
     /** Step 4 (plan §7c): on grant/deny, notify the DF. */
     public Mono<Void> onCnsDecided(String dfId, String cnsReqId, CnsReqSts outcome) {
         return ntfCmdPort.notifyDf(dfId, cnsReqId, outcome.name());

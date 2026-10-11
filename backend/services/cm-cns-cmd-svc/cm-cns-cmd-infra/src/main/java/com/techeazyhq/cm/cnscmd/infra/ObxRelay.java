@@ -45,7 +45,8 @@ public class ObxRelay {
             "CnsDeniedEvt", "cns-denied",
             "CnsRevokedEvt", "cns-revoked",
             "CnsDpLinkedEvt", "cns-dp-linked",
-            "CnsExpiredEvt", "cns-expired");
+            "CnsExpiredEvt", "cns-expired",
+            "CnsNotificationFailedEvt", "cns-notification-failed");
 
     private final DatabaseClient db;
     private final PulsarCnsEvtProducer producer;

@@ -40,6 +40,7 @@ import com.techeazyhq.cm.ntf.app.NotifyDpCmdHandler;
 import com.techeazyhq.cm.ntf.app.NtfDispatchService;
 import com.techeazyhq.cm.ntf.app.OtpSendCmdHandler;
 import com.techeazyhq.cm.ntf.app.PushDvcCmdHandler;
+import com.techeazyhq.cm.ntf.dom.DpDeliveryOutcomePort;
 import com.techeazyhq.cm.ntf.dom.EmailSenderPort;
 import com.techeazyhq.cm.ntf.dom.NtfChnl;
 import com.techeazyhq.cm.ntf.dom.PushDvcRepoPort;
@@ -48,6 +49,7 @@ import com.techeazyhq.cm.ntf.dom.SmsSenderPort;
 import com.techeazyhq.cm.ntf.dom.WhatsAppSenderPort;
 import com.techeazyhq.cm.ntf.infra.CatcherStore;
 import com.techeazyhq.cm.ntf.infra.NotificationServiceClient;
+import com.techeazyhq.cm.ntf.infra.PulsarDpDeliveryOutcomeAdapter;
 import com.techeazyhq.cm.ntf.infra.PulsarNtfCmdConsumer;
 import com.techeazyhq.cm.ntf.infra.PushCatcherAdapter;
 import com.techeazyhq.cm.ntf.infra.R2dbcPushDvcRepoAdapter;
@@ -159,8 +161,14 @@ public class NtfBeanConfig {
     }
 
     @Bean
-    public NotifyDpCmdHandler notifyDpCmdHandler(NtfDispatchService ntfDispatchService, PushDvcRepoPort pushDvcRepoPort) {
-        return new NotifyDpCmdHandler(ntfDispatchService, pushDvcRepoPort);
+    public NotifyDpCmdHandler notifyDpCmdHandler(NtfDispatchService ntfDispatchService, PushDvcRepoPort pushDvcRepoPort,
+                                                 DpDeliveryOutcomePort dpDeliveryOutcomePort) {
+        return new NotifyDpCmdHandler(ntfDispatchService, pushDvcRepoPort, dpDeliveryOutcomePort);
+    }
+
+    @Bean
+    public DpDeliveryOutcomePort dpDeliveryOutcomePort(ReactivePulsarClient reactivePulsarClient, ObjectMapper objectMapper) {
+        return new PulsarDpDeliveryOutcomeAdapter(reactivePulsarClient, objectMapper);
     }
 
     @Bean
