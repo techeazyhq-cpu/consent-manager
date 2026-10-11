@@ -37,6 +37,10 @@ saga. Every synchronous call to another service, and every gateway route, goes t
 into domain, application, infrastructure and interface modules, and an ArchUnit test keeps the dependencies pointing
 inwards. The decisions are recorded in [docs/adr](docs/adr).
 
+How the platform will meet DPDPA, GDPR, HIPAA and the Gulf data protection laws (the gaps today, the proposed
+architecture with regional cells, an identity vault with crypto-shredding, and rights and breach workflows, and the
+phased plan) is in [docs/compliance](docs/compliance/compliance-architecture.md).
+
 | Frontend | Port | Users |
 |---|---|---|
 | `mf-dp-portal` | 5174 | Data principals |

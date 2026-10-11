@@ -23,6 +23,13 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [015](adr-015-ledger-checkpoints-anchored-by-a-timestamp-authority.md) | Ledger checkpoints, anchored by an external RFC 3161 timestamp authority | Accepted |
 | [016](adr-016-circuit-breakers-on-every-synchronous-call.md) | A circuit breaker on every synchronous call to another service | Accepted |
 | [017](adr-017-platform-staff-and-operator-role.md) | Platform staff in their own service, with an operator role | Accepted |
+| [018](adr-018-regional-cells-for-data-residency.md) | Regional cells for data residency | Proposed |
+| [019](adr-019-identity-vault-and-crypto-shredding.md) | An Identity Vault holds personal data; erasure by crypto-shredding | Proposed |
+| [020](adr-020-regime-profiles-as-versioned-data.md) | Regime profiles as versioned, reviewed data | Proposed |
+| [021](adr-021-data-principal-rights-and-erasure-saga.md) | A Data Principal Rights context, with an orchestrated erasure saga | Proposed |
+| [022](adr-022-children-guardians-and-representatives.md) | Children, guardians and other representatives | Proposed |
+| [023](adr-023-breach-response-and-privacy-governance.md) | Breach response and privacy governance in their own context | Proposed |
+| [024](adr-024-hipaa-authorisations-and-fhir-consent.md) | HIPAA authorisations in the consent model; FHIR Consent at the boundary | Proposed |
 
 ## Writing one
 
