@@ -33,6 +33,12 @@ public interface CnsArtRdMdlRepoPort {
 
     Flux<CnsArtRdMdl> findByDfId(String dfId);
 
+    /** How many of the fiduciary's requests are in each status; a status none are in is absent. */
+    Mono<java.util.Map<CnsLcySts, Long>> countByStsForDfId(String dfId);
+
+    /** One page of the fiduciary's requests, newest first; {@code sts} null for every status. */
+    Flux<CnsArtRdMdl> pageByDfId(String dfId, CnsLcySts sts, int limit, long offset);
+
     /** Sets dp_id on every row still null-dp matching (cnsReqId/cnsArtId) — used projecting CnsDpLinkedEvt (plan §7a). */
     Mono<Void> linkDp(String recordId, String recordType, String newDpId);
 

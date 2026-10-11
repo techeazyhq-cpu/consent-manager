@@ -24,11 +24,13 @@ dependencies {
     api(project(":cm-ntf-dom"))
     implementation(project(":cm-ntf-app"))
     implementation(project(":cm-res-kit"))
+    implementation(project(":cm-evt-kit"))
     implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:3.3.3")
     implementation("org.springframework.boot:spring-boot-starter-mail:3.5.16")
     implementation("org.springframework.boot:spring-boot-starter-webflux:3.5.16")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc:3.5.16")
     implementation("org.apache.pulsar:pulsar-client-reactive-api:0.5.2")
+    implementation("org.apache.pulsar:pulsar-client-reactive-adapter:0.5.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.22.3")
     implementation("org.slf4j:slf4j-api:2.0.16")
 

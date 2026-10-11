@@ -19,6 +19,7 @@
 package com.techeazyhq.cm.cnsqry.infra;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -97,6 +98,30 @@ public class R2dbcCnsArtRdMdlRepoAdapter implements CnsArtRdMdlRepoPort {
     public Flux<CnsArtRdMdl> findByDfId(String dfId) {
         return db.sql("select * from cns_qry.cns_art_rd_mdl where df_id = :dfId order by updated_at desc")
                 .bind("dfId", dfId).map(this::toDomain).all();
+    }
+
+    @Override
+    public Mono<Map<CnsLcySts, Long>> countByStsForDfId(String dfId) {
+        return db.sql("select lcy_sts, count(*) as cnt from cns_qry.cns_art_rd_mdl where df_id = :dfId group by lcy_sts")
+                .bind("dfId", dfId)
+                .map((row, meta) -> Map.entry(CnsLcySts.valueOf(row.get("lcy_sts", String.class)),
+                        row.get("cnt", Long.class)))
+                .all()
+                .collectMap(Map.Entry::getKey, Map.Entry::getValue);
+    }
+
+    @Override
+    public Flux<CnsArtRdMdl> pageByDfId(String dfId, CnsLcySts sts, int limit, long offset) {
+        String where = sts == null ? "where df_id = :dfId" : "where df_id = :dfId and lcy_sts = :sts";
+        DatabaseClient.GenericExecuteSpec spec = db.sql("select * from cns_qry.cns_art_rd_mdl " + where
+                        + " order by created_at desc, cns_req_id limit :limit offset :offset")
+                .bind("dfId", dfId)
+                .bind("limit", limit)
+                .bind("offset", offset);
+        if (sts != null) {
+            spec = spec.bind("sts", sts.name());
+        }
+        return spec.map(this::toDomain).all();
     }
 
     @Override

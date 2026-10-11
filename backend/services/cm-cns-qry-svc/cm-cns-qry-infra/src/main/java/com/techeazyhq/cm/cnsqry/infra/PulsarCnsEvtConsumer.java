@@ -26,6 +26,7 @@ import org.apache.pulsar.reactive.client.api.ReactivePulsarClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techeazyhq.cm.cnsqry.app.Projector;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsDeniedEvtPayload;
+import com.techeazyhq.cm.cnsqry.app.evt.CnsNotificationFailedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsDpLinkedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsExpiredEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsGrantedEvtPayload;
@@ -63,6 +64,7 @@ public class PulsarCnsEvtConsumer {
         consume("cns-revoked", CnsRevokedEvtPayload.class, projector::onCnsRevoked);
         consume("cns-expired", CnsExpiredEvtPayload.class, projector::onCnsExpired);
         consume("cns-dp-linked", CnsDpLinkedEvtPayload.class, projector::onCnsDpLinked);
+        consume("cns-notification-failed", CnsNotificationFailedEvtPayload.class, projector::onCnsNotificationFailed);
     }
 
     private <T> void consume(String eventNameKebab, Class<T> payloadType, java.util.function.Function<T, Mono<Void>> handler) {
@@ -77,17 +79,19 @@ public class PulsarCnsEvtConsumer {
                 // comment for the bug this fixes.
                 .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
                 .build()
-                .consumeMany(messageFlux -> messageFlux.flatMap(message -> {
-                    try {
-                        T payload = objectMapper.readValue(message.getValue(), payloadType);
-                        return handler.apply(payload)
-                                .thenReturn(MessageResult.acknowledge(message.getMessageId(), message.getValue()));
-                    } catch (Exception e) {
-                        org.slf4j.LoggerFactory.getLogger(PulsarCnsEvtConsumer.class)
-                                .warn("Failed to project message on {}, negatively acknowledging", topic, e);
-                        return Mono.just(MessageResult.negativeAcknowledge(message.getMessageId(), message.getValue()));
-                    }
-                }))
+                .consumeMany(messageFlux -> messageFlux.flatMap(message -> Mono
+                        .fromCallable(() -> objectMapper.readValue(message.getValue(), payloadType))
+                        .flatMap(handler)
+                        .thenReturn(MessageResult.acknowledge(message.getMessageId(), message.getValue()))
+                        // An error from the projection's Mono, not only one thrown while parsing, must nack this
+                        // message for redelivery: left unhandled, it would end the whole consumer stream and
+                        // freeze the read model.
+                        .onErrorResume(e -> {
+                            org.slf4j.LoggerFactory.getLogger(PulsarCnsEvtConsumer.class)
+                                    .warn("Failed to project message on {}, negatively acknowledging", topic, e);
+                            return Mono.just(MessageResult.negativeAcknowledge(message.getMessageId(),
+                                    message.getValue()));
+                        })))
                 .subscribe();
     }
 }

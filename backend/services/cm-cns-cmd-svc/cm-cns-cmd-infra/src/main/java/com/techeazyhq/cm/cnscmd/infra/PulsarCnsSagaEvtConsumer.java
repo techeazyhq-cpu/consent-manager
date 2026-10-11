@@ -63,28 +63,36 @@ public class PulsarCnsSagaEvtConsumer {
                 payload -> orchestrator.onCnsDecided(payload.dfId(), payload.cnsReqId(), CnsReqSts.DENIED));
         consume("cns-revoked", "saga-notify-df", CnsRevokedEvtPayload.class,
                 payload -> orchestrator.onCnsRevoked(payload.dfId(), payload.cnsArtId()));
+        // cm-ntf-svc's report that the DP could not be reached (NtfDpDeliveryFailedEvt).
+        consumeTopic(PulsarTopics.evt("ntf", "dp-delivery-failed"), "saga-ntf-failed",
+                NtfDpDeliveryFailedEvtPayload.class, payload -> orchestrator.onDpDeliveryFailed(payload.cnsReqId()));
     }
 
     private <T> void consume(String eventNameKebab, String subscriptionSuffix, Class<T> payloadType,
                               java.util.function.Function<T, Mono<Void>> handler) {
-        String topic = PulsarTopics.evt(CTX, eventNameKebab);
-        String subscription = PulsarTopics.subscription(CTX, subscriptionSuffix + "-" + eventNameKebab);
+        consumeTopic(PulsarTopics.evt(CTX, eventNameKebab), subscriptionSuffix + "-" + eventNameKebab, payloadType, handler);
+    }
+
+    private <T> void consumeTopic(String topic, String subscriptionPurpose, Class<T> payloadType,
+                              java.util.function.Function<T, Mono<Void>> handler) {
+        String subscription = PulsarTopics.subscription(CTX, subscriptionPurpose);
         reactivePulsarClient.messageConsumer(Schema.STRING)
                 .topic(topic)
                 .subscriptionName(subscription)
                 .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
                 .build()
-                .consumeMany(messageFlux -> messageFlux.flatMap(message -> {
-                    try {
-                        T payload = objectMapper.readValue(message.getValue(), payloadType);
-                        return handler.apply(payload)
-                                .thenReturn(MessageResult.acknowledge(message.getMessageId(), message.getValue()));
-                    } catch (Exception e) {
-                        org.slf4j.LoggerFactory.getLogger(PulsarCnsSagaEvtConsumer.class)
-                                .warn("Failed to process saga message on {}, negatively acknowledging", topic, e);
-                        return Mono.just(MessageResult.negativeAcknowledge(message.getMessageId(), message.getValue()));
-                    }
-                }))
+                .consumeMany(messageFlux -> messageFlux.flatMap(message -> Mono
+                        .fromCallable(() -> objectMapper.readValue(message.getValue(), payloadType))
+                        .flatMap(handler)
+                        .thenReturn(MessageResult.acknowledge(message.getMessageId(), message.getValue()))
+                        // An error from the handler's Mono, not only one thrown while parsing, must nack this
+                        // message for redelivery: left unhandled, it would end the whole consumer stream.
+                        .onErrorResume(e -> {
+                            org.slf4j.LoggerFactory.getLogger(PulsarCnsSagaEvtConsumer.class)
+                                    .warn("Failed to process saga message on {}, negatively acknowledging", topic, e);
+                            return Mono.just(MessageResult.negativeAcknowledge(message.getMessageId(),
+                                    message.getValue()));
+                        })))
                 .subscribe();
     }
 
@@ -98,5 +106,8 @@ public class PulsarCnsSagaEvtConsumer {
     }
 
     record CnsRevokedEvtPayload(String cnsArtId, String dfId) {
+    }
+
+    record NtfDpDeliveryFailedEvtPayload(String cnsReqId) {
     }
 }

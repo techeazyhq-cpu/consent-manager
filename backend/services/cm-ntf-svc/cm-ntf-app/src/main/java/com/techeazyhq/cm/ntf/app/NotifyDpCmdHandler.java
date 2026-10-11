@@ -18,6 +18,7 @@
 
 package com.techeazyhq.cm.ntf.app;
 
+import com.techeazyhq.cm.ntf.dom.DpDeliveryOutcomePort;
 import com.techeazyhq.cm.ntf.dom.NtfChnl;
 import com.techeazyhq.cm.ntf.dom.NtfCtg;
 import com.techeazyhq.cm.ntf.dom.NtfDeliveryRejectedException;
@@ -37,12 +38,20 @@ public class NotifyDpCmdHandler {
 
     private final NtfDispatchService dispatchService;
     private final PushDvcRepoPort pushDvcRepo;
+    private final DpDeliveryOutcomePort outcomePort;
 
-    public NotifyDpCmdHandler(NtfDispatchService dispatchService, PushDvcRepoPort pushDvcRepo) {
+    public NotifyDpCmdHandler(NtfDispatchService dispatchService, PushDvcRepoPort pushDvcRepo,
+                              DpDeliveryOutcomePort outcomePort) {
         this.dispatchService = dispatchService;
         this.pushDvcRepo = pushDvcRepo;
+        this.outcomePort = outcomePort;
     }
 
+    /**
+     * An unlinked DP is reached by email or SMS, the only way they learn of the request; if that is refused for good,
+     * the failure is reported back to the consent lifecycle and the command completes, since a redelivery would be
+     * refused the same way.
+     */
     public Mono<Void> handle(NotifyDpCmd cmd) {
         NtfChnl channel = toChannel(cmd.channelHint());
         if (channel == NtfChnl.APP) {
@@ -50,7 +59,11 @@ public class NotifyDpCmdHandler {
         }
         NtfMsg msg = new NtfMsg(cmd.destination(), cmd.ntcTitle(), cmd.ntcText(), NtfCtg.TRANSACTIONAL,
                 "cm-notify-dp-" + cmd.cnsReqId());
-        return dispatchService.dispatch(channel, msg);
+        return dispatchService.dispatch(channel, msg)
+                .onErrorResume(NtfDeliveryRejectedException.class, err -> {
+                    LOG.warn("{} to the DP of consent request {} rejected: {}", channel, cmd.cnsReqId(), err.code());
+                    return outcomePort.deliveryFailed(cmd.cnsReqId(), channel, err.code());
+                });
     }
 
     /**

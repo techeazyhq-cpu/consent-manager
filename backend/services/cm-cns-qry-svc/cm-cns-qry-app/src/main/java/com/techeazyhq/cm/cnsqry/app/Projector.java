@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.Set;
 
 import com.techeazyhq.cm.cnsqry.app.evt.CnsDeniedEvtPayload;
+import com.techeazyhq.cm.cnsqry.app.evt.CnsNotificationFailedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsDpLinkedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsExpiredEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsGrantedEvtPayload;
@@ -86,6 +87,16 @@ public class Projector {
                     CnsArtRdMdl updated = withStatus(existing, CnsLcySts.DENIED, evt.occurredAt());
                     return rdMdlRepo.upsert(updated)
                             .then(hstRepo.append(new CnsHstRdMdl(evt.cnsReqId(), existing.lcySts(), CnsLcySts.DENIED, evt.occurredAt(), evt.evtId())));
+                }));
+    }
+
+    public Mono<Void> onCnsNotificationFailed(CnsNotificationFailedEvtPayload evt) {
+        return dedupe(evt.evtId(), () -> rdMdlRepo.findByCnsReqId(evt.cnsReqId())
+                .flatMap(existing -> {
+                    CnsArtRdMdl updated = withStatus(existing, CnsLcySts.NOTIFICATION_FAILED, evt.occurredAt());
+                    return rdMdlRepo.upsert(updated)
+                            .then(hstRepo.append(new CnsHstRdMdl(evt.cnsReqId(), existing.lcySts(),
+                                    CnsLcySts.NOTIFICATION_FAILED, evt.occurredAt(), evt.evtId())));
                 }));
     }
 

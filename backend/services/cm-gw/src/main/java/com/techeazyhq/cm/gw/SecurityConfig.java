@@ -59,6 +59,8 @@ public class SecurityConfig {
                         // Any signed-in user may see a fiduciary's logo (DP portal tiles too); only staff set it.
                         .pathMatchers(HttpMethod.PUT, "/api/df-reg/dfs/*/logo").hasRole("CM_ADMIN")
                         .pathMatchers("/api/bil/**").hasRole("CM_ADMIN")
+                        // A tenant's consent counts and masked requests, for CM Admin's tenant detail.
+                        .pathMatchers("/api/cns-qry/admin/**").hasAnyRole("CM_ADMIN", "CM_OPERATOR")
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
                 .build();
