@@ -49,6 +49,7 @@ public class PulsarAudEvtConsumer {
             "CnsRevokedEvt", new String[] {"cnscmd", "cns-revoked"},
             "CnsDpLinkedEvt", new String[] {"cnscmd", "cns-dp-linked"},
             "CnsExpiredEvt", new String[] {"cnscmd", "cns-expired"},
+            "CnsNotificationFailedEvt", new String[] {"cnscmd", "cns-notification-failed"},
             "DfActivatedEvt", new String[] {"dfreg", "df-activated"});
 
     private final ReactivePulsarClient pulsar;

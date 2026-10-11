@@ -18,6 +18,7 @@
 
 package com.techeazyhq.cm.ntf.app;
 
+import com.techeazyhq.cm.ntf.dom.NtfChnl;
 import com.techeazyhq.cm.ntf.dom.NtfCtg;
 import com.techeazyhq.cm.ntf.dom.NtfDeliveryRejectedException;
 import com.techeazyhq.cm.ntf.dom.NtfMsg;
@@ -43,10 +44,13 @@ class NotifyDpCmdHandlerTest {
     private final List<NtfMsg> emails = new ArrayList<>();
     private final List<NtfMsg> sms = new ArrayList<>();
     private final List<NtfMsg> pushes = new ArrayList<>();
+    private final List<String> failuresReported = new ArrayList<>();
 
     private NotifyDpCmdHandler handler(Map<String, List<PushDvc>> devicesByDp, String rejectedToken, String failingToken) {
         NtfDispatchService dispatch = new NtfDispatchService(
-                msg -> record(emails, msg),
+                msg -> msg.destination().equals("bounce@example.com")
+                        ? Mono.error(new NtfDeliveryRejectedException("INVALID_RECIPIENT", "mailbox does not exist"))
+                        : record(emails, msg),
                 msg -> record(sms, msg),
                 msg -> Mono.error(new AssertionError("no WhatsApp expected")),
                 msg -> msg.destination().equals(rejectedToken)
@@ -54,7 +58,8 @@ class NotifyDpCmdHandlerTest {
                         : msg.destination().equals(failingToken)
                                 ? Mono.error(new IllegalStateException("gateway down"))
                                 : record(pushes, msg));
-        return new NotifyDpCmdHandler(dispatch, new FakeRepo(devicesByDp));
+        return new NotifyDpCmdHandler(dispatch, new FakeRepo(devicesByDp),
+                (cnsReqId, channel, code) -> Mono.fromRunnable(() -> failuresReported.add(cnsReqId + " " + channel + " " + code)));
     }
 
     private static Mono<Void> record(List<NtfMsg> sink, NtfMsg msg) {
@@ -79,6 +84,15 @@ class NotifyDpCmdHandlerTest {
         assertEquals("Full notice text", msg.body());
         assertEquals("cm-notify-dp-req-1", msg.ref());
         assertTrue(pushes.isEmpty());
+        assertTrue(failuresReported.isEmpty());
+    }
+
+    @Test
+    void anEmailRefusedForGoodIsReportedBackAndTheCommandCompletes() {
+        handler(Map.of(), null, null).handle(cmd("EMAIL", "bounce@example.com")).block();
+
+        assertEquals(List.of("req-1 " + NtfChnl.EMAIL + " INVALID_RECIPIENT"), failuresReported);
+        assertTrue(emails.isEmpty());
     }
 
     @Test
@@ -109,6 +123,7 @@ class NotifyDpCmdHandlerTest {
                 .handle(cmd("APP", "dp-1")).block();
 
         assertEquals(List.of("tok-2"), pushes.stream().map(NtfMsg::destination).toList());
+        assertTrue(failuresReported.isEmpty(), "the DP still sees the request on their dashboard");
     }
 
     @Test

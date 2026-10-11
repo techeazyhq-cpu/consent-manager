@@ -66,8 +66,8 @@ public class SecurityConfig {
                                 .hasRole("CM_ADMIN")
                         .pathMatchers(HttpMethod.GET, "/api/bil/**").hasAnyRole(STAFF)
                         .pathMatchers("/api/bil/**").hasRole("CM_ADMIN")
-                        // cm-stf-svc decides which staff may do what (only administrators manage staff).
-                        .pathMatchers("/api/stf/**").hasAnyRole(STAFF)
+                        // A tenant's consent counts and masked requests, for CM Admin's tenant detail.
+                        .pathMatchers("/api/cns-qry/admin/**").hasAnyRole("CM_ADMIN", "CM_OPERATOR")
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
                 .build();

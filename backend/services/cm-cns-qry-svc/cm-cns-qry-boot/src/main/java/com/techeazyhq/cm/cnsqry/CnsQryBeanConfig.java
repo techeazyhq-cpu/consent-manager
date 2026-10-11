@@ -29,6 +29,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.r2dbc.core.DatabaseClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techeazyhq.cm.cnsqry.app.AdminCnsQryHandler;
 import com.techeazyhq.cm.cnsqry.app.DpDashboardQryHandler;
 import com.techeazyhq.cm.cnsqry.app.GetCnsArtQryHandler;
 import com.techeazyhq.cm.cnsqry.app.GetCnsHstQryHandler;
@@ -83,6 +84,11 @@ public class CnsQryBeanConfig {
     @Bean
     public InternalStatusQryHandler internalStatusQryHandler(CnsArtRdMdlRepoPort rdMdlRepo) {
         return new InternalStatusQryHandler(rdMdlRepo);
+    }
+
+    @Bean
+    public AdminCnsQryHandler adminCnsQryHandler(CnsArtRdMdlRepoPort rdMdlRepo) {
+        return new AdminCnsQryHandler(rdMdlRepo);
     }
 
     @Bean(destroyMethod = "close")
