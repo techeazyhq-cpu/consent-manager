@@ -24,6 +24,7 @@ import org.apache.pulsar.reactive.client.api.MessageResult;
 import org.apache.pulsar.reactive.client.api.ReactivePulsarClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techeazyhq.cm.evtkit.PulsarTopics;
 import com.techeazyhq.cm.ntf.app.NotifyDfCmd;
 import com.techeazyhq.cm.ntf.app.NotifyDfCmdHandler;
 import com.techeazyhq.cm.ntf.app.NotifyDpCmd;
@@ -54,11 +55,11 @@ public class PulsarNtfCmdConsumer {
     }
 
     public void start() {
-        consume("persistent://cm/ntf/cmd-notify-dp-v1", "ntf-notify-dp-sub", json -> {
+        consume(PulsarTopics.cmd("ntf", "notify-dp"), "ntf-notify-dp-sub", json -> {
             NotifyDpCmd cmd = readValue(json, NotifyDpCmd.class);
             return notifyDpCmdHandler.handle(cmd);
         });
-        consume("persistent://cm/ntf/cmd-notify-df-v1", "ntf-notify-df-sub", json -> {
+        consume(PulsarTopics.cmd("ntf", "notify-df"), "ntf-notify-df-sub", json -> {
             NotifyDfCmd cmd = readValue(json, NotifyDfCmd.class);
             return notifyDfCmdHandler.handle(cmd);
         });

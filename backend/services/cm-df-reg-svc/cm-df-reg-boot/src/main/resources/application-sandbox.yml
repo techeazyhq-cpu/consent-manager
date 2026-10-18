@@ -1,0 +1,35 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# The sandbox (ADR-034, ADR-037), on top of the docker profile (SPRING_PROFILES_ACTIVE=docker,sandbox): the same
+# service with its own database (cm_sandbox), its own Keycloak realms (sbx-cm-*: own users, keys and issuers) and its
+# own Pulsar tenant (CM_PULSAR_TENANT=cm-sbx, set in docker-compose.yml). Nothing here reaches production's data.
+
+spring:
+  r2dbc:
+    url: r2dbc:postgresql://postgres:5432/cm_sandbox?schema=df_reg
+  flyway:
+    url: jdbc:postgresql://postgres:5432/cm_sandbox
+
+cm:
+  sandbox:
+    enabled: true
+  security:
+    realm-prefix: sbx-
+  service-urls:
+    bil: http://cm-sbx-bil-svc:8085
+  keycloak:
+    realm: sbx-cm-df

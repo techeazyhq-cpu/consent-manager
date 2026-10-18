@@ -80,6 +80,27 @@ class CnsReqBatchTest {
     }
 
     @Test
+    void theSandboxTakesOnlyTestContacts() {
+        ContactPolicy sandbox = ContactPolicy.TEST_CONTACTS_ONLY;
+        assertEquals(java.util.Optional.empty(), sandbox.refusal(new Recipient(ExtDpRefTyp.EMAIL, "asha@sandbox.example")));
+        assertEquals(java.util.Optional.empty(), sandbox.refusal(new Recipient(ExtDpRefTyp.EMAIL, "a@team.sandbox.example")));
+        assertEquals(java.util.Optional.empty(), sandbox.refusal(new Recipient(ExtDpRefTyp.PHONE, "+447700900123")));
+        assertEquals(java.util.Optional.of(ContactPolicy.REFUSED),
+                sandbox.refusal(new Recipient(ExtDpRefTyp.EMAIL, "asha@example.com")));
+        assertEquals(java.util.Optional.of(ContactPolicy.REFUSED),
+                sandbox.refusal(new Recipient(ExtDpRefTyp.EMAIL, "asha@notsandbox.example")));
+        assertEquals(java.util.Optional.of(ContactPolicy.REFUSED),
+                sandbox.refusal(new Recipient(ExtDpRefTyp.PHONE, "+919876543210")));
+        assertEquals(java.util.Optional.empty(), ContactPolicy.ANYONE.refusal(new Recipient(ExtDpRefTyp.PHONE, "+919876543210")));
+
+        CnsReqBatch.Plan plan = CnsReqBatch.plan("df-1", TEMPLATE, CnsReqBatch.Source.CSV, "list.csv", "u-1",
+                List.of(new Input("asha@sandbox.example", null, null), new Input("asha@example.com", null, null)),
+                sandbox);
+        assertEquals(1, plan.batch().valid());
+        assertEquals(ContactPolicy.REFUSED, plan.problems().get(0).problem());
+    }
+
+    @Test
     void aListWithNothingToSendIsDoneAtOnce() {
         CnsReqBatch.Plan plan = plan(new Input("nope", null, null));
 

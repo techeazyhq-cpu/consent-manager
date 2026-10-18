@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -48,6 +49,26 @@ class RealmTrustTest {
         assertEquals(Optional.of(Audience.PLATFORM_STAFF), Audience.ofIssuer("https://id.example/realms/cm-staff/"));
         assertEquals(Optional.empty(), Audience.ofIssuer("http://localhost:8080/realms/cm-realm"));
         assertEquals(Optional.empty(), Audience.ofIssuer(null));
+    }
+
+    @Test
+    void aSandboxRealmIsItsAudiencesRealmWithAPrefix() {
+        assertEquals(Optional.of(Audience.FIDUCIARY), Audience.ofIssuer("http://localhost:8080/realms/sbx-cm-df"));
+        assertEquals(Optional.of(Audience.DATA_PRINCIPAL), Audience.ofIssuer("http://localhost:8080/realms/sbx-cm-dp"));
+        assertEquals(Optional.empty(), Audience.ofIssuer("http://localhost:8080/realms/sbxcm-df"));
+        assertEquals(Optional.empty(), Audience.ofIssuer("http://localhost:8080/realms/cm-df-x"));
+    }
+
+    @Test
+    void theSandboxAndProductionNeverTrustEachOthersIssuers() {
+        String base = "http://localhost:8080/realms/";
+        Map<String, Audience> production = RealmTokens.trustedIssuers(base, "");
+        Map<String, Audience> sandbox = RealmTokens.trustedIssuers(base, "sbx-");
+
+        assertEquals(Audience.FIDUCIARY, production.get(base + "cm-df"));
+        assertEquals(Audience.FIDUCIARY, sandbox.get(base + "sbx-cm-df"));
+        assertEquals(3, production.size());
+        assertTrue(production.keySet().stream().noneMatch(sandbox::containsKey));
     }
 
     @Test

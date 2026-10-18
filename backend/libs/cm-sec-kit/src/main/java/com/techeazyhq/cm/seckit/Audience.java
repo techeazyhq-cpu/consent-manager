@@ -55,7 +55,11 @@ public enum Audience {
         return role != null && mayAssert.test(role);
     }
 
-    /** The audience whose realm issued a token, from its {@code iss}; empty for any other issuer. */
+    /**
+     * The audience whose realm issued a token, from its {@code iss}; empty for any other issuer. A sandbox realm
+     * ({@code sbx-cm-df}) is its audience's realm with a prefix; which issuers are accepted at all is pinned by
+     * {@link RealmTokens}.
+     */
     public static Optional<Audience> ofIssuer(String issuer) {
         if (issuer == null) {
             return Optional.empty();
@@ -65,6 +69,6 @@ public enum Audience {
             return Optional.empty();
         }
         String realm = issuer.substring(at + REALMS_PATH.length()).replaceAll("/+$", "");
-        return Arrays.stream(values()).filter(a -> a.realm.equals(realm)).findFirst();
+        return Arrays.stream(values()).filter(a -> realm.equals(a.realm) || realm.endsWith("-" + a.realm)).findFirst();
     }
 }

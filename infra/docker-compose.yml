@@ -27,6 +27,29 @@
 # so overriding even one field of one route via an env var silently drops the rest of that
 # route list; discovered and fixed during Phase 1 verification.
 
+x-sbx-env: &sbx-env
+  SPRING_PROFILES_ACTIVE: docker,sandbox
+  CM_PULSAR_TENANT: cm-sbx
+  # small heaps: the sandbox carries test traffic only
+  JAVA_TOOL_OPTIONS: -Xmx256m -XX:+UseSerialGC
+
+x-sbx-service: &sbx-service
+  profiles: [sandbox]
+  environment: *sbx-env
+  depends_on:
+    sbx-pg-init:
+      condition: service_completed_successfully
+    sbx-pulsar-init:
+      condition: service_completed_successfully
+    keycloak:
+      condition: service_started
+    redis:
+      condition: service_healthy
+    sbx-mailpit:
+      condition: service_started
+    sbx-opa:
+      condition: service_started
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -47,6 +70,10 @@ services:
   pulsar:
     image: apachepulsar/pulsar:3.3.1
     command: bin/pulsar standalone
+    environment:
+      # Standalone runs ZooKeeper, a bookie and a broker in one JVM; its defaults take ~1.7 GB. Capped for laptops,
+      # which also run the sandbox (ADR-037): plenty for development traffic.
+      PULSAR_MEM: -Xms256m -Xmx512m -XX:MaxDirectMemorySize=256m
     ports:
       - "6650:6650"
       - "8181:8080" # Pulsar's own admin/web port, remapped so it doesn't clash with Keycloak's 8080
@@ -255,7 +282,104 @@ services:
       - cm-bil-svc
       - cm-stf-svc
 
+  # ---- The sandbox (ADR-034, ADR-037): `docker compose --profile sandbox up -d` ----
+  # The same images as production with SPRING_PROFILES_ACTIVE=docker,sandbox: their own database (cm_sandbox), Keycloak
+  # realms (sbx-cm-*), Pulsar tenant (cm-sbx), Redis database (1), consent token keys, PDP and inbox. Only the servers
+  # (Postgres, Pulsar, Keycloak, Redis) are shared, to keep a laptop's footprint small; production runs it as its own
+  # deployment with the same settings. Its gateway is http://localhost:9100, its inbox http://localhost:8125.
+
+  sbx-pg-init:
+    profiles: [sandbox]
+    image: postgres:16-alpine
+    entrypoint: ["/bin/sh", "/sandbox/pg-init.sh"]
+    volumes:
+      - ./sandbox:/sandbox:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  sbx-pulsar-init:
+    profiles: [sandbox]
+    image: apachepulsar/pulsar:3.3.1
+    entrypoint: ["/bin/bash", "/sandbox/pulsar-init.sh"]
+    volumes:
+      - ./sandbox:/sandbox:ro
+    depends_on:
+      pulsar:
+        condition: service_started
+
+  sbx-mailpit:
+    profiles: [sandbox]
+    image: axllent/mailpit:latest
+    ports:
+      - "8125:8025" # the sandbox's inbox: everything it "sends" lands here and nowhere else
+
+  sbx-opa:
+    profiles: [sandbox]
+    image: openpolicyagent/opa:1.20.1
+    command: ["run", "--server", "--addr=0.0.0.0:8181", "/policies", "/sandbox-data"]
+    volumes:
+      - ./opa/policies:/policies:ro
+      - ./sandbox/opa:/sandbox-data:ro # checks consent tokens against the sandbox's cm-cns-cmd-svc
+
+  cm-sbx-df-reg-svc:
+    <<: *sbx-service
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-df-reg-svc/cm-df-reg-boot/build/libs/cm-df-reg-boot-0.1.0-SNAPSHOT.jar
+    environment:
+      <<: *sbx-env
+      CM_KEYCLOAK_ADMIN-USERNAME: admin
+      CM_KEYCLOAK_ADMIN-PASSWORD: admin
+
+  cm-sbx-cns-cmd-svc:
+    <<: *sbx-service
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-cns-cmd-svc/cm-cns-cmd-boot/build/libs/cm-cns-cmd-boot-0.1.0-SNAPSHOT.jar
+    volumes:
+      - sbx-cns-tkn-keys:/var/lib/cm/keys # the sandbox's own consent token keys
+
+  cm-sbx-cns-qry-svc:
+    <<: *sbx-service
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-cns-qry-svc/cm-cns-qry-boot/build/libs/cm-cns-qry-boot-0.1.0-SNAPSHOT.jar
+
+  cm-sbx-ntf-svc:
+    <<: *sbx-service
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-ntf-svc/cm-ntf-boot/build/libs/cm-ntf-boot-0.1.0-SNAPSHOT.jar
+
+  cm-sbx-bil-svc:
+    <<: *sbx-service
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-bil-svc/cm-bil-boot/build/libs/cm-bil-boot-0.1.0-SNAPSHOT.jar
+
+  cm-sbx-gw:
+    <<: *sbx-service
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-gw/build/libs/cm-gw-0.1.0-SNAPSHOT.jar
+    ports:
+      - "9100:9000"
+
 volumes:
   cns-tkn-keys:
+  sbx-cns-tkn-keys:
   pg-data:
   pulsar-data:

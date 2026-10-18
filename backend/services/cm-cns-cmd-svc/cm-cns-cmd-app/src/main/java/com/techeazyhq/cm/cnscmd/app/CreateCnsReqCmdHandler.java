@@ -26,11 +26,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.techeazyhq.cm.cnscmd.dom.CnsReq;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqFactory;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqRepoPort;
+import com.techeazyhq.cm.cnscmd.dom.ContactPolicy;
 import com.techeazyhq.cm.cnscmd.dom.DCat;
 import com.techeazyhq.cm.cnscmd.dom.DfActivePort;
 import com.techeazyhq.cm.cnscmd.dom.DfSubEligiblePolicy;
 import com.techeazyhq.cm.cnscmd.dom.DpRef;
 import com.techeazyhq.cm.cnscmd.dom.Prps;
+import com.techeazyhq.cm.cnscmd.dom.Recipient;
 import com.techeazyhq.cm.cnscmd.dom.Scp;
 import com.techeazyhq.cm.domkit.Spec;
 import com.techeazyhq.cm.webkit.DomRuleViolation;
@@ -48,17 +50,34 @@ public class CreateCnsReqCmdHandler implements CmdHandler<CreateCnsReqCmd, CnsRe
     private final DfActivePort dfActivePort;
     private final DfSubEligiblePolicy dfSubEligiblePolicy;
 
+    private final ContactPolicy contacts;
+
     public CreateCnsReqCmdHandler(CnsReqRepoPort cnsReqRepo, DfActivePort dfActivePort,
                                    DfSubEligiblePolicy dfSubEligiblePolicy) {
+        this(cnsReqRepo, dfActivePort, dfSubEligiblePolicy, ContactPolicy.ANYONE);
+    }
+
+    public CreateCnsReqCmdHandler(CnsReqRepoPort cnsReqRepo, DfActivePort dfActivePort,
+                                   DfSubEligiblePolicy dfSubEligiblePolicy, ContactPolicy contacts) {
         this.cnsReqRepo = cnsReqRepo;
         this.dfActivePort = dfActivePort;
         this.dfSubEligiblePolicy = dfSubEligiblePolicy;
+        this.contacts = contacts;
     }
 
     @Override
     @Transactional
     public Mono<CnsReq> handle(CreateCnsReqCmd cmd) {
         DpRef dpRef = resolveDpRef(cmd);
+        if (contacts.testContactsOnly() && cmd.extDpRefTyp() != null) {
+            String refused = switch (Recipient.parse(cmd.extDpRefVal(), cmd.extDpRefTyp())) {
+                case Recipient.Ok ok -> contacts.refusal(ok.recipient()).orElse(null);
+                case Recipient.Problem problem -> problem.reason();
+            };
+            if (refused != null) {
+                return Mono.error(new DomRuleViolation(400, "not-a-test-contact", refused));
+            }
+        }
 
         return dfActivePort.isActive(cmd.dfId())
                 .flatMap(active -> active
