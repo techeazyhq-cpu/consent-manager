@@ -99,7 +99,8 @@ function KeysCard({ console: c, keys, onKeys }: { console: Console; keys: Sandbo
     try {
       const issued = await takeKeys(await freshToken(c.auth), c.dfName);
       onKeys({ dfId: issued.dfId, clientId: issued.clientId, clientSecret: issued.clientSecret, tokenUrl: issued.tokenUrl });
-      setShown(true);
+      // masked until asked for: screens get shared and captured
+      setShown(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {

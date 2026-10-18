@@ -24,5 +24,12 @@ put() { # PUT, treating 409 (already there) as done
   case "$code" in 2??|409) echo "  $1: ok ($code)" ;; *) echo "  $1: failed ($code) $(cat /tmp/out)"; exit 1 ;; esac
 }
 
+# The broker answers its admin API a while after its container starts: wait for it, up to five minutes.
+for i in $(seq 1 60); do
+  curl -sf -o /dev/null "$ADMIN/clusters" && break
+  [ "$i" = 60 ] && { echo "  Pulsar's admin API never answered at $ADMIN"; exit 1; }
+  sleep 5
+done
+
 put tenants/cm-sbx '{"allowedClusters":["standalone"]}'
 for ns in dfreg cnscmd cnsqry ntf bil; do put "namespaces/cm-sbx/$ns"; done
