@@ -45,6 +45,26 @@ public final class DfFactory {
                 null, null);
     }
 
+    /**
+     * The sandbox's copy of a production fiduciary (ADR-038): the same id, so asking again finds it, and its name, with a
+     * test contact address and a plan roomy enough to try batches. Nothing else of production's crosses over.
+     */
+    public static Df sandboxTwin(String productionDfId, String name) {
+        if (productionDfId == null || !productionDfId.matches("^[0-9a-fA-F-]{36}$")) {
+            throw new IllegalArgumentException("a fiduciary id is a UUID");
+        }
+        String display = name == null || name.isBlank() ? "Sandbox fiduciary" : name.trim();
+        if (display.length() > 255) {
+            display = display.substring(0, 255);
+        }
+        return new Df(productionDfId.toLowerCase(java.util.Locale.ROOT), display,
+                "sandbox+" + productionDfId.substring(0, 8).toLowerCase(java.util.Locale.ROOT) + "@sandbox.example",
+                DfPrfl.EMPTY, SANDBOX_PLAN, DfSts.PENDING, Instant.now(), null, null);
+    }
+
+    /** The plan a sandbox twin is subscribed to: quotas as in production, with room for a 10,000-row batch. */
+    public static final String SANDBOX_PLAN = "STANDARD";
+
     public static Df rehydrate(String id, String name, String contactEmail, DfPrfl prfl, String subPlnName,
                                 DfSts sts, Instant registeredAt, String cmDfApiClientSecret, Instant activatedAt) {
         return new Df(id, name, contactEmail, prfl, subPlnName, sts, registeredAt, cmDfApiClientSecret, activatedAt);

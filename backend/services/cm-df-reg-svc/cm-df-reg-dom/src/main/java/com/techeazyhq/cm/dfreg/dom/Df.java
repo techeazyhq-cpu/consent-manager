@@ -80,6 +80,14 @@ public final class Df extends Agg<String> {
         return activatedAt;
     }
 
+    /** A new API client secret replaces the old one, which stops working at once. Only an active fiduciary has one. */
+    public void replaceClientSecret(String clientSecret) {
+        if (sts != DfSts.ACTIVE) {
+            throw new IllegalStateException("Cannot replace the client secret of a DF in status " + sts);
+        }
+        this.cmDfApiClientSecret = clientSecret;
+    }
+
     /** {@code clientSecret} comes from Keycloak Admin API provisioning, performed by -infra before this is called (plan §10). */
     public void activate(String clientSecret) {
         if (sts != DfSts.PENDING) {

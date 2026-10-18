@@ -22,6 +22,7 @@ import { MAX_FILE_BYTES, fileProblem, progressOf, sendProblem } from "./Batches"
 import { grantRate } from "./labels";
 import { parseCategories, requestProblem, toCode } from "./Raise";
 import { batchHref, parseRoute, purposeHref, raiseHref } from "./routes";
+import { OPERATIONS, asCurl, fillPath, pathParams, remembered, tokenCurl, uploadForm } from "./sandbox";
 
 describe("DF Console routes", () => {
   it("lands on the dashboard by default and for anything unknown", () => {
@@ -102,5 +103,52 @@ describe("sending to many", () => {
     expect(sendProblem({ batch, available: 10 })).toBeNull();
     expect(sendProblem({ batch, available: 9 })).toMatch(/10 people.*9 requests left/);
     expect(sendProblem({ batch: { valid: 0 } as CnsReqBatchDto, available: 50 })).toMatch(/No one/);
+  });
+});
+
+describe("the API playground", () => {
+  const op = (id: string) => OPERATIONS.find((o) => o.id === id)!;
+
+  it("has its own page", () => {
+    expect(parseRoute("#/playground")).toEqual({ page: "playground" });
+  });
+
+  it("fills path placeholders, and waits until each has a value", () => {
+    expect(pathParams("/api/cns-cmd/cns-req-batches/{batchId}/rows")).toEqual(["batchId"]);
+    expect(fillPath("/a/{batchId}/rows", {})).toBeNull();
+    expect(fillPath("/a/{batchId}/rows", { batchId: " b 1 " })).toBe("/a/b%201/rows");
+  });
+
+  it("remembers the ids later calls need", () => {
+    expect(remembered(op("batch"), { batch: { id: "b-9" } })).toEqual({ batchId: "b-9" });
+    expect(remembered(op("list"), [{ cnsReqId: "r-1" }])).toEqual({ requestId: "r-1" });
+    expect(remembered(op("list"), [])).toEqual({});
+    expect(remembered(op("jwks"), { keys: [] })).toEqual({});
+  });
+
+  it("offers only test contacts in its samples", () => {
+    for (const o of OPERATIONS) {
+      if (o.body.kind === "none") continue;
+      for (const contact of o.body.sample.match(/[\w.+-]+@[\w.-]+/g) ?? []) expect(contact).toMatch(/@sandbox\.example$/);
+      for (const phone of o.body.sample.match(/\+\d{8,15}/g) ?? []) expect(phone).toMatch(/^\+447700900\d{3}$/);
+    }
+  });
+
+  it("copies calls as curl without the token or the secret", () => {
+    const curl = asCurl(op("raise"), "/api/cns-cmd/cns-reqs", `{"note":"it's"}`);
+    expect(curl).toContain("http://localhost:9100/api/cns-cmd/cns-reqs");
+    expect(curl).toContain('"Authorization: Bearer $SANDBOX_TOKEN"');
+    expect(curl).toContain(`--data-raw '{"note":"it'\\''s"}'`);
+    expect(asCurl(op("jwks"), "/api/cns-cmd/.well-known/jwks.json", "")).not.toContain("Authorization");
+    expect(tokenCurl({ clientId: "df-api-1", tokenUrl: "http://kc/token" })).toContain('"client_secret=$SANDBOX_CLIENT_SECRET"');
+  });
+
+  it("sends an upload as form fields and a CSV file", async () => {
+    const form = uploadForm(JSON.stringify({ prpsCode: "P", dCatCodes: ["EMAIL", "NAME"], file: "Email\na@sandbox.example\n" }));
+    expect(form.get("prpsCode")).toBe("P");
+    expect(form.get("dCatCodes")).toBe("EMAIL,NAME");
+    const file = form.get("file") as File;
+    expect(file.name).toBe("list.csv");
+    expect(await file.text()).toBe("Email\na@sandbox.example\n");
   });
 });

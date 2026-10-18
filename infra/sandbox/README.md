@@ -22,7 +22,11 @@ Keycloak imports the `sbx-cm-*` realms the next time it starts. If it was alread
 | Realms | `sbx-cm-df` (fiduciaries and their API clients), `sbx-cm-dp`, `sbx-cm-staff` |
 | Platform staff | `admin@sandbox.example`, `operator@sandbox.example` in `sbx-cm-staff` |
 
-A sandbox fiduciary is created and activated like a production one, through the sandbox's gateway with a
+**From the DF Console:** an Owner, Administrator or Developer opens **API playground** and presses **Get sandbox
+keys**. The sandbox makes a copy of their fiduciary (same id, its name, nothing else) and hands back an API client for
+it ([ADR-038](../../docs/adr/adr-038-api-playground-and-sandbox-keys.md)). Pressing it again replaces the secret.
+
+**By hand:** a sandbox fiduciary is created and activated like a production one, through the sandbox's gateway with a
 `sbx-cm-staff` token. Its API client lives in `sbx-cm-df` and gets tokens from
 `http://localhost:8080/realms/sbx-cm-df/protocol/openid-connect/token`. Those tokens are refused by production, and
 production's are refused here.

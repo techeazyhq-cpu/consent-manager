@@ -27,6 +27,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.techeazyhq.cm.dfreg.dom.DfApiClientProvisionPort;
 import com.techeazyhq.cm.reskit.DependencyFallbacks;
+import com.techeazyhq.cm.webkit.DomRuleViolation;
 
 import reactor.core.publisher.Mono;
 
@@ -94,6 +95,27 @@ public class KeycloakDfApiClientProvisionAdapter implements DfApiClientProvision
         return circuitBreaker.run(provision, DependencyFallbacks.unavailable("keycloak"));
     }
 
+    /** Keycloak regenerates the client's secret; the previous one is refused from then on. */
+    @Override
+    public Mono<String> rotateClientSecret(String dfId) {
+        Mono<String> rotate = adminWebClient.get()
+                .uri(b -> b.path("/admin/realms/{realm}/clients").queryParam("clientId", "df-api-" + dfId).build(realm))
+                .retrieve()
+                .bodyToFlux(ClientResp.class)
+                .next()
+                .switchIfEmpty(Mono.error(new DomRuleViolation(404, "df-api-client-not-found",
+                        "DF " + dfId + " has no API client")))
+                .flatMap(client -> adminWebClient.post()
+                        .uri("/admin/realms/{realm}/clients/{id}/client-secret", realm, client.id())
+                        .retrieve()
+                        .bodyToMono(ClientSecretResp.class))
+                .map(ClientSecretResp::value);
+        return circuitBreaker.run(rotate, DependencyFallbacks.unavailable("keycloak"));
+    }
+
     private record ClientSecretResp(String type, String value) {
+    }
+
+    private record ClientResp(String id, String clientId) {
     }
 }

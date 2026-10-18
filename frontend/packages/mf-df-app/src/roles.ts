@@ -44,6 +44,9 @@ export function memberRoleOf(realmRoles: string[]): DfRole | undefined {
 
 export const managesTeam = (role: DfRole) => role === "OWNER" || role === "ADMIN";
 
+/** Who takes the organisation's sandbox keys (ADR-038): the people who build integrations. */
+export const usesSandbox = (role: DfRole) => role === "OWNER" || role === "ADMIN" || role === "DEVELOPER";
+
 export const raisesRequests = (role: DfRole) => role === "OWNER" || role === "ADMIN" || role === "CONSENT_MANAGER";
 
 /** The roles {@code role} may give: only an Owner gives ownership. */

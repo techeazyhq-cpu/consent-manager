@@ -29,4 +29,7 @@ import reactor.core.publisher.Mono;
 public interface DfApiClientProvisionPort {
 
     Mono<String> provisionClientSecret(String dfId);
+
+    /** A new secret for the fiduciary's existing API client; the old one stops working. */
+    Mono<String> rotateClientSecret(String dfId);
 }

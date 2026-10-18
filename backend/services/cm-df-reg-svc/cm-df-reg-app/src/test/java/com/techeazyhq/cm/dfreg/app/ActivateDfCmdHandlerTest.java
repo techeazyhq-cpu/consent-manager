@@ -30,6 +30,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import com.techeazyhq.cm.dfreg.dom.Df;
+import com.techeazyhq.cm.dfreg.dom.DfApiClientProvisionPort;
 import com.techeazyhq.cm.dfreg.dom.DfFactory;
 import com.techeazyhq.cm.dfreg.dom.DfMember;
 import com.techeazyhq.cm.dfreg.dom.DfMemberDirectoryPort;
@@ -98,8 +99,19 @@ class ActivateDfCmdHandlerTest {
         }
     };
 
-    private final ActivateDfCmdHandler handler =
-            new ActivateDfCmdHandler(dfRepo, dfId -> Mono.just("secret"), members);
+    private final DfApiClientProvisionPort clients = new DfApiClientProvisionPort() {
+        @Override
+        public Mono<String> provisionClientSecret(String dfId) {
+            return Mono.just("secret");
+        }
+
+        @Override
+        public Mono<String> rotateClientSecret(String dfId) {
+            return Mono.just("rotated");
+        }
+    };
+
+    private final ActivateDfCmdHandler handler = new ActivateDfCmdHandler(dfRepo, clients, members);
 
     private void pendingDf(String legalName) {
         DfPrfl prfl = new DfPrfl(legalName, null, null, null, null, null, null, null, null);
@@ -129,5 +141,44 @@ class ActivateDfCmdHandlerTest {
 
         assertEquals(DfSts.ACTIVE, df.sts());
         assertTrue(invited.isEmpty());
+    }
+    // ---- sandbox keys (ADR-038), which reuse activation ----
+
+    private static final String PROD_DF = "3f2b8c1e-0000-4000-8000-00000000abcd";
+    private final IssueSandboxKeysHandler keys = new IssueSandboxKeysHandler(dfRepo, handler, clients);
+
+    private IssueSandboxKeysHandler.Keys keysFor(DfRole role) {
+        return keys.handle(new IssueSandboxKeysHandler.Cmd(PROD_DF, java.util.Optional.ofNullable(role), "Acme")).block();
+    }
+
+    @Test
+    void theFirstKeysMakeAnActiveTwinOfTheFiduciary_laterOnesANewSecret() {
+        IssueSandboxKeysHandler.Keys first = keysFor(DfRole.DEVELOPER);
+
+        assertEquals(PROD_DF, first.dfId(), "the same id, so asking again finds it");
+        assertEquals("df-api-" + PROD_DF, first.clientId());
+        assertEquals("secret", first.clientSecret());
+        assertTrue(first.created());
+        Df twin = dfs.get(PROD_DF);
+        assertEquals(DfSts.ACTIVE, twin.sts());
+        assertEquals("Acme", twin.name());
+        assertEquals("sandbox+3f2b8c1e@sandbox.example", twin.contactEmail(), "a test contact, not production's");
+        assertEquals(DfFactory.SANDBOX_PLAN, twin.subPlnName());
+
+        IssueSandboxKeysHandler.Keys again = keysFor(DfRole.OWNER);
+        assertEquals("rotated", again.clientSecret());
+        assertEquals(false, again.created());
+        assertEquals("rotated", dfs.get(PROD_DF).cmDfApiClientSecret());
+    }
+
+    @Test
+    void onlyPeopleWhoBuildIntegrationsTakeKeys() {
+        for (DfRole role : new DfRole[] {DfRole.CONSENT_MANAGER, DfRole.AUDITOR, null}) {
+            org.junit.jupiter.api.Assertions.assertThrows(com.techeazyhq.cm.webkit.DomRuleViolation.class,
+                    () -> keysFor(role), String.valueOf(role));
+        }
+        org.junit.jupiter.api.Assertions.assertThrows(com.techeazyhq.cm.webkit.DomRuleViolation.class,
+                () -> keys.handle(new IssueSandboxKeysHandler.Cmd(null, java.util.Optional.of(DfRole.OWNER), "Acme")).block());
+        assertTrue(dfs.isEmpty());
     }
 }
