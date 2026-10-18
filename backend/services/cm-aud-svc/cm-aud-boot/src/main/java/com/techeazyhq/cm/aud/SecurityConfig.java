@@ -18,11 +18,14 @@
 
 package com.techeazyhq.cm.aud;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+
+import com.techeazyhq.cm.seckit.RealmTokens;
 
 /** Every ledger read needs the caller's JWT; which entries they see is decided per role in the handler. */
 @Configuration
@@ -30,14 +33,17 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 public class SecurityConfig {
 
     @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+    public SecurityWebFilterChain securityWebFilterChain(
+            ServerHttpSecurity http,
+            @Value("${cm.security.issuer-base:http://localhost:8080/realms/}") String issuerBase,
+            @Value("${cm.security.jwks-base:http://localhost:8080/realms/}") String jwksBase) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(ex -> ex
                         .pathMatchers("/actuator/health", "/actuator/info").permitAll()
                         .anyExchange().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {
-                }))
+                .oauth2ResourceServer(oauth2 -> oauth2.authenticationManagerResolver(
+                        RealmTokens.resolver(issuerBase, jwksBase)))
                 .build();
     }
 }

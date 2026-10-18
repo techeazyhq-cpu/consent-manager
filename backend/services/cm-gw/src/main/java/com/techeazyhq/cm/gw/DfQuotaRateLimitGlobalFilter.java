@@ -41,6 +41,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 
+import com.techeazyhq.cm.seckit.AuthCtx;
+
 import reactor.core.publisher.Mono;
 
 /**
@@ -81,7 +83,8 @@ public class DfQuotaRateLimitGlobalFilter implements GlobalFilter, Ordered {
         // map + a null check downstream. Discovered and fixed during Phase 1 verification.
         return exchange.getPrincipal()
                 .cast(JwtAuthenticationToken.class)
-                .flatMap(token -> Mono.justOrEmpty(((Jwt) token.getPrincipal()).getClaimAsString("df_id")))
+                // only the fiduciaries' realm says which fiduciary a caller is (ADR-035)
+                .flatMap(token -> Mono.justOrEmpty(AuthCtx.from((Jwt) token.getPrincipal()).dfId()))
                 .flatMap(dfId -> checkAndForward(exchange, chain, dfId))
                 .switchIfEmpty(chain.filter(exchange));
     }

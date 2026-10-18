@@ -97,7 +97,7 @@ class KeycloakStfDirectoryAdapterTest {
         properties.setDisableTimeLimiter(true);
         return new KeycloakStfDirectoryAdapter(WebClient.builder().baseUrl(base).build(),
                 new ReactiveResilience4JCircuitBreakerFactory(registry, TimeLimiterRegistry.ofDefaults(),
-                        null /* no bulkhead */, properties), "cm-realm");
+                        null /* no bulkhead */, properties), "cm-staff");
     }
 
     @Test
@@ -105,16 +105,16 @@ class KeycloakStfDirectoryAdapterTest {
         String base = "http://127.0.0.1:" + keycloak.getAddress().getPort();
         boolean[] roleExists = {false};
         routes = ex -> switch (ex.getRequestMethod() + " " + ex.getRequestURI().getPath()) {
-            case "GET /admin/realms/cm-realm/roles/CM_OPERATOR" -> roleExists[0]
+            case "GET /admin/realms/cm-staff/roles/CM_OPERATOR" -> roleExists[0]
                     ? new Reply(200, "{\"id\":\"role-op\",\"name\":\"CM_OPERATOR\"}")
                     : new Reply(404, "{}");
-            case "POST /admin/realms/cm-realm/roles" -> {
+            case "POST /admin/realms/cm-staff/roles" -> {
                 roleExists[0] = true;
                 yield new Reply(201, "");
             }
-            case "POST /admin/realms/cm-realm/users" ->
-                    new Reply(201, "", base + "/admin/realms/cm-realm/users/u-123");
-            case "POST /admin/realms/cm-realm/users/u-123/role-mappings/realm" -> new Reply(204, "");
+            case "POST /admin/realms/cm-staff/users" ->
+                    new Reply(201, "", base + "/admin/realms/cm-staff/users/u-123");
+            case "POST /admin/realms/cm-staff/users/u-123/role-mappings/realm" -> new Reply(204, "");
             default -> new Reply(500, "{}");
         };
 
@@ -123,11 +123,11 @@ class KeycloakStfDirectoryAdapterTest {
         assertEquals("u-123", created.id());
         assertEquals(StfRole.CM_OPERATOR, created.role());
         assertEquals(List.of(
-                "GET /admin/realms/cm-realm/roles/CM_OPERATOR",
-                "POST /admin/realms/cm-realm/roles",
-                "GET /admin/realms/cm-realm/roles/CM_OPERATOR",
-                "POST /admin/realms/cm-realm/users",
-                "POST /admin/realms/cm-realm/users/u-123/role-mappings/realm"), calls);
+                "GET /admin/realms/cm-staff/roles/CM_OPERATOR",
+                "POST /admin/realms/cm-staff/roles",
+                "GET /admin/realms/cm-staff/roles/CM_OPERATOR",
+                "POST /admin/realms/cm-staff/users",
+                "POST /admin/realms/cm-staff/users/u-123/role-mappings/realm"), calls);
     }
 
     @Test
@@ -144,23 +144,23 @@ class KeycloakStfDirectoryAdapterTest {
     void aUserWhoseRoleCouldNotBeGivenIsRemovedAgain() {
         String base = "http://127.0.0.1:" + keycloak.getAddress().getPort();
         routes = ex -> switch (ex.getRequestMethod() + " " + ex.getRequestURI().getPath()) {
-            case "GET /admin/realms/cm-realm/roles/CM_OPERATOR" -> new Reply(200, "{\"id\":\"r\",\"name\":\"CM_OPERATOR\"}");
-            case "POST /admin/realms/cm-realm/users" -> new Reply(201, "", base + "/admin/realms/cm-realm/users/u-9");
-            case "DELETE /admin/realms/cm-realm/users/u-9" -> new Reply(204, "");
+            case "GET /admin/realms/cm-staff/roles/CM_OPERATOR" -> new Reply(200, "{\"id\":\"r\",\"name\":\"CM_OPERATOR\"}");
+            case "POST /admin/realms/cm-staff/users" -> new Reply(201, "", base + "/admin/realms/cm-staff/users/u-9");
+            case "DELETE /admin/realms/cm-staff/users/u-9" -> new Reply(204, "");
             default -> new Reply(503, "{}");
         };
 
         assertThrows(DependencyUnavailableException.class,
                 () -> adapter().createOperator(new NewOperator("dee@example.com", "Dee")).block());
-        assertTrue(calls.contains("DELETE /admin/realms/cm-realm/users/u-9"));
+        assertTrue(calls.contains("DELETE /admin/realms/cm-staff/users/u-9"));
     }
 
     @Test
     void listsAdministratorsAndOperatorsOnceEach() {
         routes = ex -> switch (ex.getRequestURI().getPath()) {
-            case "/admin/realms/cm-realm/roles/CM_ADMIN/users" -> new Reply(200,
+            case "/admin/realms/cm-staff/roles/CM_ADMIN/users" -> new Reply(200,
                     "[{\"id\":\"a1\",\"email\":\"admin@cm.local\",\"firstName\":\"Ada\",\"enabled\":true,\"createdTimestamp\":1790000000000}]");
-            case "/admin/realms/cm-realm/roles/CM_OPERATOR/users" -> new Reply(200,
+            case "/admin/realms/cm-staff/roles/CM_OPERATOR/users" -> new Reply(200,
                     "[{\"id\":\"a1\",\"email\":\"admin@cm.local\",\"enabled\":true},"
                             + "{\"id\":\"o1\",\"email\":\"op@cm.local\",\"firstName\":\"Cy\",\"lastName\":\"Das\",\"enabled\":false}]");
             default -> new Reply(500, "{}");
@@ -180,6 +180,6 @@ class KeycloakStfDirectoryAdapterTest {
 
         adapter().setEnabled("o1", false).block();
 
-        assertEquals(List.of("PUT /admin/realms/cm-realm/users/o1", "POST /admin/realms/cm-realm/users/o1/logout"), calls);
+        assertEquals(List.of("PUT /admin/realms/cm-staff/users/o1", "POST /admin/realms/cm-staff/users/o1/logout"), calls);
     }
 }

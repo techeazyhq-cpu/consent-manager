@@ -16,14 +16,14 @@
  * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
  */
 
-// Keycloak theme JAR: cm-realm's login pages, one theme per audience (data principal, data fiduciary, platform
+// Keycloak theme JAR: the login pages of the three realms (ADR-035), one theme per audience (data principal, data fiduciary, platform
 // administrator) on a shared cm-base. Resources only; Keycloak finds the themes through META-INF/keycloak-themes.json.
 // The JAR lands next to cm-idn-otp-spi's in the providers directory infra/docker-compose.yml mounts into Keycloak.
 plugins {
     id("java-library")
 }
 
-val realmExport = rootProject.file("infra/keycloak/realm-export/cm-realm.json")
+val realmExports = rootProject.file("infra/keycloak/realm-export")
 
 dependencies {
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
@@ -43,7 +43,7 @@ tasks.jar {
 
 tasks.test {
     useJUnitPlatform()
-    // The realm export decides which client shows which theme, so the tests check the two together.
-    inputs.file(realmExport)
-    systemProperty("cm.realmExport", realmExport.absolutePath)
+    // The realm exports decide which client shows which theme, so the tests check them together.
+    inputs.dir(realmExports)
+    systemProperty("cm.realmExports", realmExports.absolutePath)
 }

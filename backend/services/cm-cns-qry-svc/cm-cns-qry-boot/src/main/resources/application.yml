@@ -33,11 +33,6 @@ spring:
     schemas: cns_qry
     default-schema: cns_qry
     locations: classpath:db/migration
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8080/realms/cm-realm
 
 cm:
   pulsar:

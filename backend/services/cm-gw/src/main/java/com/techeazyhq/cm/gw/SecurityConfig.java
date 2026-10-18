@@ -20,19 +20,18 @@ package com.techeazyhq.cm.gw;
 
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.web.server.SecurityWebFilterChain;
-import org.springframework.core.convert.converter.Converter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
-import reactor.core.publisher.Mono;
+
+import com.techeazyhq.cm.seckit.RealmTokens;
 
 /**
  * Defense-in-depth (plan §9): the gateway validates the Keycloak JWT so unauthenticated
@@ -47,8 +46,10 @@ public class SecurityConfig {
 
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(
-            ServerHttpSecurity http, Converter<Jwt, Mono<AbstractAuthenticationToken>> jwtAuthenticationConverter,
-            CorsConfigurationSource corsConfigurationSource) {
+            ServerHttpSecurity http,
+            CorsConfigurationSource corsConfigurationSource,
+            @Value("${cm.security.issuer-base:http://localhost:8080/realms/}") String issuerBase,
+            @Value("${cm.security.jwks-base:http://localhost:8080/realms/}") String jwksBase) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
@@ -70,7 +71,8 @@ public class SecurityConfig {
                         // A tenant's consent counts and masked requests, for CM Admin's tenant detail.
                         .pathMatchers("/api/cns-qry/admin/**").hasAnyRole("CM_ADMIN", "CM_OPERATOR")
                         .anyExchange().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
+                .oauth2ResourceServer(oauth2 -> oauth2.authenticationManagerResolver(
+                        RealmTokens.resolver(issuerBase, jwksBase)))
                 .build();
     }
 

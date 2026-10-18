@@ -17,7 +17,7 @@
  * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
  */
 
-// Scripted check of the passwordless browser sign-in (cm-idn-otp-spi, plan §9a): drives cm-realm's login pages the
+// Scripted check of the passwordless browser sign-in (cm-idn-otp-spi, plan §9a): drives each realm's login pages (ADR-035) the
 // way a browser would for each frontend's client (cm-dp-portal, cm-df-app, cm-cm-admin), reading each code from
 // Mailpit, and checks:
 //   0. each client's sign-in page shows its own audience theme (cm-idn-theme), and keeps it on the code page;
@@ -33,13 +33,13 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 
 const KC = process.env.KC_BASE || 'http://localhost:8080';
 const MAILPIT = process.env.MAILPIT_URL || 'http://localhost:8025';
-const REALM = `${KC}/realms/cm-realm`;
+const realmUrl = (client) => `${KC}/realms/${client.realm}`;
 
-/** Each frontend's client in cm-realm, where it sends people back to, and the audience its login theme shows. */
+/** Each frontend's client and realm, where it sends people back to, and the audience its login theme shows. */
 const CLIENTS = {
-  dpPortal: { clientId: 'cm-dp-portal', redirectUri: 'http://localhost:5174/', audience: 'dp' },
-  dfApp: { clientId: 'cm-df-app', redirectUri: 'http://localhost:5175/', audience: 'df' },
-  cmAdmin: { clientId: 'cm-cm-admin', redirectUri: 'http://localhost:5176/', audience: 'admin' },
+  dpPortal: { realm: 'cm-dp', clientId: 'cm-dp-portal', redirectUri: 'http://localhost:5174/', audience: 'dp' },
+  dfApp: { realm: 'cm-df', clientId: 'cm-df-app', redirectUri: 'http://localhost:5175/', audience: 'df' },
+  cmAdmin: { realm: 'cm-staff', clientId: 'cm-cm-admin', redirectUri: 'http://localhost:5176/', audience: 'admin' },
 };
 
 let failures = 0;
@@ -88,7 +88,7 @@ async function latestCode(address, after) {
   throw new Error(`No code reached ${address} in Mailpit`);
 }
 
-const authorizationUrl = (client, challenge) => `${REALM}/protocol/openid-connect/auth?${new URLSearchParams({
+const authorizationUrl = (client, challenge) => `${realmUrl(client)}/protocol/openid-connect/auth?${new URLSearchParams({
   client_id: client.clientId, redirect_uri: client.redirectUri, response_type: 'code', scope: 'openid',
   state: randomUUID(), code_challenge: challenge, code_challenge_method: 'S256',
 })}`;
@@ -125,7 +125,7 @@ async function signIn(address, client, { tryWrongCode = false } = {}) {
   check(done.status === 302 && location.startsWith(client.redirectUri) && authCode,
     `${address}: the right code signs in`);
   if (!authCode) return null;
-  const tokens = await (await fetch(`${REALM}/protocol/openid-connect/token`, {
+  const tokens = await (await fetch(`${realmUrl(client)}/protocol/openid-connect/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -154,6 +154,24 @@ check(admin?.roles?.includes('CM_ADMIN'), 'the seeded admin signs in with a code
 const newcomer = `dp-${Date.now()}@example.com`;
 const created = await signIn(newcomer, CLIENTS.dpPortal);
 check(created?.roles?.includes('DP') && created?.email === newcomer, `${newcomer} became a DP account by signing in`);
+
+/** Proves an address, then expects the realm to refuse it: no account there, and none created (ADR-035). */
+async function refusedWithNoAccount(address, client) {
+  const go = browser();
+  const identifyPage = await (await go(authorizationUrl(client, 'x'.repeat(43)))).text();
+  const sentAfter = new Date(Date.now() - 1000);
+  const codePage = await (await post(go, formAction(identifyPage), { identifier: address })).text();
+  const code = await latestCode(address, sentAfter);
+  const done = await post(go, formAction(codePage), { code });
+  const page = done.status === 200 ? await done.text() : '';
+  check(done.status === 200 && page.includes('There is no account for that address'),
+    `${client.clientId}: ${address} gets no account, and none is made`);
+}
+
+// Only data principals sign themselves up; a principal's account doesn't exist in the other realms.
+await refusedWithNoAccount(`stranger-${Date.now()}@example.com`, CLIENTS.cmAdmin);
+await refusedWithNoAccount(`stranger-${Date.now()}@example.com`, CLIENTS.dfApp);
+await refusedWithNoAccount(newcomer, CLIENTS.cmAdmin);
 
 console.log(failures === 0 ? '\nAll OTP sign-in checks passed.' : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);

@@ -17,12 +17,14 @@
 
 # Scripted end-to-end curl flow (plan §16) exercising the full consent lifecycle through
 # cm-gw. Uses Keycloak password-grant login for the seeded demo users since cm-idn-otp-spi
-# (passwordless OTP, plan §9a) doesn't exist yet — see cm-realm.json's _comment.
+# (passwordless OTP, plan §9a) doesn't exist yet. One realm per audience (ADR-035).
 set -euo pipefail
 
 KC_BASE="http://localhost:8080"
 GW_BASE="http://localhost:9000"
-REALM="cm-realm"
+STAFF_REALM="cm-staff"
+DF_REALM="cm-df"
+DP_REALM="cm-dp"
 # Each login uses its own frontend's client, the two that keep the password grant for this script.
 ADMIN_CLIENT="cm-cm-admin"
 DP_CLIENT="cm-dp-portal"
@@ -30,7 +32,7 @@ DP_CLIENT="cm-dp-portal"
 jget() { node -e "let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{try{console.log(JSON.parse(d)$1)}catch(e){console.error('PARSE FAIL:',d);process.exit(1)}})"; }
 
 echo "== 1. CM_ADMIN password-grant login =="
-ADMIN_TOKEN=$(curl -s -X POST "$KC_BASE/realms/$REALM/protocol/openid-connect/token" \
+ADMIN_TOKEN=$(curl -s -X POST "$KC_BASE/realms/$STAFF_REALM/protocol/openid-connect/token" \
   -d "grant_type=password&client_id=$ADMIN_CLIENT&username=admin@cm.local&password=admin" | jget '.access_token')
 echo "  got admin token (${#ADMIN_TOKEN} chars)"
 
@@ -49,7 +51,7 @@ DF_SECRET=$(echo "$ACTIVATE_RESP" | jget '.cmDfApiClientSecret')
 echo "  got client secret (${#DF_SECRET} chars)"
 
 echo "== 4. DF Integration API: client-credentials login as df-api-$DF_ID =="
-DF_TOKEN=$(curl -s -X POST "$KC_BASE/realms/$REALM/protocol/openid-connect/token" \
+DF_TOKEN=$(curl -s -X POST "$KC_BASE/realms/$DF_REALM/protocol/openid-connect/token" \
   -d "grant_type=client_credentials&client_id=df-api-$DF_ID&client_secret=$DF_SECRET" | jget '.access_token')
 echo "  got DF token (${#DF_TOKEN} chars)"
 
@@ -62,7 +64,7 @@ CNS_REQ_ID=$(echo "$CNSREQ_RESP" | jget '.id')
 echo "  cnsReqId=$CNS_REQ_ID"
 
 echo "== 6. DP password-grant login =="
-DP_TOKEN=$(curl -s -X POST "$KC_BASE/realms/$REALM/protocol/openid-connect/token" \
+DP_TOKEN=$(curl -s -X POST "$KC_BASE/realms/$DP_REALM/protocol/openid-connect/token" \
   -d "grant_type=password&client_id=$DP_CLIENT&username=dp-demo@cm.local&password=dp-demo" | jget '.access_token')
 echo "  got DP token (${#DP_TOKEN} chars)"
 DP_SUB=$(echo "$DP_TOKEN" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const p=JSON.parse(Buffer.from(d.split('.')[1],'base64url').toString());console.log(p.sub)})")

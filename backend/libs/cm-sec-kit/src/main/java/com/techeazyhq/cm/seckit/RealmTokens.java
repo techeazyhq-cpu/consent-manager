@@ -1,0 +1,96 @@
+/*
+ * Copyright 2026 Vasantha Kumar
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+ */
+
+package com.techeazyhq.cm.seckit;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.authentication.ReactiveAuthenticationManager;
+import org.springframework.security.authentication.ReactiveAuthenticationManagerResolver;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtIssuerReactiveAuthenticationManagerResolver;
+import org.springframework.security.oauth2.server.resource.authentication.JwtReactiveAuthenticationManager;
+import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
+import org.springframework.web.server.ServerWebExchange;
+
+import reactor.core.publisher.Mono;
+
+/**
+ * Accepts tokens from the three realms (ADR-035) and from nowhere else. A token's issuer picks its realm's signing
+ * keys and must be exactly that realm's address; its {@code roles} become {@code ROLE_} authorities only where the
+ * realm may assert them ({@link Audience}), so {@code hasRole} checks see the same filtered roles as {@link AuthCtx}.
+ *
+ * <p>Two bases, because the issuer a browser sees ({@code http://localhost:8080/realms/}) and the address services
+ * fetch keys from inside the network ({@code http://keycloak:8080/realms/}) can differ.
+ */
+public final class RealmTokens {
+
+    private RealmTokens() {
+    }
+
+    /**
+     * @param issuerBase what tokens carry as {@code iss}, up to the realm name, e.g. {@code http://localhost:8080/realms/}
+     * @param jwksBase   where this service reaches Keycloak, up to the realm name
+     */
+    public static ReactiveAuthenticationManagerResolver<ServerWebExchange> resolver(String issuerBase, String jwksBase) {
+        Map<String, ReactiveAuthenticationManager> byIssuer = new HashMap<>();
+        for (Audience audience : Audience.values()) {
+            String issuer = withSlash(issuerBase) + audience.realm();
+            NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder
+                    .withJwkSetUri(withSlash(jwksBase) + audience.realm() + "/protocol/openid-connect/certs")
+                    .build();
+            decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(issuer));
+            JwtReactiveAuthenticationManager manager = new JwtReactiveAuthenticationManager(decoder);
+            manager.setJwtAuthenticationConverter(converter(audience));
+            byIssuer.put(issuer, manager);
+        }
+        return new JwtIssuerReactiveAuthenticationManagerResolver(issuer -> Mono.justOrEmpty(byIssuer.get(issuer)));
+    }
+
+    /** The realm's roles as {@code ROLE_} authorities, keeping only those {@code audience} may assert. */
+    public static Converter<Jwt, Mono<AbstractAuthenticationToken>> converter(Audience audience) {
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> authorities(audience, jwt));
+        return new ReactiveJwtAuthenticationConverterAdapter(converter);
+    }
+
+    static Collection<GrantedAuthority> authorities(Audience audience, Jwt jwt) {
+        List<String> roles = jwt.getClaimAsStringList("roles");
+        if (roles == null) {
+            return List.of();
+        }
+        return roles.stream()
+                .filter(audience::mayAssert)
+                .<GrantedAuthority>map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                .toList();
+    }
+
+    private static String withSlash(String base) {
+        return base.endsWith("/") ? base : base + "/";
+    }
+}

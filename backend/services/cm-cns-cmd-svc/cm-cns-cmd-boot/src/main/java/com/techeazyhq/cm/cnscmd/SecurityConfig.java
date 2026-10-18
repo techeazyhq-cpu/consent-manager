@@ -18,6 +18,7 @@
 
 package com.techeazyhq.cm.cnscmd;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
@@ -25,6 +26,7 @@ import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 
 import com.techeazyhq.cm.cnscmd.ifc.rest.CnsCmdRouterConfig;
+import com.techeazyhq.cm.seckit.RealmTokens;
 
 /**
  * Every consent command needs the caller's JWT. The consent token public keys are open by design (ADR-006): OPA and
@@ -35,7 +37,10 @@ import com.techeazyhq.cm.cnscmd.ifc.rest.CnsCmdRouterConfig;
 public class SecurityConfig {
 
     @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+    public SecurityWebFilterChain securityWebFilterChain(
+            ServerHttpSecurity http,
+            @Value("${cm.security.issuer-base:http://localhost:8080/realms/}") String issuerBase,
+            @Value("${cm.security.jwks-base:http://localhost:8080/realms/}") String jwksBase) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(ex -> ex
@@ -43,8 +48,8 @@ public class SecurityConfig {
                         // The PDP calls the live status check without a token, on the service network only (ADR-027).
                         .pathMatchers(CnsCmdRouterConfig.INTERNAL_PATHS).permitAll()
                         .anyExchange().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> {
-                }))
+                .oauth2ResourceServer(oauth2 -> oauth2.authenticationManagerResolver(
+                        RealmTokens.resolver(issuerBase, jwksBase)))
                 .build();
     }
 }

@@ -54,7 +54,7 @@ import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
 /** Runs the adapter against a stub of Keycloak's Admin REST API on a real socket. */
 class KeycloakDfMemberDirectoryAdapterTest {
 
-    private static final String REALM = "/admin/realms/cm-realm";
+    private static final String REALM = "/admin/realms/cm-df";
     private static final String READY_PROFILE = "{\"attributes\":[{\"name\":\"email\"},{\"name\":\"df_id\"}]}";
 
     private HttpServer keycloak;
@@ -111,7 +111,7 @@ class KeycloakDfMemberDirectoryAdapterTest {
         properties.setDisableTimeLimiter(true);
         return new KeycloakDfMemberDirectoryAdapter(WebClient.builder().baseUrl(base()).build(),
                 new ReactiveResilience4JCircuitBreakerFactory(registry, TimeLimiterRegistry.ofDefaults(),
-                        null /* no bulkhead */, properties), "cm-realm");
+                        null /* no bulkhead */, properties), "cm-df");
     }
 
     /** A realm already set up: every role, the attribute and the mapper exist. */

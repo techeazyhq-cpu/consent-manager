@@ -1,41 +1,37 @@
-# cm-realm.json notes
+# Realm exports: one realm per audience (ADR-035)
 
-(Not embeddable in the JSON itself — Keycloak's realm import uses strict Jackson
-deserialization and rejects unrecognized fields.)
+(Notes live here, not in the JSON: Keycloak's realm import uses strict Jackson deserialization and rejects
+unrecognized fields.)
 
-- **`cm-df-api` client-credentials clients are not statically defined here.**
-  `cm-df-reg-svc`'s `KeycloakDfApiClientProvisionAdapter` (plan §10) creates one dynamically
-  per DF (`df-api-<dfId>`) at activation time via the Admin REST API, each with a
-  hardcoded-claim `df_id` mapper.
-- **Browser sign-in is passwordless (plan §9a).** The realm's `browserFlow` is `cm-otp-browser`:
-  an existing SSO session, otherwise `cm-idn-otp-spi`'s one-time code by email or SMS, sent
-  through cm-ntf-svc. Being the realm-wide browser flow, it applies to every app that signs in
-  through any of the browser clients and to the account console. The authenticator
-  config `cm-otp` sets the cm-ntf-svc URL, code validity (300 s, matching cm-ntf-svc's OTP
-  validity), wrong guesses per code (5) and the role given to accounts created by signing in
-  (`DP`; empty allows existing accounts only).
-- **Signing in creates a DP account.** An address with no account that proves itself with a code
-  becomes a DP user (username = the email or phone number, phone in the `phone` attribute), so
-  `registrationAllowed` is `false` and the password registration page is gone.
-- **The user profile asks for nothing but a username.** Keycloak 25's default profile requires
-  first name, last name and email, which would stop a new DP at an "update profile" page and ask
-  a phone-only DP for an email. CM doesn't need a DP's name, so the `declarative-user-profile`
-  component in `components` keeps those attributes but makes them optional.
-- **Brute-force protection is on** (`bruteForceProtected`, 10 failures, waits from 1 to 15
-  minutes): wrong codes count against the account across sign-ins, on top of the per-code limit.
-- **Applying a changed realm file** needs a fresh import: `--import-realm` skips a realm that
-  already exists. Locally, recreate the dev container
-  (`docker compose up -d --force-recreate keycloak`; its dev database lives in the container).
-- **One public client per frontend, each with its own login theme** (`attributes.login_theme`):
-  `cm-dp-portal` shows `cm-dp`, `cm-df-app` shows `cm-df`, `cm-cm-admin` shows `cm-admin`; the realm's
-  `loginTheme` is `cm-base` (account console, any other client). The themes come from
-  `backend/keycloak-ext/cm-idn-theme`; a client naming a theme Keycloak doesn't have silently falls back to
-  Keycloak's own, so `cm-idn-theme`'s tests check this file against the themes the JAR ships. `cm-df-app` is ready
-  for fiduciary staff sign-in; the DF app itself still connects with its API client secret.
-- **`directAccessGrantsEnabled: true` on `cm-dp-portal` and `cm-cm-admin` is a TESTING-ONLY convenience** so
-  curl-based verification (`scripts/verify-phase1.sh`) can still obtain tokens with the seeded
-  demo users' passwords. Browser sign-in no longer uses passwords; turn this off once the
-  verification scripts sign in with codes (`scripts/verify-otp-login.mjs` shows how).
-- **`scripts/verify-otp-login.mjs`** checks the browser sign-in end to end: each client's audience
-  theme, invalid address, wrong code, a seeded admin keeping `CM_ADMIN`, and a new address becoming a
-  DP (codes read from Mailpit).
+| File | Realm | Who | Client (login theme) | Roles | Seed users | Sign-up |
+|---|---|---|---|---|---|---|
+| `cm-dp.json` | `cm-dp` | Data principals | `cm-dp-portal` (`cm-dp`) | `DP` | `dp-demo@cm.local` | Yes |
+| `cm-df.json` | `cm-df` | Fiduciaries' people and systems | `cm-df-app` (`cm-df`) | `DF`, `DF_*` | none (invited, ADR-033) | No |
+| `cm-staff.json` | `cm-staff` | Platform administrators and operators | `cm-cm-admin` (`cm-admin`) | `CM_ADMIN`, `CM_OPERATOR` | `admin@cm.local`, `operator@cm.local` | No |
+
+Each realm has its own sessions, so one browser can be signed in to the DP portal, the DF Console and CM Admin as
+three different people. Services accept tokens from all three realms but believe each only for its own audience's
+roles (`cm-sec-kit`'s `Audience` and `RealmTokens`).
+
+- **API clients are not defined here.** cm-df-reg-svc creates one per fiduciary (`df-api-<dfId>`) in `cm-df` at
+  activation, with a hardcoded `df_id` claim. It also sets up what `cm-df` needs for members if missing: the `DF_*`
+  roles, the admin-only `df_id` user attribute, and the `df_id` mapper on `cm-df-app`.
+- **Browser sign-in is passwordless (plan §9a).** Every realm's `browserFlow` is `cm-otp-browser`: an existing
+  session, otherwise `cm-idn-otp-spi`'s one-time code by email or SMS, sent through cm-ntf-svc. Its config `cm-otp`
+  sets the cm-ntf-svc URL, code validity (300 s), wrong guesses per code (5) and `autoRegisterRole`:
+  - `DP` in `cm-dp`, where a new address that proves itself becomes a data principal;
+  - empty in `cm-df` and `cm-staff`, where an unknown address gets "no account" and nothing is created.
+- **The user profile asks for nothing but a username.** Keycloak 25's default profile requires first name, last name
+  and email; the `declarative-user-profile` component keeps them optional. `cm-df` also declares `df_id`, which only
+  administrators may view or edit.
+- **Brute-force protection is on** in every realm (10 failures, waits from 1 to 15 minutes).
+- **Applying a changed realm file** needs a fresh import: `--import-realm` skips a realm that already exists. Locally,
+  recreate the dev container (`docker compose up -d --force-recreate keycloak`; its dev database lives in the
+  container). A new realm file imports on the next start without a recreate.
+- **Themes** come from `backend/keycloak-ext/cm-idn-theme`. A client naming a theme Keycloak doesn't have silently
+  falls back to Keycloak's own, so `cm-idn-theme`'s tests check these files against the themes the JAR ships, and that
+  each realm holds only its own client, roles and sign-up setting.
+- **`directAccessGrantsEnabled: true` on `cm-dp-portal` and `cm-cm-admin` is a TESTING-ONLY convenience**, so
+  curl-based verification (`scripts/verify-phase1.sh`) can obtain tokens with the seeded demo users' passwords.
+  Browser sign-in doesn't use passwords; turn this off once the verification scripts sign in with codes
+  (`scripts/verify-otp-login.mjs` shows how).
