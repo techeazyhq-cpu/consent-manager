@@ -120,6 +120,12 @@ public final class CnsReqBatch {
      */
     public static Plan plan(String dfId, CnsReqTemplate template, Source source, String fileName, String createdBy,
                             List<Input> inputs) {
+        return plan(dfId, template, source, fileName, createdBy, inputs, ContactPolicy.ANYONE);
+    }
+
+    /** As above, skipping as invalid any contact {@code policy} refuses (in the sandbox, anything but test contacts). */
+    public static Plan plan(String dfId, CnsReqTemplate template, Source source, String fileName, String createdBy,
+                            List<Input> inputs, ContactPolicy policy) {
         if (inputs == null || inputs.isEmpty()) {
             throw new IllegalArgumentException("the list has no rows");
         }
@@ -136,7 +142,11 @@ public final class CnsReqBatch {
             Input in = inputs.get(i);
             String ref = in.ref() == null || in.ref().isBlank() ? null : truncate(in.ref().trim(), 128);
             String contact = in.contact() == null ? "" : truncate(in.contact().trim(), 255);
-            switch (Recipient.parse(contact, in.typ())) {
+            Recipient.Parsed parsed = Recipient.parse(contact, in.typ());
+            if (parsed instanceof Recipient.Ok ok && policy.refusal(ok.recipient()).isPresent()) {
+                parsed = new Recipient.Problem(policy.refusal(ok.recipient()).get());
+            }
+            switch (parsed) {
                 case Recipient.Ok ok when !seen.add(ok.recipient()) -> {
                     duplicate++;
                     rows.add(new Row(i + 1, contact, ref, ok.recipient().typ(), ok.recipient().val(),

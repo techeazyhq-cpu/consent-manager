@@ -44,7 +44,8 @@ public class SecurityConfig {
     public SecurityWebFilterChain securityWebFilterChain(
             ServerHttpSecurity http,
             @Value("${cm.security.issuer-base:http://localhost:8080/realms/}") String issuerBase,
-            @Value("${cm.security.jwks-base:http://localhost:8080/realms/}") String jwksBase) {
+            @Value("${cm.security.jwks-base:http://localhost:8080/realms/}") String jwksBase,
+            @Value("${cm.security.realm-prefix:}") String realmPrefix) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(ex -> ex
@@ -57,7 +58,7 @@ public class SecurityConfig {
                                 "/api/df-reg/dfs/*/members").hasRole("CM_ADMIN")
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.authenticationManagerResolver(
-                        RealmTokens.resolver(issuerBase, jwksBase)))
+                        RealmTokens.resolver(issuerBase, jwksBase, realmPrefix)))
                 .build();
     }
 

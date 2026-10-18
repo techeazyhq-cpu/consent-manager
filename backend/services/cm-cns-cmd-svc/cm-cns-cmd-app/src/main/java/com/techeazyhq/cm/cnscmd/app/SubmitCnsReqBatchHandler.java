@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 
 import com.techeazyhq.cm.cnscmd.dom.CnsReqBatch;
+import com.techeazyhq.cm.cnscmd.dom.ContactPolicy;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqBatchRepoPort;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqTemplate;
 import com.techeazyhq.cm.cnscmd.dom.DfActivePort;
@@ -44,10 +45,18 @@ public class SubmitCnsReqBatchHandler {
     private final DfActivePort dfActive;
     private final DfUsagePort usage;
 
+    private final ContactPolicy contacts;
+
     public SubmitCnsReqBatchHandler(CnsReqBatchRepoPort batchRepo, DfActivePort dfActive, DfUsagePort usage) {
+        this(batchRepo, dfActive, usage, ContactPolicy.ANYONE);
+    }
+
+    public SubmitCnsReqBatchHandler(CnsReqBatchRepoPort batchRepo, DfActivePort dfActive, DfUsagePort usage,
+                                    ContactPolicy contacts) {
         this.batchRepo = batchRepo;
         this.dfActive = dfActive;
         this.usage = usage;
+        this.contacts = contacts;
     }
 
     public record Cmd(String dfId, String createdBy, String prpsCode, Set<String> dCatCodes, String ntcTitle,
@@ -63,7 +72,8 @@ public class SubmitCnsReqBatchHandler {
         CnsReqBatch.Plan plan;
         try {
             CnsReqTemplate template = CnsReqTemplate.of(cmd.prpsCode(), cmd.dCatCodes(), cmd.ntcTitle(), cmd.ntcText());
-            plan = CnsReqBatch.plan(cmd.dfId(), template, cmd.source(), cmd.fileName(), cmd.createdBy(), cmd.inputs());
+            plan = CnsReqBatch.plan(cmd.dfId(), template, cmd.source(), cmd.fileName(), cmd.createdBy(), cmd.inputs(),
+                    contacts);
         } catch (IllegalArgumentException e) {
             return Mono.error(new DomRuleViolation(400, "invalid-batch", e.getMessage()));
         }

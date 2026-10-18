@@ -1,0 +1,58 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# The sandbox (ADR-034, ADR-037), on top of the docker profile (SPRING_PROFILES_ACTIVE=docker,sandbox): the same
+# service with its own database (cm_sandbox), its own Keycloak realms (sbx-cm-*: own users, keys and issuers) and its
+# own Pulsar tenant (CM_PULSAR_TENANT=cm-sbx, set in docker-compose.yml). Nothing here reaches production's data.
+
+spring:
+  data:
+    redis:
+      database: 1 # usage counters apart from production's (database 0)
+  cloud:
+    gateway:
+      # The whole list, as a list can't be merged across profiles: only what the sandbox runs.
+      routes:
+        - id: df-reg
+          uri: http://cm-sbx-df-reg-svc:8081
+          predicates:
+            - Path=/api/df-reg/**
+        - id: cns-cmd
+          uri: http://cm-sbx-cns-cmd-svc:8082
+          predicates:
+            - Path=/api/cns-cmd/**
+        - id: cns-qry
+          uri: http://cm-sbx-cns-qry-svc:8083
+          predicates:
+            - Path=/api/cns-qry/**
+        - id: ntf
+          uri: http://cm-sbx-ntf-svc:8084
+          predicates:
+            - Path=/api/ntf/**
+        - id: bil
+          uri: http://cm-sbx-bil-svc:8085
+          predicates:
+            - Path=/api/bil/**
+
+cm:
+  sandbox:
+    enabled: true
+  security:
+    realm-prefix: sbx-
+  pdp:
+    base-url: http://sbx-opa:8181 # verifies consent tokens against the sandbox's own keys
+  service-urls:
+    bil: http://cm-sbx-bil-svc:8085

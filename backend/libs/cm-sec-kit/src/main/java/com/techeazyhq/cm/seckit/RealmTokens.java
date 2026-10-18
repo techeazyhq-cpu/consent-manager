@@ -47,6 +47,10 @@ import reactor.core.publisher.Mono;
  *
  * <p>Two bases, because the issuer a browser sees ({@code http://localhost:8080/realms/}) and the address services
  * fetch keys from inside the network ({@code http://keycloak:8080/realms/}) can differ.
+ *
+ * <p>A sandbox (ADR-034, ADR-037) runs the same services against its own realms, named with a prefix
+ * ({@code sbx-cm-df}): their own users, keys and issuers, so a sandbox token never verifies in production, and the
+ * reverse.
  */
 public final class RealmTokens {
 
@@ -58,18 +62,36 @@ public final class RealmTokens {
      * @param jwksBase   where this service reaches Keycloak, up to the realm name
      */
     public static ReactiveAuthenticationManagerResolver<ServerWebExchange> resolver(String issuerBase, String jwksBase) {
+        return resolver(issuerBase, jwksBase, "");
+    }
+
+    /**
+     * @param realmPrefix put before each realm's name: empty in production, {@code sbx-} in the sandbox
+     */
+    public static ReactiveAuthenticationManagerResolver<ServerWebExchange> resolver(String issuerBase, String jwksBase,
+                                                                                    String realmPrefix) {
         Map<String, ReactiveAuthenticationManager> byIssuer = new HashMap<>();
-        for (Audience audience : Audience.values()) {
-            String issuer = withSlash(issuerBase) + audience.realm();
+        trustedIssuers(issuerBase, realmPrefix).forEach((issuer, audience) -> {
+            String realm = issuer.substring(withSlash(issuerBase).length());
             NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder
-                    .withJwkSetUri(withSlash(jwksBase) + audience.realm() + "/protocol/openid-connect/certs")
+                    .withJwkSetUri(withSlash(jwksBase) + realm + "/protocol/openid-connect/certs")
                     .build();
             decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(issuer));
             JwtReactiveAuthenticationManager manager = new JwtReactiveAuthenticationManager(decoder);
             manager.setJwtAuthenticationConverter(converter(audience));
             byIssuer.put(issuer, manager);
-        }
+        });
         return new JwtIssuerReactiveAuthenticationManagerResolver(issuer -> Mono.justOrEmpty(byIssuer.get(issuer)));
+    }
+
+    /** The only issuers a service believes, each with its audience; a token from any other is refused. */
+    static Map<String, Audience> trustedIssuers(String issuerBase, String realmPrefix) {
+        String prefix = realmPrefix == null ? "" : realmPrefix;
+        Map<String, Audience> issuers = new HashMap<>();
+        for (Audience audience : Audience.values()) {
+            issuers.put(withSlash(issuerBase) + prefix + audience.realm(), audience);
+        }
+        return issuers;
     }
 
     /** The realm's roles as {@code ROLE_} authorities, keeping only those {@code audience} may assert. */

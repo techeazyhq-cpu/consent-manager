@@ -40,6 +40,9 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [032](adr-032-channels-per-audience-web-mobile-console-developer-portal.md) | Channels per audience: DP web and mobile, DF Console, developer portal | Proposed |
 | [033](adr-033-fiduciary-staff-accounts-separate-from-api-clients.md) | Fiduciaries' people have their own accounts; API clients are for systems only | Proposed |
 | [034](adr-034-sandbox-and-api-playground.md) | A sandbox with synthetic principals, and an API playground in the developer portal | Proposed |
+| [035](adr-035-a-keycloak-realm-per-audience.md) | A Keycloak realm per audience: data principals, fiduciaries, platform staff | Accepted |
+| [036](adr-036-batches-of-consent-requests.md) | Batches of consent requests: one template, many people, from JSON, CSV or Excel | Accepted |
+| [037](adr-037-running-the-sandbox.md) | Running the sandbox: the same images, its own stores, realms and keys, shared servers | Accepted |
 
 ## Writing one
 

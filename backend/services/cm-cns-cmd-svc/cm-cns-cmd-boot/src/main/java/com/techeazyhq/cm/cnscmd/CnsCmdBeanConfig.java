@@ -51,6 +51,7 @@ import com.techeazyhq.cm.cnscmd.dom.DfUsagePort;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqBatchRepoPort;
 import com.techeazyhq.cm.cnscmd.dom.CnsArtRepoPort;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqRepoPort;
+import com.techeazyhq.cm.cnscmd.dom.ContactPolicy;
 import com.techeazyhq.cm.cnscmd.dom.DfActivePort;
 import com.techeazyhq.cm.cnscmd.dom.DfSubEligiblePolicy;
 import com.techeazyhq.cm.cnscmd.dom.NtfCmdPort;
@@ -137,10 +138,16 @@ public class CnsCmdBeanConfig {
         return new R2dbcCnsReqBatchRepoAdapter(db, objectMapper);
     }
 
+    /** In the sandbox (ADR-037), only test contacts can be asked: it never holds a real person's address. */
+    @Bean
+    public ContactPolicy contactPolicy(@Value("${cm.sandbox.enabled:false}") boolean sandbox) {
+        return ContactPolicy.of(sandbox);
+    }
+
     @Bean
     public SubmitCnsReqBatchHandler submitCnsReqBatchHandler(CnsReqBatchRepoPort batchRepo, DfActivePort dfActivePort,
-                                                             DfUsagePort dfUsagePort) {
-        return new SubmitCnsReqBatchHandler(batchRepo, dfActivePort, dfUsagePort);
+                                                             DfUsagePort dfUsagePort, ContactPolicy contactPolicy) {
+        return new SubmitCnsReqBatchHandler(batchRepo, dfActivePort, dfUsagePort, contactPolicy);
     }
 
     /** A bean of its own, so its @Transactional send wraps each row's request and outcome together. */
@@ -193,8 +200,9 @@ public class CnsCmdBeanConfig {
 
     @Bean
     public CreateCnsReqCmdHandler createCnsReqCmdHandler(CnsReqRepoPort cnsReqRepo, DfActivePort dfActivePort,
-                                                           DfSubEligiblePolicy dfSubEligiblePolicy) {
-        return new CreateCnsReqCmdHandler(cnsReqRepo, dfActivePort, dfSubEligiblePolicy);
+                                                           DfSubEligiblePolicy dfSubEligiblePolicy,
+                                                           ContactPolicy contactPolicy) {
+        return new CreateCnsReqCmdHandler(cnsReqRepo, dfActivePort, dfSubEligiblePolicy, contactPolicy);
     }
 
     @Bean

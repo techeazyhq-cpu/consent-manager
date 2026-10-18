@@ -1,0 +1,5 @@
+{
+  "config": {
+    "cns_cmd_base_url": "http://cm-sbx-cns-cmd-svc:8082"
+  }
+}

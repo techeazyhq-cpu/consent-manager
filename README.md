@@ -79,6 +79,17 @@ without an account becomes a data principal account by signing in. See
 To deliver email, SMS and push through notification-service instead of the local catchers, follow
 [infra/notification-service/README.md](infra/notification-service/README.md).
 
+### The sandbox
+
+A second, isolated copy of the API for fiduciaries to test against, with test contacts only and nothing delivered
+([ADR-037](docs/adr/adr-037-running-the-sandbox.md)):
+
+```bash
+docker compose -f infra/docker-compose.yml --profile sandbox up -d --build
+```
+
+Its gateway is http://localhost:9100 and its inbox http://localhost:8125. See [infra/sandbox/README.md](infra/sandbox/README.md).
+
 ## Verify it
 
 ```bash

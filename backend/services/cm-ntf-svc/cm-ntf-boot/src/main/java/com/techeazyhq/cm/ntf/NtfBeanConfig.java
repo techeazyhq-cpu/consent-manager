@@ -120,7 +120,13 @@ public class NtfBeanConfig {
                 @Value("${cm.ntf.notification-service.otp-validity-seconds:300}") int otpValiditySeconds,
                 @Value("${cm.ntf.notification-service.timeout:5s}") Duration timeout,
                 @Value("${cm.ntf.notification-service.max-retries:3}") int maxRetries,
-                @Value("${cm.ntf.notification-service.retry-backoff:500ms}") Duration retryBackoff) {
+                @Value("${cm.ntf.notification-service.retry-backoff:500ms}") Duration retryBackoff,
+                @Value("${cm.sandbox.enabled:false}") boolean sandbox) {
+            // The sandbox never delivers (ADR-034, ADR-037): its messages stay in its own inbox, Mailpit and the catchers.
+            if (sandbox) {
+                throw new IllegalStateException("cm.ntf.provider=notification-service would deliver for real; "
+                        + "the sandbox (cm.sandbox.enabled=true) runs only with cm.ntf.provider=local");
+            }
             if (apiKey.isBlank()) {
                 throw new IllegalStateException("cm.ntf.notification-service.api-key must be set when cm.ntf.provider=notification-service");
             }
