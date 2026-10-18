@@ -25,11 +25,11 @@ plugins {
 dependencies {
     compileOnly("org.springframework.boot:spring-boot-starter-webflux:3.5.16")
     compileOnly("org.springframework.boot:spring-boot-autoconfigure:3.5.16")
-    compileOnly("io.github.resilience4j:resilience4j-circuitbreaker:2.2.0")
+    compileOnly("io.github.resilience4j:resilience4j-circuitbreaker:2.4.0")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.springframework.boot:spring-boot-starter-webflux:3.5.16")
-    testImplementation("io.github.resilience4j:resilience4j-circuitbreaker:2.2.0")
+    testImplementation("io.github.resilience4j:resilience4j-circuitbreaker:2.4.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
