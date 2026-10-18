@@ -197,6 +197,12 @@ export function OrgLogo({
   );
 }
 
+/** A code such as {@code ORDER_FULFILLMENT} as words a person reads: "Order fulfillment". */
+export function humanise(code: string): string {
+  const words = code.replace(/[_-]+/g, " ").trim().toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 /** Small line icons for menus, drawn with the current text colour. */
 export const Icons: Record<string, ReactNode> = {
   dashboard: (
@@ -245,6 +251,12 @@ export const Icons: Record<string, ReactNode> = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
       <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />
       <path d="M10 20a2 2 0 0 0 4 0" />
+    </svg>
+  ),
+  send: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M21 3L3 10.5l7 2.5 2.5 7z" />
+      <path d="M10 13l11-10" />
     </svg>
   ),
   user: (
