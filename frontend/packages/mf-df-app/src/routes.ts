@@ -24,7 +24,10 @@ export type Route =
   | { page: "team" }
   | { page: "organisation" }
   | { page: "account" }
-  | { page: "purpose"; prpsCode: string };
+  | { page: "purpose"; prpsCode: string }
+  | { page: "send-to-many" }
+  | { page: "batches" }
+  | { page: "batch"; id: string };
 
 /** Anything unrecognised lands on the dashboard, the default page. */
 export function parseRoute(hash: string): Route {
@@ -37,6 +40,10 @@ export function parseRoute(hash: string): Route {
     case "organisation":
     case "account":
       return { page: parts[0] };
+    case "send-to-many":
+      return { page: "send-to-many" };
+    case "batches":
+      return parts[1] ? { page: "batch", id: parts[1] } : { page: "batches" };
     case "purposes":
       return parts[1] ? { page: "purpose", prpsCode: parts[1] } : { page: "dashboard" };
     default:
@@ -48,3 +55,6 @@ export const purposeHref = (prpsCode: string) => `#/purposes/${encodeURIComponen
 
 /** The request form, with the purpose filled in when raised from a purpose's page. */
 export const raiseHref = (prpsCode?: string) => (prpsCode ? `#/raise/${encodeURIComponent(prpsCode)}` : "#/raise");
+
+/** A list sent to many people, with its progress and each row's outcome. */
+export const batchHref = (id: string) => `#/batches/${encodeURIComponent(id)}`;

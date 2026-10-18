@@ -29,6 +29,7 @@ import com.techeazyhq.cm.bil.app.ListSubPlnsQryHandler;
 import com.techeazyhq.cm.bil.app.SetDfSubStsCmd;
 import com.techeazyhq.cm.bil.app.SetDfSubStsCmdHandler;
 import com.techeazyhq.cm.bil.app.SubEligQryHandler;
+import com.techeazyhq.cm.bil.app.UsgReservationHandler;
 import com.techeazyhq.cm.bil.dom.SubPln;
 
 import reactor.core.publisher.Mono;
@@ -42,16 +43,19 @@ public class BilHandler {
     private final SubEligQryHandler subEligHandler;
     private final ListSubPlnsQryHandler listSubPlnsHandler;
     private final GetDfSubStatusQryHandler getDfSubStatusHandler;
+    private final UsgReservationHandler usgReservationHandler;
 
     public BilHandler(AssignSubPlnCmdHandler assignSubPlnHandler, SetDfSubStsCmdHandler setDfSubStsHandler,
                        GetUsgQryHandler getUsgHandler, SubEligQryHandler subEligHandler,
-                       ListSubPlnsQryHandler listSubPlnsHandler, GetDfSubStatusQryHandler getDfSubStatusHandler) {
+                       ListSubPlnsQryHandler listSubPlnsHandler, GetDfSubStatusQryHandler getDfSubStatusHandler,
+                      UsgReservationHandler usgReservationHandler) {
         this.assignSubPlnHandler = assignSubPlnHandler;
         this.setDfSubStsHandler = setDfSubStsHandler;
         this.getUsgHandler = getUsgHandler;
         this.subEligHandler = subEligHandler;
         this.listSubPlnsHandler = listSubPlnsHandler;
         this.getDfSubStatusHandler = getDfSubStatusHandler;
+        this.usgReservationHandler = usgReservationHandler;
     }
 
     public Mono<ServerResponse> listSubPlns(ServerRequest request) {
@@ -91,6 +95,27 @@ public class BilHandler {
     public Mono<ServerResponse> eligibility(ServerRequest request) {
         return subEligHandler.handle(request.pathVariable("id"))
                 .flatMap(result -> ServerResponse.ok().bodyValue(result));
+    }
+
+    /** Reserves a batch's allowance, all or nothing (ADR-036): {@code reserved} false, with what is left, when it doesn't fit. */
+    public Mono<ServerResponse> reserveUsage(ServerRequest request) {
+        String dfId = request.pathVariable("id");
+        return request.bodyToMono(CountReqDto.class)
+                .defaultIfEmpty(new CountReqDto(0))
+                .flatMap(body -> usgReservationHandler.reserve(dfId, body.count()))
+                .flatMap(reservation -> ServerResponse.ok().bodyValue(reservation));
+    }
+
+    /** Gives back what a batch reserved but didn't send. */
+    public Mono<ServerResponse> releaseUsage(ServerRequest request) {
+        String dfId = request.pathVariable("id");
+        return request.bodyToMono(CountReqDto.class)
+                .defaultIfEmpty(new CountReqDto(0))
+                .flatMap(body -> usgReservationHandler.release(dfId, body.count()))
+                .then(ServerResponse.noContent().build());
+    }
+
+    record CountReqDto(long count) {
     }
 
     record AssignSubPlnReqDto(String subPlnName) {

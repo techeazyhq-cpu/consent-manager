@@ -29,6 +29,12 @@ import type {
   CnsStats,
   StfAcct,
   StfSession,
+  CnsReqBatchReqDto,
+  CnsReqBatchSubmitRespDto,
+  CnsReqBatchTemplate,
+  CnsReqBatchDto,
+  CnsReqBatchRowDto,
+  CnsReqBatchOutcome,
   DfNameRespDto,
   DfRespDto,
   DfRole,
@@ -53,7 +59,8 @@ async function request<T>(baseUrl: string, path: string, token: string, init?: R
   const res = await fetch(`${baseUrl}${path}`, {
     ...init,
     headers: {
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
+      // a JSON body unless it's a form upload, whose boundary the browser sets
+      ...(init?.body && !(init.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
       Authorization: `Bearer ${token}`,
       ...init?.headers,
     },
@@ -155,6 +162,44 @@ export const cnsQry = {
     request<{ result: string }>(base, `/api/cns-qry/cns-arts/${cnsArtId}/verify?purpose=${encodeURIComponent(purpose)}`, token, {
       headers: { "X-Cns-Tkn": cnsTkn },
     }),
+};
+
+/** Batches of consent requests (ADR-036): one template, many people, from JSON or a CSV/Excel upload. */
+export const cnsBatch = {
+  /** `dryRun` checks the list and reports, sending nothing. */
+  submit: (base: string, token: string, body: CnsReqBatchReqDto, dryRun = false) =>
+    request<CnsReqBatchSubmitRespDto>(base, `/api/cns-cmd/cns-req-batches${dryRun ? "?dryRun=true" : ""}`, token, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  upload: (base: string, token: string, template: CnsReqBatchTemplate, file: File, dryRun = false) => {
+    const form = new FormData();
+    form.set("prpsCode", template.prpsCode);
+    form.set("dCatCodes", template.dCatCodes.join(","));
+    form.set("ntcTitle", template.ntcTitle);
+    form.set("ntcText", template.ntcText);
+    form.set("file", file, file.name);
+    return request<CnsReqBatchSubmitRespDto>(base, `/api/cns-cmd/cns-req-batches${dryRun ? "?dryRun=true" : ""}`, token, {
+      method: "POST",
+      body: form,
+    });
+  },
+  list: (base: string, token: string) => request<CnsReqBatchDto[]>(base, "/api/cns-cmd/cns-req-batches", token),
+  get: (base: string, token: string, id: string) =>
+    request<CnsReqBatchDto>(base, `/api/cns-cmd/cns-req-batches/${encodeURIComponent(id)}`, token),
+  rows: (base: string, token: string, id: string, opts: { outcome?: CnsReqBatchOutcome; limit?: number; offset?: number } = {}) => {
+    const q = new URLSearchParams({ limit: String(opts.limit ?? 100), offset: String(opts.offset ?? 0) });
+    if (opts.outcome) q.set("outcome", opts.outcome);
+    return request<CnsReqBatchRowDto[]>(base, `/api/cns-cmd/cns-req-batches/${encodeURIComponent(id)}/rows?${q}`, token);
+  },
+  /** Every row with its outcome, as a CSV file. */
+  report: async (base: string, token: string, id: string): Promise<Blob> => {
+    const res = await fetch(`${base}/api/cns-cmd/cns-req-batches/${encodeURIComponent(id)}/report.csv`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
+    return res.blob();
+  },
 };
 
 /** A tenant's consents for platform staff: counts, and requests with the data principal pseudonymised. */

@@ -37,6 +37,7 @@ import com.techeazyhq.cm.bil.app.ListSubPlnsQryHandler;
 import com.techeazyhq.cm.bil.app.OnDfActivatedEvtHandler;
 import com.techeazyhq.cm.bil.app.SetDfSubStsCmdHandler;
 import com.techeazyhq.cm.bil.app.SubEligQryHandler;
+import com.techeazyhq.cm.bil.app.UsgReservationHandler;
 import com.techeazyhq.cm.bil.dom.DfSubRepoPort;
 import com.techeazyhq.cm.bil.dom.SubPlnRepoPort;
 import com.techeazyhq.cm.bil.dom.UsgPort;
@@ -81,6 +82,11 @@ public class BilBeanConfig {
     @Bean
     public GetUsgQryHandler getUsgQryHandler(UsgPort usgPort) {
         return new GetUsgQryHandler(usgPort);
+    }
+
+    @Bean
+    public UsgReservationHandler usgReservationHandler(DfSubRepoPort dfSubRepo, SubPlnRepoPort subPlnRepo, UsgPort usgPort) {
+        return new UsgReservationHandler(dfSubRepo, subPlnRepo, usgPort);
     }
 
     @Bean

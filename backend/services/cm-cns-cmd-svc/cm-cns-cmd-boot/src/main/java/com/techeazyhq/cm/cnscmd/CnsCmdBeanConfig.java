@@ -33,6 +33,10 @@ import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techeazyhq.cm.cnscmd.app.SubmitCnsReqBatchHandler;
+import com.techeazyhq.cm.cnscmd.app.CnsReqBatchWorker;
+import com.techeazyhq.cm.cnscmd.app.CnsReqBatchSender;
+import com.techeazyhq.cm.cnscmd.app.CnsReqBatchQueries;
 import com.techeazyhq.cm.cnscmd.app.ApproveCnsCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.CnsExpirySweepJob;
 import com.techeazyhq.cm.cnscmd.app.CnsTknIssuer;
@@ -43,12 +47,16 @@ import com.techeazyhq.cm.cnscmd.app.CreateCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.DenyCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.LinkDpCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.RevokeCnsArtCmdHandler;
+import com.techeazyhq.cm.cnscmd.dom.DfUsagePort;
+import com.techeazyhq.cm.cnscmd.dom.CnsReqBatchRepoPort;
 import com.techeazyhq.cm.cnscmd.dom.CnsArtRepoPort;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqRepoPort;
 import com.techeazyhq.cm.cnscmd.dom.DfActivePort;
 import com.techeazyhq.cm.cnscmd.dom.DfSubEligiblePolicy;
 import com.techeazyhq.cm.cnscmd.dom.NtfCmdPort;
 import com.techeazyhq.cm.cnscmd.dom.ObxPort;
+import com.techeazyhq.cm.cnscmd.infra.WebClientDfUsageAdapter;
+import com.techeazyhq.cm.cnscmd.infra.R2dbcCnsReqBatchRepoAdapter;
 import com.techeazyhq.cm.cnscmd.infra.ObxRelay;
 import com.techeazyhq.cm.cnscmd.infra.PulsarCnsEvtProducer;
 import com.techeazyhq.cm.cnscmd.infra.PulsarCnsSagaEvtConsumer;
@@ -116,6 +124,40 @@ public class CnsCmdBeanConfig {
     public DfActivePort dfActivePort(WebClient.Builder builder, ReactiveCircuitBreakerFactory cbFactory,
                                       ServiceUrls serviceUrls) {
         return new WebClientDfActiveAdapter(builder, cbFactory, serviceUrls.dfReg());
+    }
+
+    @Bean
+    public DfUsagePort dfUsagePort(WebClient.Builder builder, ReactiveCircuitBreakerFactory cbFactory,
+                                   ServiceUrls serviceUrls) {
+        return new WebClientDfUsageAdapter(builder, cbFactory, serviceUrls.bil());
+    }
+
+    @Bean
+    public CnsReqBatchRepoPort cnsReqBatchRepoPort(DatabaseClient db, ObjectMapper objectMapper) {
+        return new R2dbcCnsReqBatchRepoAdapter(db, objectMapper);
+    }
+
+    @Bean
+    public SubmitCnsReqBatchHandler submitCnsReqBatchHandler(CnsReqBatchRepoPort batchRepo, DfActivePort dfActivePort,
+                                                             DfUsagePort dfUsagePort) {
+        return new SubmitCnsReqBatchHandler(batchRepo, dfActivePort, dfUsagePort);
+    }
+
+    /** A bean of its own, so its @Transactional send wraps each row's request and outcome together. */
+    @Bean
+    public CnsReqBatchSender cnsReqBatchSender(CnsReqRepoPort cnsReqRepo, CnsReqBatchRepoPort batchRepo) {
+        return new CnsReqBatchSender(cnsReqRepo, batchRepo);
+    }
+
+    @Bean
+    public CnsReqBatchWorker cnsReqBatchWorker(CnsReqBatchRepoPort batchRepo, CnsReqBatchSender sender,
+                                               DfUsagePort dfUsagePort) {
+        return new CnsReqBatchWorker(batchRepo, sender, dfUsagePort);
+    }
+
+    @Bean
+    public CnsReqBatchQueries cnsReqBatchQueries(CnsReqBatchRepoPort batchRepo) {
+        return new CnsReqBatchQueries(batchRepo);
     }
 
     @Bean

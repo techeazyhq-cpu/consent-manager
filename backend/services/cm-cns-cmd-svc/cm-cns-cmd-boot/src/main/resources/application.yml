@@ -22,6 +22,14 @@ server:
 spring:
   application:
     name: cm-cns-cmd-svc
+  # Batches (ADR-036): a JSON list of 10,000 recipients is well over the 256 KB default; uploads are at most 5 MB.
+  codec:
+    max-in-memory-size: 4MB
+  webflux:
+    multipart:
+      max-in-memory-size: 1MB
+      max-disk-usage-per-part: 6MB
+      max-parts: 16
   r2dbc:
     url: r2dbc:postgresql://localhost:5432/consent_manager?schema=cns_cmd
     username: cm

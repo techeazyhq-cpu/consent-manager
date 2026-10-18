@@ -26,6 +26,8 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import com.techeazyhq.cm.cnscmd.app.CnsReqBatchQueries;
+import com.techeazyhq.cm.cnscmd.app.SubmitCnsReqBatchHandler;
 import com.techeazyhq.cm.cnscmd.app.ApproveCnsCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.CreateCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.DenyCnsReqCmdHandler;
@@ -60,13 +62,22 @@ public class CnsCmdRouterConfig {
                                                          LinkDpCmdHandler linkDpHandler,
                                                          RefreshCnsTknCmdHandler refreshTknHandler,
                                                          GetCnsArtLiveStatusQryHandler liveStatusHandler,
-                                                         CnsTknKeys cnsTknKeys) {
+                                                         CnsTknKeys cnsTknKeys,
+                                                         SubmitCnsReqBatchHandler submitBatchHandler,
+                                                         CnsReqBatchQueries batchQueries) {
         CnsReqHandler cnsReqHandler = new CnsReqHandler(createHandler, approveHandler, denyHandler);
         CnsArtHandler cnsArtHandler = new CnsArtHandler(revokeHandler, refreshTknHandler, liveStatusHandler);
         DpLinkHandler dpLinkHandler = new DpLinkHandler(linkDpHandler);
+        CnsReqBatchHttpHandler batches = new CnsReqBatchHttpHandler(submitBatchHandler, batchQueries);
 
         return RouterFunctions.route()
                 .POST("/api/cns-cmd/cns-reqs", cnsReqHandler::create)
+                // batches (ADR-036): one template, many people, sent in the background
+                .POST("/api/cns-cmd/cns-req-batches", batches::create)
+                .GET("/api/cns-cmd/cns-req-batches", batches::list)
+                .GET("/api/cns-cmd/cns-req-batches/{id}", batches::get)
+                .GET("/api/cns-cmd/cns-req-batches/{id}/rows", batches::rows)
+                .GET("/api/cns-cmd/cns-req-batches/{id}/report.csv", batches::report)
                 .POST("/api/cns-cmd/cns-reqs/{id}/approve", cnsReqHandler::approve)
                 .POST("/api/cns-cmd/cns-reqs/{id}/deny", cnsReqHandler::deny)
                 .POST("/api/cns-cmd/cns-arts/{id}/revoke", cnsArtHandler::revoke)
