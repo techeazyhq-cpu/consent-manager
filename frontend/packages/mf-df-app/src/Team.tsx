@@ -139,7 +139,7 @@ export default function Team({ auth, role, gwBase, canManage }: Props) {
 
       <div style={{ height: 20 }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <h3 style={{ margin: 0 }}>Team</h3>
+        <h3 style={{ margin: 0 }}>Members</h3>
         <Button onClick={load}>Refresh</Button>
       </div>
 

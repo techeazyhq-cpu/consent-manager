@@ -119,4 +119,4 @@ export function friendlyError(err: unknown): string {
   return "Something went wrong";
 }
 
-export { AppShell, Icons, OrgLogo, forgetLogo, useHashRoute, type NavItem } from "./shell";
+export { AppShell, Icons, OrgLogo, forgetLogo, humanise, useHashRoute, type NavItem } from "./shell";

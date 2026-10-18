@@ -146,6 +146,16 @@
   max-width: 1180px;
 }
 
+/* Links inside tables read as links on the dark surface. */
+.cm-table a {
+  color: var(--cm-primary);
+  text-decoration: none;
+}
+
+.cm-table a:hover {
+  text-decoration: underline;
+}
+
 /* Summary stats, toolbar and logo tiles */
 
 .cm-summary {

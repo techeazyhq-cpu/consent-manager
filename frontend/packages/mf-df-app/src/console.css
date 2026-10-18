@@ -1,0 +1,164 @@
+/*
+ * Copyright 2026 Vasantha Kumar
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+ */
+
+/* The DF Console's own pieces; the shell, tiles and stats come from ui-kit. */
+
+.df-stat-button {
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.df-stat-button:hover,
+.df-stat-button:focus-visible {
+  border-color: var(--cm-primary);
+}
+
+.df-callout {
+  background: var(--cm-surface-2);
+  border: 1px solid var(--cm-warning);
+  border-radius: var(--cm-radius);
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.df-tile-counts {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--cm-text-dim);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.df-tile-counts b {
+  color: var(--cm-text);
+}
+
+.df-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.df-filters button {
+  background: var(--cm-surface);
+  border: 1px solid var(--cm-border);
+  color: var(--cm-text-dim);
+  border-radius: 16px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.df-filters button[aria-pressed="true"] {
+  border-color: var(--cm-primary);
+  color: var(--cm-text);
+}
+
+.cm-field textarea {
+  font: inherit;
+  resize: vertical;
+}
+
+/* Raising a request: the form beside a preview of what the person will see. */
+
+.df-raise {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 20px;
+  align-items: start;
+}
+
+.df-raise aside {
+  position: sticky;
+  top: 16px;
+}
+
+.df-preview {
+  background: var(--cm-surface);
+  border: 1px solid var(--cm-border);
+  border-radius: var(--cm-radius);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.df-preview-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.df-preview-purpose {
+  font-weight: 600;
+}
+
+.df-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.df-chip {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--cm-surface-2);
+  border: 1px solid var(--cm-border);
+}
+
+.df-preview-notice {
+  background: var(--cm-surface-2);
+  border-left: 3px solid var(--cm-primary);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.df-preview-notice p {
+  margin: 6px 0 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.df-preview-actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .df-raise {
+    grid-template-columns: 1fr;
+  }
+
+  .df-raise aside {
+    position: static;
+  }
+}

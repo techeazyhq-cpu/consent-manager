@@ -18,11 +18,7 @@
 
 import type { CnsLcySts } from "api-client";
 
-/** A code such as {@code ORDER_FULFILLMENT} as words a person reads: "Order fulfillment". */
-export function humanise(code: string): string {
-  const words = code.replace(/[_-]+/g, " ").trim().toLowerCase();
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
+export { humanise } from "ui-kit/src/index";
 
 /**
  * Where a consent stands, in the person's terms. A request whose notification failed is still theirs to decide, so
