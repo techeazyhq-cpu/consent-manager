@@ -16,15 +16,18 @@
  * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
  */
 
-/* CM Admin shell: a left menu beside the page; on narrow screens the menu becomes a bar across the top. */
+/*
+ * The app shell shared by CM Admin and the DP Portal: a left menu beside the page (a bar across the top on narrow
+ * screens), and the pieces their pages are built from: summary stats, logo tiles, tabs, field lists.
+ */
 
-.adm-shell {
+.cm-shell {
   display: grid;
   grid-template-columns: 232px 1fr;
   min-height: 100vh;
 }
 
-.adm-side {
+.cm-side {
   background: var(--cm-surface);
   border-right: 1px solid var(--cm-border);
   display: flex;
@@ -35,7 +38,7 @@
   height: 100vh;
 }
 
-.adm-brand {
+.cm-brand {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -43,7 +46,7 @@
   font-weight: 600;
 }
 
-.adm-brand-mark {
+.cm-brand-mark {
   width: 30px;
   height: 30px;
   border-radius: 8px;
@@ -54,20 +57,20 @@
   font-size: 14px;
 }
 
-.adm-brand small {
+.cm-brand small {
   display: block;
   font-weight: 400;
   color: var(--cm-text-dim);
   font-size: 12px;
 }
 
-.adm-nav {
+.cm-sidenav {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.adm-nav a {
+.cm-sidenav a {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -78,24 +81,35 @@
   font-size: 14px;
 }
 
-.adm-nav a:hover {
+.cm-sidenav a:hover {
   background: var(--cm-surface-2);
   color: var(--cm-text);
 }
 
-.adm-nav a[aria-current="page"] {
+.cm-sidenav a[aria-current="page"] {
   background: var(--cm-surface-2);
   color: var(--cm-text);
   box-shadow: inset 3px 0 0 var(--cm-primary);
 }
 
-.adm-nav svg {
+.cm-sidenav-badge {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: var(--cm-primary);
+  color: #fff;
+  font-size: 12px;
+  text-align: center;
+}
+
+.cm-sidenav svg {
   width: 18px;
   height: 18px;
   flex: none;
 }
 
-.adm-nav-section {
+.cm-sidenav-section {
   margin: 14px 10px 4px;
   font-size: 11px;
   letter-spacing: 0.06em;
@@ -103,63 +117,63 @@
   color: var(--cm-text-dim);
 }
 
-.adm-me {
+.cm-me {
   margin-top: auto;
   border-top: 1px solid var(--cm-border);
   padding: 12px 8px 0;
   font-size: 13px;
 }
 
-.adm-me-actions {
+.cm-me-actions {
   margin-top: 8px;
 }
 
-.adm-me-name {
+.cm-me-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.adm-me small {
+.cm-me small {
   color: var(--cm-text-dim);
 }
 
-.adm-main {
+.cm-main {
   min-width: 0;
 }
 
-.adm-main .cm-page {
+.cm-main .cm-page {
   max-width: 1180px;
 }
 
-/* Dashboard */
+/* Summary stats, toolbar and logo tiles */
 
-.adm-summary {
+.cm-summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
   gap: 12px;
   margin-bottom: 18px;
 }
 
-.adm-stat {
+.cm-stat {
   background: var(--cm-surface);
   border: 1px solid var(--cm-border);
   border-radius: var(--cm-radius);
   padding: 14px 16px;
 }
 
-.adm-stat b {
+.cm-stat b {
   display: block;
   font-size: 24px;
   font-variant-numeric: tabular-nums;
 }
 
-.adm-stat span {
+.cm-stat span {
   color: var(--cm-text-dim);
   font-size: 13px;
 }
 
-.adm-toolbar {
+.cm-toolbar {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
@@ -167,8 +181,8 @@
   margin-bottom: 14px;
 }
 
-.adm-toolbar input,
-.adm-toolbar select {
+.cm-toolbar input,
+.cm-toolbar select {
   min-width: 0;
   background: var(--cm-surface-2);
   border: 1px solid var(--cm-border);
@@ -179,17 +193,17 @@
   font-size: 14px;
 }
 
-.adm-toolbar input {
+.cm-toolbar input {
   flex: 1 1 220px;
 }
 
-.adm-tiles {
+.cm-logo-tiles {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 14px;
 }
 
-.adm-tile {
+.cm-logo-tile {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -205,19 +219,19 @@
   transition: border-color 0.15s ease, transform 0.1s ease;
 }
 
-.adm-tile:hover,
-.adm-tile:focus-visible {
+.cm-logo-tile:hover,
+.cm-logo-tile:focus-visible {
   border-color: var(--cm-primary);
   transform: translateY(-1px);
   outline: none;
 }
 
-.adm-tile-name {
+.cm-logo-tile-name {
   font-weight: 600;
   overflow-wrap: anywhere;
 }
 
-.adm-tile-meta {
+.cm-logo-tile-meta {
   color: var(--cm-text-dim);
   font-size: 12px;
   max-width: 100%;
@@ -227,7 +241,7 @@
 }
 
 /* A fiduciary's logo, or its initials on a colour taken from its id. */
-.adm-logo {
+.cm-logo {
   display: grid;
   place-items: center;
   border-radius: 14px;
@@ -238,26 +252,26 @@
   font-weight: 600;
 }
 
-.adm-logo img {
+.cm-logo img {
   width: 100%;
   height: 100%;
   object-fit: contain;
   padding: 8%;
 }
 
-/* Tenant detail */
+/* A detail page: back link, heading, tabs, fields */
 
-.adm-back {
+.cm-back {
   color: var(--cm-text-dim);
   text-decoration: none;
   font-size: 14px;
 }
 
-.adm-back:hover {
+.cm-back:hover {
   color: var(--cm-text);
 }
 
-.adm-head {
+.cm-head {
   display: flex;
   gap: 18px;
   align-items: center;
@@ -265,19 +279,19 @@
   flex-wrap: wrap;
 }
 
-.adm-head h1 {
+.cm-head h1 {
   margin: 0 0 4px;
   font-size: 22px;
   overflow-wrap: anywhere;
 }
 
-.adm-head p {
+.cm-head p {
   margin: 0;
   color: var(--cm-text-dim);
   font-size: 14px;
 }
 
-.adm-tabs {
+.cm-tabs {
   display: flex;
   gap: 4px;
   border-bottom: 1px solid var(--cm-border);
@@ -285,7 +299,7 @@
   overflow-x: auto;
 }
 
-.adm-tabs button {
+.cm-tabs button {
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
@@ -297,41 +311,41 @@
   white-space: nowrap;
 }
 
-.adm-tabs button[aria-selected="true"] {
+.cm-tabs button[aria-selected="true"] {
   color: var(--cm-text);
   border-bottom-color: var(--cm-primary);
 }
 
-.adm-fields {
+.cm-fields {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 14px 24px;
   margin: 0;
 }
 
-.adm-fields dt {
+.cm-fields dt {
   color: var(--cm-text-dim);
   font-size: 12px;
   margin-bottom: 3px;
 }
 
-.adm-fields dd {
+.cm-fields dd {
   margin: 0;
   overflow-wrap: anywhere;
 }
 
-.adm-form-grid {
+.cm-form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 0 16px;
 }
 
-.adm-section-title {
+.cm-section-title {
   margin: 22px 0 10px;
   font-size: 15px;
 }
 
-.adm-secret {
+.cm-secret {
   background: var(--cm-surface-2);
   border: 1px dashed var(--cm-warning);
   border-radius: var(--cm-radius);
@@ -340,29 +354,29 @@
   font-size: 13px;
 }
 
-.adm-secret code {
+.cm-secret code {
   display: block;
   margin-top: 6px;
   overflow-wrap: anywhere;
   font-size: 13px;
 }
 
-.adm-note {
+.cm-note {
   color: var(--cm-text-dim);
   font-size: 13px;
 }
 
-.adm-ok {
+.cm-ok {
   color: var(--cm-success);
   font-size: 13px;
 }
 
 @media (max-width: 760px) {
-  .adm-shell {
+  .cm-shell {
     grid-template-columns: 1fr;
   }
 
-  .adm-side {
+  .cm-side {
     position: static;
     height: auto;
     flex-direction: row;
@@ -374,44 +388,44 @@
     border-bottom: 1px solid var(--cm-border);
   }
 
-  .adm-brand {
+  .cm-brand {
     padding: 0;
     margin-right: auto;
   }
 
-  .adm-brand small,
-  .adm-nav-section,
-  .adm-me-name,
-  .adm-me small {
+  .cm-brand small,
+  .cm-sidenav-section,
+  .cm-me-name,
+  .cm-me small {
     display: none;
   }
 
-  .adm-me-actions {
+  .cm-me-actions {
     margin: 0;
   }
 
-  .adm-tiles {
+  .cm-logo-tiles {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 
-  .adm-nav {
+  .cm-sidenav {
     flex-direction: row;
     flex-wrap: wrap;
     width: 100%;
     order: 3;
   }
 
-  .adm-nav a span {
+  .cm-sidenav a span {
     display: none;
   }
 
-  .adm-me {
+  .cm-me {
     margin: 0;
     border: none;
     padding: 0;
   }
 
-  .adm-main .cm-page {
+  .cm-main .cm-page {
     padding: 16px;
   }
 }

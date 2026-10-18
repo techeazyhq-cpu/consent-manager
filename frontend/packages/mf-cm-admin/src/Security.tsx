@@ -51,7 +51,7 @@ export default function Security({ session }: { session: Session }) {
 
       <Card style={{ marginBottom: 18 }}>
         {me ? (
-          <dl className="adm-fields">
+          <dl className="cm-fields">
             <div>
               <dt>Name</dt>
               <dd>{me.name}</dd>
@@ -74,7 +74,7 @@ export default function Security({ session }: { session: Session }) {
         )}
       </Card>
 
-      <h3 className="adm-section-title">Where you're signed in</h3>
+      <h3 className="cm-section-title">Where you're signed in</h3>
       {sessions === null ? (
         <Spinner />
       ) : (

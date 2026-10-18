@@ -16,6 +16,8 @@
  * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
  */
 
+@import "./shell.css";
+
 :root {
   --cm-bg: #0f1720;
   --cm-surface: #1a2432;

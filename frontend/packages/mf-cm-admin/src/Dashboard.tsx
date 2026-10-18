@@ -64,22 +64,22 @@ export default function Dashboard({ session }: { session: Session }) {
       <PageHeader title="Dashboard" subtitle="The data fiduciaries on the platform. Open one to see everything about it." />
       {error ? <ErrorBanner message={error} /> : null}
 
-      <div className="adm-summary">
-        <div className="adm-stat">
+      <div className="cm-summary">
+        <div className="cm-stat">
           <b>{dfs ? count() : "–"}</b>
           <span>Tenants</span>
         </div>
-        <div className="adm-stat">
+        <div className="cm-stat">
           <b>{dfs ? count("ACTIVE") : "–"}</b>
           <span>Active</span>
         </div>
-        <div className="adm-stat">
+        <div className="cm-stat">
           <b>{dfs ? count("PENDING") : "–"}</b>
           <span>Awaiting activation</span>
         </div>
       </div>
 
-      <div className="adm-toolbar">
+      <div className="cm-toolbar">
         <input
           type="search"
           placeholder="Search by name, email or industry"
@@ -101,19 +101,19 @@ export default function Dashboard({ session }: { session: Session }) {
       {dfs === null ? (
         <Spinner label="Loading tenants…" />
       ) : shown.length === 0 ? (
-        <p className="adm-note">
+        <p className="cm-note">
           {dfs.length === 0 ? "No tenants yet. Onboard the first one." : "No tenants match your search."}
         </p>
       ) : (
-        <div className="adm-tiles">
+        <div className="cm-logo-tiles">
           {shown.map((df) => (
-            <a key={df.id} className="adm-tile" href={tenantHref(df.id)} style={{ textDecoration: "none" }}>
+            <a key={df.id} className="cm-logo-tile" href={tenantHref(df.id)} style={{ textDecoration: "none" }}>
               <DfLogo session={session} dfId={df.id} name={df.name} />
-              <div className="adm-tile-name">{df.name}</div>
-              <div className="adm-tile-meta" title={df.contactEmail}>
+              <div className="cm-logo-tile-name">{df.name}</div>
+              <div className="cm-logo-tile-meta" title={df.contactEmail}>
                 {df.contactEmail}
               </div>
-              <div className="adm-tile-meta">{[df.industry, df.subPlnName ?? "FREE"].filter(Boolean).join(" · ")}</div>
+              <div className="cm-logo-tile-meta">{[df.industry, df.subPlnName ?? "FREE"].filter(Boolean).join(" · ")}</div>
               <Badge status={df.sts} />
             </a>
           ))}
