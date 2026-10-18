@@ -20,9 +20,10 @@ package com.techeazyhq.cm.cnsqry.app.evt;
 
 import java.time.Instant;
 
+/** {@code ntcTitle} and {@code ntcText} are absent (null) in events raised before they were added. */
 public record CnsReqCreatedEvtPayload(
         String evtId, Instant occurredAt, String cnsReqId, String dfId, DpRefPayload dpRef,
-        PrpsPayload prps, ScpPayload scp) {
+        PrpsPayload prps, ScpPayload scp, String ntcTitle, String ntcText) {
 
     public record PrpsPayload(String code) {
     }

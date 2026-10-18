@@ -81,6 +81,26 @@
   border: 1px solid var(--cm-border);
 }
 
+.dp-notice {
+  background: var(--cm-surface-2);
+  border-left: 3px solid var(--cm-primary);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.dp-notice summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.dp-notice p {
+  margin: 6px 0 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  color: var(--cm-text);
+}
+
 .dp-consent-actions {
   display: flex;
   gap: 8px;

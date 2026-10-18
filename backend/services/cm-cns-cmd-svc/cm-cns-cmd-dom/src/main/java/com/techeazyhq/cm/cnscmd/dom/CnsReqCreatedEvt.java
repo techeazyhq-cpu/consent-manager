@@ -24,11 +24,18 @@ import java.util.UUID;
 import com.techeazyhq.cm.domkit.DomainEvt;
 
 /** Stage 1: Capture (plan §7c step 1). Published to {@code cm.cnscmd.evt.cns-req-created.v1}. */
+/**
+ * A fiduciary asked a person for consent. It carries the notice the fiduciary wrote, so the person sees what they're
+ * asked to agree to wherever their consents are shown (DPDPA s.5, GDPR art. 7): a decision is only informed if the
+ * notice is in front of them. The notice is the fiduciary's text, not personal data.
+ */
 public record CnsReqCreatedEvt(UUID evtId, Instant occurredAt, String cnsReqId, String dfId, DpRef dpRef, Prps prps,
-                                Scp scp)
+                                Scp scp, String ntcTitle, String ntcText)
         implements DomainEvt {
 
-    public static CnsReqCreatedEvt of(String cnsReqId, String dfId, DpRef dpRef, Prps prps, Scp scp) {
-        return new CnsReqCreatedEvt(UUID.randomUUID(), Instant.now(), cnsReqId, dfId, dpRef, prps, scp);
+    public static CnsReqCreatedEvt of(String cnsReqId, String dfId, DpRef dpRef, Prps prps, Scp scp, String ntcTitle,
+                                      String ntcText) {
+        return new CnsReqCreatedEvt(UUID.randomUUID(), Instant.now(), cnsReqId, dfId, dpRef, prps, scp, ntcTitle,
+                ntcText);
     }
 }

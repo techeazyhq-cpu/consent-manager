@@ -36,5 +36,14 @@ public record CnsArtRdMdl(
         Instant validFrom,
         Instant validUntil,
         Instant createdAt,
-        Instant updatedAt) {
+        Instant updatedAt,
+        String ntcTitle,
+        String ntcText) {
+
+    /** The same record in a new state; everything the fiduciary asked, the notice included, stays as it was. */
+    public CnsArtRdMdl with(String newCnsArtId, String newDpId, CnsLcySts newSts, Instant newValidFrom,
+                            Instant newValidUntil, Instant newUpdatedAt) {
+        return new CnsArtRdMdl(cnsReqId, newCnsArtId, dfId, newDpId, prpsCode, dCatCodes, newSts, newValidFrom,
+                newValidUntil, createdAt, newUpdatedAt, ntcTitle, ntcText);
+    }
 }

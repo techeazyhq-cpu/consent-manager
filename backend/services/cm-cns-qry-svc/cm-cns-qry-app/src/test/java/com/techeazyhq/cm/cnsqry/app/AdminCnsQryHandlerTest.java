@@ -36,8 +36,10 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 
+import com.techeazyhq.cm.cnsqry.app.evt.CnsGrantedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsNotificationFailedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsReqCreatedEvtPayload;
+import com.techeazyhq.cm.cnsqry.app.evt.CnsRevokedEvtPayload;
 import com.techeazyhq.cm.cnsqry.dom.CnsArtRdMdl;
 import com.techeazyhq.cm.cnsqry.dom.CnsArtRdMdlRepoPort;
 import com.techeazyhq.cm.cnsqry.dom.CnsHstRdMdl;
@@ -103,10 +105,35 @@ class AdminCnsQryHandlerTest {
     }
 
     @Test
+    void theNoticeTheFiduciaryWroteStaysWithTheConsentThroughItsLife() {
+        Projector projector = new Projector(readModel, new NoHistory(), new Checkpoints());
+        projector.onCnsReqCreated(new CnsReqCreatedEvtPayload("e1", T0, "r1", "df-1", null,
+                new CnsReqCreatedEvtPayload.PrpsPayload("ORDER_FULFILLMENT"), null, "Order updates",
+                "We email you about your orders until they arrive.")).block();
+        projector.onCnsGranted(new CnsGrantedEvtPayload("e2", T0.plusSeconds(5), "r1", "a1", "df-1", null, "tkn",
+                new CnsGrantedEvtPayload.ValPrdPayload(T0, T0.plusSeconds(3600)))).block();
+        projector.onCnsRevoked(new CnsRevokedEvtPayload("e3", T0.plusSeconds(9), "a1", null, "df-1")).block();
+
+        CnsArtRdMdl revoked = rows.get("r1");
+        assertEquals(CnsLcySts.REVOKED, revoked.lcySts());
+        assertEquals("Order updates", revoked.ntcTitle());
+        assertEquals("We email you about your orders until they arrive.", revoked.ntcText());
+    }
+
+    @Test
+    void aRequestFromBeforeNoticesWereProjectedHasNone() {
+        Projector projector = new Projector(readModel, new NoHistory(), new Checkpoints());
+        projector.onCnsReqCreated(new CnsReqCreatedEvtPayload("e1", T0, "r1", "df-1", null,
+                new CnsReqCreatedEvtPayload.PrpsPayload("ORDER_FULFILLMENT"), null, null, null)).block();
+
+        assertNull(rows.get("r1").ntcTitle());
+    }
+
+    @Test
     void aRequestWhosePrincipalCouldNotBeReachedIsProjectedAsFailed() {
         Projector projector = new Projector(readModel, new NoHistory(), new Checkpoints());
         projector.onCnsReqCreated(new CnsReqCreatedEvtPayload("e1", T0, "r1", "df-1", null,
-                new CnsReqCreatedEvtPayload.PrpsPayload("ORDER_FULFILLMENT"), null)).block();
+                new CnsReqCreatedEvtPayload.PrpsPayload("ORDER_FULFILLMENT"), null, null, null)).block();
 
         projector.onCnsNotificationFailed(new CnsNotificationFailedEvtPayload("e2", T0.plusSeconds(5), "r1", "df-1", null))
                 .block();
@@ -120,7 +147,7 @@ class AdminCnsQryHandlerTest {
     private void row(String cnsReqId, String dfId, String dpId, CnsLcySts sts, int minute) {
         Instant at = T0.plusSeconds(60L * minute);
         rows.put(cnsReqId, new CnsArtRdMdl(cnsReqId, null, dfId, dpId, "ORDER_FULFILLMENT", Set.of("EMAIL"), sts,
-                null, null, at, at));
+                null, null, at, at, "Order updates", "We email you about your orders."));
     }
 
     private final class InMemoryReadModel implements CnsArtRdMdlRepoPort {
@@ -137,7 +164,7 @@ class AdminCnsQryHandlerTest {
 
         @Override
         public Mono<CnsArtRdMdl> findByCnsArtId(String cnsArtId) {
-            return Mono.empty();
+            return Mono.justOrEmpty(rows.values().stream().filter(r -> cnsArtId.equals(r.cnsArtId())).findFirst());
         }
 
         @Override
