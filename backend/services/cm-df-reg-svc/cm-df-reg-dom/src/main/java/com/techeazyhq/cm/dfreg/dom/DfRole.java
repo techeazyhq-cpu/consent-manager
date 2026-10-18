@@ -49,6 +49,11 @@ public enum DfRole {
         return this == OWNER || this == ADMIN;
     }
 
+    /** Who may take sandbox API keys for their fiduciary (ADR-038): the people who build integrations. */
+    public boolean usesSandbox() {
+        return this == OWNER || this == ADMIN || this == DEVELOPER;
+    }
+
     public boolean raisesRequests() {
         return this == OWNER || this == ADMIN || this == CONSENT_MANAGER;
     }

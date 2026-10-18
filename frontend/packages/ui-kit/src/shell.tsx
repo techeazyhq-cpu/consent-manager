@@ -259,6 +259,11 @@ export const Icons: Record<string, ReactNode> = {
       <path d="M10 13l11-10" />
     </svg>
   ),
+  code: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" />
+    </svg>
+  ),
   upload: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
       <path d="M12 15V3M7 8l5-5 5 5" />

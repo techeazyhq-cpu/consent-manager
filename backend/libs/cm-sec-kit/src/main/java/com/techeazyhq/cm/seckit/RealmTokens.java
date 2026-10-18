@@ -19,9 +19,11 @@
 package com.techeazyhq.cm.seckit;
 
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
@@ -70,8 +72,18 @@ public final class RealmTokens {
      */
     public static ReactiveAuthenticationManagerResolver<ServerWebExchange> resolver(String issuerBase, String jwksBase,
                                                                                     String realmPrefix) {
+        return resolver(issuerBase, jwksBase, realmPrefix, EnumSet.allOf(Audience.class));
+    }
+
+    /**
+     * Only {@code audiences}' realms. The sandbox uses this to believe production's fiduciary realm, and nothing else
+     * of production's, on the one route that gives a production fiduciary's people their sandbox keys (ADR-038).
+     */
+    public static ReactiveAuthenticationManagerResolver<ServerWebExchange> resolver(String issuerBase, String jwksBase,
+                                                                                    String realmPrefix,
+                                                                                    Set<Audience> audiences) {
         Map<String, ReactiveAuthenticationManager> byIssuer = new HashMap<>();
-        trustedIssuers(issuerBase, realmPrefix).forEach((issuer, audience) -> {
+        trustedIssuers(issuerBase, realmPrefix, audiences).forEach((issuer, audience) -> {
             String realm = issuer.substring(withSlash(issuerBase).length());
             NimbusReactiveJwtDecoder decoder = NimbusReactiveJwtDecoder
                     .withJwkSetUri(withSlash(jwksBase) + realm + "/protocol/openid-connect/certs")
@@ -86,9 +98,13 @@ public final class RealmTokens {
 
     /** The only issuers a service believes, each with its audience; a token from any other is refused. */
     static Map<String, Audience> trustedIssuers(String issuerBase, String realmPrefix) {
+        return trustedIssuers(issuerBase, realmPrefix, EnumSet.allOf(Audience.class));
+    }
+
+    static Map<String, Audience> trustedIssuers(String issuerBase, String realmPrefix, Set<Audience> audiences) {
         String prefix = realmPrefix == null ? "" : realmPrefix;
         Map<String, Audience> issuers = new HashMap<>();
-        for (Audience audience : Audience.values()) {
+        for (Audience audience : audiences) {
             issuers.put(withSlash(issuerBase) + prefix + audience.realm(), audience);
         }
         return issuers;

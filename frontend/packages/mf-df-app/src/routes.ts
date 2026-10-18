@@ -27,7 +27,8 @@ export type Route =
   | { page: "purpose"; prpsCode: string }
   | { page: "send-to-many" }
   | { page: "batches" }
-  | { page: "batch"; id: string };
+  | { page: "batch"; id: string }
+  | { page: "playground" };
 
 /** Anything unrecognised lands on the dashboard, the default page. */
 export function parseRoute(hash: string): Route {
@@ -40,6 +41,8 @@ export function parseRoute(hash: string): Route {
     case "organisation":
     case "account":
       return { page: parts[0] };
+    case "playground":
+      return { page: "playground" };
     case "send-to-many":
       return { page: "send-to-many" };
     case "batches":

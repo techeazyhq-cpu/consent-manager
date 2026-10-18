@@ -24,6 +24,7 @@ import "./console.css";
 import { useConsole } from "./console";
 import { BatchDetail, Batches, SendToMany } from "./Batches";
 import { Account, Dashboard, Organisation, PurposeDetail, Requests } from "./pages";
+import Playground from "./Playground";
 import Raise from "./Raise";
 import Team from "./Team";
 import { ROLE_LABELS, managesTeam, raisesRequests } from "./roles";
@@ -53,6 +54,7 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
       : []),
     { key: "requests", href: "#/requests", label: "Requests", section: "Consent", icon: Icons.list },
     { key: "batches", href: "#/batches", label: "Lists sent", section: "Consent", icon: Icons.inbox },
+    { key: "playground", href: "#/playground", label: "API playground", section: "Developers", icon: Icons.code },
     { key: "team", href: "#/team", label: "Team", section: "Organisation", icon: Icons.people },
     { key: "organisation", href: "#/organisation", label: "Organisation", section: "Organisation", icon: Icons.building },
     { key: "account", href: "#/account", label: "Account", section: "Organisation", icon: Icons.user },
@@ -89,6 +91,7 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
         )
       ) : null}
       {route.page === "requests" ? <Requests key={statusFilter?.join() ?? "all"} console={c} initial={statusFilter} /> : null}
+      {route.page === "playground" ? <Playground console={c} /> : null}
       {route.page === "send-to-many" ? <SendToMany console={c} /> : null}
       {route.page === "batches" ? <Batches console={c} /> : null}
       {route.page === "batch" ? <BatchDetail key={route.id} console={c} id={route.id} /> : null}

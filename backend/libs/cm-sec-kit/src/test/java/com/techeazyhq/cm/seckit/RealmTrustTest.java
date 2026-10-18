@@ -72,6 +72,14 @@ class RealmTrustTest {
     }
 
     @Test
+    void theSandboxKeysRouteBelievesOnlyProductionsFiduciaryRealm() {
+        String base = "http://localhost:8080/realms/";
+        Map<String, Audience> keysRoute = RealmTokens.trustedIssuers(base, "", Set.of(Audience.FIDUCIARY));
+
+        assertEquals(Map.of(base + "cm-df", Audience.FIDUCIARY), keysRoute);
+    }
+
+    @Test
     void eachRealmKeepsOnlyItsOwnRoles() {
         AuthCtx staff = AuthCtx.from(token("cm-staff", List.of("CM_ADMIN", "DP", "DF_OWNER"), "df-1"));
         assertEquals(Set.of("CM_ADMIN"), staff.roles());
