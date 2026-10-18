@@ -29,6 +29,9 @@ export type DfSubSts = "ACTIVE" | "SUSPENDED";
 export interface ProblemDetail {
   type: string;
   title: string;
+  status?: number;
+  /** The human-readable explanation, when the service gives one. */
+  detail?: string;
 }
 
 export interface DfRespDto {
