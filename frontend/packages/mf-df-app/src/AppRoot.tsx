@@ -23,7 +23,7 @@ import { memberRoleOf } from "./roles";
 import DfConsoleApp from "./App";
 
 const KC_BASE = import.meta.env.VITE_KC_BASE_URL ?? "http://localhost:8080";
-const KC_REALM = import.meta.env.VITE_KC_REALM ?? "cm-realm";
+const KC_REALM = import.meta.env.VITE_KC_REALM ?? "cm-df";
 const KC_CLIENT = import.meta.env.VITE_KC_CLIENT_ID ?? "cm-df-app";
 const GW_BASE = import.meta.env.VITE_GW_BASE_URL ?? "http://localhost:9000";
 

@@ -43,11 +43,6 @@ spring:
     schemas: ntf
     default-schema: ntf
     locations: classpath:db/migration
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8080/realms/cm-realm
 
 cm:
   pulsar:

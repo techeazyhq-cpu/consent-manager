@@ -20,6 +20,7 @@ package com.techeazyhq.cm.seckit;
 
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.security.oauth2.jwt.Jwt;
 
@@ -43,12 +44,16 @@ public record AuthCtx(String subject, String dfId, String dpId, Set<String> role
      * (plan §7a), not a separate custom claim.
      */
     public static AuthCtx from(Jwt jwt) {
+        // Each realm is believed only for its own audience (ADR-035): staff roles from cm-staff, fiduciary roles and
+        // df_id from cm-df, DP from cm-dp. Anything else in the token is dropped, never honoured.
+        Audience audience = Audience.ofIssuer(jwt.getIssuer() == null ? null : jwt.getIssuer().toString()).orElse(null);
         List<String> roleClaim = jwt.getClaimAsStringList(CLAIM_ROLES);
-        Set<String> roles = roleClaim == null ? Set.of() : Set.copyOf(roleClaim);
+        Set<String> roles = audience == null || roleClaim == null ? Set.of()
+                : roleClaim.stream().filter(audience::mayAssert).collect(Collectors.toUnmodifiableSet());
         return new AuthCtx(
                 jwt.getSubject(),
-                jwt.getClaimAsString(CLAIM_DF_ID),
-                roles.contains(ROLE_DP) ? jwt.getSubject() : null,
+                audience == Audience.FIDUCIARY ? jwt.getClaimAsString(CLAIM_DF_ID) : null,
+                audience == Audience.DATA_PRINCIPAL && roles.contains(ROLE_DP) ? jwt.getSubject() : null,
                 roles);
     }
 

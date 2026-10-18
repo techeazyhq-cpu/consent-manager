@@ -1,7 +1,7 @@
 {
-  "realm": "cm-realm",
-  "displayName": "Consent Manager",
-  "loginTheme": "cm-base",
+  "realm": "cm-df",
+  "displayName": "Consent Manager · Data fiduciaries",
+  "loginTheme": "cm-df",
   "enabled": true,
   "sslRequired": "none",
   "registrationAllowed": false,
@@ -15,20 +15,8 @@
   "roles": {
     "realm": [
       {
-        "name": "CM_ADMIN",
-        "description": "Consent Manager platform administrator"
-      },
-      {
-        "name": "CM_OPERATOR",
-        "description": "Consent Manager platform operator: views tenants and onboards them"
-      },
-      {
         "name": "DF",
         "description": "Data Fiduciary"
-      },
-      {
-        "name": "DP",
-        "description": "Data Principal"
       },
       {
         "name": "DF_OWNER",
@@ -53,60 +41,6 @@
     ]
   },
   "clients": [
-    {
-      "clientId": "cm-dp-portal",
-      "name": "DP portal (data principals)",
-      "enabled": true,
-      "publicClient": true,
-      "protocol": "openid-connect",
-      "standardFlowEnabled": true,
-      "directAccessGrantsEnabled": true,
-      "implicitFlowEnabled": false,
-      "serviceAccountsEnabled": false,
-      "redirectUris": [
-        "http://localhost:5174/*"
-      ],
-      "webOrigins": [
-        "+"
-      ],
-      "attributes": {
-        "pkce.code.challenge.method": "S256",
-        "login_theme": "cm-dp"
-      },
-      "defaultClientScopes": [
-        "openid",
-        "profile",
-        "email",
-        "roles"
-      ],
-      "protocolMappers": [
-        {
-          "name": "roles",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-realm-role-mapper",
-          "config": {
-            "claim.name": "roles",
-            "multivalued": "true",
-            "userinfo.token.claim": "true",
-            "id.token.claim": "true",
-            "access.token.claim": "true"
-          }
-        },
-        {
-          "name": "sub-in-access-token",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-property-mapper",
-          "config": {
-            "user.attribute": "id",
-            "claim.name": "sub",
-            "jsonType.label": "String",
-            "userinfo.token.claim": "true",
-            "id.token.claim": "true",
-            "access.token.claim": "true"
-          }
-        }
-      ]
-    },
     {
       "clientId": "cm-df-app",
       "name": "DF app (data fiduciary staff)",
@@ -173,140 +107,9 @@
           }
         }
       ]
-    },
-    {
-      "clientId": "cm-cm-admin",
-      "name": "CM Admin (platform administrators)",
-      "enabled": true,
-      "publicClient": true,
-      "protocol": "openid-connect",
-      "standardFlowEnabled": true,
-      "directAccessGrantsEnabled": true,
-      "implicitFlowEnabled": false,
-      "serviceAccountsEnabled": false,
-      "redirectUris": [
-        "http://localhost:5176/*"
-      ],
-      "webOrigins": [
-        "+"
-      ],
-      "attributes": {
-        "pkce.code.challenge.method": "S256",
-        "login_theme": "cm-admin"
-      },
-      "defaultClientScopes": [
-        "openid",
-        "profile",
-        "email",
-        "roles"
-      ],
-      "protocolMappers": [
-        {
-          "name": "roles",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-realm-role-mapper",
-          "config": {
-            "claim.name": "roles",
-            "multivalued": "true",
-            "userinfo.token.claim": "true",
-            "id.token.claim": "true",
-            "access.token.claim": "true"
-          }
-        },
-        {
-          "name": "sub-in-access-token",
-          "protocol": "openid-connect",
-          "protocolMapper": "oidc-usermodel-property-mapper",
-          "config": {
-            "user.attribute": "id",
-            "claim.name": "sub",
-            "jsonType.label": "String",
-            "userinfo.token.claim": "true",
-            "id.token.claim": "true",
-            "access.token.claim": "true"
-          }
-        }
-      ]
     }
   ],
-  "users": [
-    {
-      "username": "admin@cm.local",
-      "email": "admin@cm.local",
-      "enabled": true,
-      "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "admin",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "CM_ADMIN"
-      ],
-      "requiredActions": [],
-      "firstName": "CM",
-      "lastName": "Admin"
-    },
-    {
-      "username": "operator@cm.local",
-      "email": "operator@cm.local",
-      "enabled": true,
-      "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "operator",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "CM_OPERATOR"
-      ],
-      "requiredActions": [],
-      "firstName": "CM",
-      "lastName": "Operator"
-    },
-    {
-      "username": "df-demo@cm.local",
-      "email": "df-demo@cm.local",
-      "enabled": true,
-      "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "df-demo",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "DF"
-      ],
-      "requiredActions": [],
-      "firstName": "DF",
-      "lastName": "Demo"
-    },
-    {
-      "username": "dp-demo@cm.local",
-      "email": "dp-demo@cm.local",
-      "enabled": true,
-      "emailVerified": true,
-      "credentials": [
-        {
-          "type": "password",
-          "value": "dp-demo",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "DP"
-      ],
-      "requiredActions": [],
-      "firstName": "DP",
-      "lastName": "Demo"
-    }
-  ],
+  "users": [],
   "authenticationFlows": [
     {
       "alias": "cm-otp-browser",
@@ -356,7 +159,7 @@
         "ntfBaseUrl": "http://cm-ntf-svc:8084",
         "codeTtlSeconds": "300",
         "maxAttempts": "5",
-        "autoRegisterRole": "DP"
+        "autoRegisterRole": ""
       }
     }
   ],

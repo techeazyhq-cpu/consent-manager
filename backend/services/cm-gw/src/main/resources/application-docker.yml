@@ -22,17 +22,6 @@
 # YAML-defined predicates for every route (this broke the gateway on first docker-compose run
 # — "Property: spring.cloud.gateway.routes[0].predicates ... must not be empty").
 spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          # jwk-set-uri, not issuer-uri: fetches signing keys from the container-network
-          # hostname without also requiring the token's iss claim to equal that same
-          # hostname — tokens obtained by a host-side client (curl, a browser on localhost)
-          # carry iss=http://localhost:8080/..., which issuer-uri would reject as a mismatch
-          # even though the signature is valid and the token genuinely came from this same
-          # Keycloak. Discovered and fixed during Phase 1 verification.
-          jwk-set-uri: http://keycloak:8080/realms/cm-realm/protocol/openid-connect/certs
   data:
     redis:
       host: redis
@@ -69,6 +58,10 @@ spring:
             - Path=/api/stf/**
 
 cm:
+  # Tokens come from three realms (ADR-035): their issuer is the browser-facing address (cm.security.issuer-base,
+  # http://localhost:8080/realms/ by default), but keys are fetched from Keycloak on the container network.
+  security:
+    jwks-base: http://keycloak:8080/realms/
   pdp:
     base-url: http://opa:8181
   service-urls:

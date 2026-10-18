@@ -85,7 +85,7 @@ services:
     volumes:
       - ./keycloak/realm-export:/opt/keycloak/data/import
       # Provider JARs built by ./gradlew build before `docker compose up`; start-dev picks them up on every start.
-      # cm-idn-otp-spi (plan §9a): cm-realm's browser flow, sending codes through cm-ntf-svc
+      # cm-idn-otp-spi (plan §9a): every realm's browser flow (cm-dp, cm-df, cm-staff; ADR-035), sending codes through cm-ntf-svc
       # (http://cm-ntf-svc:8084, authenticator config "cm-otp"). cm-idn-theme: the login themes, one per audience.
       - ../backend/keycloak-ext/build/providers:/opt/keycloak/providers
 

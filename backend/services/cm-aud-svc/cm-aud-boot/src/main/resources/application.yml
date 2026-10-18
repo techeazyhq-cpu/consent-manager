@@ -39,11 +39,6 @@ spring:
     schemas: aud
     default-schema: aud
     locations: classpath:db/migration
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8080/realms/cm-realm
 
 cm:
   pulsar:

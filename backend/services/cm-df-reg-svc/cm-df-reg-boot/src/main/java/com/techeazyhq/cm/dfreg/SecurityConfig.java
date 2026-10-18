@@ -18,15 +18,15 @@
 
 package com.techeazyhq.cm.dfreg;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
-import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+
+import com.techeazyhq.cm.seckit.RealmTokens;
 
 /**
  * Every API call needs a valid token, re-validated here although cm-gw already checked it (defense in depth), with
@@ -41,7 +41,10 @@ public class SecurityConfig {
     private static final String[] STAFF = {"CM_ADMIN", "CM_OPERATOR"};
 
     @Bean
-    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+    public SecurityWebFilterChain securityWebFilterChain(
+            ServerHttpSecurity http,
+            @Value("${cm.security.issuer-base:http://localhost:8080/realms/}") String issuerBase,
+            @Value("${cm.security.jwks-base:http://localhost:8080/realms/}") String jwksBase) {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(ex -> ex
@@ -53,17 +56,9 @@ public class SecurityConfig {
                         .pathMatchers("/api/df-reg/dfs", "/api/df-reg/dfs/*/activate", "/api/df-reg/dfs/*/profile",
                                 "/api/df-reg/dfs/*/members").hasRole("CM_ADMIN")
                         .anyExchange().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(rolesConverter())))
+                .oauth2ResourceServer(oauth2 -> oauth2.authenticationManagerResolver(
+                        RealmTokens.resolver(issuerBase, jwksBase)))
                 .build();
     }
 
-    /** Keycloak puts realm roles in a {@code roles} claim; {@code hasRole} expects {@code ROLE_} authorities. */
-    private static ReactiveJwtAuthenticationConverterAdapter rolesConverter() {
-        JwtGrantedAuthoritiesConverter authorities = new JwtGrantedAuthoritiesConverter();
-        authorities.setAuthoritiesClaimName("roles");
-        authorities.setAuthorityPrefix("ROLE_");
-        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(authorities);
-        return new ReactiveJwtAuthenticationConverterAdapter(converter);
-    }
 }

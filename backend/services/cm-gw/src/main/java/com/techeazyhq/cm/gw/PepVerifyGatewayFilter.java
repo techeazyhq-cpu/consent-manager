@@ -36,6 +36,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 
+import com.techeazyhq.cm.seckit.AuthCtx;
+
 import reactor.core.publisher.Mono;
 
 /**
@@ -117,7 +119,8 @@ public class PepVerifyGatewayFilter implements GlobalFilter, Ordered {
     private static Mono<String> callerDfId(ServerWebExchange exchange) {
         return exchange.getPrincipal()
                 .filter(JwtAuthenticationToken.class::isInstance)
-                .flatMap(principal -> Mono.justOrEmpty(((JwtAuthenticationToken) principal).getToken().getClaimAsString("df_id")))
+                // only the fiduciaries' realm says which fiduciary a caller is (ADR-035)
+                .flatMap(principal -> Mono.justOrEmpty(AuthCtx.from(((JwtAuthenticationToken) principal).getToken()).dfId()))
                 .defaultIfEmpty("");
     }
 

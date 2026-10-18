@@ -45,7 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The login themes this JAR ships, and cm-realm's use of them. Keycloak resolves a missing theme, parent or message
+ * The login themes this JAR ships, and the three realms' use of them (ADR-035). Keycloak resolves a missing theme, parent or message
  * key silently (falling back to its default theme or printing the key), so these are checked here rather than found
  * on a sign-in page.
  */
@@ -116,53 +116,50 @@ class CmLoginThemesTest {
         }
     }
 
-    @Test
-    void theRealmDefaultsToTheBaseTheme() throws IOException {
-        assertEquals(BASE_THEME, realmExport().path("loginTheme").asText());
-    }
-
     @ParameterizedTest
-    @CsvSource({"cm-dp-portal, cm-dp", "cm-df-app, cm-df", "cm-cm-admin, cm-admin"})
-    void eachFrontendHasItsOwnClientShowingItsAudienceTheme(String clientId, String theme) throws IOException {
-        JsonNode client = client(clientId);
+    @CsvSource({"cm-dp, cm-dp-portal, cm-dp", "cm-df, cm-df-app, cm-df", "cm-staff, cm-cm-admin, cm-admin"})
+    void eachAudienceHasItsOwnRealmWithOnlyItsFrontendShowingItsTheme(String realm, String clientId, String theme)
+            throws IOException {
+        JsonNode export = realmExport(realm);
+        assertEquals(realm, export.path("realm").asText());
+        assertEquals(theme, export.path("loginTheme").asText(), realm + " defaults to its audience's theme");
 
+        List<String> clients = new java.util.ArrayList<>();
+        export.get("clients").forEach(c -> clients.add(c.get("clientId").asText()));
+        assertEquals(List.of(clientId), clients, realm + " holds only its own frontend");
+
+        JsonNode client = export.get("clients").get(0);
         assertTrue(client.path("publicClient").asBoolean(), clientId + " must be public (PKCE, no secret)");
         assertEquals(theme, client.path("attributes").path("login_theme").asText());
     }
 
-    @Test
-    void noBrowserClientUsesAThemeThisJarDoesNotShip() throws IOException {
-        Set<String> shippedThemes = new HashSet<>(AUDIENCE_THEMES);
-        shippedThemes.add(BASE_THEME);
+    @ParameterizedTest
+    @CsvSource({"cm-dp, DP", "cm-df, ''", "cm-staff, ''"})
+    void onlyDataPrincipalsCanSignThemselvesUp(String realm, String autoRegisterRole) throws IOException {
+        JsonNode configs = realmExport(realm).get("authenticatorConfig");
+        assertEquals(autoRegisterRole, configs.get(0).path("config").path("autoRegisterRole").asText(), realm);
+    }
 
-        for (JsonNode client : realmExport().get("clients")) {
-            String theme = client.path("attributes").path("login_theme").asText("");
-            if (!theme.isEmpty()) {
-                assertTrue(shippedThemes.contains(theme), client.get("clientId").asText() + " uses " + theme);
-            }
-        }
+    @ParameterizedTest
+    @CsvSource({"cm-dp, DP", "cm-df, DF", "cm-staff, CM_"})
+    void eachRealmDefinesOnlyItsAudiencesRoles(String realm, String prefix) throws IOException {
+        realmExport(realm).path("roles").path("realm").forEach(role ->
+                assertTrue(role.get("name").asText().startsWith(prefix), realm + " defines " + role.get("name")));
     }
 
     @Test
-    void theSharedBrowserClientIsGone() throws IOException {
-        for (JsonNode client : realmExport().get("clients")) {
-            assertFalse("cm-shell".equals(client.get("clientId").asText()), "cm-shell still in cm-realm.json");
-        }
+    void theOldSharedRealmIsGone() {
+        assertFalse(Path.of(exportsDir(), "cm-realm.json").toFile().exists(), "cm-realm.json is back");
     }
 
-    private JsonNode client(String clientId) throws IOException {
-        for (JsonNode client : realmExport().get("clients")) {
-            if (clientId.equals(client.get("clientId").asText())) {
-                return client;
-            }
-        }
-        throw new AssertionError(clientId + " missing from cm-realm.json");
+    private JsonNode realmExport(String realm) throws IOException {
+        return json.readTree(Path.of(exportsDir(), realm + ".json").toFile());
     }
 
-    private JsonNode realmExport() throws IOException {
-        String realmExportPath = System.getProperty("cm.realmExport");
-        assertNotNull(realmExportPath, "cm.realmExport system property not set by the build");
-        return json.readTree(Path.of(realmExportPath).toFile());
+    private static String exportsDir() {
+        String dir = System.getProperty("cm.realmExports");
+        assertNotNull(dir, "cm.realmExports system property not set by the build");
+        return dir;
     }
 
     private Properties loginProperties(String theme, String file) throws IOException {

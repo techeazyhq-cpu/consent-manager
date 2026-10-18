@@ -22,11 +22,6 @@ server:
 spring:
   application:
     name: cm-df-reg-svc
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8080/realms/cm-realm
   r2dbc:
     url: r2dbc:postgresql://localhost:5432/consent_manager?schema=df_reg
     username: cm
@@ -46,7 +41,7 @@ cm:
     bil: http://localhost:8085
   keycloak:
     base-url: http://localhost:8080
-    realm: cm-realm
+    realm: cm-df
     admin-username: admin
     admin-password: admin
   dfreg:

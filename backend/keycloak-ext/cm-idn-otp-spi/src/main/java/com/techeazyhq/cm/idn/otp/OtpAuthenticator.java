@@ -40,7 +40,7 @@ import java.util.Map;
 
 /**
  * Passwordless sign-in (plan §9a): the person gives an email address or phone number, receives a 6-digit code through
- * cm-ntf-svc, and types it in. It replaces the username/password step of cm-realm's browser flow, so CM Admin, the DF
+ * cm-ntf-svc, and types it in. It replaces the username/password step of each realm's browser flow, so CM Admin, the DF
  * app and the DP portal all sign in the same way.
  *
  * <ul>

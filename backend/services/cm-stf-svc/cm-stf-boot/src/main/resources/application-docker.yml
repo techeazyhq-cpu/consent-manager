@@ -14,14 +14,10 @@
 #
 # @author Vasantha Kumar <vasantha.kumar@hotmail.com>
 
-spring:
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          # jwk-set-uri, not issuer-uri: see cm-gw's application-docker.yml for why.
-          jwk-set-uri: http://keycloak:8080/realms/cm-realm/protocol/openid-connect/certs
-
 cm:
+  # Tokens come from three realms (ADR-035): their issuer is the browser-facing address (cm.security.issuer-base,
+  # http://localhost:8080/realms/ by default), but keys are fetched from Keycloak on the container network.
+  security:
+    jwks-base: http://keycloak:8080/realms/
   keycloak:
     base-url: http://keycloak:8080

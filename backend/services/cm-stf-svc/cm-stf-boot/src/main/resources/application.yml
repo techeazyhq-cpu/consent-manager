@@ -22,16 +22,11 @@ server:
 spring:
   application:
     name: cm-stf-svc
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: http://localhost:8080/realms/cm-realm
 
 cm:
   keycloak:
     base-url: http://localhost:8080
-    realm: cm-realm
+    realm: cm-staff
     admin-username: admin
     admin-password: admin
 
