@@ -226,3 +226,63 @@ export interface AuthInfo {
   email?: string;
   logout: () => void;
 }
+
+/** What a batch asks every recipient (ADR-036). */
+export interface CnsReqBatchTemplate {
+  prpsCode: string;
+  dCatCodes: string[];
+  ntcTitle: string;
+  ntcText: string;
+}
+
+/** A recipient: `contact` (email or mobile), or `email` or `phone`; `ref` is the fiduciary's own reference. */
+export interface CnsReqBatchRecipient {
+  contact?: string;
+  email?: string;
+  phone?: string;
+  ref?: string;
+}
+
+export interface CnsReqBatchReqDto extends CnsReqBatchTemplate {
+  recipients: CnsReqBatchRecipient[];
+}
+
+export type CnsReqBatchOutcome = "PENDING" | "SENT" | "INVALID" | "DUPLICATE" | "FAILED";
+
+export interface CnsReqBatchDto {
+  id: string;
+  sts: "QUEUED" | "SENDING" | "DONE";
+  source: "API" | "CSV" | "XLSX";
+  fileName: string | null;
+  prpsCode: string;
+  dCatCodes: string[];
+  ntcTitle: string;
+  total: number;
+  valid: number;
+  invalid: number;
+  duplicate: number;
+  sent: number;
+  failed: number;
+  pending: number;
+  createdAt: string;
+  finishedAt: string | null;
+}
+
+export interface CnsReqBatchRowDto {
+  rowNo: number;
+  contact: string;
+  ref: string | null;
+  outcome: CnsReqBatchOutcome;
+  cnsReqId: string | null;
+  problem: string | null;
+}
+
+export interface CnsReqBatchSubmitRespDto {
+  /** False for a dry run. */
+  stored: boolean;
+  batch: CnsReqBatchDto;
+  /** The first problem rows; the batch's rows hold all of them. */
+  problems: CnsReqBatchRowDto[];
+  /** Requests left this month (after this batch, if stored). */
+  available: number;
+}

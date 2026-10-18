@@ -22,6 +22,7 @@ import type { CnsLcySts, DfRole } from "api-client";
 import { AppShell, ErrorBanner, Icons, PageHeader, useHashRoute, type NavItem } from "ui-kit/src/index";
 import "./console.css";
 import { useConsole } from "./console";
+import { BatchDetail, Batches, SendToMany } from "./Batches";
 import { Account, Dashboard, Organisation, PurposeDetail, Requests } from "./pages";
 import Raise from "./Raise";
 import Team from "./Team";
@@ -45,15 +46,19 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
   const items: NavItem[] = [
     { key: "dashboard", href: "#/dashboard", label: "Dashboard", section: "Consent", icon: Icons.dashboard },
     ...(raisesRequests(role)
-      ? [{ key: "raise", href: "#/raise", label: "Raise a request", section: "Consent", icon: Icons.send }]
+      ? [
+          { key: "raise", href: "#/raise", label: "Raise a request", section: "Consent", icon: Icons.send },
+          { key: "send-to-many", href: "#/send-to-many", label: "Send to many", section: "Consent", icon: Icons.upload },
+        ]
       : []),
     { key: "requests", href: "#/requests", label: "Requests", section: "Consent", icon: Icons.list },
+    { key: "batches", href: "#/batches", label: "Lists sent", section: "Consent", icon: Icons.inbox },
     { key: "team", href: "#/team", label: "Team", section: "Organisation", icon: Icons.people },
     { key: "organisation", href: "#/organisation", label: "Organisation", section: "Organisation", icon: Icons.building },
     { key: "account", href: "#/account", label: "Account", section: "Organisation", icon: Icons.user },
   ];
-  // a purpose's page belongs under the dashboard in the menu
-  const current = route.page === "purpose" ? "dashboard" : route.page;
+  // a purpose's page belongs under the dashboard in the menu, and a list's under the lists sent
+  const current = route.page === "purpose" ? "dashboard" : route.page === "batch" ? "batches" : route.page;
 
   return (
     <AppShell
@@ -84,6 +89,9 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
         )
       ) : null}
       {route.page === "requests" ? <Requests key={statusFilter?.join() ?? "all"} console={c} initial={statusFilter} /> : null}
+      {route.page === "send-to-many" ? <SendToMany console={c} /> : null}
+      {route.page === "batches" ? <Batches console={c} /> : null}
+      {route.page === "batch" ? <BatchDetail key={route.id} console={c} id={route.id} /> : null}
       {route.page === "purpose" ? <PurposeDetail console={c} prpsCode={route.prpsCode} /> : null}
       {route.page === "team" ? (
         <>
