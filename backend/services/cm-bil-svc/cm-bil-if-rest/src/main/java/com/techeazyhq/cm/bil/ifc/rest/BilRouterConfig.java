@@ -30,6 +30,7 @@ import com.techeazyhq.cm.bil.app.GetUsgQryHandler;
 import com.techeazyhq.cm.bil.app.ListSubPlnsQryHandler;
 import com.techeazyhq.cm.bil.app.SetDfSubStsCmdHandler;
 import com.techeazyhq.cm.bil.app.SubEligQryHandler;
+import com.techeazyhq.cm.bil.app.UsgReservationHandler;
 
 @Configuration
 public class BilRouterConfig {
@@ -40,9 +41,10 @@ public class BilRouterConfig {
                                                       GetUsgQryHandler getUsgHandler,
                                                       SubEligQryHandler subEligHandler,
                                                       ListSubPlnsQryHandler listSubPlnsHandler,
-                                                      GetDfSubStatusQryHandler getDfSubStatusHandler) {
+                                                      GetDfSubStatusQryHandler getDfSubStatusHandler,
+                                                      UsgReservationHandler usgReservationHandler) {
         BilHandler handler = new BilHandler(assignSubPlnHandler, setDfSubStsHandler, getUsgHandler, subEligHandler,
-                listSubPlnsHandler, getDfSubStatusHandler);
+                listSubPlnsHandler, getDfSubStatusHandler, usgReservationHandler);
         return RouterFunctions.route()
                 .GET("/api/bil/sub-plns", handler::listSubPlns)
                 .PUT("/api/bil/dfs/{id}/sub-pln", handler::assignSubPln)
@@ -51,6 +53,8 @@ public class BilRouterConfig {
                 .GET("/api/bil/dfs/{id}/sub-status", handler::subStatus)
                 .GET("/internal/dfs/{id}/sub-eligibility", handler::eligibility)
                 .GET("/internal/sub-plns/{name}", handler::subPln)
+                .POST("/internal/dfs/{id}/usage/reservations", handler::reserveUsage)
+                .POST("/internal/dfs/{id}/usage/releases", handler::releaseUsage)
                 .build();
     }
 }

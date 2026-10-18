@@ -27,4 +27,7 @@ import reactor.core.publisher.Mono;
 public interface UsgPort {
 
     Mono<Long> currentPeriodUsage(String dfId);
+
+    /** Adds {@code count} (negative to give back) to this period's usage atomically; the new total. */
+    Mono<Long> add(String dfId, long count);
 }

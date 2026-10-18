@@ -49,6 +49,11 @@ public class RedisUsgCtrAdapter implements UsgPort {
         return redisTemplate.opsForValue().get(key).map(Long::parseLong).defaultIfEmpty(0L);
     }
 
+    @Override
+    public Mono<Long> add(String dfId, long count) {
+        return redisTemplate.opsForValue().increment(usageKey(dfId), count);
+    }
+
     public static String usageKey(String dfId) {
         return "usg:" + dfId + ":" + LocalDate.now(ZoneOffset.UTC).format(PERIOD_FORMAT);
     }
