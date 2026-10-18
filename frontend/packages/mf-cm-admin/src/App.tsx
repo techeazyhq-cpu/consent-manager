@@ -16,285 +16,138 @@
  * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
  */
 
-import { Fragment, useEffect, useState } from "react";
-import { ApiError, bil, dfReg, type AuthInfo, type DfListItemRespDto, type DfSubStatusResult, type SubPln } from "api-client";
-import { Badge, Button, Card, ErrorBanner, Field, PageHeader, Spinner, friendlyError } from "ui-kit/src/index";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import type { AuthInfo } from "auth-kit";
+import "./admin.css";
+import Dashboard from "./Dashboard";
+import Onboard from "./Onboard";
+import TenantDetail from "./TenantDetail";
+import Staff from "./Staff";
+import Security from "./Security";
+import type { Session } from "./session";
+import { parseRoute, type Route } from "./routes";
 
 interface Props {
   auth: AuthInfo;
   gwBase: string;
 }
 
-export default function CmAdminApp({ auth, gwBase }: Props) {
-  const [dfs, setDfs] = useState<DfListItemRespDto[]>([]);
-  const [subPlns, setSubPlns] = useState<SubPln[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [revealedSecrets, setRevealedSecrets] = useState<Record<string, string>>({});
-  const [newDf, setNewDf] = useState({ name: "", contactEmail: "" });
-  const [registering, setRegistering] = useState(false);
+const ICONS: Record<string, ReactNode> = {
+  dashboard: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  ),
+  onboard: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M4 21V7l8-4 8 4v14" />
+      <path d="M9 21v-6h6v6" />
+      <path d="M12 7v4M10 9h4" />
+    </svg>
+  ),
+  staff: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5" />
+      <path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.8 2.6 2.5 3 5.2" />
+    </svg>
+  ),
+  security: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  ),
+};
 
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [dfList, plns] = await Promise.all([dfReg.list(gwBase, auth.token), bil.listSubPlns(gwBase, auth.token)]);
-      setDfs(dfList);
-      setSubPlns(plns);
-    } catch (err) {
-      setError(friendlyError(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    <>
-      <div className="cm-topbar">
-        <strong>CM Admin</strong>
-        <button onClick={auth.logout}>Log out</button>
-      </div>
-    <div className="cm-page">
-      <PageHeader title="CM Admin" subtitle="Onboard Data Fiduciaries and manage their subscriptions." />
-      {error ? <ErrorBanner message={error} /> : null}
-
-      <Card>
-        <h3 style={{ marginTop: 0 }}>Register a new Data Fiduciary</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
-          <Field label="Organization name">
-            <input value={newDf.name} onChange={(e) => setNewDf({ ...newDf, name: e.target.value })} />
-          </Field>
-          <Field label="Contact email">
-            <input value={newDf.contactEmail} onChange={(e) => setNewDf({ ...newDf, contactEmail: e.target.value })} />
-          </Field>
-        </div>
-        <Button
-          variant="primary"
-          disabled={registering || !newDf.name || !newDf.contactEmail}
-          onClick={async () => {
-            setRegistering(true);
-            setError(null);
-            try {
-              await dfReg.register(gwBase, auth.token, newDf);
-              setNewDf({ name: "", contactEmail: "" });
-              await load();
-            } catch (err) {
-              setError(friendlyError(err));
-            } finally {
-              setRegistering(false);
-            }
-          }}
-        >
-          Register
-        </Button>
-      </Card>
-
-      <div style={{ height: 20 }} />
-      <h3>Data Fiduciaries</h3>
-      {loading ? (
-        <Spinner />
-      ) : (
-        <table className="cm-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>DF ID</th>
-              <th>Contact</th>
-              <th>Status</th>
-              <th>Registered</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {dfs.map((df) => (
-              <Fragment key={df.id}>
-                <tr>
-                  <td>{df.name}</td>
-                  <td>
-                    <code style={{ fontSize: 12, color: "var(--cm-text-dim)" }}>{df.id}</code>
-                  </td>
-                  <td>{df.contactEmail}</td>
-                  <td>
-                    <Badge status={df.sts} />
-                  </td>
-                  <td>{new Date(df.registeredAt).toLocaleDateString()}</td>
-                  <td>
-                    <Button onClick={() => setExpandedId(expandedId === df.id ? null : df.id)}>
-                      {expandedId === df.id ? "Close" : "Manage"}
-                    </Button>
-                  </td>
-                </tr>
-                {expandedId === df.id ? (
-                  <tr>
-                    <td colSpan={6}>
-                      <DfDetail
-                        gwBase={gwBase}
-                        auth={auth}
-                        df={df}
-                        subPlns={subPlns}
-                        revealedSecret={revealedSecrets[df.id]}
-                        onActivated={(secret) => {
-                          setRevealedSecrets((prev) => ({ ...prev, [df.id]: secret }));
-                          load();
-                        }}
-                        onChanged={load}
-                      />
-                    </td>
-                  </tr>
-                ) : null}
-              </Fragment>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-    </>
-  );
+interface NavItem {
+  key: Route["page"];
+  href: string;
+  label: string;
+  section: "Tenants" | "Platform";
+  show: boolean;
 }
 
-function DfDetail({
-  gwBase,
-  auth,
-  df,
-  subPlns,
-  revealedSecret,
-  onActivated,
-  onChanged,
-}: {
-  gwBase: string;
-  auth: AuthInfo;
-  df: DfListItemRespDto;
-  subPlns: SubPln[];
-  revealedSecret?: string;
-  onActivated: (secret: string) => void;
-  onChanged: () => void;
-}) {
-  const [status, setStatus] = useState<DfSubStatusResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState("");
-
-  const loadStatus = async (attempt = 0) => {
-    if (df.sts !== "ACTIVE") return;
-    try {
-      const s = await bil.subStatus(gwBase, auth.token, df.id);
-      setStatus(s);
-      setSelectedPlan(s.subPlnName);
-    } catch (err) {
-      // Right after activation, cm-bil-svc's FREE-tier DfSub is created asynchronously (via
-      // its Pulsar consumer reacting to DfActivatedEvt) — calling sub-status immediately can
-      // land in the gap before that row exists, surfacing as a 404 "df-sub-not-found" even
-      // though activation itself succeeded. Retry a few times before treating it as a real
-      // error, rather than leaving the admin looking at a stuck failure for a timing quirk.
-      if (err instanceof ApiError && err.status === 404 && attempt < 5) {
-        setTimeout(() => loadStatus(attempt + 1), 800);
-        return;
-      }
-      setError(friendlyError(err));
-    }
-  };
-
+/** The current hash route, kept in step with the address bar so Back, Forward and reload all work. */
+function useRoute(): Route {
+  const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash));
   useEffect(() => {
-    loadStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [df.sts]);
+    const onChange = () => {
+      setRoute(parseRoute(window.location.hash));
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener("hashchange", onChange);
+    return () => window.removeEventListener("hashchange", onChange);
+  }, []);
+  return route;
+}
+
+/** CM Admin: a left menu, the dashboard of tenants by default, and a page per tenant. */
+export default function CmAdminApp({ auth, gwBase }: Props) {
+  const route = useRoute();
+  const session = useMemo<Session>(
+    () => ({ auth, gwBase, isAdmin: auth.roles.includes("CM_ADMIN") }),
+    [auth, gwBase],
+  );
+
+  const items = ([
+    { key: "dashboard", href: "#/dashboard", label: "Dashboard", section: "Tenants", show: true },
+    { key: "onboard", href: "#/onboard", label: "Onboard tenant", section: "Tenants", show: true },
+    // only administrators manage staff
+    { key: "staff", href: "#/staff", label: "Platform staff", section: "Platform", show: session.isAdmin },
+    { key: "security", href: "#/security", label: "Sign-in & security", section: "Platform", show: true },
+  ] as NavItem[]).filter((i) => i.show);
+  // A tenant's page belongs under the dashboard in the menu.
+  const current = route.page === "tenant" ? "dashboard" : route.page;
 
   return (
-    <Card style={{ margin: "8px 0" }}>
-      {error ? <ErrorBanner message={error} /> : null}
-      {revealedSecret ? (
-        <ErrorBanner
-          message={`DF ID: ${df.id}  |  Client secret (shown once — copy both now): ${revealedSecret}`}
-        />
-      ) : null}
-
-      {df.sts === "PENDING" ? (
-        <Button
-          variant="primary"
-          disabled={busy}
-          onClick={async () => {
-            setBusy(true);
-            setError(null);
-            try {
-              const resp = await dfReg.activate(gwBase, auth.token, df.id);
-              if (resp.cmDfApiClientSecret) onActivated(resp.cmDfApiClientSecret);
-            } catch (err) {
-              setError(friendlyError(err));
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          Activate
-        </Button>
-      ) : status ? (
-        <div style={{ display: "flex", gap: 24, alignItems: "flex-end", flexWrap: "wrap" }}>
-          <div>
-            <div style={{ fontSize: 12, color: "var(--cm-text-dim)" }}>Subscription status</div>
-            <Badge status={status.dfSubSts} />
+    <div className="adm-shell">
+      <aside className="adm-side">
+        <div className="adm-brand">
+          <div className="adm-brand-mark" aria-hidden="true">
+            CM
           </div>
           <div>
-            <div style={{ fontSize: 12, color: "var(--cm-text-dim)" }}>Usage this period</div>
-            <div>
-              {status.curPeriodUsg} / {status.reqPerMonthQta}
-            </div>
+            CM Admin
+            <small>Consent Manager platform</small>
           </div>
-          <Field label="Plan">
-            <select value={selectedPlan} onChange={(e) => setSelectedPlan(e.target.value)}>
-              {subPlns.map((p) => (
-                <option key={p.id} value={p.name}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Button
-            disabled={busy || selectedPlan === status.subPlnName}
-            onClick={async () => {
-              setBusy(true);
-              setError(null);
-              try {
-                await bil.assignSubPln(gwBase, auth.token, df.id, selectedPlan);
-                await loadStatus();
-                onChanged();
-              } catch (err) {
-                setError(friendlyError(err));
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            Assign plan
-          </Button>
-          <Button
-            variant={status.dfSubSts === "ACTIVE" ? "danger" : "primary"}
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              setError(null);
-              try {
-                await bil.setSubSts(gwBase, auth.token, df.id, status.dfSubSts !== "ACTIVE");
-                await loadStatus();
-                onChanged();
-              } catch (err) {
-                setError(friendlyError(err));
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            {status.dfSubSts === "ACTIVE" ? "Suspend" : "Reactivate"}
-          </Button>
         </div>
-      ) : (
-        <Spinner />
-      )}
-    </Card>
+        <nav className="adm-nav" aria-label="Main">
+          {items.map((i, n) => (
+            <div key={i.key} style={{ display: "contents" }}>
+              {/* a heading above the first item of each section */}
+              {n === 0 || items[n - 1].section !== i.section ? <div className="adm-nav-section">{i.section}</div> : null}
+              <a href={i.href} aria-current={current === i.key ? "page" : undefined} title={i.label} aria-label={i.label}>
+                {ICONS[i.key]}
+                <span>{i.label}</span>
+              </a>
+            </div>
+          ))}
+        </nav>
+        <div className="adm-me">
+          <div className="adm-me-name" title={auth.username}>
+            {auth.username}
+          </div>
+          <small>{session.isAdmin ? "Administrator" : "Operator"}</small>
+          <div className="adm-me-actions">
+            <button className="cm-btn" onClick={auth.logout}>
+              Sign out
+            </button>
+          </div>
+        </div>
+      </aside>
+      <main className="adm-main">
+        <div className="cm-page">
+          {route.page === "dashboard" ? <Dashboard session={session} /> : null}
+          {route.page === "onboard" ? <Onboard session={session} /> : null}
+          {route.page === "tenant" ? <TenantDetail key={route.dfId} session={session} dfId={route.dfId} tab={route.tab} /> : null}
+          {route.page === "staff" ? (session.isAdmin ? <Staff session={session} /> : <Dashboard session={session} />) : null}
+          {route.page === "security" ? <Security session={session} /> : null}
+        </div>
+      </main>
+    </div>
   );
 }

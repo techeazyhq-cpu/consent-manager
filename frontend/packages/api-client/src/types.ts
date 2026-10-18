@@ -47,6 +47,89 @@ export interface DfListItemRespDto {
   contactEmail: string;
   sts: DfSts;
   registeredAt: string;
+  legalName?: string | null;
+  industry?: string | null;
+  /** The plan chosen at onboarding; null means FREE. */
+  subPlnName?: string | null;
+}
+
+/** What onboarding asks for; everything after the plan is the organisation's profile, all optional. */
+export interface DfRegisterReqDto {
+  name: string;
+  contactEmail: string;
+  subPlnName?: string;
+  legalName?: string;
+  contactPhone?: string;
+  website?: string;
+  registeredAddress?: string;
+  industry?: string;
+  cin?: string;
+  gstin?: string;
+  dpoName?: string;
+  dpoEmail?: string;
+}
+
+export interface DfProfileRespDto {
+  id: string;
+  name: string;
+  contactEmail: string;
+  sts: DfSts;
+  subPlnName: string | null;
+  registeredAt: string;
+  activatedAt: string | null;
+  legalName: string | null;
+  contactPhone: string | null;
+  website: string | null;
+  registeredAddress: string | null;
+  industry: string | null;
+  cin: string | null;
+  gstin: string | null;
+  dpoName: string | null;
+  dpoEmail: string | null;
+}
+
+/** A tenant's consent requests by lifecycle status, for CM Admin (counts only). */
+export interface CnsStats {
+  dfId: string;
+  sent: number;
+  pending: number;
+  granted: number;
+  denied: number;
+  revoked: number;
+  expired: number;
+  notificationFailed: number;
+}
+
+/** A tenant's consent request as staff see it: the data principal only as a pseudonym. */
+export interface AdminCnsReqView {
+  cnsReqId: string;
+  cnsArtId: string | null;
+  dpPseudonym: string;
+  prpsCode: string;
+  dCatCodes: string[];
+  lcySts: CnsLcySts;
+  validUntil: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type StfRole = "CM_ADMIN" | "CM_OPERATOR";
+
+export interface StfAcct {
+  id: string;
+  email: string;
+  name: string;
+  role: StfRole;
+  enabled: boolean;
+  createdAt: string | null;
+}
+
+export interface StfSession {
+  id: string;
+  ipAddress: string;
+  startedAt: string | null;
+  lastAccessAt: string | null;
+  clients: string[];
 }
 
 export interface DfNameRespDto {

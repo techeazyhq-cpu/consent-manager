@@ -98,12 +98,13 @@ export function WrongAccountNotice({
   );
 }
 
+/** A form control with its label. The label wraps the control, so it names it for assistive tech and focuses it. */
 export function Field({ label, children }: PropsWithChildren<{ label: string }>) {
   return (
-    <div className="cm-field">
-      <label>{label}</label>
+    <label className="cm-field">
+      <span className="cm-field-label">{label}</span>
       {children}
-    </div>
+    </label>
   );
 }
 
