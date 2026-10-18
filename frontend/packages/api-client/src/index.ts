@@ -22,6 +22,13 @@ import type {
   CnsReqRespDto,
   DfListItemRespDto,
   DfMemberRespDto,
+  DfProfileRespDto,
+  DfRegisterReqDto,
+  AdminCnsReqView,
+  CnsLcySts,
+  CnsStats,
+  StfAcct,
+  StfSession,
   DfNameRespDto,
   DfRespDto,
   DfRole,
@@ -62,8 +69,24 @@ async function request<T>(baseUrl: string, path: string, token: string, init?: R
 export const dfReg = {
   list: (base: string, token: string) => request<DfListItemRespDto[]>(base, "/api/df-reg/dfs", token),
   getOne: (base: string, token: string, id: string) => request<DfNameRespDto>(base, `/api/df-reg/dfs/${id}`, token),
-  register: (base: string, token: string, body: { name: string; contactEmail: string }) =>
+  register: (base: string, token: string, body: DfRegisterReqDto) =>
     request<DfRespDto>(base, "/api/df-reg/dfs", token, { method: "POST", body: JSON.stringify(body) }),
+  profile: (base: string, token: string, id: string) =>
+    request<DfProfileRespDto>(base, `/api/df-reg/dfs/${id}/profile`, token),
+  /** The logo as an image blob, or null if the fiduciary has none. */
+  logo: async (base: string, token: string, id: string): Promise<Blob | null> => {
+    const res = await fetch(`${base}/api/df-reg/dfs/${id}/logo`, { headers: { Authorization: `Bearer ${token}` } });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
+    return res.blob();
+  },
+  /** A PNG or JPEG of at most 256 KB; the server checks the bytes really are that format. */
+  uploadLogo: (base: string, token: string, id: string, file: Blob) =>
+    request<void>(base, `/api/df-reg/dfs/${id}/logo`, token, {
+      method: "PUT",
+      body: file,
+      headers: { "Content-Type": file.type },
+    }),
   activate: (base: string, token: string, id: string) =>
     request<DfRespDto>(base, `/api/df-reg/dfs/${id}/activate`, token, { method: "POST" }),
   /** Platform staff inviting the first Owner of an active fiduciary that has none (ADR-033). */
@@ -131,6 +154,35 @@ export const cnsQry = {
   verify: (base: string, token: string, cnsArtId: string, purpose: string, cnsTkn: string) =>
     request<{ result: string }>(base, `/api/cns-qry/cns-arts/${cnsArtId}/verify?purpose=${encodeURIComponent(purpose)}`, token, {
       headers: { "X-Cns-Tkn": cnsTkn },
+    }),
+};
+
+/** A tenant's consents for platform staff: counts, and requests with the data principal pseudonymised. */
+export const cnsAdmin = {
+  stats: (base: string, token: string, dfId: string) =>
+    request<CnsStats>(base, `/api/cns-qry/admin/dfs/${dfId}/stats`, token),
+  requests: (base: string, token: string, dfId: string, opts: { sts?: CnsLcySts; limit?: number; offset?: number } = {}) => {
+    const q = new URLSearchParams();
+    if (opts.sts) q.set("sts", opts.sts);
+    q.set("limit", String(opts.limit ?? 25));
+    q.set("offset", String(opts.offset ?? 0));
+    return request<AdminCnsReqView[]>(base, `/api/cns-qry/admin/dfs/${dfId}/cns-reqs?${q}`, token);
+  },
+};
+
+/** Platform staff accounts (cm-stf-svc): your own account, and staff management for administrators. */
+export const stf = {
+  me: (base: string, token: string) => request<StfAcct>(base, "/api/stf/me", token),
+  mySessions: (base: string, token: string) => request<StfSession[]>(base, "/api/stf/me/sessions", token),
+  signOutEverywhere: (base: string, token: string) =>
+    request<void>(base, "/api/stf/me/sign-out-everywhere", token, { method: "POST" }),
+  list: (base: string, token: string) => request<StfAcct[]>(base, "/api/stf/staff", token),
+  createOperator: (base: string, token: string, body: { email: string; name: string }) =>
+    request<StfAcct>(base, "/api/stf/operators", token, { method: "POST", body: JSON.stringify(body) }),
+  setEnabled: (base: string, token: string, id: string, enabled: boolean) =>
+    request<StfAcct>(base, `/api/stf/staff/${encodeURIComponent(id)}/enabled`, token, {
+      method: "PUT",
+      body: JSON.stringify({ enabled }),
     }),
 };
 

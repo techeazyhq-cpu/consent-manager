@@ -62,12 +62,13 @@ export default function AppRoot() {
     );
   }
 
-  if (!auth || !auth.roles.includes("CM_ADMIN")) {
+  // administrators and operators (ADR-017); what each may do is decided per page and by the services
+  if (!auth || !(auth.roles.includes("CM_ADMIN") || auth.roles.includes("CM_OPERATOR"))) {
     return (
       <div className="cm-page">
         <WrongAccountNotice
           appName="CM Admin"
-          requiredAccount="a platform administrator account"
+          requiredAccount="a platform staff account"
           username={auth?.username}
           onSignOut={() => (auth ? auth.logout() : window.location.reload())}
         />

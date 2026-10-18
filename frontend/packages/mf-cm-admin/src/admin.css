@@ -1,0 +1,417 @@
+/*
+ * Copyright 2026 Vasantha Kumar
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+ */
+
+/* CM Admin shell: a left menu beside the page; on narrow screens the menu becomes a bar across the top. */
+
+.adm-shell {
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  min-height: 100vh;
+}
+
+.adm-side {
+  background: var(--cm-surface);
+  border-right: 1px solid var(--cm-border);
+  display: flex;
+  flex-direction: column;
+  padding: 18px 12px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.adm-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 18px;
+  font-weight: 600;
+}
+
+.adm-brand-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--cm-primary);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 14px;
+}
+
+.adm-brand small {
+  display: block;
+  font-weight: 400;
+  color: var(--cm-text-dim);
+  font-size: 12px;
+}
+
+.adm-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.adm-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  color: var(--cm-text-dim);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.adm-nav a:hover {
+  background: var(--cm-surface-2);
+  color: var(--cm-text);
+}
+
+.adm-nav a[aria-current="page"] {
+  background: var(--cm-surface-2);
+  color: var(--cm-text);
+  box-shadow: inset 3px 0 0 var(--cm-primary);
+}
+
+.adm-nav svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+.adm-nav-section {
+  margin: 14px 10px 4px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cm-text-dim);
+}
+
+.adm-me {
+  margin-top: auto;
+  border-top: 1px solid var(--cm-border);
+  padding: 12px 8px 0;
+  font-size: 13px;
+}
+
+.adm-me-actions {
+  margin-top: 8px;
+}
+
+.adm-me-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adm-me small {
+  color: var(--cm-text-dim);
+}
+
+.adm-main {
+  min-width: 0;
+}
+
+.adm-main .cm-page {
+  max-width: 1180px;
+}
+
+/* Dashboard */
+
+.adm-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.adm-stat {
+  background: var(--cm-surface);
+  border: 1px solid var(--cm-border);
+  border-radius: var(--cm-radius);
+  padding: 14px 16px;
+}
+
+.adm-stat b {
+  display: block;
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-stat span {
+  color: var(--cm-text-dim);
+  font-size: 13px;
+}
+
+.adm-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.adm-toolbar input,
+.adm-toolbar select {
+  min-width: 0;
+  background: var(--cm-surface-2);
+  border: 1px solid var(--cm-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--cm-text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.adm-toolbar input {
+  flex: 1 1 220px;
+}
+
+.adm-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.adm-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 20px 14px 16px;
+  background: var(--cm-surface);
+  border: 1px solid var(--cm-border);
+  border-radius: var(--cm-radius);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.1s ease;
+}
+
+.adm-tile:hover,
+.adm-tile:focus-visible {
+  border-color: var(--cm-primary);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.adm-tile-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.adm-tile-meta {
+  color: var(--cm-text-dim);
+  font-size: 12px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A fiduciary's logo, or its initials on a colour taken from its id. */
+.adm-logo {
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+  flex: none;
+  color: #fff;
+  font-weight: 600;
+}
+
+.adm-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8%;
+}
+
+/* Tenant detail */
+
+.adm-back {
+  color: var(--cm-text-dim);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.adm-back:hover {
+  color: var(--cm-text);
+}
+
+.adm-head {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  margin: 14px 0 18px;
+  flex-wrap: wrap;
+}
+
+.adm-head h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+
+.adm-head p {
+  margin: 0;
+  color: var(--cm-text-dim);
+  font-size: 14px;
+}
+
+.adm-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--cm-border);
+  margin-bottom: 18px;
+  overflow-x: auto;
+}
+
+.adm-tabs button {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--cm-text-dim);
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.adm-tabs button[aria-selected="true"] {
+  color: var(--cm-text);
+  border-bottom-color: var(--cm-primary);
+}
+
+.adm-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px 24px;
+  margin: 0;
+}
+
+.adm-fields dt {
+  color: var(--cm-text-dim);
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+
+.adm-fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.adm-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0 16px;
+}
+
+.adm-section-title {
+  margin: 22px 0 10px;
+  font-size: 15px;
+}
+
+.adm-secret {
+  background: var(--cm-surface-2);
+  border: 1px dashed var(--cm-warning);
+  border-radius: var(--cm-radius);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+.adm-secret code {
+  display: block;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.adm-note {
+  color: var(--cm-text-dim);
+  font-size: 13px;
+}
+
+.adm-ok {
+  color: var(--cm-success);
+  font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .adm-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .adm-side {
+    position: static;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-right: none;
+    border-bottom: 1px solid var(--cm-border);
+  }
+
+  .adm-brand {
+    padding: 0;
+    margin-right: auto;
+  }
+
+  .adm-brand small,
+  .adm-nav-section,
+  .adm-me-name,
+  .adm-me small {
+    display: none;
+  }
+
+  .adm-me-actions {
+    margin: 0;
+  }
+
+  .adm-tiles {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .adm-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+    order: 3;
+  }
+
+  .adm-nav a span {
+    display: none;
+  }
+
+  .adm-me {
+    margin: 0;
+    border: none;
+    padding: 0;
+  }
+
+  .adm-main .cm-page {
+    padding: 16px;
+  }
+}

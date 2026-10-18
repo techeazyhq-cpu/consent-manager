@@ -213,7 +213,7 @@ body {
   margin-bottom: 12px;
 }
 
-.cm-field label {
+.cm-field-label {
   font-size: 12px;
   color: var(--cm-text-dim);
 }
