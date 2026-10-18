@@ -26,6 +26,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux:3.5.16")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server:3.5.16")
     implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.6.0")
+    // reads .xlsx recipient lists for batches (ADR-036); small, streaming, no Apache POI
+    implementation("org.dhatim:fastexcel-reader:0.19.0")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")

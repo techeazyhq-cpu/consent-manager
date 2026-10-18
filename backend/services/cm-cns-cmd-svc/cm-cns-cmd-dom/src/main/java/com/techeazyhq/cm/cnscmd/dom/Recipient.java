@@ -28,8 +28,10 @@ import java.util.regex.Pattern;
 public record Recipient(ExtDpRefTyp typ, String val) {
 
     private static final Pattern EMAIL = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
-    /** International (+ and 8 to 15 digits) or national (8 to 15 digits) numbering. */
-    private static final Pattern PHONE = Pattern.compile("^\\+?[0-9]{8,15}$");
+    /** International numbering (E.164): + and 8 to 15 digits. A text can't reach a number without its country code. */
+    private static final Pattern PHONE = Pattern.compile("^\\+[1-9][0-9]{7,14}$");
+    private static final Pattern NATIONAL = Pattern.compile("^0?[0-9]{8,15}$");
+    private static final Pattern HAS_LETTER = Pattern.compile("\\p{L}");
     private static final Pattern NUMBER_PUNCTUATION = Pattern.compile("[\\s\\-().]");
 
     /** A contact read from a request, a file cell or a JSON field, or why it can't be one. */
@@ -55,10 +57,16 @@ public record Recipient(ExtDpRefTyp typ, String val) {
                     ? new Ok(new Recipient(ExtDpRefTyp.EMAIL, email))
                     : new Problem("Not a valid email address");
         }
+        if (typ == null && HAS_LETTER.matcher(text).find()) {
+            return new Problem("Not an email address or mobile number");
+        }
         String number = NUMBER_PUNCTUATION.matcher(text).replaceAll("");
-        return PHONE.matcher(number).matches()
-                ? new Ok(new Recipient(ExtDpRefTyp.PHONE, number))
-                : new Problem("Not a valid mobile number");
+        if (PHONE.matcher(number).matches()) {
+            return new Ok(new Recipient(ExtDpRefTyp.PHONE, number));
+        }
+        return new Problem(NATIONAL.matcher(number).matches()
+                ? "Add the country code, for example +91 98765 43210"
+                : "Not a valid mobile number");
     }
 
     public DpRef dpRef() {

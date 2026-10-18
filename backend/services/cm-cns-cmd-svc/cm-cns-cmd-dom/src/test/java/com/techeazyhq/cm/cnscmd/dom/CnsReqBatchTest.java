@@ -46,8 +46,12 @@ class CnsReqBatchTest {
                 ((Recipient.Ok) Recipient.parse("  Asha@Example.COM ", null)).recipient());
         assertEquals(new Recipient(ExtDpRefTyp.PHONE, "+919876543210"),
                 ((Recipient.Ok) Recipient.parse("+91 98765-43210", null)).recipient());
-        assertEquals(new Recipient(ExtDpRefTyp.PHONE, "09876543210"),
-                ((Recipient.Ok) Recipient.parse("(098) 765 43210", null)).recipient());
+        assertEquals(new Recipient(ExtDpRefTyp.PHONE, "+919876543210"),
+                ((Recipient.Ok) Recipient.parse("+91 (98765) 432.10", null)).recipient());
+        assertEquals("Add the country code, for example +91 98765 43210",
+                ((Recipient.Problem) Recipient.parse("098765 43210", null)).reason(), "texts need the country code");
+        assertEquals("Not an email address or mobile number",
+                ((Recipient.Problem) Recipient.parse("not-an-address", null)).reason());
         assertInstanceOf(Recipient.Problem.class, Recipient.parse("asha@", null));
         assertInstanceOf(Recipient.Problem.class, Recipient.parse("12345", null));
         assertInstanceOf(Recipient.Problem.class, Recipient.parse("", null));
