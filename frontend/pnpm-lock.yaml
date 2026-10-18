@@ -71,6 +71,9 @@ importers:
       api-client:
         specifier: workspace:*
         version: link:../api-client
+      auth-kit:
+        specifier: workspace:*
+        version: link:../auth-kit
       react:
         specifier: ^18.3.1
         version: 18.3.1

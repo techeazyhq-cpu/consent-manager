@@ -21,7 +21,10 @@ package com.techeazyhq.cm.dfreg;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.reactive.client.adapter.AdaptedReactivePulsarClientFactory;
 import org.apache.pulsar.reactive.client.api.ReactivePulsarClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
@@ -32,6 +35,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techeazyhq.cm.dfreg.app.ActivateDfCmdHandler;
+import com.techeazyhq.cm.dfreg.app.DfTeamHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfActiveQryHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfLogoQryHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfQryHandler;
@@ -40,11 +44,13 @@ import com.techeazyhq.cm.dfreg.app.RegisterDfCmdHandler;
 import com.techeazyhq.cm.dfreg.app.UploadDfLogoCmdHandler;
 import com.techeazyhq.cm.dfreg.dom.DfApiClientProvisionPort;
 import com.techeazyhq.cm.dfreg.dom.DfLogoRepoPort;
+import com.techeazyhq.cm.dfreg.dom.DfMemberDirectoryPort;
 import com.techeazyhq.cm.dfreg.dom.DfRepoPort;
 import com.techeazyhq.cm.dfreg.dom.ObxPort;
 import com.techeazyhq.cm.dfreg.dom.SubPlnCatalogPort;
 import com.techeazyhq.cm.kckit.KeycloakAdminAuthFilter;
 import com.techeazyhq.cm.dfreg.infra.KeycloakDfApiClientProvisionAdapter;
+import com.techeazyhq.cm.dfreg.infra.KeycloakDfMemberDirectoryAdapter;
 import com.techeazyhq.cm.dfreg.infra.ObxRelay;
 import com.techeazyhq.cm.dfreg.infra.PulsarDfEvtProducer;
 import com.techeazyhq.cm.dfreg.infra.R2dbcDfLogoAdapter;
@@ -55,6 +61,8 @@ import com.techeazyhq.cm.dfreg.infra.WebClientSubPlnCatalogAdapter;
 @Configuration
 @EnableConfigurationProperties(DfRegBeanConfig.KeycloakProps.class)
 public class DfRegBeanConfig {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DfRegBeanConfig.class);
 
     @Bean
     public DfRepoPort dfRepoPort(DatabaseClient db, ObjectMapper objectMapper) {
@@ -96,6 +104,28 @@ public class DfRegBeanConfig {
         return new KeycloakDfApiClientProvisionAdapter(keycloakAdminWebClient, cbFactory, props.realm());
     }
 
+    @Bean
+    public KeycloakDfMemberDirectoryAdapter dfMemberDirectory(WebClient keycloakAdminWebClient,
+                                                              ReactiveCircuitBreakerFactory<?, ?> cbFactory,
+                                                              KeycloakProps props) {
+        return new KeycloakDfMemberDirectoryAdapter(keycloakAdminWebClient, cbFactory, props.realm());
+    }
+
+    /** Sets up the realm for fiduciary members at start, so their first sign-in finds it ready; retried on first use. */
+    @Bean
+    public ApplicationRunner dfMemberRealmSetup(KeycloakDfMemberDirectoryAdapter dfMemberDirectory) {
+        return args -> dfMemberDirectory.ensureRealmSetup()
+                .doOnError(e -> LOG.warn("Keycloak isn't ready for fiduciary members yet, retrying on first use: {}",
+                        e.getMessage()))
+                .onErrorComplete()
+                .subscribe();
+    }
+
+    @Bean
+    public DfTeamHandler dfTeamHandler(DfMemberDirectoryPort dfMemberDirectory, DfRepoPort dfRepo) {
+        return new DfTeamHandler(dfMemberDirectory, dfRepo);
+    }
+
     @Bean(destroyMethod = "close")
     public PulsarClient pulsarClient(@Value("${cm.pulsar.service-url:pulsar://localhost:6650}") String serviceUrl)
             throws org.apache.pulsar.client.api.PulsarClientException {
@@ -128,8 +158,9 @@ public class DfRegBeanConfig {
     }
 
     @Bean
-    public ActivateDfCmdHandler activateDfCmdHandler(DfRepoPort dfRepo, DfApiClientProvisionPort provisionPort) {
-        return new ActivateDfCmdHandler(dfRepo, provisionPort);
+    public ActivateDfCmdHandler activateDfCmdHandler(DfRepoPort dfRepo, DfApiClientProvisionPort provisionPort,
+                                                     DfMemberDirectoryPort dfMemberDirectory) {
+        return new ActivateDfCmdHandler(dfRepo, provisionPort, dfMemberDirectory);
     }
 
     @Bean

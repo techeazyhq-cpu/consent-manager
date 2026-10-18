@@ -31,6 +31,7 @@ import com.techeazyhq.cm.cnscmd.app.CreateCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.DenyCnsReqCmd;
 import com.techeazyhq.cm.cnscmd.app.DenyCnsReqCmdHandler;
 import com.techeazyhq.cm.seckit.AuthCtx;
+import com.techeazyhq.cm.webkit.DomRuleViolation;
 
 import reactor.core.publisher.Mono;
 
@@ -59,6 +60,10 @@ public class CnsReqHandler {
                 .flatMap(tuple -> {
                     CnsReqCreateReqDto body = tuple.getT1();
                     AuthCtx ctx = tuple.getT2();
+                    if (ctx.isDf() && !ctx.mayRaiseCnsReqs()) {
+                        return Mono.error(new DomRuleViolation(403, "not-permitted",
+                                "Your role at this fiduciary doesn't raise consent requests"));
+                    }
                     CreateCnsReqCmd cmd = new CreateCnsReqCmd(
                             ctx.dfId(), body.dpId(), body.extDpRefTyp(), body.extDpRefVal(),
                             body.prpsCode(), body.dCatCodes(), body.ntcTitle(), body.ntcText());

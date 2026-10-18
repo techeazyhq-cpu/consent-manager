@@ -29,6 +29,9 @@ export type DfSubSts = "ACTIVE" | "SUSPENDED";
 export interface ProblemDetail {
   type: string;
   title: string;
+  status?: number;
+  /** The human-readable explanation, when the service gives one. */
+  detail?: string;
 }
 
 export interface DfRespDto {
@@ -49,6 +52,16 @@ export interface DfListItemRespDto {
 export interface DfNameRespDto {
   id: string;
   name: string;
+}
+
+/** What a person at a fiduciary may do (ADR-033). */
+export type DfRole = "OWNER" | "ADMIN" | "CONSENT_MANAGER" | "DEVELOPER" | "AUDITOR";
+
+export interface DfMemberRespDto {
+  id: string;
+  email: string;
+  name: string;
+  role: DfRole;
 }
 
 export interface CnsReqRespDto {
