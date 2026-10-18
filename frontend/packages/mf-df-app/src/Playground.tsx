@@ -41,27 +41,6 @@ import {
 } from "./sandbox";
 import { freshToken } from "./token";
 
-const KEYS_STORE = "cm-df-sandbox-keys";
-
-/** Kept for this browser tab only, so a reload doesn't lose them; gone when the tab closes. */
-function loadKeys(dfId: string): SandboxKeys | null {
-  try {
-    const keys = JSON.parse(sessionStorage.getItem(KEYS_STORE) ?? "null") as SandboxKeys | null;
-    return keys && keys.dfId === dfId ? keys : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveKeys(keys: SandboxKeys | null) {
-  try {
-    if (keys) sessionStorage.setItem(KEYS_STORE, JSON.stringify(keys));
-    else sessionStorage.removeItem(KEYS_STORE);
-  } catch {
-    // private windows may refuse storage; the keys still work until the page reloads
-  }
-}
-
 interface Answer {
   status: number;
   ms: number;
@@ -133,7 +112,7 @@ function KeysCard({ console: c, keys, onKeys }: { console: Console; keys: Sandbo
             </div>
           </div>
           <p className="cm-note">
-            Kept in this tab only. Store the secret somewhere safe if your systems will use it: taking keys again replaces it,
+            Kept on this page only, and forgotten when it reloads. Store the secret somewhere safe if your systems will use it: taking keys again replaces it,
             and the old one stops working.
           </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -188,7 +167,9 @@ function KeysCard({ console: c, keys, onKeys }: { console: Console; keys: Sandbo
  * the request and the answer. Each call can be copied as a curl command for your own code.
  */
 export default function Playground({ console: c }: { console: Console }) {
-  const [keys, setKeys] = useState<SandboxKeys | null>(() => loadKeys(c.dfId));
+  // Held in this page's memory only, never in browser storage: a reload forgets them, and the person takes or enters
+  // them again.
+  const [keys, setKeys] = useState<SandboxKeys | null>(null);
   const [token, setToken] = useState<SandboxToken | null>(null);
   const [opId, setOpId] = useState(OPERATIONS[0].id);
   const [bodies, setBodies] = useState<Record<string, string>>({});
@@ -206,7 +187,6 @@ export default function Playground({ console: c }: { console: Console }) {
   const useKeys = (next: SandboxKeys | null) => {
     setKeys(next);
     setToken(null);
-    saveKeys(next);
   };
 
   const pick = (next: Operation) => {

@@ -38,8 +38,8 @@ connect the two.
      contact address (`sandbox+…@sandbox.example`) and the STANDARD plan, so 10,000-row batches fit. Nothing else of
      production's crosses over.
    - Every later call **replaces** the secret, and the old one stops working.
-   - The secret is in that response only (`Cache-Control: no-store`). The console keeps it in the tab's
-     `sessionStorage`, gone when the tab closes.
+   - The secret is in that response only (`Cache-Control: no-store`). The console holds it in the page's memory, never
+     in browser storage, so a reload forgets it and the person takes or enters keys again.
 3. **People without a key role** can enter keys an Owner, Administrator or Developer shared with them.
 
 ## Options considered
@@ -67,4 +67,4 @@ connect the two.
 ## Compliance impact
 
 - No personal data reaches the sandbox: the twin carries an id and a name, and requests take test contacts only.
-- Secrets aren't logged or stored by the console beyond the tab's session, and aren't put in copied commands.
+- Secrets aren't logged, written to browser storage, or put in copied commands.
