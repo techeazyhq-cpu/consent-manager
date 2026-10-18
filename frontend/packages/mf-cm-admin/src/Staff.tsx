@@ -67,12 +67,12 @@ export default function Staff({ session }: { session: Session }) {
         subtitle="Administrators manage plans, suspensions and staff; operators view and onboard tenants."
       />
       {error ? <ErrorBanner message={error} /> : null}
-      {done ? <p className="adm-ok" role="status">{done}</p> : null}
+      {done ? <p className="cm-ok" role="status">{done}</p> : null}
 
       {session.isAdmin ? (
         <Card style={{ marginBottom: 18 }}>
           <h3 style={{ marginTop: 0 }}>Add an operator</h3>
-          <p className="adm-note">They sign in with a one-time code sent to their email address; there is no password.</p>
+          <p className="cm-note">They sign in with a one-time code sent to their email address; there is no password.</p>
           <form
             onSubmit={async (e) => {
               e.preventDefault();
@@ -82,7 +82,7 @@ export default function Staff({ session }: { session: Session }) {
               }
             }}
           >
-            <div className="adm-form-grid">
+            <div className="cm-form-grid">
               <Field label="Email">
                 <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
               </Field>

@@ -42,7 +42,7 @@ export default function LogoPreview({ image, size = 72 }: { image: ImageBitmap; 
   }, [image, size]);
 
   return (
-    <div className="adm-logo" style={{ width: size, height: size, marginBottom: 12 }}>
+    <div className="cm-logo" style={{ width: size, height: size, marginBottom: 12 }}>
       <canvas ref={canvas} style={{ width: size, height: size }} role="img" aria-label="Logo preview" />
     </div>
   );

@@ -71,7 +71,7 @@ export default function TenantDetail({ session, dfId, tab }: { session: Session;
   if (notFound) {
     return (
       <>
-        <a className="adm-back" href="#/dashboard">
+        <a className="cm-back" href="#/dashboard">
           ← Dashboard
         </a>
         <p>There is no tenant {dfId}.</p>
@@ -84,10 +84,10 @@ export default function TenantDetail({ session, dfId, tab }: { session: Session;
 
   return (
     <>
-      <a className="adm-back" href="#/dashboard">
+      <a className="cm-back" href="#/dashboard">
         ← Dashboard
       </a>
-      <div className="adm-head">
+      <div className="cm-head">
         <DfLogo session={session} dfId={df.id} name={df.name} size={84} version={logoVersion} />
         <div style={{ minWidth: 0 }}>
           <h1>{df.name}</h1>
@@ -101,7 +101,7 @@ export default function TenantDetail({ session, dfId, tab }: { session: Session;
       {error ? <ErrorBanner message={error} /> : null}
       {notice ? <ErrorBanner message={notice} /> : null}
       {secret ? (
-        <div className="adm-secret" role="alert">
+        <div className="cm-secret" role="alert">
           <strong>Copy the API client secret now: it isn't shown again.</strong> The fiduciary's systems sign in as
           client <code>df-api-{df.id}</code>
           with this secret:
@@ -112,7 +112,7 @@ export default function TenantDetail({ session, dfId, tab }: { session: Session;
         </div>
       ) : null}
 
-      <div className="adm-tabs" role="tablist" aria-label="Tenant">
+      <div className="cm-tabs" role="tablist" aria-label="Tenant">
         {TENANT_TABS.map((t) => (
           <button
             key={t}
@@ -186,7 +186,7 @@ function Overview({
       {df.sts === "PENDING" ? (
         <Card style={{ marginBottom: 16 }}>
           <strong>Awaiting activation.</strong>
-          <p className="adm-note">
+          <p className="cm-note">
             Activating creates the fiduciary's API client, starts its subscription and invites {df.contactEmail} as its
             Owner.
           </p>
@@ -212,7 +212,7 @@ function Overview({
       ) : null}
 
       <Card>
-        <dl className="adm-fields">
+        <dl className="cm-fields">
           {fields.map(([label, value]) => (
             <div key={label}>
               <dt>{label}</dt>
@@ -222,7 +222,7 @@ function Overview({
         </dl>
       </Card>
 
-      <h3 className="adm-section-title">Logo</h3>
+      <h3 className="cm-section-title">Logo</h3>
       <Card>
         <Field label="Replace the logo (PNG or JPEG, up to 256 KB)">
           <input
@@ -253,7 +253,7 @@ function Overview({
             }}
           />
         </Field>
-        {done ? <span className="adm-ok">{done}</span> : null}
+        {done ? <span className="cm-ok">{done}</span> : null}
       </Card>
     </>
   );
@@ -288,7 +288,7 @@ function Subscription({ session, df }: { session: Session; df: DfProfileRespDto 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [df.sts]);
 
-  if (df.sts !== "ACTIVE") return <p className="adm-note">The subscription starts when the tenant is activated.</p>;
+  if (df.sts !== "ACTIVE") return <p className="cm-note">The subscription starts when the tenant is activated.</p>;
   if (!status) return error ? <ErrorBanner message={error} /> : <Spinner label="Loading subscription…" />;
 
   const used = status.reqPerMonthQta > 0 ? Math.min(100, (status.curPeriodUsg / status.reqPerMonthQta) * 100) : 0;
@@ -308,18 +308,18 @@ function Subscription({ session, df }: { session: Session; df: DfProfileRespDto 
   return (
     <>
       {error ? <ErrorBanner message={error} /> : null}
-      <div className="adm-summary">
-        <div className="adm-stat">
+      <div className="cm-summary">
+        <div className="cm-stat">
           <b>{status.subPlnName}</b>
           <span>Plan</span>
         </div>
-        <div className="adm-stat">
+        <div className="cm-stat">
           <b>
             <Badge status={status.dfSubSts} />
           </b>
           <span>Subscription</span>
         </div>
-        <div className="adm-stat">
+        <div className="cm-stat">
           <b>
             {status.curPeriodUsg.toLocaleString()} / {status.reqPerMonthQta.toLocaleString()}
           </b>
@@ -380,7 +380,7 @@ function Subscription({ session, df }: { session: Session; df: DfProfileRespDto 
           </div>
         </Card>
       ) : (
-        <p className="adm-note">Only platform administrators change a tenant's plan or suspend it.</p>
+        <p className="cm-note">Only platform administrators change a tenant's plan or suspend it.</p>
       )}
     </>
   );
@@ -426,11 +426,11 @@ function Consents({ session, df }: { session: Session; df: DfProfileRespDto }) {
   return (
     <>
       {error ? <ErrorBanner message={error} /> : null}
-      <div className="adm-summary">
+      <div className="cm-summary">
         {STATUS_LABELS.map(({ key, sts: s, label }) => (
           <button
             key={key}
-            className="adm-stat"
+            className="cm-stat"
             style={{
               textAlign: "left",
               cursor: "pointer",
@@ -450,7 +450,7 @@ function Consents({ session, df }: { session: Session; df: DfProfileRespDto }) {
         ))}
       </div>
 
-      <p className="adm-note">
+      <p className="cm-note">
         Data principals are shown only as pseudonyms: the platform runs consent, it doesn't look at the people behind
         it.
       </p>
@@ -458,7 +458,7 @@ function Consents({ session, df }: { session: Session; df: DfProfileRespDto }) {
       {rows === null ? (
         <Spinner />
       ) : rows.length === 0 ? (
-        <p className="adm-note">{offset === 0 ? "No consent requests here yet." : "No more requests."}</p>
+        <p className="cm-note">{offset === 0 ? "No consent requests here yet." : "No more requests."}</p>
       ) : (
         <div style={{ overflowX: "auto" }}>
           <table className="cm-table">
@@ -511,14 +511,14 @@ function Team({ session, df }: { session: Session; df: DfProfileRespDto }) {
 
   return (
     <>
-      <p className="adm-note" style={{ marginTop: 0 }}>
+      <p className="cm-note" style={{ marginTop: 0 }}>
         A fiduciary manages its own people in the DF Console. The platform only helps when activation couldn't invite
         its first Owner, for example because that address was already in use.
       </p>
       {error ? <ErrorBanner message={error} /> : null}
-      {done ? <p className="adm-ok">{done}</p> : null}
+      {done ? <p className="cm-ok">{done}</p> : null}
       {df.sts !== "ACTIVE" ? (
-        <p className="adm-note">Activate the tenant first; activation invites {df.contactEmail} as its Owner.</p>
+        <p className="cm-note">Activate the tenant first; activation invites {df.contactEmail} as its Owner.</p>
       ) : (
         <Card>
           <h3 style={{ marginTop: 0 }}>Invite the first Owner</h3>
@@ -541,7 +541,7 @@ function Team({ session, df }: { session: Session; df: DfProfileRespDto }) {
               }
             }}
           >
-            <div className="adm-form-grid">
+            <div className="cm-form-grid">
               <Field label="Email">
                 <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
               </Field>

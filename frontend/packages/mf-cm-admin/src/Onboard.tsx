@@ -109,10 +109,10 @@ export default function Onboard({ session }: { session: Session }) {
         }}
       >
         <Card>
-          <h3 className="adm-section-title" style={{ marginTop: 0 }}>
+          <h3 className="cm-section-title" style={{ marginTop: 0 }}>
             Organisation
           </h3>
-          <div className="adm-form-grid">
+          <div className="cm-form-grid">
             <Field label="Display name *">
               <input required maxLength={200} value={form.name} onChange={set("name")} />
             </Field>
@@ -147,8 +147,8 @@ export default function Onboard({ session }: { session: Session }) {
           </div>
           {logo ? <LogoPreview image={logo.image} /> : null}
 
-          <h3 className="adm-section-title">Legal details</h3>
-          <div className="adm-form-grid">
+          <h3 className="cm-section-title">Legal details</h3>
+          <div className="cm-form-grid">
             <Field label="Legal name">
               <input maxLength={200} value={form.legalName} onChange={set("legalName")} />
             </Field>
@@ -172,8 +172,8 @@ export default function Onboard({ session }: { session: Session }) {
             </Field>
           </div>
 
-          <h3 className="adm-section-title">Data Protection Officer</h3>
-          <div className="adm-form-grid">
+          <h3 className="cm-section-title">Data Protection Officer</h3>
+          <div className="cm-form-grid">
             <Field label="Name">
               <input maxLength={100} value={form.dpoName} onChange={set("dpoName")} />
             </Field>
