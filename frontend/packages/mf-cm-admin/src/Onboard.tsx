@@ -20,12 +20,11 @@ import { useEffect, useState } from "react";
 import { bil, dfReg, type DfRegisterReqDto, type SubPln } from "api-client";
 import { Button, Card, ErrorBanner, Field, PageHeader, friendlyError } from "ui-kit/src/index";
 import { forgetLogo } from "./DfLogo";
+import { checkLogo, type CheckedImage } from "./logo";
+import LogoPreview from "./LogoPreview";
 import { tenantHref } from "./routes";
 import { rememberNotice, rememberSecret } from "./secrets";
 import { freshToken, type Session } from "./session";
-
-const LOGO_TYPES = ["image/png", "image/jpeg"];
-const LOGO_MAX_BYTES = 256 * 1024;
 
 const EMPTY: DfRegisterReqDto = {
   name: "",
@@ -42,19 +41,11 @@ const EMPTY: DfRegisterReqDto = {
   dpoEmail: "",
 };
 
-/** The checks the server makes too, so most mistakes are caught before anything is sent. */
-export function logoProblem(file: File): string | null {
-  if (!LOGO_TYPES.includes(file.type)) return "The logo must be a PNG or JPEG image.";
-  if (file.size > LOGO_MAX_BYTES) return "The logo must be at most 256 KB.";
-  return null;
-}
-
 /** Onboards a data fiduciary: registers it, adds its logo, and optionally activates it straight away. */
 export default function Onboard({ session }: { session: Session }) {
   const [form, setForm] = useState<DfRegisterReqDto>(EMPTY);
   const [plans, setPlans] = useState<SubPln[]>([]);
-  const [logo, setLogo] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logo, setLogo] = useState<CheckedImage | null>(null);
   const [activateNow, setActivateNow] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,10 +56,6 @@ export default function Onboard({ session }: { session: Session }) {
       .then(setPlans)
       .catch((err) => setError(friendlyError(err)));
   }, [session]);
-
-  useEffect(() => () => {
-    if (logoPreview) URL.revokeObjectURL(logoPreview);
-  }, [logoPreview]);
 
   const set = (key: keyof DfRegisterReqDto) => (e: { target: { value: string } }) =>
     setForm({ ...form, [key]: e.target.value });
@@ -86,7 +73,7 @@ export default function Onboard({ session }: { session: Session }) {
       const created = await dfReg.register(session.gwBase, token, body);
       dfId = created.id;
       if (logo) {
-        await dfReg.uploadLogo(session.gwBase, token, created.id, logo);
+        await dfReg.uploadLogo(session.gwBase, token, created.id, logo.file);
         forgetLogo(created.id);
       }
       if (activateNow) {
@@ -146,22 +133,19 @@ export default function Onboard({ session }: { session: Session }) {
               <input
                 type="file"
                 accept="image/png,image/jpeg"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] ?? null;
-                  if (logoPreview) URL.revokeObjectURL(logoPreview);
-                  const problem = file ? logoProblem(file) : null;
-                  setError(problem);
-                  setLogo(problem ? null : file);
-                  setLogoPreview(file && !problem ? URL.createObjectURL(file) : null);
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  setLogo(null);
+                  setError(null);
+                  if (!file) return;
+                  const checked = await checkLogo(file);
+                  if ("problem" in checked) setError(checked.problem);
+                  else setLogo(checked);
                 }}
               />
             </Field>
           </div>
-          {logoPreview ? (
-            <div className="adm-logo" style={{ width: 72, height: 72, marginBottom: 12 }}>
-              <img src={logoPreview} alt="Logo preview" />
-            </div>
-          ) : null}
+          {logo ? <LogoPreview image={logo.image} /> : null}
 
           <h3 className="adm-section-title">Legal details</h3>
           <div className="adm-form-grid">

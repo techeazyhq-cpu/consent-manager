@@ -31,7 +31,7 @@ import {
 } from "api-client";
 import { Badge, Button, Card, ErrorBanner, Field, Spinner, friendlyError } from "ui-kit/src/index";
 import DfLogo, { forgetLogo } from "./DfLogo";
-import { logoProblem } from "./Onboard";
+import { checkLogo } from "./logo";
 import { TENANT_TABS, tenantHref, type TenantTab } from "./routes";
 import { takeNotice, takeSecret } from "./secrets";
 import { freshToken, type Session } from "./session";
@@ -233,10 +233,10 @@ function Overview({
               const file = e.target.files?.[0];
               e.target.value = "";
               if (!file) return;
-              const problem = logoProblem(file);
               setDone(null);
-              if (problem) {
-                setError(problem);
+              const checked = await checkLogo(file);
+              if ("problem" in checked) {
+                setError(checked.problem);
                 return;
               }
               setBusy(true);
