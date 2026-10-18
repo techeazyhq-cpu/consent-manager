@@ -174,6 +174,9 @@ export interface CnsArtRdMdl {
   validUntil: string | null;
   createdAt: string;
   updatedAt: string;
+  /** The notice the fiduciary wrote with its request; absent on requests raised before notices were recorded here. */
+  ntcTitle?: string | null;
+  ntcText?: string | null;
 }
 
 export interface DpDashboardRow {

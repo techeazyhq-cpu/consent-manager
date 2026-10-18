@@ -77,6 +77,7 @@ export default function ConsentCard({
             </span>
           ))}
         </div>
+        <Notice row={row} />
         <div className="cm-note">
           {awaitsDecision(row.lcySts) ? `Asked ${fmtDate(row.createdAt)}` : `Updated ${fmtDate(row.updatedAt)}`}
           {until ? ` · ${row.lcySts === "ISSUED" ? "Valid until" : "Would be valid until"} ${until}` : ""}
@@ -112,6 +113,24 @@ export default function ConsentCard({
         ) : null}
       </div>
     </article>
+  );
+}
+
+/**
+ * What the organisation told the person when it asked. Open while a decision is waiting, so it is read before
+ * choosing; folded away afterwards, a click from view. Shown as text only: it is the organisation's writing.
+ */
+function Notice({ row }: { row: CnsArtRdMdl }) {
+  if (!row.ntcTitle && !row.ntcText) {
+    return awaitsDecision(row.lcySts) ? (
+      <p className="cm-note">This request was sent without a notice you can read here.</p>
+    ) : null;
+  }
+  return (
+    <details className="dp-notice" open={awaitsDecision(row.lcySts)}>
+      <summary>{row.ntcTitle || "The organisation's notice"}</summary>
+      {row.ntcText ? <p>{row.ntcText}</p> : null}
+    </details>
   );
 }
 

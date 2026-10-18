@@ -55,7 +55,7 @@ public final class CnsReq extends Agg<String> {
 
     /** Package-private: only {@link CnsReqFactory} (same package) raises the creation event. */
     void markCreated() {
-        raise(CnsReqCreatedEvt.of(id(), dfId, dpRef, prps, scp));
+        raise(CnsReqCreatedEvt.of(id(), dfId, dpRef, prps, scp, ntcTitle, ntcText));
     }
 
     public String dfId() {
