@@ -74,8 +74,23 @@ public class DfRegBeanConfig {
     private static final Logger LOG = LoggerFactory.getLogger(DfRegBeanConfig.class);
 
     @Bean
-    public DfRepoPort dfRepoPort(DatabaseClient db, ObjectMapper objectMapper) {
-        return new R2dbcDfRepoAdapter(db, objectMapper);
+    public R2dbcDfRepoAdapter dfRepoPort(DatabaseClient db, ObjectMapper objectMapper, SecretSealerPort secretSealer) {
+        return new R2dbcDfRepoAdapter(db, objectMapper, secretSealer);
+    }
+
+    /** Seals the API client secrets stored before they were sealed (#220); reads accept either until it has run. */
+    @Bean
+    public ApplicationRunner dfClientSecretSealing(R2dbcDfRepoAdapter dfRepo) {
+        return args -> dfRepo.sealPlainTextSecrets()
+                .doOnNext(sealed -> {
+                    if (sealed > 0) {
+                        LOG.info("Sealed the API client secrets of {} fiduciaries", sealed);
+                    }
+                })
+                .doOnError(e -> LOG.warn("Couldn't seal stored API client secrets, retrying at the next start: {}",
+                        e.getMessage()))
+                .onErrorComplete()
+                .subscribe();
     }
 
     @Bean

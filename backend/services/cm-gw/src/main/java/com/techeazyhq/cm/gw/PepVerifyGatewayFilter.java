@@ -124,7 +124,15 @@ public class PepVerifyGatewayFilter implements GlobalFilter, Ordered {
                 .defaultIfEmpty("");
     }
 
+    /**
+     * A 403 problem, unless this exchange's response has already gone out: then its headers are read-only, and writing
+     * them threw an UnsupportedOperationException that logged an ERROR after the caller already had its answer (#218,
+     * thousands a minute under load). What was sent stands.
+     */
     private Mono<Void> deny(ServerWebExchange exchange) {
+        if (exchange.getResponse().isCommitted()) {
+            return Mono.empty();
+        }
         exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
         exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_PROBLEM_JSON);
         byte[] body = "{\"type\":\"urn:cm:problem:consent-not-verified\",\"title\":\"DENY\"}".getBytes();
