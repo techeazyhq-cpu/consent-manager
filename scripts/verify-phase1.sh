@@ -55,10 +55,18 @@ DF_TOKEN=$(curl -s -X POST "$KC_BASE/realms/$DF_REALM/protocol/openid-connect/to
   -d "grant_type=client_credentials&client_id=df-api-$DF_ID&client_secret=$DF_SECRET" | jget '.access_token')
 echo "  got DF token (${#DF_TOKEN} chars)"
 
+echo "== 4b. DF defines and publishes the purpose it asks for (ADR-031) =="
+PRPS_RESP=$(curl -s -X POST "$GW_BASE/api/cns-cmd/prps-defs" \
+  -H "Authorization: Bearer $DF_TOKEN" -H "Content-Type: application/json" \
+  -d '{"code":"ORDER_FULFILLMENT","content":{"name":"Order fulfillment","dCats":[{"code":"EMAIL","sensitivity":"ORDINARY","necessary":true,"consequence":"Without your email we cannot confirm your order."},{"code":"NAME","sensitivity":"ORDINARY","necessary":false}],"recipients":[],"transfers":[],"retentionDays":365,"requestedValidityDays":365,"maxValidityDays":365,"flags":[],"notices":[{"lang":"en","title":"Consent for order fulfillment","text":"We need your email and name to fulfill your order."}]}}')
+echo "  $PRPS_RESP"
+PUBLISH_RESP=$(curl -s -X POST "$GW_BASE/api/cns-cmd/prps-defs/ORDER_FULFILLMENT/publish" -H "Authorization: Bearer $DF_TOKEN")
+echo "  currentVer=$(echo "$PUBLISH_RESP" | jget '.currentVer')"
+
 echo "== 5. DF creates CnsReq for an UNLINKED DP (by email, no dpId yet) =="
 CNSREQ_RESP=$(curl -s -X POST "$GW_BASE/api/cns-cmd/cns-reqs" \
   -H "Authorization: Bearer $DF_TOKEN" -H "Content-Type: application/json" \
-  -d '{"extDpRefTyp":"EMAIL","extDpRefVal":"dp-demo@cm.local","prpsCode":"ORDER_FULFILLMENT","dCatCodes":["EMAIL","NAME"],"ntcTitle":"Consent for order fulfillment","ntcText":"We need your email and name to fulfill your order."}')
+  -d '{"extDpRefTyp":"EMAIL","extDpRefVal":"dp-demo@cm.local","prpsCode":"ORDER_FULFILLMENT","prpsVer":1}')
 echo "  $CNSREQ_RESP"
 CNS_REQ_ID=$(echo "$CNSREQ_RESP" | jget '.id')
 echo "  cnsReqId=$CNS_REQ_ID"

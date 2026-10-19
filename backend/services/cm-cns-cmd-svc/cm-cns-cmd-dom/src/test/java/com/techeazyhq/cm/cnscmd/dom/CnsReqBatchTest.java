@@ -34,7 +34,8 @@ import com.techeazyhq.cm.cnscmd.dom.CnsReqBatch.Outcome;
 class CnsReqBatchTest {
 
     private static final CnsReqTemplate TEMPLATE =
-            CnsReqTemplate.of("ORDER_UPDATES", Set.of("EMAIL"), "Order updates", "We email you about your orders.");
+            CnsReqTemplate.of(new Prps("ORDER_UPDATES"), new Scp(Set.of(new DCat("EMAIL"))), "Order updates",
+                    "We email you about your orders.", new PrpsVerRef("ver-1", 1, "en", "hash"));
 
     private static CnsReqBatch.Plan plan(Input... inputs) {
         return CnsReqBatch.plan("df-1", TEMPLATE, CnsReqBatch.Source.CSV, "list.csv", "u-1", List.of(inputs));
@@ -132,8 +133,9 @@ class CnsReqBatchTest {
 
     @Test
     void theTemplateNeedsANoticePeopleCanRead() {
-        assertThrows(IllegalArgumentException.class, () -> CnsReqTemplate.of("P", Set.of("EMAIL"), "Title", " "));
-        assertThrows(IllegalArgumentException.class, () -> CnsReqTemplate.of("P", Set.of(), "Title", "Text"));
-        assertThrows(IllegalArgumentException.class, () -> CnsReqTemplate.of(" ", Set.of("EMAIL"), "Title", "Text"));
+        Scp email = new Scp(Set.of(new DCat("EMAIL")));
+        PrpsVerRef v1 = new PrpsVerRef("ver-1", 1, "en", "hash");
+        assertThrows(IllegalArgumentException.class, () -> CnsReqTemplate.of(new Prps("P"), email, "Title", " ", v1));
+        assertThrows(IllegalArgumentException.class, () -> CnsReqTemplate.of(new Prps("P"), email, " ", "Text", v1));
     }
 }

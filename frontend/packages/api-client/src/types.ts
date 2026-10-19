@@ -152,6 +152,10 @@ export interface CnsReqRespDto {
   dfId: string;
   sts: CnsReqSts;
   prpsCode: string;
+  prpsVer: number | null;
+  ntcLang: string | null;
+  /** SHA-256 of the notice the person is shown. */
+  ntcHash: string | null;
 }
 
 export interface CnsArtRespDto {
@@ -304,12 +308,91 @@ export interface AuthInfo {
   logout: () => void;
 }
 
-/** What a batch asks every recipient (ADR-036). */
+/**
+ * What a request asks (ADR-031): a published purpose version, the notice's language (English or the first written
+ * when absent), and the data categories (all the version's when absent or empty). A batch asks every recipient this.
+ */
 export interface CnsReqBatchTemplate {
   prpsCode: string;
-  dCatCodes: string[];
-  ntcTitle: string;
-  ntcText: string;
+  prpsVer: number;
+  ntcLang?: string;
+  dCatCodes?: string[];
+}
+
+export type PrpsSensitivity = "ORDINARY" | "SENSITIVE" | "PHI" | "CHILD";
+export type PrpsFlag = "TRACKING" | "BEHAVIOURAL_MONITORING" | "TARGETED_ADVERTISING";
+
+/** A data category as a purpose version defines it (ADR-026, ADR-031). */
+export interface PrpsDCat {
+  code: string;
+  /** W3C DPV personal data type, such as `dpv-pd:EmailAddress`. */
+  dpv?: string | null;
+  sensitivity: PrpsSensitivity;
+  /** Needed for the purpose; the person may still refuse or withdraw it. */
+  necessary: boolean;
+  /** What happens without it; required when necessary. */
+  consequence?: string | null;
+}
+
+/** A notice in one language; `hash` is filled in by the platform. */
+export interface PrpsNtc {
+  lang: string;
+  title: string;
+  text: string;
+  hash?: string;
+}
+
+/** What one version of a purpose says. */
+export interface PrpsContent {
+  name: string;
+  description?: string | null;
+  dCats: PrpsDCat[];
+  recipients: string[];
+  transfers: string[];
+  retentionDays: number;
+  requestedValidityDays: number;
+  maxValidityDays: number;
+  flags: PrpsFlag[];
+  notices: PrpsNtc[];
+}
+
+/** How a version differs from the one before, as the platform classifies it. */
+export interface PrpsChange {
+  kind: "INITIAL" | "MATERIAL" | "NON_MATERIAL";
+  /** Reasons it needs re-consent. */
+  material: string[];
+  minor: string[];
+}
+
+export interface PrpsVer {
+  id: string;
+  verNo: number;
+  sts: "DRAFT" | "PUBLISHED";
+  content: PrpsContent;
+  change: PrpsChange | null;
+  createdAt: string;
+  publishedAt: string | null;
+}
+
+/** A purpose with every version, oldest first; requests are made from `currentVer`. */
+export interface PrpsDefDto {
+  id: string;
+  code: string;
+  currentVer: number | null;
+  draftVer: number | null;
+  createdAt: string;
+  versions: PrpsVer[];
+}
+
+/** A purpose in a list, with its current version's content and any draft's. */
+export interface PrpsSummaryDto {
+  id: string;
+  code: string;
+  currentVer: number | null;
+  draftVer: number | null;
+  current: PrpsContent | null;
+  draft: PrpsContent | null;
+  updatedAt: string;
 }
 
 /** A recipient: `contact` (email or mobile), or `email` or `phone`; `ref` is the fiduciary's own reference. */
@@ -332,6 +415,8 @@ export interface CnsReqBatchDto {
   source: "API" | "CSV" | "XLSX";
   fileName: string | null;
   prpsCode: string;
+  prpsVer: number | null;
+  ntcLang: string | null;
   dCatCodes: string[];
   ntcTitle: string;
   total: number;

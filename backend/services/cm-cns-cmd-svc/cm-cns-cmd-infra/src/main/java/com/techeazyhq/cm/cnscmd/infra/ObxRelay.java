@@ -48,6 +48,7 @@ public class ObxRelay {
             "CnsDpLinkedEvt", "cns-dp-linked",
             "CnsExpiredEvt", "cns-expired",
             "CnsNotificationFailedEvt", "cns-notification-failed",
+            "PrpsVerPublishedEvt", "prps-ver-published",
             // what people did, for the audit ledger (ADR-040)
             "PlatformActionEvt", "platform-action");
 

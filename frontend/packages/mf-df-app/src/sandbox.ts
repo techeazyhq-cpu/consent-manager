@@ -109,25 +109,81 @@ export interface Operation {
   remembers?: (body: any) => Record<string, string | undefined>;
 }
 
-const NOTICE = {
-  prpsCode: "ORDER_UPDATES",
-  dCatCodes: ["EMAIL"],
-  ntcTitle: "Order updates by email",
-  ntcText: "We email you when your order ships, for as long as you shop with us. Nobody else sees your address. You can withdraw at any time.",
+/** What every request sample asks (ADR-031): version 1 of the purpose the first samples define and publish. */
+const ASK = { prpsCode: "ORDER_UPDATES", prpsVer: 1 };
+
+const PURPOSE = {
+  code: "ORDER_UPDATES",
+  content: {
+    name: "Order updates",
+    description: "Emails about the orders you place with us.",
+    dCats: [
+      {
+        code: "EMAIL",
+        dpv: "dpv-pd:EmailAddress",
+        sensitivity: "ORDINARY",
+        necessary: true,
+        consequence: "Without your email address we can't tell you when your order ships.",
+      },
+    ],
+    recipients: [],
+    transfers: [],
+    retentionDays: 365,
+    requestedValidityDays: 180,
+    maxValidityDays: 365,
+    flags: [],
+    notices: [
+      {
+        lang: "en",
+        title: "Order updates by email",
+        text: "We email you when your order ships, for as long as you shop with us. Nobody else sees your address. You can withdraw at any time.",
+      },
+    ],
+  },
 };
 
 const json = (value: unknown) => JSON.stringify(value, null, 2);
 
 export const OPERATIONS: Operation[] = [
   {
+    id: "purpose",
+    group: "Purposes",
+    title: "Define a purpose",
+    method: "POST",
+    path: "/api/cns-cmd/prps-defs",
+    about: "What you ask consent for: the data, how long, who else receives it, and the notice. Version 1 is a draft.",
+    remembers: (b) => ({ prpsCode: b?.code }),
+    body: { kind: "json", sample: json(PURPOSE) },
+  },
+  {
+    id: "purpose-publish",
+    group: "Purposes",
+    title: "Publish it",
+    method: "POST",
+    path: "/api/cns-cmd/prps-defs/{prpsCode}/publish",
+    about: "The draft becomes the current version. Requests name it as prpsCode and prpsVer; it never changes again.",
+    body: { kind: "none" },
+  },
+  {
+    id: "purposes",
+    group: "Purposes",
+    title: "Your purposes",
+    method: "GET",
+    path: "/api/cns-cmd/prps-defs",
+    about: "Every purpose with its current version, and any draft.",
+    body: { kind: "none" },
+    remembers: (b) => ({ prpsCode: Array.isArray(b) ? b[0]?.code : undefined }),
+  },
+  {
     id: "raise",
     group: "Consent requests",
     title: "Ask one person",
     method: "POST",
     path: "/api/cns-cmd/cns-reqs",
-    about: "Raises a consent request. The person is notified and decides in their portal.",
+    about:
+      "Raises a consent request for a published purpose version. The person is notified and decides in their portal.",
     remembers: (b) => ({ requestId: b?.id }),
-    body: { kind: "json", sample: json({ extDpRefTyp: "EMAIL", extDpRefVal: TEST_CONTACTS[0], ...NOTICE }) },
+    body: { kind: "json", sample: json({ extDpRefTyp: "EMAIL", extDpRefVal: TEST_CONTACTS[0], ...ASK }) },
   },
   {
     id: "list",
@@ -167,7 +223,7 @@ export const OPERATIONS: Operation[] = [
     body: {
       kind: "json",
       sample: json({
-        ...NOTICE,
+        ...ASK,
         recipients: [
           { email: TEST_CONTACTS[0], ref: "CUST-001" },
           { phone: TEST_CONTACTS[2], ref: "CUST-002" },
@@ -186,7 +242,7 @@ export const OPERATIONS: Operation[] = [
     remembers: (b) => ({ batchId: b?.batch?.id }),
     body: {
       kind: "json",
-      sample: json({ ...NOTICE, recipients: [{ email: TEST_CONTACTS[0], ref: "CUST-001" }, { email: TEST_CONTACTS[1], ref: "CUST-002" }] }),
+      sample: json({ ...ASK, recipients: [{ email: TEST_CONTACTS[0], ref: "CUST-001" }, { email: TEST_CONTACTS[1], ref: "CUST-002" }] }),
     },
   },
   {
@@ -200,8 +256,7 @@ export const OPERATIONS: Operation[] = [
     body: {
       kind: "upload",
       sample: json({
-        ...NOTICE,
-        dCatCodes: "EMAIL",
+        ...ASK,
         file: `Email,Customer ID\n${TEST_CONTACTS[0]},CUST-001\n${TEST_CONTACTS[1]},CUST-002\n`,
       }),
     },

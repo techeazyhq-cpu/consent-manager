@@ -33,6 +33,7 @@ import com.techeazyhq.cm.cnscmd.app.CreateCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.DenyCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.GetCnsArtLiveStatusQryHandler;
 import com.techeazyhq.cm.cnscmd.app.LinkDpCmdHandler;
+import com.techeazyhq.cm.cnscmd.app.PrpsDefCmds;
 import com.techeazyhq.cm.cnscmd.app.RefreshCnsTknCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.RevokeCnsArtCmdHandler;
 import com.techeazyhq.cm.seckit.CnsTknKeys;
@@ -64,13 +65,23 @@ public class CnsCmdRouterConfig {
                                                          GetCnsArtLiveStatusQryHandler liveStatusHandler,
                                                          CnsTknKeys cnsTknKeys,
                                                          SubmitCnsReqBatchHandler submitBatchHandler,
-                                                         CnsReqBatchQueries batchQueries) {
+                                                         CnsReqBatchQueries batchQueries,
+                                                         PrpsDefCmds prpsDefCmds) {
         CnsReqHandler cnsReqHandler = new CnsReqHandler(createHandler, approveHandler, denyHandler);
         CnsArtHandler cnsArtHandler = new CnsArtHandler(revokeHandler, refreshTknHandler, liveStatusHandler);
         DpLinkHandler dpLinkHandler = new DpLinkHandler(linkDpHandler);
         CnsReqBatchHttpHandler batches = new CnsReqBatchHttpHandler(submitBatchHandler, batchQueries);
+        PrpsDefHttpHandler purposes = new PrpsDefHttpHandler(prpsDefCmds);
 
         return RouterFunctions.route()
+                // purposes and their versions (ADR-031): what requests may ask for
+                .GET("/api/cns-cmd/prps-defs", purposes::list)
+                .POST("/api/cns-cmd/prps-defs", purposes::create)
+                .GET("/api/cns-cmd/prps-defs/{code}", purposes::get)
+                .PUT("/api/cns-cmd/prps-defs/{code}/draft", purposes::saveDraft)
+                .DELETE("/api/cns-cmd/prps-defs/{code}/draft", purposes::discardDraft)
+                .GET("/api/cns-cmd/prps-defs/{code}/draft/change", purposes::draftChange)
+                .POST("/api/cns-cmd/prps-defs/{code}/publish", purposes::publish)
                 .POST("/api/cns-cmd/cns-reqs", cnsReqHandler::create)
                 // batches (ADR-036): one template, many people, sent in the background
                 .POST("/api/cns-cmd/cns-req-batches", batches::create)

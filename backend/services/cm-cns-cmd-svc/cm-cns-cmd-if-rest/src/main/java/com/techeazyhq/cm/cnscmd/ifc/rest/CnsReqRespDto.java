@@ -21,8 +21,12 @@ package com.techeazyhq.cm.cnscmd.ifc.rest;
 import com.techeazyhq.cm.cnscmd.dom.CnsReq;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqSts;
 
-public record CnsReqRespDto(String id, String dfId, CnsReqSts sts, String prpsCode) {
+public record CnsReqRespDto(String id, String dfId, CnsReqSts sts, String prpsCode, Integer prpsVer, String ntcLang,
+                            String ntcHash) {
     public static CnsReqRespDto of(CnsReq cnsReq) {
-        return new CnsReqRespDto(cnsReq.id(), cnsReq.dfId(), cnsReq.sts(), cnsReq.prps().code());
+        var ver = cnsReq.prpsVer();
+        return new CnsReqRespDto(cnsReq.id(), cnsReq.dfId(), cnsReq.sts(), cnsReq.prps().code(),
+                ver == null ? null : ver.verNo(), ver == null ? null : ver.ntcLang(),
+                ver == null ? null : ver.ntcHash());
     }
 }

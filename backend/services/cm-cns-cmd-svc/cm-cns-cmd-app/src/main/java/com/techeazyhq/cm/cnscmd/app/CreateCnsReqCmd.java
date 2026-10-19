@@ -25,7 +25,9 @@ import com.techeazyhq.cm.cnscmd.dom.ExtDpRefTyp;
 /**
  * Either {@code dpId} (DP already has a CM identity) or {@code extDpRefTyp}/{@code extDpRefVal}
  * (DP not yet registered, plan §7a) must be supplied — never both, never neither; validated by
- * {@code CreateCnsReqCmdHandler}.
+ * {@code CreateCnsReqCmdHandler}. The request asks for published purpose version {@code prpsVer} (ADR-031), with its
+ * notice in {@code ntcLang} (English or the first written when null), for {@code dCatCodes} (all of the version's
+ * categories when empty).
  */
 public record CreateCnsReqCmd(
         String dfId,
@@ -33,7 +35,7 @@ public record CreateCnsReqCmd(
         ExtDpRefTyp extDpRefTyp,
         String extDpRefVal,
         String prpsCode,
-        Set<String> dCatCodes,
-        String ntcTitle,
-        String ntcText) {
+        Integer prpsVer,
+        String ntcLang,
+        Set<String> dCatCodes) {
 }

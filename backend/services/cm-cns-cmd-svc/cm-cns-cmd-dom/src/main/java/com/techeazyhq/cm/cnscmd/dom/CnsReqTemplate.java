@@ -18,41 +18,35 @@
 
 package com.techeazyhq.cm.cnscmd.dom;
 
-import java.util.Collection;
-import java.util.stream.Collectors;
-
 /**
- * What a batch asks every recipient (ADR-036): one purpose, one set of data, one notice. Each recipient still gets a
- * request of their own, made from this.
+ * What a request asks (ADR-031, ADR-036): a published purpose version, the data categories asked for, and the notice
+ * the principal is shown, in one language. Made by {@link PrpsDef#templateFor}; a batch asks every recipient the same.
  *
- * <p>The constructor takes values as they are, as stored batches are read back with it; a new template is made with
- * {@link #of}, which checks them. A stored batch that no longer passes today's checks must still be readable (VAPT:
- * one that couldn't be made every listing of its fiduciary's batches fail).
+ * <p>The constructor takes values as they are, as stored requests and batches are read back with it; a new template
+ * is made with {@link #of}, which checks them. A stored batch that no longer passes today's checks must still be
+ * readable (VAPT: one that couldn't be made every listing of its fiduciary's batches fail).
+ *
+ * @param prpsVer the purpose version and notice; null only for a request stored before purposes were versioned and
+ *                never migrated
  */
-public record CnsReqTemplate(Prps prps, Scp scp, String ntcTitle, String ntcText) {
+public record CnsReqTemplate(Prps prps, Scp scp, String ntcTitle, String ntcText, PrpsVerRef prpsVer) {
 
-    public static CnsReqTemplate of(String prpsCode, Collection<String> dCatCodes, String ntcTitle, String ntcText) {
-        if (prpsCode == null) {
-            throw new IllegalArgumentException("purpose code must not be blank");
-        }
-        Scp scp = new Scp(dCatCodes == null ? java.util.Set.of()
-                : dCatCodes.stream().filter(c -> c != null && !c.isBlank()).map(DCat::new).collect(Collectors.toSet()));
-        // normalised before it is checked, so what is checked is what is stored
-        String title = ntcTitle == null ? null : ntcTitle.strip();
-        String text = ntcText == null ? null : ntcText.strip();
-        if (title == null || title.isEmpty()) {
+    static CnsReqTemplate of(Prps prps, Scp scp, String ntcTitle, String ntcText, PrpsVerRef prpsVer) {
+        if (ntcTitle == null || ntcTitle.isBlank()) {
             throw new IllegalArgumentException("notice title must not be blank");
         }
-        if (text == null || text.isEmpty()) {
+        if (ntcText == null || ntcText.isBlank()) {
             throw new IllegalArgumentException("notice text must not be blank: people decide on it");
         }
-        Prps prps = new Prps(prpsCode.strip());
-        CnsReqFactory.checkInput(prps, scp, title, text);
-        return new CnsReqTemplate(prps, scp, title, text);
+        if (prpsVer == null) {
+            throw new IllegalArgumentException("a request names a published purpose version");
+        }
+        CnsReqFactory.checkInput(prps, scp, ntcTitle, ntcText);
+        return new CnsReqTemplate(prps, scp, ntcTitle, ntcText, prpsVer);
     }
 
     /** This template's request for one person. */
     public CnsReq requestFor(String dfId, Recipient recipient) {
-        return CnsReqFactory.create(dfId, recipient.dpRef(), prps, scp, ntcTitle, ntcText);
+        return CnsReqFactory.create(dfId, recipient.dpRef(), this);
     }
 }

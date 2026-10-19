@@ -30,6 +30,7 @@ import com.techeazyhq.cm.cnscmd.dom.CnsReq;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqFactory;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqRepoPort;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqSts;
+import com.techeazyhq.cm.cnscmd.dom.CnsReqTemplate;
 import com.techeazyhq.cm.cnscmd.dom.DCat;
 import com.techeazyhq.cm.cnscmd.dom.DpRef;
 import com.techeazyhq.cm.cnscmd.dom.ExtDpRefTyp;
@@ -58,9 +59,11 @@ public class R2dbcCnsReqRepoAdapter implements CnsReqRepoPort {
         String dCatsJson = writeDCats(cnsReq.scp());
         DatabaseClient.GenericExecuteSpec spec = db.sql("""
                         insert into cns_cmd.cns_req
-                            (id, df_id, dp_ref_typ, dp_ref_val, dp_id, prps_code, d_cats, ntc_title, ntc_text, sts, created_at)
+                            (id, df_id, dp_ref_typ, dp_ref_val, dp_id, prps_code, d_cats, ntc_title, ntc_text, sts, created_at,
+                             prps_ver_id, prps_ver_no, ntc_lang, ntc_hash)
                         values
-                            (:id, :dfId, :dpRefTyp, :dpRefVal, :dpId, :prpsCode, cast(:dCats as jsonb), :ntcTitle, :ntcText, :sts, :createdAt)
+                            (:id, :dfId, :dpRefTyp, :dpRefVal, :dpId, :prpsCode, cast(:dCats as jsonb), :ntcTitle, :ntcText, :sts, :createdAt,
+                             :prpsVerId, :prpsVerNo, :ntcLang, :ntcHash)
                         on conflict (id) do update set
                             dp_ref_typ = excluded.dp_ref_typ,
                             dp_ref_val = excluded.dp_ref_val,
@@ -75,6 +78,7 @@ public class R2dbcCnsReqRepoAdapter implements CnsReqRepoPort {
                 .bind("ntcText", cnsReq.ntcText() == null ? "" : cnsReq.ntcText())
                 .bind("sts", cnsReq.sts().name())
                 .bind("createdAt", cnsReq.createdAt());
+        spec = PrpsVerColumns.bind(spec, cnsReq.prpsVer());
         spec = R2dbcBinds.bindNullable(spec, "dpRefTyp", DpRefColumns.typOf(cnsReq.dpRef()), String.class);
         spec = R2dbcBinds.bindNullable(spec, "dpRefVal", DpRefColumns.valOf(cnsReq.dpRef()), String.class);
         spec = R2dbcBinds.bindNullable(spec, "dpId", DpRefColumns.dpIdOf(cnsReq.dpRef()), String.class);
@@ -113,10 +117,8 @@ public class R2dbcCnsReqRepoAdapter implements CnsReqRepoPort {
                 row.get("id", String.class),
                 row.get("df_id", String.class),
                 dpRef,
-                new Prps(row.get("prps_code", String.class)),
-                scp,
-                row.get("ntc_title", String.class),
-                row.get("ntc_text", String.class),
+                new CnsReqTemplate(new Prps(row.get("prps_code", String.class)), scp, row.get("ntc_title", String.class),
+                        row.get("ntc_text", String.class), PrpsVerColumns.read(row)),
                 CnsReqSts.valueOf(row.get("sts", String.class)),
                 row.get("created_at", Instant.class));
     }

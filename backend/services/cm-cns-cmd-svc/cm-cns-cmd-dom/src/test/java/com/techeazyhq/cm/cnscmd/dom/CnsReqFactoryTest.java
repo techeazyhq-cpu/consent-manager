@@ -34,10 +34,11 @@ class CnsReqFactoryTest {
 
     private static final DpRef ASHA = new DpRef.UnlnkDpRef(ExtDpRefTyp.EMAIL, "asha@example.com");
     private static final Scp EMAIL = new Scp(Set.of(new DCat("EMAIL")));
+    private static final PrpsVerRef V1 = new PrpsVerRef("ver-1", 1, "en", "hash");
 
     @Test
     void anOrdinaryRequestIsMade() {
-        assertDoesNotThrow(() -> CnsReqFactory.create("df-1", ASHA, new Prps("ORDER_UPDATES"), EMAIL, "Order updates",
+        assertDoesNotThrow(() -> create(new Prps("ORDER_UPDATES"), EMAIL, "Order updates",
                 "We email you when your order ships."));
     }
 
@@ -54,8 +55,9 @@ class CnsReqFactoryTest {
 
     @Test
     void aBatchTemplateIsCheckedTheSameWay() {
-        assertThrows(IllegalArgumentException.class, () -> CnsReqTemplate.of("ORDER_UPDATES",
-                IntStream.range(0, 51).mapToObj(i -> "C" + i).toList(), "Title", "Text"));
+        assertThrows(IllegalArgumentException.class, () -> CnsReqTemplate.of(new Prps("ORDER_UPDATES"),
+                new Scp(IntStream.range(0, 51).mapToObj(i -> new DCat("C" + i)).collect(Collectors.toSet())), "Title",
+                "Text", V1));
     }
 
     @Test
@@ -65,32 +67,39 @@ class CnsReqFactoryTest {
         assertThrows(IllegalArgumentException.class,
                 () -> create(new Prps("P"), new Scp(Set.of(new DCat("EM\u0000AIL"))), "Title", "Text"));
         assertThrows(IllegalArgumentException.class, () -> CnsReqFactory.create("df-1",
-                new DpRef.UnlnkDpRef(ExtDpRefTyp.EMAIL, "a".repeat(250) + "@example.com"), new Prps("P"), EMAIL,
-                "Title", "Text"));
+                new DpRef.UnlnkDpRef(ExtDpRefTyp.EMAIL, "a".repeat(250) + "@example.com"),
+                CnsReqTemplate.of(new Prps("P"), EMAIL, "Title", "Text", V1)));
         assertDoesNotThrow(() -> create(new Prps("P"), EMAIL, "Title", "First line.\nSecond line.\tTabbed."));
         assertInstanceOf(Recipient.Problem.class, Recipient.parse("as\u0000ha@example.com", ExtDpRefTyp.EMAIL));
     }
 
     @Test
     void aNoticeThatIsBlankOnceTrimmedIsRefused() {
-        // \u0001 isn't whitespace to isBlank, but trimming removes it: checked after normalising, it's caught
+        // \u0001 isn't whitespace to isBlank: it's caught as a control character
         assertThrows(IllegalArgumentException.class,
-                () -> CnsReqTemplate.of("ORDER_UPDATES", Set.of("EMAIL"), "Title", "\u0001"));
+                () -> CnsReqTemplate.of(new Prps("ORDER_UPDATES"), EMAIL, "Title", "\u0001", V1));
     }
 
     @Test
     void aStoredTemplateIsReadBackEvenIfTodayItWouldBeRefused() {
-        assertDoesNotThrow(() -> new CnsReqTemplate(new Prps("ORDER_UPDATES"), EMAIL, "Title", ""));
+        assertDoesNotThrow(() -> new CnsReqTemplate(new Prps("ORDER_UPDATES"), EMAIL, "Title", "", null));
+    }
+
+    @Test
+    void aRequestNamesAPurposeVersion() {
+        assertThrows(IllegalArgumentException.class, () -> CnsReqTemplate.of(new Prps("P"), EMAIL, "Title", "Text", null));
+        assertThrows(IllegalArgumentException.class, () -> CnsReqFactory.create("df-1", ASHA,
+                new CnsReqTemplate(new Prps("P"), EMAIL, "Title", "Text", null)));
     }
 
     @Test
     void storedRequestsRehydrateWhateverTheirSize() {
         Scp many = new Scp(IntStream.range(0, 500).mapToObj(i -> new DCat("C" + i)).collect(Collectors.toSet()));
-        assertDoesNotThrow(() -> CnsReqFactory.rehydrate("id", "df-1", ASHA, new Prps("P"), many, "Title", "Text",
-                CnsReqSts.PENDING, java.time.Instant.EPOCH));
+        assertDoesNotThrow(() -> CnsReqFactory.rehydrate("id", "df-1", ASHA,
+                new CnsReqTemplate(new Prps("P"), many, "Title", "Text", V1), CnsReqSts.PENDING, java.time.Instant.EPOCH));
     }
 
     private static CnsReq create(Prps prps, Scp scp, String title, String text) {
-        return CnsReqFactory.create("df-1", ASHA, prps, scp, title, text);
+        return CnsReqFactory.create("df-1", ASHA, CnsReqTemplate.of(prps, scp, title, text, V1));
     }
 }

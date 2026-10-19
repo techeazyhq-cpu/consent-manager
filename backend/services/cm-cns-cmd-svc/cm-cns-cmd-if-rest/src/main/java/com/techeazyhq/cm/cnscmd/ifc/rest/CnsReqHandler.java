@@ -66,7 +66,8 @@ public class CnsReqHandler {
                     }
                     CreateCnsReqCmd cmd = new CreateCnsReqCmd(
                             ctx.dfId(), body.dpId(), body.extDpRefTyp(), body.extDpRefVal(),
-                            body.prpsCode(), body.dCatCodes(), body.ntcTitle(), body.ntcText());
+                            body.prpsCode(), body.prpsVer(), body.ntcLang(),
+                            body.dCatCodes() == null ? java.util.Set.of() : body.dCatCodes());
                     return createHandler.handle(cmd);
                 })
                 // the domain refusing what was asked (no data categories, sizes over the limits) is the caller's

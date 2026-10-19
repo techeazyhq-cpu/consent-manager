@@ -55,5 +55,8 @@ export const managesApiKeys = (role: DfRole) => role === "OWNER" || role === "AD
 
 export const raisesRequests = (role: DfRole) => role === "OWNER" || role === "ADMIN" || role === "CONSENT_MANAGER";
 
+/** Who defines and publishes purposes (ADR-031): the people who raise requests, since a purpose is what they ask. */
+export const managesPurposes = raisesRequests;
+
 /** The roles {@code role} may give: only an Owner gives ownership. */
 export const assignableBy = (role: DfRole): DfRole[] => (role === "OWNER" ? ROLES : ROLES.filter((r) => r !== "OWNER"));

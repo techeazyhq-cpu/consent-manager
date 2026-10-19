@@ -76,12 +76,24 @@ const keys = {
 };
 await json(await fetch(`${GW}/api/df-reg/me/api-keys/${keys.aRevoked.id}`, { method: 'DELETE', headers: bearer(tokenA) }));
 
+// each fiduciary's purpose (ADR-031): defined and published once, reused when the kit runs again
+const PURPOSE = { code: 'ORDER_UPDATES', content: { name: 'Order updates', dCats: [{ code: 'EMAIL', sensitivity: 'ORDINARY',
+  necessary: false }], recipients: [], transfers: [], retentionDays: 365, requestedValidityDays: 365, maxValidityDays: 365,
+  flags: [], notices: [{ lang: 'en', title: 'Order updates', text: 'Set up by the test kit.' }] } };
+for (const who of ['a', 'b']) {
+  const made = await call(keys[who], 'POST', '/api/cns-cmd/prps-defs', { body: PURPOSE });
+  if (made.status !== 201 && made.status !== 409) throw new Error(`purpose for ${who}: ${made.status} ${made.text.slice(0, 200)}`);
+  await call(keys[who], 'POST', '/api/cns-cmd/prps-defs/ORDER_UPDATES/publish'); // 409 when already published
+  const def = await call(keys[who], 'GET', '/api/cns-cmd/prps-defs/ORDER_UPDATES');
+  keys[`prpsVer${who.toUpperCase()}`] = def.json.currentVer;
+}
+
 // one given consent each: raised with the key, approved by the data principal in the portal's way
 const dp = 'perf-dp@example.test';
 const raised = {};
 for (const who of ['a', 'b']) {
   const r = await call(keys[who], 'POST', '/api/cns-cmd/cns-reqs', { body: { extDpRefTyp: 'EMAIL', extDpRefVal: dp,
-    prpsCode: 'ORDER_UPDATES', dCatCodes: ['EMAIL'], ntcTitle: 'Order updates', ntcText: 'Set up by the test kit.' } });
+    prpsCode: 'ORDER_UPDATES', prpsVer: keys[`prpsVer${who.toUpperCase()}`] } });
   if (r.status !== 201) throw new Error(`raise for ${who}: ${r.status} ${r.text.slice(0, 200)}`);
   raised[who] = r.json.id;
 }

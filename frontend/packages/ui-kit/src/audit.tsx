@@ -74,6 +74,16 @@ export function describeAudit(row: AuditRow): string {
       return `Disabled ${d(row, "staff")}`;
     case "staff.signed-out-everywhere":
       return "Signed out of every session";
+    case "purpose.created":
+      return `Defined the purpose ${word(d(row, "purpose"))}`;
+    case "purpose.draft-saved":
+      return `Drafted version ${d(row, "version")} of ${word(d(row, "purpose"))}`;
+    case "purpose.draft-discarded":
+      return `Discarded the draft of ${word(d(row, "purpose"))} version ${d(row, "version")}`;
+    case "purpose.published":
+      return `Published ${word(d(row, "purpose"))} version ${d(row, "version")}${
+        row.details.change === "MATERIAL" ? " (needs re-consent)" : ""
+      }`;
     case "batch.submitted":
       return `Sent a list of ${d(row, "rows")} (${d(row, "toSend")} to ask)${row.details.file ? `, ${row.details.file}` : ""}`;
     case "batch.finished":

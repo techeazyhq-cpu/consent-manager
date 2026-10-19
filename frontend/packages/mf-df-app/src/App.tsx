@@ -26,7 +26,8 @@ import { BatchDetail, Batches, SendToMany } from "./Batches";
 import ApiKeys from "./ApiKeys";
 import Audit from "./Audit";
 import Billing from "./Billing";
-import { Account, Dashboard, Organisation, PurposeDetail, Requests } from "./pages";
+import { Account, Dashboard, Organisation, Requests } from "./pages";
+import { PurposeDetail, PurposeEditor, Purposes } from "./Purposes";
 import Playground from "./Playground";
 import Raise from "./Raise";
 import Team from "./Team";
@@ -40,7 +41,7 @@ interface Props {
   gwBase: string;
 }
 
-/** DF Console: a left menu, a dashboard of the purposes asked for, and a page per purpose (ADR-033 roles). */
+/** DF Console: a left menu, a dashboard of the purposes asked for, purposes and their versions (ADR-031, ADR-033 roles). */
 export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
   const route = useHashRoute(parseRoute);
   const c = useConsole(auth, gwBase, dfId, role);
@@ -49,6 +50,7 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
 
   const items: NavItem[] = [
     { key: "dashboard", href: "#/dashboard", label: "Dashboard", section: "Consent", icon: Icons.dashboard },
+    { key: "purposes", href: "#/purposes", label: "Purposes", section: "Consent", icon: Icons.list },
     ...(raisesRequests(role)
       ? [
           { key: "raise", href: "#/raise", label: "Raise a request", section: "Consent", icon: Icons.send },
@@ -69,8 +71,9 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
       : []),
     { key: "account", href: "#/account", label: "Account", section: "Organisation", icon: Icons.user },
   ];
-  // a purpose's page belongs under the dashboard in the menu, and a list's under the lists sent
-  const current = route.page === "purpose" ? "dashboard" : route.page === "batch" ? "batches" : route.page;
+  // a purpose's pages belong under the purposes in the menu, and a list's under the lists sent
+  const current =
+    route.page === "purpose" || route.page === "purpose-edit" ? "purposes" : route.page === "batch" ? "batches" : route.page;
 
   return (
     <AppShell
@@ -106,7 +109,11 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
       {route.page === "send-to-many" ? <SendToMany console={c} /> : null}
       {route.page === "batches" ? <Batches console={c} /> : null}
       {route.page === "batch" ? <BatchDetail key={route.id} console={c} id={route.id} /> : null}
-      {route.page === "purpose" ? <PurposeDetail console={c} prpsCode={route.prpsCode} /> : null}
+      {route.page === "purposes" ? <Purposes console={c} /> : null}
+      {route.page === "purpose" ? <PurposeDetail key={route.prpsCode} console={c} prpsCode={route.prpsCode} /> : null}
+      {route.page === "purpose-edit" ? (
+        <PurposeEditor key={route.prpsCode ?? "new"} console={c} prpsCode={route.prpsCode} />
+      ) : null}
       {route.page === "team" ? (
         <>
           <PageHeader title="Team" subtitle="The people at your organisation who use this console." />

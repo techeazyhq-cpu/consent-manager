@@ -60,10 +60,12 @@ public class R2dbcCnsReqBatchRepoAdapter implements CnsReqBatchRepoPort {
         DatabaseClient.GenericExecuteSpec insertBatch = db.sql("""
                         insert into cns_cmd.cns_req_batch
                             (id, df_id, prps_code, d_cats, ntc_title, ntc_text, source, file_name, created_by, created_at,
-                             total, valid, invalid, duplicate, sent, failed, sts, finished_at)
+                             total, valid, invalid, duplicate, sent, failed, sts, finished_at,
+                             prps_ver_id, prps_ver_no, ntc_lang, ntc_hash)
                         values
                             (:id, :dfId, :prpsCode, cast(:dCats as jsonb), :ntcTitle, :ntcText, :source, :fileName,
-                             :createdBy, :createdAt, :total, :valid, :invalid, :duplicate, 0, 0, :sts, :finishedAt)
+                             :createdBy, :createdAt, :total, :valid, :invalid, :duplicate, 0, 0, :sts, :finishedAt,
+                             :prpsVerId, :prpsVerNo, :ntcLang, :ntcHash)
                         """)
                 .bind("id", batch.id())
                 .bind("dfId", batch.dfId())
@@ -78,6 +80,7 @@ public class R2dbcCnsReqBatchRepoAdapter implements CnsReqBatchRepoPort {
                 .bind("invalid", batch.invalid())
                 .bind("duplicate", batch.duplicate())
                 .bind("sts", batch.sts().name());
+        insertBatch = PrpsVerColumns.bind(insertBatch, t.prpsVer());
         insertBatch = R2dbcBinds.bindNullable(insertBatch, "fileName", batch.fileName(), String.class);
         insertBatch = R2dbcBinds.bindNullable(insertBatch, "createdBy", batch.createdBy(), String.class);
         insertBatch = R2dbcBinds.bindNullable(insertBatch, "finishedAt", batch.finishedAt(), Instant.class);
@@ -200,7 +203,8 @@ public class R2dbcCnsReqBatchRepoAdapter implements CnsReqBatchRepoPort {
 
     private CnsReqBatch toBatch(Readable row) {
         CnsReqTemplate template = new CnsReqTemplate(new Prps(row.get("prps_code", String.class)),
-                readScp(row.get("d_cats", String.class)), row.get("ntc_title", String.class), row.get("ntc_text", String.class));
+                readScp(row.get("d_cats", String.class)), row.get("ntc_title", String.class), row.get("ntc_text", String.class),
+                PrpsVerColumns.read(row));
         return CnsReqBatch.rehydrate(
                 row.get("id", String.class),
                 row.get("df_id", String.class),

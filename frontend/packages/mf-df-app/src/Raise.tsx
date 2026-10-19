@@ -23,7 +23,7 @@ import type { Console, NewRequest } from "./console";
 import { purposeHref } from "./routes";
 import { RequestPreview, TemplateFields, templateProblem, useTemplateForm } from "./Template";
 
-export { parseCategories, toCode } from "./Template";
+export { toCode } from "./Template";
 
 /** Why the request can't be sent yet, or null when it can. */
 export function requestProblem(req: NewRequest): string | null {
@@ -31,13 +31,14 @@ export function requestProblem(req: NewRequest): string | null {
 }
 
 /**
- * Raising a consent request for one person: who, for what purpose, which data, and the notice they read before
- * deciding. The preview shows the request as they will see it. For many people, see "Send to many".
+ * Raising a consent request for one person: who, and which published purpose (ADR-031), so the data and the notice
+ * they read are the purpose's own. The preview shows the request as they will see it. For many people, see "Send to
+ * many".
  */
 export default function Raise({ console: c, prpsCode }: { console: Console; prpsCode?: string }) {
   const [refTyp, setRefTyp] = useState<ExtDpRefTyp>("EMAIL");
   const [refVal, setRefVal] = useState("");
-  const form = useTemplateForm(prpsCode);
+  const form = useTemplateForm(c.defs, prpsCode);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,7 +88,7 @@ export default function Raise({ console: c, prpsCode }: { console: Console; prps
             <p className="cm-note">
               Asking many people? <a href="#/send-to-many">Send to many</a> takes a CSV or Excel list.
             </p>
-            <TemplateFields form={form} known={c.purposes.map((p) => p.code)} />
+            <TemplateFields console={c} form={form} />
             <Button type="submit" variant="primary" disabled={busy}>
               {busy ? "Sending…" : "Send request"}
             </Button>

@@ -52,7 +52,8 @@ import reactor.core.publisher.Mono;
  * Batches of consent requests (ADR-036), for the fiduciary's people and its systems alike.
  * <ul>
  *   <li>{@code POST /api/cns-cmd/cns-req-batches}: JSON ({@code recipients} listed), or a multipart upload of a CSV
- *       or Excel file with the template as form fields. {@code ?dryRun=true} checks the list and reports, sending
+ *       or Excel file with the purpose version ({@code prpsCode}, {@code prpsVer}, optional {@code ntcLang} and
+ *       {@code dCatCodes}) as form fields. {@code ?dryRun=true} checks the list and reports, sending
  *       nothing. A stored batch answers 202; it is sent in the background.</li>
  *   <li>{@code GET .../cns-req-batches}, {@code .../{id}}, {@code .../{id}/rows} and {@code .../{id}/report.csv}.</li>
  * </ul>
@@ -121,9 +122,9 @@ public class CnsReqBatchHttpHandler {
                 .map(body -> {
                     List<CnsReqBatch.Input> inputs = body.recipients() == null ? List.of()
                             : body.recipients().stream().map(RecipientDto::toInput).toList();
-                    return new SubmitCnsReqBatchHandler.Cmd(ctx.dfId(), ctx.subject(), body.prpsCode(),
-                            body.dCatCodes() == null ? Set.of() : Set.copyOf(body.dCatCodes()), body.ntcTitle(),
-                            body.ntcText(), CnsReqBatch.Source.API, null, inputs, dryRun);
+                    return new SubmitCnsReqBatchHandler.Cmd(ctx.dfId(), ctx.subject(), body.prpsCode(), body.prpsVer(),
+                            body.ntcLang(), body.dCatCodes() == null ? Set.of() : Set.copyOf(body.dCatCodes()),
+                            CnsReqBatch.Source.API, null, inputs, dryRun);
                 });
     }
 
@@ -154,8 +155,8 @@ public class CnsReqBatchHttpHandler {
                             throw new DomRuleViolation(400, "invalid-list", e.getMessage());
                         }
                         return new SubmitCnsReqBatchHandler.Cmd(ctx.dfId(), ctx.subject(), field(parts, "prpsCode"),
-                                categories(field(parts, "dCatCodes")), field(parts, "ntcTitle"), field(parts, "ntcText"),
-                                source, filePart.filename(), inputs, dryRun);
+                                version(field(parts, "prpsVer")), field(parts, "ntcLang"),
+                                categories(field(parts, "dCatCodes")), source, filePart.filename(), inputs, dryRun);
                     });
         });
     }
@@ -181,6 +182,18 @@ public class CnsReqBatchHttpHandler {
             return Set.of();
         }
         return new LinkedHashSet<>(Arrays.stream(commaSeparated.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList());
+    }
+
+    /** A form field's purpose version: absent is left for the purpose check to refuse; not a number is refused here. */
+    private static Integer version(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(value.strip());
+        } catch (NumberFormatException e) {
+            throw new DomRuleViolation(400, "invalid-batch", "prpsVer must be a number");
+        }
     }
 
     private static int intParam(ServerRequest request, String name, int fallback) {
@@ -223,16 +236,19 @@ public class CnsReqBatchHttpHandler {
         }
     }
 
-    record BatchReqDto(String prpsCode, List<String> dCatCodes, String ntcTitle, String ntcText,
+    /** Every recipient is asked for published purpose version {@code prpsVer} (ADR-031), as a single request is. */
+    record BatchReqDto(String prpsCode, Integer prpsVer, String ntcLang, List<String> dCatCodes,
                        List<RecipientDto> recipients) {
     }
 
-    record BatchDto(String id, String sts, String source, String fileName, String prpsCode, List<String> dCatCodes,
-                    String ntcTitle, int total, int valid, int invalid, int duplicate, int sent, int failed, int pending,
-                    Instant createdAt, Instant finishedAt) {
+    record BatchDto(String id, String sts, String source, String fileName, String prpsCode, Integer prpsVer,
+                    String ntcLang, List<String> dCatCodes, String ntcTitle, int total, int valid, int invalid,
+                    int duplicate, int sent, int failed, int pending, Instant createdAt, Instant finishedAt) {
 
         static BatchDto of(CnsReqBatch b) {
+            var ver = b.template().prpsVer();
             return new BatchDto(b.id(), b.sts().name(), b.source().name(), b.fileName(), b.template().prps().code(),
+                    ver == null ? null : ver.verNo(), ver == null ? null : ver.ntcLang(),
                     b.template().scp().dCats().stream().map(DCat::code).sorted().toList(), b.template().ntcTitle(),
                     b.total(), b.valid(), b.invalid(), b.duplicate(), b.sent(), b.failed(),
                     Math.max(0, b.valid() - b.sent() - b.failed()), b.createdAt(), b.finishedAt());

@@ -36,11 +36,13 @@ import com.techeazyhq.cm.cnscmd.dom.CnsReq;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqFactory;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqRepoPort;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqSts;
+import com.techeazyhq.cm.cnscmd.dom.CnsReqTemplate;
 import com.techeazyhq.cm.cnscmd.dom.DCat;
 import com.techeazyhq.cm.cnscmd.dom.DpRef;
 import com.techeazyhq.cm.cnscmd.dom.ExtDpRefTyp;
 import com.techeazyhq.cm.cnscmd.dom.NtfCmdPort;
 import com.techeazyhq.cm.cnscmd.dom.Prps;
+import com.techeazyhq.cm.cnscmd.dom.PrpsVerRef;
 import com.techeazyhq.cm.cnscmd.dom.Scp;
 import com.techeazyhq.cm.domkit.DomainEvt;
 
@@ -95,8 +97,9 @@ class CnsLifecycleSagaOrchestratorTest {
 
     private CnsReq stored(CnsReqSts sts) {
         CnsReq req = CnsReqFactory.rehydrate("req-" + sts, "df-1",
-                new DpRef.UnlnkDpRef(ExtDpRefTyp.EMAIL, "ann@example.com"), new Prps("ORDER_FULFILLMENT"),
-                new Scp(Set.of(new DCat("EMAIL"))), "Title", "Text", sts, Instant.now());
+                new DpRef.UnlnkDpRef(ExtDpRefTyp.EMAIL, "ann@example.com"), new CnsReqTemplate(new Prps("ORDER_FULFILLMENT"),
+                        new Scp(Set.of(new DCat("EMAIL"))), "Title", "Text", new PrpsVerRef("ver-1", 1, "en", "hash")),
+                sts, Instant.now());
         reqs.put(req.id(), req);
         return req;
     }

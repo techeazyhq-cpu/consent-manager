@@ -17,11 +17,14 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { CnsArtRdMdl, CnsLcySts, CnsReqBatchDto } from "api-client";
+import type { CnsArtRdMdl, CnsLcySts, CnsReqBatchDto, PrpsContent, PrpsSummaryDto } from "api-client";
 import { MAX_FILE_BYTES, fileProblem, progressOf, sendProblem } from "./Batches";
 import { grantRate } from "./labels";
-import { parseCategories, requestProblem, toCode } from "./Raise";
-import { batchHref, parseRoute, purposeHref, raiseHref } from "./routes";
+import { purposeTiles } from "./console";
+import { contentProblem, emptyContent, linesOf, tidy } from "./Purposes";
+import { requestProblem, toCode } from "./Raise";
+import { batchHref, parseRoute, purposeEditHref, purposeHref, raiseHref } from "./routes";
+import { askable, noticeIn } from "./Template";
 import { usageNote } from "./Billing";
 import { OPERATIONS, asCurl, fillPath, pathParams, remembered, tokenCurl, uploadForm } from "./sandbox";
 
@@ -29,7 +32,12 @@ describe("DF Console routes", () => {
   it("lands on the dashboard by default and for anything unknown", () => {
     expect(parseRoute("")).toEqual({ page: "dashboard" });
     expect(parseRoute("#/nowhere")).toEqual({ page: "dashboard" });
-    expect(parseRoute("#/purposes")).toEqual({ page: "dashboard" });
+  });
+
+  it("lists purposes, and opens one, a new one, or its next version's draft", () => {
+    expect(parseRoute("#/purposes")).toEqual({ page: "purposes" });
+    expect(parseRoute(purposeEditHref())).toEqual({ page: "purpose-edit" });
+    expect(parseRoute(purposeEditHref("ORDER_UPDATES"))).toEqual({ page: "purpose-edit", prpsCode: "ORDER_UPDATES" });
   });
 
   it("opens a purpose, and the request form with or without one", () => {
@@ -42,27 +50,99 @@ describe("DF Console routes", () => {
   });
 });
 
+const content = (over: Partial<PrpsContent> = {}): PrpsContent => ({
+  ...emptyContent(),
+  name: "Order updates",
+  dCats: [{ code: "EMAIL", sensitivity: "ORDINARY", necessary: true, consequence: "No updates without it." }],
+  notices: [
+    { lang: "hi", title: "ऑर्डर अपडेट", text: "हम ईमेल करते हैं।" },
+    { lang: "en", title: "Order updates", text: "We email you about your orders." },
+  ],
+  ...over,
+});
+
+const summary = (code: string, over: Partial<PrpsSummaryDto> = {}): PrpsSummaryDto => ({
+  id: code,
+  code,
+  currentVer: 1,
+  draftVer: null,
+  current: content(),
+  draft: null,
+  updatedAt: "2026-10-01T00:00:00Z",
+  ...over,
+});
+
 describe("raising a request", () => {
   it("files what people type under codes", () => {
     expect(toCode(" Order updates! ")).toBe("ORDER_UPDATES");
-    expect(parseCategories("Email, name,, email, Phone number")).toEqual(["EMAIL", "NAME", "PHONE_NUMBER"]);
   });
 
-  it("needs a purpose, data, a full notice and who to ask", () => {
-    const ok = {
-      extDpRefTyp: "EMAIL" as const,
-      extDpRefVal: "a@b.example",
-      prpsCode: "ORDER_UPDATES",
-      dCatCodes: ["EMAIL"],
-      ntcTitle: "Order updates",
-      ntcText: "We email you about your orders. You can withdraw at any time.",
-    };
+  it("needs a published purpose version, some of its data, and who to ask", () => {
+    const ok = { extDpRefTyp: "EMAIL" as const, extDpRefVal: "a@b.example", prpsCode: "ORDER_UPDATES", prpsVer: 1, dCatCodes: ["EMAIL"] };
     expect(requestProblem(ok)).toBeNull();
-    expect(requestProblem({ ...ok, prpsCode: "" })).toMatch(/for/);
+    expect(requestProblem({ ...ok, dCatCodes: undefined })).toBeNull();
+    expect(requestProblem({ ...ok, prpsCode: "" })).toMatch(/purpose/);
+    expect(requestProblem({ ...ok, prpsVer: 0 })).toMatch(/publish/i);
     expect(requestProblem({ ...ok, dCatCodes: [] })).toMatch(/data/);
-    expect(requestProblem({ ...ok, ntcTitle: " " })).toMatch(/title/);
-    expect(requestProblem({ ...ok, ntcText: "" })).toMatch(/notice/i);
     expect(requestProblem({ ...ok, extDpRefVal: "" })).toMatch(/who/);
+  });
+
+  it("asks only from purposes with a published version, in English unless another language is chosen", () => {
+    const defs = [summary("ORDER_UPDATES"), summary("DRAFT_ONLY", { currentVer: null, current: null, draftVer: 1, draft: content() })];
+    expect(askable(defs).map((d) => d.code)).toEqual(["ORDER_UPDATES"]);
+    expect(askable(null)).toEqual([]);
+    expect(noticeIn(content())?.lang).toBe("en");
+    expect(noticeIn(content(), "hi")?.lang).toBe("hi");
+    expect(noticeIn(content(), "ta")).toBeUndefined();
+    expect(noticeIn(content({ notices: [{ lang: "ta", title: "T", text: "X" }] }))?.lang).toBe("ta");
+  });
+});
+
+describe("purposes", () => {
+  it("shows every defined purpose, and any code requests used, with their counts", () => {
+    const rows = [
+      { prpsCode: "ORDER_UPDATES", lcySts: "ISSUED", createdAt: "2026-10-02T00:00:00Z" },
+      { prpsCode: "OLD_CODE", lcySts: "PENDING", createdAt: "2026-09-01T00:00:00Z" },
+    ] as CnsArtRdMdl[];
+    const tiles = purposeTiles([summary("ORDER_UPDATES"), summary("NEWSLETTER", { updatedAt: "2026-09-15T00:00:00Z" })], rows);
+    expect(tiles.map((t) => [t.code, t.sent, t.granted, t.pending])).toEqual([
+      ["ORDER_UPDATES", 1, 1, 0],
+      ["NEWSLETTER", 0, 0, 0],
+      ["OLD_CODE", 1, 0, 1],
+    ]);
+    expect(tiles[0].name).toBe("Order updates");
+    expect(tiles[2].currentVer).toBeNull();
+  });
+
+  it("tidies a draft before it is checked: trimmed codes, blank rows and empty optional fields dropped", () => {
+    const out = tidy(
+      content({
+        name: " Order updates ",
+        description: "  ",
+        dCats: [
+          { code: " e-mail ", dpv: " ", sensitivity: "ORDINARY", necessary: false, consequence: "" },
+          { code: " ", sensitivity: "ORDINARY", necessary: false },
+        ],
+        notices: [
+          { lang: " en ", title: " T ", text: " X " },
+          { lang: "hi", title: "", text: "" },
+        ],
+      }),
+    );
+    expect(out.name).toBe("Order updates");
+    expect(out.description).toBeNull();
+    expect(out.dCats).toEqual([{ code: "E_MAIL", dpv: null, sensitivity: "ORDINARY", necessary: false, consequence: null }]);
+    expect(out.notices).toEqual([{ lang: "en", title: "T", text: "X" }]);
+    expect(linesOf(" Courier Ltd \n\n Ad Co ")).toEqual(["Courier Ltd", "Ad Co"]);
+  });
+
+  it("says what to fix first: a name, data, a consequence for needed data, sane validity and a full notice", () => {
+    expect(contentProblem(content())).toBeNull();
+    expect(contentProblem(content({ name: "" }))).toMatch(/name/);
+    expect(contentProblem(content({ dCats: [] }))).toMatch(/data/);
+    expect(contentProblem(content({ dCats: [{ code: "EMAIL", sensitivity: "ORDINARY", necessary: true }] }))).toMatch(/refuses/);
+    expect(contentProblem(content({ requestedValidityDays: 400, maxValidityDays: 365 }))).toMatch(/validity/);
+    expect(contentProblem(content({ notices: [{ lang: "en", title: "", text: "X" }] }))).toMatch(/notice/);
   });
 });
 
@@ -127,6 +207,13 @@ describe("the API playground", () => {
     expect(remembered(op("jwks"), { keys: [] })).toEqual({});
   });
 
+  it("asks for the purpose version its first samples define and publish", () => {
+    expect(OPERATIONS.slice(0, 2).map((o) => o.id)).toEqual(["purpose", "purpose-publish"]);
+    expect(remembered(op("purpose"), { code: "ORDER_UPDATES" })).toEqual({ prpsCode: "ORDER_UPDATES" });
+    const raise = op("raise").body;
+    expect(raise.kind === "json" && JSON.parse(raise.sample)).toMatchObject({ prpsCode: "ORDER_UPDATES", prpsVer: 1 });
+  });
+
   it("offers only test contacts in its samples", () => {
     for (const o of OPERATIONS) {
       if (o.body.kind === "none") continue;
@@ -145,12 +232,19 @@ describe("the API playground", () => {
   });
 
   it("sends an upload as form fields and a CSV file", async () => {
-    const form = uploadForm(JSON.stringify({ prpsCode: "P", dCatCodes: ["EMAIL", "NAME"], file: "Email\na@sandbox.example\n" }));
+    const form = uploadForm(JSON.stringify({ prpsCode: "P", prpsVer: 2, dCatCodes: ["EMAIL", "NAME"], file: "Email\na@sandbox.example\n" }));
     expect(form.get("prpsCode")).toBe("P");
+    expect(form.get("prpsVer")).toBe("2");
     expect(form.get("dCatCodes")).toBe("EMAIL,NAME");
     const file = form.get("file") as File;
     expect(file.name).toBe("list.csv");
-    expect(await file.text()).toBe("Email\na@sandbox.example\n");
+    // jsdom's File has no text(); FileReader reads it the same way
+    const text = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.readAsText(file);
+    });
+    expect(text).toBe("Email\na@sandbox.example\n");
   });
 });
 

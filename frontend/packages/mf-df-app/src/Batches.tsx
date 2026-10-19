@@ -137,7 +137,7 @@ function ProblemRows({ rows }: { rows: CnsReqBatchRowDto[] }) {
  * skipped and said why.
  */
 export function SendToMany({ console: c }: { console: Console }) {
-  const form = useTemplateForm();
+  const form = useTemplateForm(c.defs);
   const [file, setFile] = useState<File | null>(null);
   const [check, setCheck] = useState<CnsReqBatchSubmitRespDto | null>(null);
   const [busy, setBusy] = useState<"check" | "send" | null>(null);
@@ -207,7 +207,7 @@ export function SendToMany({ console: c }: { console: Console }) {
                 Download a sample list
               </a>
             </p>
-            <TemplateFields form={form} known={c.purposes.map((p) => p.code)} />
+            <TemplateFields console={c} form={form} />
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <Button onClick={() => submit(true)} disabled={busy !== null}>
                 {busy === "check" ? "Checking…" : current ? "Check again" : "Check the list"}
@@ -401,7 +401,7 @@ export function BatchDetail({ console: c, id }: { console: Console; id: string }
   return (
     <>
       <PageHeader
-        title={`${humanise(batch.prpsCode)}: ${batch.fileName ?? "sent through the API"}`}
+        title={`${humanise(batch.prpsCode)}${batch.prpsVer ? ` v${batch.prpsVer}` : ""}: ${batch.fileName ?? "sent through the API"}`}
         subtitle={`${batch.ntcTitle} · ${batch.dCatCodes.map(humanise).join(", ")} · ${fmtDate(batch.createdAt)}`}
       />
       {error ? <ErrorBanner message={error} /> : null}

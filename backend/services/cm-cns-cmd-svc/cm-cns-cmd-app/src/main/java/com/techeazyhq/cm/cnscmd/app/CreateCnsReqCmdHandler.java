@@ -18,8 +18,6 @@
 
 package com.techeazyhq.cm.cnscmd.app;
 
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,13 +25,10 @@ import com.techeazyhq.cm.cnscmd.dom.CnsReq;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqFactory;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqRepoPort;
 import com.techeazyhq.cm.cnscmd.dom.ContactPolicy;
-import com.techeazyhq.cm.cnscmd.dom.DCat;
 import com.techeazyhq.cm.cnscmd.dom.DfActivePort;
 import com.techeazyhq.cm.cnscmd.dom.DfSubEligiblePolicy;
 import com.techeazyhq.cm.cnscmd.dom.DpRef;
-import com.techeazyhq.cm.cnscmd.dom.Prps;
 import com.techeazyhq.cm.cnscmd.dom.Recipient;
-import com.techeazyhq.cm.cnscmd.dom.Scp;
 import com.techeazyhq.cm.domkit.Spec;
 import com.techeazyhq.cm.webkit.DomRuleViolation;
 
@@ -42,7 +37,8 @@ import reactor.core.publisher.Mono;
 /**
  * Stage 1: Capture (plan §7c step 1). Order of checks matters: DF-active first (cheap identity
  * check, existing pattern), then {@link DfSubEligiblePolicy} (§7b's hard subscription gate) —
- * both Circuit-Breaker-wrapped in their respective infra adapters — before anything is persisted.
+ * both Circuit-Breaker-wrapped in their respective infra adapters — then the purpose version (ADR-031),
+ * before anything is persisted.
  */
 public class CreateCnsReqCmdHandler implements CmdHandler<CreateCnsReqCmd, CnsReq> {
 
@@ -50,18 +46,21 @@ public class CreateCnsReqCmdHandler implements CmdHandler<CreateCnsReqCmd, CnsRe
     private final DfActivePort dfActivePort;
     private final DfSubEligiblePolicy dfSubEligiblePolicy;
 
+    private final PrpsResolver purposes;
     private final ContactPolicy contacts;
 
     public CreateCnsReqCmdHandler(CnsReqRepoPort cnsReqRepo, DfActivePort dfActivePort,
-                                   DfSubEligiblePolicy dfSubEligiblePolicy) {
-        this(cnsReqRepo, dfActivePort, dfSubEligiblePolicy, ContactPolicy.ANYONE);
+                                   DfSubEligiblePolicy dfSubEligiblePolicy, PrpsResolver purposes) {
+        this(cnsReqRepo, dfActivePort, dfSubEligiblePolicy, purposes, ContactPolicy.ANYONE);
     }
 
     public CreateCnsReqCmdHandler(CnsReqRepoPort cnsReqRepo, DfActivePort dfActivePort,
-                                   DfSubEligiblePolicy dfSubEligiblePolicy, ContactPolicy contacts) {
+                                   DfSubEligiblePolicy dfSubEligiblePolicy, PrpsResolver purposes,
+                                   ContactPolicy contacts) {
         this.cnsReqRepo = cnsReqRepo;
         this.dfActivePort = dfActivePort;
         this.dfSubEligiblePolicy = dfSubEligiblePolicy;
+        this.purposes = purposes;
         this.contacts = contacts;
     }
 
@@ -85,12 +84,9 @@ public class CreateCnsReqCmdHandler implements CmdHandler<CreateCnsReqCmd, CnsRe
                         : Mono.error(new DomRuleViolation(404, "df-not-active", "DF " + cmd.dfId() + " is not active")))
                 .then(dfSubEligiblePolicy.evaluate(cmd.dfId()))
                 .flatMap(result -> requireEligible(cmd.dfId(), result))
-                .then(Mono.defer(() -> {
-                    Scp scp = new Scp(cmd.dCatCodes().stream().map(DCat::new).collect(Collectors.toSet()));
-                    CnsReq cnsReq = CnsReqFactory.create(
-                            cmd.dfId(), dpRef, new Prps(cmd.prpsCode()), scp, cmd.ntcTitle(), cmd.ntcText());
-                    return cnsReqRepo.save(cnsReq);
-                }));
+                // purpose limitation (ADR-031): only the current version of a defined purpose, only its categories
+                .then(purposes.resolve(cmd.dfId(), cmd.prpsCode(), cmd.prpsVer(), cmd.ntcLang(), cmd.dCatCodes()))
+                .flatMap(template -> cnsReqRepo.save(CnsReqFactory.create(cmd.dfId(), dpRef, template)));
     }
 
     private Mono<Void> requireEligible(String dfId, Spec.SpecResult result) {

@@ -22,13 +22,17 @@ import java.util.Set;
 
 import com.techeazyhq.cm.cnscmd.dom.ExtDpRefTyp;
 
-/** Request body for {@code POST /api/cns-cmd/cns-reqs} — the DF Integration API's core write operation (plan §10). */
+/**
+ * Request body for {@code POST /api/cns-cmd/cns-reqs} — the DF Integration API's core write operation (plan §10). It
+ * names a published purpose version (ADR-031): {@code prpsCode} and {@code prpsVer}; optionally the notice's language
+ * {@code ntcLang} and the data categories {@code dCatCodes} (all the version's, when none are named).
+ */
 public record CnsReqCreateReqDto(
         String dpId,
         ExtDpRefTyp extDpRefTyp,
         String extDpRefVal,
         String prpsCode,
-        Set<String> dCatCodes,
-        String ntcTitle,
-        String ntcText) {
+        Integer prpsVer,
+        String ntcLang,
+        Set<String> dCatCodes) {
 }

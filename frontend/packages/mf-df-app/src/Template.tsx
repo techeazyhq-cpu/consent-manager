@@ -17,9 +17,11 @@
  */
 
 import { useState } from "react";
-import type { CnsReqBatchTemplate } from "api-client";
+import type { CnsReqBatchTemplate, PrpsContent, PrpsNtc, PrpsSummaryDto } from "api-client";
 import { Field, humanise } from "ui-kit/src/index";
 import type { Console } from "./console";
+import { managesPurposes } from "./roles";
+import { purposeEditHref } from "./routes";
 
 /** A code people's choices can be filed under: letters, digits and underscores, in capitals. */
 export const toCode = (text: string) =>
@@ -29,65 +31,116 @@ export const toCode = (text: string) =>
     .replace(/[^A-Z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
-export const parseCategories = (text: string) => Array.from(new Set(text.split(",").map(toCode).filter(Boolean)));
-
-/** Why the template can't be used yet, or null when it can. */
+/** Why the request can't be sent yet, or null when it can. */
 export function templateProblem(t: CnsReqBatchTemplate): string | null {
-  if (!t.prpsCode) return "Say what the data is for.";
-  if (t.dCatCodes.length === 0) return "Name at least one kind of data you need.";
-  if (!t.ntcTitle.trim()) return "Give the notice a title.";
-  if (!t.ntcText.trim()) return "Write the notice: what you'll do with the data, and that they can withdraw.";
+  if (!t.prpsCode) return "Choose the purpose you're asking consent for.";
+  if (!t.prpsVer) return "That purpose has no published version yet. Publish it first.";
+  if (t.dCatCodes && t.dCatCodes.length === 0) return "Ask for at least one kind of data.";
   return null;
 }
 
-/** What is asked of a person (purpose, data, notice), as typed and as the codes sent. */
-export function useTemplateForm(prpsCode?: string) {
-  const [purpose, setPurpose] = useState(prpsCode ? humanise(prpsCode) : "");
-  const [categories, setCategories] = useState("");
-  const [ntcTitle, setNtcTitle] = useState("");
-  const [ntcText, setNtcText] = useState("");
+/** The notice in `lang`; with none chosen, English if there is one, otherwise the first written (as the platform). */
+export function noticeIn(content: PrpsContent, lang?: string): PrpsNtc | undefined {
+  if (lang) return content.notices.find((n) => n.lang === lang);
+  return content.notices.find((n) => n.lang === "en") ?? content.notices[0];
+}
+
+/** The purposes a request can be made from: those with a published version. */
+export const askable = (defs: PrpsSummaryDto[] | null) =>
+  (defs ?? []).filter((d): d is PrpsSummaryDto & { current: PrpsContent; currentVer: number } => !!d.current && !!d.currentVer);
+
+/**
+ * What a request asks (ADR-031): a purpose's current version, the notice's language, and which of its data
+ * categories. Every category is asked for until unticked; a request can never ask for more than the purpose covers.
+ */
+export function useTemplateForm(defs: PrpsSummaryDto[] | null, prpsCode?: string) {
+  const [code, setCodeState] = useState(prpsCode ?? "");
+  const [lang, setLang] = useState("");
+  const [left, setLeft] = useState<string[]>([]);
+  const def = askable(defs).find((d) => d.code === code);
+  const content = def?.current;
+  const notice = content ? noticeIn(content, lang || undefined) : undefined;
+  const dCatCodes = content ? content.dCats.map((d) => d.code).filter((c) => !left.includes(c)) : [];
   const template: CnsReqBatchTemplate = {
-    prpsCode: toCode(purpose),
-    dCatCodes: parseCategories(categories),
-    ntcTitle: ntcTitle.trim(),
-    ntcText: ntcText.trim(),
+    prpsCode: def ? def.code : "",
+    prpsVer: def?.currentVer ?? 0,
+    ntcLang: notice?.lang,
+    dCatCodes,
   };
-  return { purpose, setPurpose, categories, setCategories, ntcTitle, setNtcTitle, ntcText, setNtcText, template };
+  const setCode = (next: string) => {
+    setCodeState(next);
+    setLang("");
+    setLeft([]);
+  };
+  const toggle = (dCat: string, asked: boolean) =>
+    setLeft((prev) => (asked ? prev.filter((c) => c !== dCat) : [...prev, dCat]));
+  return { code, setCode, lang, setLang, content, notice, toggle, template };
 }
 
 export type TemplateForm = ReturnType<typeof useTemplateForm>;
 
-/** The purpose, data and notice fields, suggesting purposes used before. */
-export function TemplateFields({ form, known }: { form: TemplateForm; known: string[] }) {
+/** The purpose, the notice's language and the data asked for, from the purposes published. */
+export function TemplateFields({ console: c, form }: { console: Console; form: TemplateForm }) {
+  const options = askable(c.defs);
+  const content = form.content;
   return (
     <>
       <h3 className="cm-section-title">What you're asking for</h3>
+      {c.defs && options.length === 0 ? (
+        <div className="df-callout" role="status">
+          <span>
+            Requests are made from a published purpose: what the data is for, which data, and the notice people read.
+          </span>
+          {managesPurposes(c.role) ? (
+            <a className="cm-btn" href={purposeEditHref()} style={{ textDecoration: "none" }}>
+              Define a purpose
+            </a>
+          ) : null}
+        </div>
+      ) : null}
       <div className="cm-form-grid">
         <Field label="Purpose">
-          <input list="df-purposes" value={form.purpose} onChange={(e) => form.setPurpose(e.target.value)} placeholder="e.g. Order updates" />
+          <select value={form.code} onChange={(e) => form.setCode(e.target.value)}>
+            <option value="">Choose a purpose…</option>
+            {options.map((d) => (
+              <option key={d.code} value={d.code}>
+                {d.current.name} (version {d.currentVer})
+              </option>
+            ))}
+          </select>
         </Field>
-        <Field label="Data you need (comma-separated)">
-          <input value={form.categories} onChange={(e) => form.setCategories(e.target.value)} placeholder="e.g. Email, Name" />
-        </Field>
+        {content && content.notices.length > 1 ? (
+          <Field label="Notice language">
+            <select value={form.notice?.lang ?? ""} onChange={(e) => form.setLang(e.target.value)}>
+              {content.notices.map((n) => (
+                <option key={n.lang} value={n.lang}>
+                  {n.lang}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : null}
       </div>
-      <datalist id="df-purposes">
-        {known.map((k) => (
-          <option key={k} value={humanise(k)} />
-        ))}
-      </datalist>
-
-      <h3 className="cm-section-title">The notice they'll read</h3>
-      <Field label="Title">
-        <input maxLength={255} value={form.ntcTitle} onChange={(e) => form.setNtcTitle(e.target.value)} placeholder="e.g. Order updates by email" />
-      </Field>
-      <Field label="Notice">
-        <textarea
-          rows={5}
-          value={form.ntcText}
-          onChange={(e) => form.setNtcText(e.target.value)}
-          placeholder="What you'll do with the data, for how long, who else sees it, and that they can withdraw at any time."
-        />
-      </Field>
+      {content ? (
+        <fieldset className="df-dcats">
+          <legend>Data you're asking for</legend>
+          {content.dCats.map((d) => (
+            <label key={d.code}>
+              <input
+                type="checkbox"
+                checked={form.template.dCatCodes?.includes(d.code) ?? false}
+                onChange={(e) => form.toggle(d.code, e.target.checked)}
+              />{" "}
+              {humanise(d.code)}
+              {d.necessary ? <span className="cm-note"> · needed: {d.consequence}</span> : null}
+            </label>
+          ))}
+          <p className="cm-note">
+            Consent is asked for {content.requestedValidityDays} days; people may choose up to{" "}
+            {content.maxValidityDays}. To change the data, notice or validity, publish a new version of the purpose.
+          </p>
+        </fieldset>
+      ) : null}
     </>
   );
 }
@@ -105,17 +158,17 @@ export function RequestPreview({ console: c, form }: { console: Console; form: T
           <strong>{c.dfName}</strong>
           <span className="cm-badge cm-badge-pending">Awaiting your decision</span>
         </div>
-        <div className="df-preview-purpose">{form.purpose.trim() ? humanise(t.prpsCode) : "Purpose"}</div>
+        <div className="df-preview-purpose">{t.prpsCode ? humanise(t.prpsCode) : "Purpose"}</div>
         <div className="df-chips">
-          {(t.dCatCodes.length ? t.dCatCodes : ["DATA"]).map((d) => (
+          {(t.dCatCodes?.length ? t.dCatCodes : ["DATA"]).map((d) => (
             <span key={d} className="df-chip">
               {humanise(d)}
             </span>
           ))}
         </div>
         <div className="df-preview-notice">
-          <strong>{t.ntcTitle || "Notice title"}</strong>
-          <p>{t.ntcText || "Your notice appears here, exactly as you write it."}</p>
+          <strong>{form.notice?.title ?? "Notice title"}</strong>
+          <p>{form.notice?.text ?? "The purpose's notice appears here, exactly as it was published."}</p>
         </div>
         <div className="df-preview-actions">
           <span className="cm-btn cm-btn-primary">Give consent</span>

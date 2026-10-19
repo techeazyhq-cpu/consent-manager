@@ -20,7 +20,8 @@
 
 Every request authenticates with the API key in {{apiKey}} and is signed (CM1-HMAC-SHA256, ADR-041) by the
 collection's pre-request script with {{signingSecret}}, a fresh timestamp and a fresh nonce. Ids that later requests
-need ({{requestId}}, {{batchId}}) are captured from responses. A "Replay protection" folder sends one signed request
+need ({{requestId}}, {{batchId}}) are captured from responses. The Purposes folder comes first: requests name the
+purpose version it defines and publishes (ADR-031), and run again it accepts that the purpose already exists. A "Replay protection" folder sends one signed request
 twice and expects the second to be refused.
 
 Postman builds multipart bodies after pre-request scripts run, so the CSV upload goes unsigned: use it with a key that
@@ -65,6 +66,11 @@ pm.request.headers.upsert({ key: 'X-Signature', value: cryptojs.HmacSHA256(canon
 """
 
 CAPTURE = {
+    # run again, the purpose is already defined, and already published: both are fine
+    "definePurpose": "pm.test('defined, or already was', () => pm.expect(pm.response.code).to.be.oneOf([201, 409]));\n"
+                     "if (pm.response.code === 201) pm.collectionVariables.set('prpsCode', pm.response.json().code);",
+    "publishPurposeVersion": "pm.test('published, or nothing left to publish', () => "
+                             "pm.expect(pm.response.code).to.be.oneOf([200, 409]));",
     "raiseConsentRequest": "pm.test('raised', () => pm.response.to.have.status(201));\n"
                            "pm.collectionVariables.set('requestId', pm.response.json().id);",
     "sendToMany": "pm.test('accepted or checked', () => pm.expect(pm.response.code).to.be.oneOf([200, 202]));\n"
@@ -76,6 +82,7 @@ CAPTURE = {
 DEFAULT_TEST = "pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300));"
 
 VARIABLES = {"requestId": "", "batchId": "", "cnsArtId": "", "cnsTkn": "", "purpose": "ORDER_UPDATES",
+             "prpsCode": "ORDER_UPDATES",
              "fixedNonce": "", "timestampOffset": "0"}
 
 
@@ -138,9 +145,7 @@ def upload_item() -> dict:
                     "path": ["api", "cns-cmd", "cns-req-batches"], "query": [{"key": "dryRun", "value": "true"}]},
             "body": {"mode": "formdata", "formdata": [
                 {"key": "prpsCode", "value": "ORDER_UPDATES", "type": "text"},
-                {"key": "dCatCodes", "value": "EMAIL", "type": "text"},
-                {"key": "ntcTitle", "value": "Order updates by email", "type": "text"},
-                {"key": "ntcText", "value": "We email you when your order ships. You can withdraw at any time.", "type": "text"},
+                {"key": "prpsVer", "value": "1", "type": "text"},
                 {"key": "file", "type": "file", "src": "list.csv",
                  "description": "Choose a CSV such as:\n" + csv},
             ]},
