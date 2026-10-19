@@ -55,6 +55,6 @@ users).
 | File | What |
 |---|---|
 | `make-realms.py` | Writes `infra/keycloak/realm-export/sbx-cm-*.json` from production's realms. Run it after changing those, and commit the result |
-| `pg-init.sh`, `pulsar-init.sh` | Create the `cm_sandbox` database and the `cm-sbx` tenant once. Run by the `sbx-pg-init` and `sbx-pulsar-init` containers |
+| `pg-init.sh` | Creates the `cm_sandbox` database once. Run by the `sbx-pg-init` container. The `cm-sbx` Pulsar tenant comes from `infra/pulsar/init-tenant.sh`, run by `sbx-pulsar-init` |
 | `opa/data.json` | Points the sandbox's PDP at the sandbox's cm-cns-cmd-svc for consent token keys and live status |
 | `reset.sh` | The reset |

@@ -15,9 +15,13 @@
 #
 # @author Vasantha Kumar <vasantha.kumar@hotmail.com>
 
-# The sandbox's Pulsar tenant and namespaces (ADR-037), created once; run by the sbx-pulsar-init container.
+# A Pulsar tenant and its namespaces, created if missing: production's (TENANT=cm, the pulsar-init container) and the
+# sandbox's (TENANT=cm-sbx, sbx-pulsar-init; ADR-037). Run on every `docker compose up`, so a fresh or reset broker needs
+# nothing by hand (ADR-004); with everything already there it changes nothing.
 set -euo pipefail
 ADMIN=${PULSAR_ADMIN_URL:-http://pulsar:8080}/admin/v2
+TENANT=${TENANT:-cm}
+NAMESPACES=${NAMESPACES:-dfreg cnscmd cnsqry ntf bil}
 
 put() { # PUT, treating 409 (already there) as done
   code=$(curl -s -o /tmp/out -w '%{http_code}' -X PUT -H 'Content-Type: application/json' "$ADMIN/$1" -d "${2:-}")
@@ -31,5 +35,5 @@ for i in $(seq 1 60); do
   sleep 5
 done
 
-put tenants/cm-sbx '{"allowedClusters":["standalone"]}'
-for ns in dfreg cnscmd cnsqry ntf bil; do put "namespaces/cm-sbx/$ns"; done
+put "tenants/$TENANT" '{"allowedClusters":["standalone"]}'
+for ns in $NAMESPACES; do put "namespaces/$TENANT/$ns"; done
