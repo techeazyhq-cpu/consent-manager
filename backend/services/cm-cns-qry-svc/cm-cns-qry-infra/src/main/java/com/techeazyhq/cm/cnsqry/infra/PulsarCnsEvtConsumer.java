@@ -18,6 +18,8 @@
 
 package com.techeazyhq.cm.cnsqry.infra;
 
+import java.time.Duration;
+
 import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.client.api.SubscriptionInitialPosition;
 import org.apache.pulsar.reactive.client.api.MessageResult;
@@ -78,6 +80,9 @@ public class PulsarCnsEvtConsumer {
                 // fresh subscription, not just future ones. See PulsarDfActivatedConsumer's
                 // comment for the bug this fixes.
                 .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
+                // an event that came before its request's creation (Projector.NotYetProjected) is back in a second,
+                // not Pulsar's default minute (#219)
+                .negativeAckRedeliveryDelay(Duration.ofSeconds(1))
                 .build()
                 .consumeMany(messageFlux -> messageFlux.flatMap(message -> Mono
                         .fromCallable(() -> objectMapper.readValue(message.getValue(), payloadType))
@@ -87,8 +92,14 @@ public class PulsarCnsEvtConsumer {
                         // message for redelivery: left unhandled, it would end the whole consumer stream and
                         // freeze the read model.
                         .onErrorResume(e -> {
-                            org.slf4j.LoggerFactory.getLogger(PulsarCnsEvtConsumer.class)
-                                    .warn("Failed to project message on {}, negatively acknowledging", topic, e);
+                            if (e instanceof Projector.NotYetProjected) {
+                                // expected now and then, and redelivered shortly: no stack trace
+                                org.slf4j.LoggerFactory.getLogger(PulsarCnsEvtConsumer.class)
+                                        .debug("{} on {}; redelivering", e.getMessage(), topic);
+                            } else {
+                                org.slf4j.LoggerFactory.getLogger(PulsarCnsEvtConsumer.class)
+                                        .warn("Failed to project message on {}, negatively acknowledging", topic, e);
+                            }
                             return Mono.just(MessageResult.negativeAcknowledge(message.getMessageId(),
                                     message.getValue()));
                         })))

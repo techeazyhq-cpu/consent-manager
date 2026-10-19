@@ -29,6 +29,7 @@ import com.techeazyhq.cm.dfreg.dom.DfFactory;
 import com.techeazyhq.cm.dfreg.dom.DfPrfl;
 import com.techeazyhq.cm.dfreg.dom.DfRepoPort;
 import com.techeazyhq.cm.dfreg.dom.DfSts;
+import com.techeazyhq.cm.dfreg.dom.SecretSealerPort;
 import com.techeazyhq.cm.domkit.DomainEvt;
 
 import reactor.core.publisher.Flux;
@@ -36,12 +37,21 @@ import reactor.core.publisher.Mono;
 
 public class R2dbcDfRepoAdapter implements DfRepoPort {
 
+    /** {@link AesGcmSecretSealer}'s format marker. A Keycloak client secret never starts with it. */
+    private static final String SEALED_PREFIX = "v1:";
+
     private final DatabaseClient db;
     private final ObxWriter obxWriter;
+    private final SecretSealerPort sealer;
 
-    public R2dbcDfRepoAdapter(DatabaseClient db, ObjectMapper objectMapper) {
+    /**
+     * {@code sealer} seals each fiduciary's API client secret at rest, as API key signing secrets are (ADR-041): read
+     * from the table alone, it no longer lets anyone act as the fiduciary's API client (#220).
+     */
+    public R2dbcDfRepoAdapter(DatabaseClient db, ObjectMapper objectMapper, SecretSealerPort sealer) {
         this.db = db;
         this.obxWriter = new ObxWriter(db, objectMapper);
+        this.sealer = sealer;
     }
 
     @Override
@@ -63,7 +73,7 @@ public class R2dbcDfRepoAdapter implements DfRepoPort {
                 .bind("contactEmail", df.contactEmail())
                 .bind("sts", df.sts().name())
                 .bind("registeredAt", df.registeredAt());
-        spec = bindNullable(spec, "clientSecret", df.cmDfApiClientSecret());
+        spec = bindNullable(spec, "clientSecret", sealed(df.cmDfApiClientSecret()));
         spec = bindNullableInstant(spec, "activatedAt", df.activatedAt());
         DfPrfl prfl = df.prfl();
         spec = bindNullable(spec, "legalName", prfl.legalName());
@@ -97,6 +107,37 @@ public class R2dbcDfRepoAdapter implements DfRepoPort {
         return db.sql("select * from df_reg.df order by registered_at desc").map(this::toDomain).all();
     }
 
+    /**
+     * Seals any fiduciary whose client secret is still stored as plain text, from before secrets were sealed (#220).
+     * Run once at start-up; with nothing left to seal it changes nothing. Returns how many it sealed.
+     */
+    public Mono<Long> sealPlainTextSecrets() {
+        return db.sql("select id, cm_df_api_client_secret from df_reg.df where cm_df_api_client_secret is not null")
+                .map((row, meta) -> new String[] {row.get("id", String.class), row.get("cm_df_api_client_secret", String.class)})
+                .all()
+                .filter(idAndSecret -> !isSealed(idAndSecret[1]))
+                .collectList()
+                .flatMapMany(Flux::fromIterable)
+                .concatMap(idAndSecret -> db.sql("update df_reg.df set cm_df_api_client_secret = :sealed where id = :id")
+                        .bind("sealed", sealer.seal(idAndSecret[1]))
+                        .bind("id", idAndSecret[0])
+                        .fetch().rowsUpdated())
+                .reduce(0L, Long::sum);
+    }
+
+    private String sealed(String secret) {
+        return secret == null || isSealed(secret) ? secret : sealer.seal(secret);
+    }
+
+    /** Sealed secrets are opened; a plain one, from before sealing and not yet migrated, is read as it is. */
+    private String opened(String stored) {
+        return stored == null || !isSealed(stored) ? stored : sealer.open(stored);
+    }
+
+    private static boolean isSealed(String stored) {
+        return stored.startsWith(SEALED_PREFIX);
+    }
+
     private Df toDomain(io.r2dbc.spi.Row row, io.r2dbc.spi.RowMetadata meta) {
         return DfFactory.rehydrate(
                 row.get("id", String.class),
@@ -115,7 +156,7 @@ public class R2dbcDfRepoAdapter implements DfRepoPort {
                 row.get("sub_pln_name", String.class),
                 DfSts.valueOf(row.get("sts", String.class)),
                 row.get("registered_at", Instant.class),
-                row.get("cm_df_api_client_secret", String.class),
+                opened(row.get("cm_df_api_client_secret", String.class)),
                 row.get("activated_at", Instant.class));
     }
 
