@@ -32,4 +32,4 @@ for i in $(seq 1 60); do
 done
 
 put tenants/cm-sbx '{"allowedClusters":["standalone"]}'
-for ns in dfreg cnscmd cnsqry ntf bil; do put "namespaces/cm-sbx/$ns"; done
+for ns in dfreg cnscmd cnsqry ntf bil stf; do put "namespaces/cm-sbx/$ns"; done

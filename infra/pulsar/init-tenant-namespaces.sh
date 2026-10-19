@@ -25,7 +25,7 @@
 set -euo pipefail
 
 docker exec infra-pulsar-1 bin/pulsar-admin tenants create cm 2>&1 | grep -v "already exists" || true
-for ns in dfreg cnscmd cnsqry ntf bil; do
+for ns in dfreg cnscmd cnsqry ntf bil stf; do
   docker exec infra-pulsar-1 bin/pulsar-admin namespaces create "cm/$ns" 2>&1 | grep -v "already exists" || true
 done
 

@@ -38,6 +38,8 @@ import type {
   DfNameRespDto,
   DfRespDto,
   DfRole,
+  AudActivityRow,
+  AudVerifyResult,
   BilOverviewRow,
   DfSubStatusResult,
   PlnChgReqDto,
@@ -274,6 +276,24 @@ export const bil = {
       method: "POST",
       body: JSON.stringify({ note }),
     }),
+};
+
+/** The audit ledger (ADR-014, ADR-040): what happened, who did it; staff see every tenant, a fiduciary its own. */
+export const aud = {
+  activity: (
+    base: string,
+    token: string,
+    opts: { dfId?: string; category?: "ALL" | "CONSENT" | "PLATFORM"; before?: number; limit?: number } = {},
+  ) => {
+    const q = new URLSearchParams({ limit: String(opts.limit ?? 50) });
+    if (opts.dfId) q.set("dfId", opts.dfId);
+    if (opts.category && opts.category !== "ALL") q.set("category", opts.category);
+    if (opts.before) q.set("before", String(opts.before));
+    return request<AudActivityRow[]>(base, `/api/aud/activity?${q}`, token);
+  },
+  /** The chain and its anchored checkpoints, each with its verdict (administrators). */
+  verify: (base: string, token: string) => request<AudVerifyResult>(base, "/api/aud/chain/verify", token),
+  head: (base: string, token: string) => request<{ seq: number; entryHash: string }>(base, "/api/aud/chain/head", token),
 };
 
 /** A fiduciary's own billing (ADR-039): its subscription, and asking for another plan. */

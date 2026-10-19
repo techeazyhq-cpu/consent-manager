@@ -15,6 +15,8 @@
 # @author Vasantha Kumar <vasantha.kumar@hotmail.com>
 
 cm:
+  pulsar:
+    service-url: pulsar://pulsar:6650
   # Tokens come from three realms (ADR-035): their issuer is the browser-facing address (cm.security.issuer-base,
   # http://localhost:8080/realms/ by default), but keys are fetched from Keycloak on the container network.
   security:

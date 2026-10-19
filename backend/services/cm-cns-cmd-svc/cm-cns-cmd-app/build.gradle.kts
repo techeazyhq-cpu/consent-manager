@@ -26,6 +26,7 @@ dependencies {
     // depending on it does not cross the dom/app/infra/ifc boundary the ArchUnit test checks,
     // since that test only scans this service's own com.techeazyhq.cm.cnscmd package tree.
     implementation(project(":cm-sec-kit"))
+    api(project(":cm-aud-kit"))
     api(project(":cm-web-kit")) // DomRuleViolation is part of every handler's public error contract
     // @Transactional at the use-case boundary is a common, pragmatic pattern even in
     // otherwise-framework-light application layers; spring-tx alone (not all of Spring)

@@ -20,6 +20,7 @@ package com.techeazyhq.cm.bil.app;
 
 import org.springframework.transaction.annotation.Transactional;
 
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.bil.dom.DfSub;
 import com.techeazyhq.cm.bil.dom.DfSubRepoPort;
 import com.techeazyhq.cm.bil.dom.PendingPlnChgReqExistsException;
@@ -44,11 +45,17 @@ public class PlnChgReqHandler {
     private final PlnChgReqRepoPort reqs;
     private final DfSubRepoPort subs;
     private final SubPlnRepoPort plans;
+    private final AuditTrail audit;
 
     public PlnChgReqHandler(PlnChgReqRepoPort reqs, DfSubRepoPort subs, SubPlnRepoPort plans) {
+        this(reqs, subs, plans, AuditTrail.NONE);
+    }
+
+    public PlnChgReqHandler(PlnChgReqRepoPort reqs, DfSubRepoPort subs, SubPlnRepoPort plans, AuditTrail audit) {
         this.reqs = reqs;
         this.subs = subs;
         this.plans = plans;
+        this.audit = audit;
     }
 
     @Transactional
@@ -66,7 +73,7 @@ public class PlnChgReqHandler {
                     } catch (IllegalArgumentException e) {
                         return Mono.error(new DomRuleViolation(400, "invalid-plan-change-request", e.getMessage()));
                     }
-                    return reqs.save(req);
+                    return reqs.save(req).flatMap(saved -> recorded("plan-change.requested", saved));
                 })
                 .onErrorMap(PendingPlnChgReqExistsException.class, e -> new DomRuleViolation(409,
                         "plan-change-request-pending", "You already asked for a plan change. Withdraw it to ask for another."));
@@ -81,7 +88,8 @@ public class PlnChgReqHandler {
         return pending(id)
                 .filter(req -> req.dfId().equals(caller.dfId()))
                 .switchIfEmpty(Mono.error(notFound(id)))
-                .flatMap(req -> decide(req, () -> req.withdraw(caller.subject(), caller.name())));
+                .flatMap(req -> decide(req, () -> req.withdraw(caller.subject(), caller.name())))
+                .flatMap(req -> recorded("plan-change.withdrawn", req));
     }
 
     /** Changes the fiduciary's plan to the one asked for, and records who approved it. */
@@ -95,14 +103,16 @@ public class PlnChgReqHandler {
                             sub.assignPlan(subAndPlan.getT2().id());
                             return subs.save(sub);
                         })
-                        .then(decide(req, () -> req.approve(caller.subject(), caller.name(), note))));
+                        .then(decide(req, () -> req.approve(caller.subject(), caller.name(), note))))
+                .flatMap(req -> recorded("plan-change.approved", req));
     }
 
     @Transactional
     public Mono<PlnChgReq> decline(BilCaller caller, String id, String reason) {
         return requireAdmin(caller)
                 .then(pending(id))
-                .flatMap(req -> decide(req, () -> req.decline(caller.subject(), caller.name(), reason)));
+                .flatMap(req -> decide(req, () -> req.decline(caller.subject(), caller.name(), reason)))
+                .flatMap(req -> recorded("plan-change.declined", req));
     }
 
     /** The fiduciary's own requests, newest first. */
@@ -130,6 +140,12 @@ public class PlnChgReqHandler {
             return Mono.error(new DomRuleViolation(409, "plan-change-request-decided", e.getMessage()));
         }
         return reqs.save(req);
+    }
+
+    private Mono<PlnChgReq> recorded(String action, PlnChgReq req) {
+        return audit.record(action, req.dfId(), req.id(), AuditTrail.details("from", req.fromPlnName(),
+                "to", req.toPlnName(), "note", req.decisionNote() != null ? req.decisionNote() : req.note()))
+                .thenReturn(req);
     }
 
     private Mono<Void> requireAdmin(BilCaller caller) {

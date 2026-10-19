@@ -20,6 +20,7 @@ package com.techeazyhq.cm.bil.app;
 
 import org.springframework.transaction.annotation.Transactional;
 
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.bil.dom.DfSubFactory;
 import com.techeazyhq.cm.bil.dom.DfSubRepoPort;
 import com.techeazyhq.cm.bil.dom.SubPlnRepoPort;
@@ -34,10 +35,16 @@ public class OnDfActivatedEvtHandler {
 
     private final DfSubRepoPort dfSubRepo;
     private final SubPlnRepoPort subPlnRepo;
+    private final AuditTrail audit;
 
     public OnDfActivatedEvtHandler(DfSubRepoPort dfSubRepo, SubPlnRepoPort subPlnRepo) {
+        this(dfSubRepo, subPlnRepo, AuditTrail.NONE);
+    }
+
+    public OnDfActivatedEvtHandler(DfSubRepoPort dfSubRepo, SubPlnRepoPort subPlnRepo, AuditTrail audit) {
         this.dfSubRepo = dfSubRepo;
         this.subPlnRepo = subPlnRepo;
+        this.audit = audit;
     }
 
     /**
@@ -52,7 +59,9 @@ public class OnDfActivatedEvtHandler {
                 .switchIfEmpty(subPlnRepo.findByName(planName)
                         .switchIfEmpty(Mono.error(new DomRuleViolation(500, "sub-pln-missing",
                                 "SubPln " + planName + " not found for DF " + dfId)))
-                        .flatMap(plan -> dfSubRepo.save(DfSubFactory.create(dfId, plan.id()))))
+                        .flatMap(plan -> dfSubRepo.save(DfSubFactory.create(dfId, plan.id()))
+                                .flatMap(sub -> audit.record("subscription.started", dfId, dfId,
+                                        AuditTrail.details("plan", plan.name())).thenReturn(sub))))
                 .then();
     }
 }

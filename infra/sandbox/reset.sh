@@ -37,7 +37,7 @@ docker compose exec -T -e PGPASSWORD=cm postgres psql -U cm -d consent_manager -
 echo "== Pulsar tenant cm-sbx: every topic, with its backlog and subscriptions"
 # Topic by topic: brokers refuse a forced namespace delete unless configured to allow it.
 docker compose exec -T pulsar bash -c '
-  for ns in dfreg cnscmd cnsqry ntf bil; do
+  for ns in dfreg cnscmd cnsqry ntf bil stf; do
     for topic in $(curl -s "http://localhost:8080/admin/v2/persistent/cm-sbx/$ns" | tr -d "[]\"" | tr "," " "); do
       curl -s -o /dev/null -w "  ${topic#persistent://}: %{http_code}\n" -X DELETE \
         "http://localhost:8080/admin/v2/persistent/${topic#persistent://}?force=true"

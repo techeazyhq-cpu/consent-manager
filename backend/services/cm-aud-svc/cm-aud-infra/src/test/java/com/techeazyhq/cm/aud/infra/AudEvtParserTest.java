@@ -83,4 +83,19 @@ class AudEvtParserTest {
         assertThrows(IOException.class, () -> parser.parse("CnsDeniedEvt", "{\"cnsReqId\":\"req-1\"}"));
         assertThrows(IOException.class, () -> parser.parse("CnsDeniedEvt", "[1,2]"));
     }
+
+    @Test
+    void aPlatformActionIsRecordedUnderTheActionItNames() throws IOException {
+        AudDraft draft = parser.parse(null, """
+                {"evtId":"6f1c2a9e-1b2c-4d5e-8f90-123456789abc","occurredAt":"2026-10-19T08:00:00Z","ctx":"bil",
+                 "action":"plan-change.approved","dfId":"df-1","target":"req-1",
+                 "actor":{"kind":"STAFF","id":"s-1","name":"admin@cm.local"},"details":{"from":"FREE","to":"STANDARD"}}
+                """);
+
+        assertEquals("plan-change.approved", draft.evtType());
+        assertEquals("df-1", draft.dfId());
+        assertNull(draft.cnsReqId());
+        assertThrows(IOException.class, () -> parser.parse(null,
+                "{\"evtId\":\"6f1c2a9e-1b2c-4d5e-8f90-123456789abc\",\"occurredAt\":\"2026-10-19T08:00:00Z\",\"action\":\"Approved\"}"));
+    }
 }

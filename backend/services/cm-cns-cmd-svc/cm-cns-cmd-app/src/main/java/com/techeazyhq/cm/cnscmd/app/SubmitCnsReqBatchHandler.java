@@ -21,6 +21,9 @@ package com.techeazyhq.cm.cnscmd.app;
 import java.util.List;
 import java.util.Set;
 
+import org.springframework.transaction.annotation.Transactional;
+
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqBatch;
 import com.techeazyhq.cm.cnscmd.dom.ContactPolicy;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqBatchRepoPort;
@@ -46,6 +49,7 @@ public class SubmitCnsReqBatchHandler {
     private final DfUsagePort usage;
 
     private final ContactPolicy contacts;
+    private final AuditTrail audit;
 
     public SubmitCnsReqBatchHandler(CnsReqBatchRepoPort batchRepo, DfActivePort dfActive, DfUsagePort usage) {
         this(batchRepo, dfActive, usage, ContactPolicy.ANYONE);
@@ -53,10 +57,16 @@ public class SubmitCnsReqBatchHandler {
 
     public SubmitCnsReqBatchHandler(CnsReqBatchRepoPort batchRepo, DfActivePort dfActive, DfUsagePort usage,
                                     ContactPolicy contacts) {
+        this(batchRepo, dfActive, usage, contacts, AuditTrail.NONE);
+    }
+
+    public SubmitCnsReqBatchHandler(CnsReqBatchRepoPort batchRepo, DfActivePort dfActive, DfUsagePort usage,
+                                    ContactPolicy contacts, AuditTrail audit) {
         this.batchRepo = batchRepo;
         this.dfActive = dfActive;
         this.usage = usage;
         this.contacts = contacts;
+        this.audit = audit;
     }
 
     public record Cmd(String dfId, String createdBy, String prpsCode, Set<String> dCatCodes, String ntcTitle,
@@ -68,6 +78,8 @@ public class SubmitCnsReqBatchHandler {
     public record Result(CnsReqBatch batch, List<CnsReqBatch.Row> problems, long available, boolean stored) {
     }
 
+    /** One transaction: the batch, its rows and the record that it was submitted (ADR-040) are stored together. */
+    @Transactional
     public Mono<Result> handle(Cmd cmd) {
         CnsReqBatch.Plan plan;
         try {
@@ -94,6 +106,10 @@ public class SubmitCnsReqBatchHandler {
                     }
                     return usage.reserve(cmd.dfId(), batch.valid()).flatMap(reservation -> reservation.reserved()
                             ? batchRepo.create(batch, plan.rows())
+                                    .flatMap(stored -> audit.record("batch.submitted", stored.dfId(), stored.id(),
+                                            AuditTrail.details("source", stored.source().name(), "file", stored.fileName(),
+                                                    "purpose", cmd.prpsCode(), "rows", String.valueOf(stored.total()),
+                                                    "toSend", String.valueOf(stored.valid()))).thenReturn(stored))
                                     // never keep a reservation for a batch that wasn't stored
                                     .onErrorResume(e -> usage.release(cmd.dfId(), batch.valid()).then(Mono.error(e)))
                                     .map(stored -> new Result(stored, problems, reservation.available(), true))

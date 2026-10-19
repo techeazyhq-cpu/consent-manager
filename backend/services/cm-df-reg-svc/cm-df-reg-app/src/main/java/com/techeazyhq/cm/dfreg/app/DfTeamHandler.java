@@ -20,6 +20,7 @@ package com.techeazyhq.cm.dfreg.app;
 
 import java.util.Comparator;
 
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.dfreg.dom.DfMember;
 import com.techeazyhq.cm.dfreg.dom.DfMemberDirectoryPort;
 import com.techeazyhq.cm.dfreg.dom.DfMemberExistsException;
@@ -46,10 +47,16 @@ public class DfTeamHandler {
 
     private final DfMemberDirectoryPort directory;
     private final DfRepoPort dfRepo;
+    private final AuditTrail audit;
 
     public DfTeamHandler(DfMemberDirectoryPort directory, DfRepoPort dfRepo) {
+        this(directory, dfRepo, AuditTrail.NONE);
+    }
+
+    public DfTeamHandler(DfMemberDirectoryPort directory, DfRepoPort dfRepo, AuditTrail audit) {
         this.directory = directory;
         this.dfRepo = dfRepo;
+        this.audit = audit;
     }
 
     /** Owners first, then by role and name. */
@@ -68,6 +75,8 @@ public class DfTeamHandler {
                 .onErrorMap(IllegalArgumentException.class, e -> new DomRuleViolation(400, "invalid-member", e.getMessage()))
                 .flatMap(member -> requireMayInvite(caller, dfId, member).thenReturn(member))
                 .flatMap(member -> directory.invite(dfId, member))
+                .flatMap(invited -> audit.record("member.invited", dfId, invited.id(),
+                        AuditTrail.details("member", invited.email(), "role", invited.role().name())).thenReturn(invited))
                 .onErrorMap(DfMemberExistsException.class, e -> new DomRuleViolation(409, "account-exists", e.getMessage()));
     }
 
@@ -87,7 +96,10 @@ public class DfTeamHandler {
                     }
                     Mono<Void> lastOwnerCheck = member.role() == DfRole.OWNER && newRole != DfRole.OWNER
                             ? requireAnotherOwner(dfId, member) : Mono.empty();
-                    return lastOwnerCheck.then(Mono.defer(() -> directory.changeRole(member, newRole)));
+                    return lastOwnerCheck.then(Mono.defer(() -> directory.changeRole(member, newRole)))
+                            .flatMap(changed -> audit.record("member.role-changed", dfId, member.id(),
+                                    AuditTrail.details("member", member.email(), "from", member.role().name(),
+                                            "to", newRole.name())).thenReturn(changed));
                 });
     }
 
@@ -102,7 +114,9 @@ public class DfTeamHandler {
                         return Mono.error(forbidden("Only an Owner removes an Owner"));
                     }
                     Mono<Void> lastOwnerCheck = member.role() == DfRole.OWNER ? requireAnotherOwner(dfId, member) : Mono.empty();
-                    return lastOwnerCheck.then(Mono.defer(() -> directory.remove(member)));
+                    return lastOwnerCheck.then(Mono.defer(() -> directory.remove(member)))
+                            .then(audit.record("member.removed", dfId, member.id(),
+                                    AuditTrail.details("member", member.email(), "role", member.role().name())));
                 });
     }
 

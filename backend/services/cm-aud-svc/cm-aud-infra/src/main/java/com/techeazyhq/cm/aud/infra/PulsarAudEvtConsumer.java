@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -50,7 +51,11 @@ public class PulsarAudEvtConsumer {
             "CnsDpLinkedEvt", new String[] {"cnscmd", "cns-dp-linked"},
             "CnsExpiredEvt", new String[] {"cnscmd", "cns-expired"},
             "CnsNotificationFailedEvt", new String[] {"cnscmd", "cns-notification-failed"},
-            "DfActivatedEvt", new String[] {"dfreg", "df-activated"});
+            "DfActivatedEvt", new String[] {"dfreg", "df-activated"},
+            "NtfDpDeliveryFailedEvt", new String[] {"ntf", "dp-delivery-failed"});
+
+    /** Contexts whose people's actions the ledger records (ADR-040), each on its {@code evt-platform-action} topic. */
+    static final List<String> ACTION_CONTEXTS = List.of("dfreg", "bil", "stf", "cnscmd");
 
     private final ReactivePulsarClient pulsar;
     private final AudEvtParser parser;
@@ -64,13 +69,15 @@ public class PulsarAudEvtConsumer {
 
     public void start() {
         TOPICS.forEach((evtType, topic) -> consume(evtType, topic[0], topic[1]));
+        // an action's type is the action it names, read from the event
+        ACTION_CONTEXTS.forEach(ctx -> consume(null, ctx, "platform-action"));
     }
 
     private void consume(String evtType, String context, String eventName) {
         String topic = PulsarTopics.evt(context, eventName);
         pulsar.messageConsumer(Schema.STRING)
                 .topic(topic)
-                .subscriptionName(PulsarTopics.subscription("aud", "ledger-" + eventName))
+                .subscriptionName(PulsarTopics.subscription("aud", "ledger-" + (evtType == null ? context + "-" : "") + eventName))
                 .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
                 .build()
                 .consumeMany(messages -> messages.concatMap(message -> Mono.defer(() -> {

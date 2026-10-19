@@ -23,12 +23,13 @@ import { AppShell, ErrorBanner, Icons, PageHeader, useHashRoute, type NavItem } 
 import "./console.css";
 import { useConsole } from "./console";
 import { BatchDetail, Batches, SendToMany } from "./Batches";
+import Audit from "./Audit";
 import Billing from "./Billing";
 import { Account, Dashboard, Organisation, PurposeDetail, Requests } from "./pages";
 import Playground from "./Playground";
 import Raise from "./Raise";
 import Team from "./Team";
-import { ROLE_LABELS, managesTeam, raisesRequests } from "./roles";
+import { ROLE_LABELS, managesTeam, raisesRequests, readsAudit } from "./roles";
 import { parseRoute } from "./routes";
 
 interface Props {
@@ -59,6 +60,9 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
     { key: "team", href: "#/team", label: "Team", section: "Organisation", icon: Icons.people },
     { key: "organisation", href: "#/organisation", label: "Organisation", section: "Organisation", icon: Icons.building },
     { key: "billing", href: "#/billing", label: "Billing", section: "Organisation", icon: Icons.card },
+    ...(readsAudit(role)
+      ? [{ key: "audit", href: "#/audit", label: "Audit", section: "Organisation", icon: Icons.shield }]
+      : []),
     { key: "account", href: "#/account", label: "Account", section: "Organisation", icon: Icons.user },
   ];
   // a purpose's page belongs under the dashboard in the menu, and a list's under the lists sent
@@ -107,6 +111,7 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
       {route.page === "organisation" ? <Organisation console={c} /> : null}
       {route.page === "account" ? <Account console={c} /> : null}
       {route.page === "billing" ? <Billing console={c} /> : null}
+      {route.page === "audit" ? <Audit console={c} /> : null}
     </AppShell>
   );
 }

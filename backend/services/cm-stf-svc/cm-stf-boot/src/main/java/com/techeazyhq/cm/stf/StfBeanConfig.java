@@ -18,6 +18,13 @@
 
 package com.techeazyhq.cm.stf;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.apache.pulsar.client.api.PulsarClient;
+import org.apache.pulsar.client.api.PulsarClientException;
+import org.apache.pulsar.reactive.client.adapter.AdaptedReactivePulsarClientFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techeazyhq.cm.audkit.AuditTrail;
+import com.techeazyhq.cm.stf.infra.PulsarStfAuditTrail;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
@@ -48,13 +55,13 @@ public class StfBeanConfig {
     }
 
     @Bean
-    public CreateOperatorCmdHandler createOperatorCmdHandler(StfDirectoryPort directory) {
-        return new CreateOperatorCmdHandler(directory);
+    public CreateOperatorCmdHandler createOperatorCmdHandler(StfDirectoryPort directory, AuditTrail audit) {
+        return new CreateOperatorCmdHandler(directory, audit);
     }
 
     @Bean
-    public SetStfEnabledCmdHandler setStfEnabledCmdHandler(StfDirectoryPort directory) {
-        return new SetStfEnabledCmdHandler(directory);
+    public SetStfEnabledCmdHandler setStfEnabledCmdHandler(StfDirectoryPort directory, AuditTrail audit) {
+        return new SetStfEnabledCmdHandler(directory, audit);
     }
 
     @Bean
@@ -63,11 +70,26 @@ public class StfBeanConfig {
     }
 
     @Bean
-    public MyAcctHandler myAcctHandler(StfDirectoryPort directory) {
-        return new MyAcctHandler(directory);
+    public MyAcctHandler myAcctHandler(StfDirectoryPort directory, AuditTrail audit) {
+        return new MyAcctHandler(directory, audit);
     }
 
     @ConfigurationProperties(prefix = "cm.keycloak")
     public record KeycloakProps(String baseUrl, String realm, String adminUsername, String adminPassword) {
+    }
+
+    // ---- the audit trail (ADR-040): staff account changes, published to Pulsar ----
+
+    @Bean(destroyMethod = "close")
+    public PulsarClient pulsarClient(@Value("${cm.pulsar.service-url:pulsar://localhost:6650}") String serviceUrl)
+            throws PulsarClientException {
+        return PulsarClient.builder().serviceUrl(serviceUrl).build();
+    }
+
+    @Bean
+    public AuditTrail auditTrail(PulsarClient pulsarClient, ObjectMapper objectMapper) {
+        PulsarStfAuditTrail publisher =
+                new PulsarStfAuditTrail(AdaptedReactivePulsarClientFactory.create(pulsarClient), objectMapper);
+        return AuditTrail.to("stf", publisher::publish);
     }
 }

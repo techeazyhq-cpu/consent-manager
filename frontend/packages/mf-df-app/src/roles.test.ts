@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { assignableBy, managesTeam, memberRoleOf, raisesRequests } from "./roles";
+import { assignableBy, managesTeam, memberRoleOf, raisesRequests, readsAudit, usesSandbox } from "./roles";
 
 describe("fiduciary member roles", () => {
   it("reads the most powerful member role from a token's realm roles", () => {
@@ -36,5 +36,11 @@ describe("fiduciary member roles", () => {
   it("lets only an Owner give ownership", () => {
     expect(assignableBy("OWNER")).toContain("OWNER");
     expect(assignableBy("ADMIN")).not.toContain("OWNER");
+  });
+
+  it("lets Owners, Administrators and Auditors read the audit (ADR-040)", () => {
+    expect(["OWNER", "ADMIN", "AUDITOR"].every((r) => readsAudit(r as never))).toBe(true);
+    expect(["CONSENT_MANAGER", "DEVELOPER"].some((r) => readsAudit(r as never))).toBe(false);
+    expect(usesSandbox("DEVELOPER")).toBe(true);
   });
 });

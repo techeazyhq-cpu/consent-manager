@@ -19,6 +19,7 @@
 import { useMemo } from "react";
 import type { AuthInfo } from "auth-kit";
 import { AppShell, Icons, useHashRoute, type NavItem } from "ui-kit/src/index";
+import Audit from "./Audit";
 import Billing from "./Billing";
 import Dashboard from "./Dashboard";
 import Onboard from "./Onboard";
@@ -49,6 +50,7 @@ export default function CmAdminApp({ auth, gwBase }: Props) {
     ...(session.isAdmin
       ? [{ key: "staff", href: "#/staff", label: "Platform staff", section: "Platform", icon: Icons.people }]
       : []),
+    { key: "audit", href: "#/audit", label: "Audit", section: "Platform", icon: Icons.list },
     { key: "security", href: "#/security", label: "Sign-in & security", section: "Platform", icon: Icons.shield },
   ];
   // A tenant's page belongs under the dashboard in the menu.
@@ -71,6 +73,7 @@ export default function CmAdminApp({ auth, gwBase }: Props) {
       {route.page === "staff" ? (session.isAdmin ? <Staff session={session} /> : <Dashboard session={session} />) : null}
       {route.page === "security" ? <Security session={session} /> : null}
       {route.page === "billing" ? <Billing session={session} tab={route.tab} /> : null}
+      {route.page === "audit" ? <Audit session={session} /> : null}
     </AppShell>
   );
 }

@@ -133,20 +133,36 @@ public class R2dbcAudLedgerAdapter implements AudLedgerPort {
 
     @Override
     public Flux<AudEntry> find(AudQuery query) {
+        return spec("select " + ENTRY_COLUMNS + " from aud.entry e", query).map((row, meta) -> toEntry(row)).all();
+    }
+
+    @Override
+    public Flux<AudRecord> findRecords(AudQuery query) {
+        return spec("select " + ENTRY_COLUMNS + ", p.payload_json from aud.entry e "
+                + "left join aud.entry_payload p on p.seq = e.seq", query)
+                .map((row, meta) -> new AudRecord(toEntry(row), row.get("payload_json", String.class)))
+                .all();
+    }
+
+    /** Newest first; an action's type has a dot ({@code plan-change.approved}), the consent lifecycle's don't. */
+    private DatabaseClient.GenericExecuteSpec spec(String select, AudQuery query) {
         List<String> where = new ArrayList<>();
         if (query.cnsReqId() != null) where.add("e.cns_req_id = :cnsReqId");
         if (query.cnsArtId() != null) where.add("e.cns_art_id = :cnsArtId");
         if (query.dfId() != null) where.add("e.df_id = :dfId");
         if (query.dpId() != null) where.add("exists (select 1 from aud.entry_subject s where s.seq = e.seq and s.dp_id = :dpId)");
-        String sql = "select " + ENTRY_COLUMNS + " from aud.entry e"
-                + (where.isEmpty() ? "" : " where " + String.join(" and ", where))
+        if (query.category() == AudQuery.Category.PLATFORM) where.add("e.evt_type like '%.%'");
+        if (query.category() == AudQuery.Category.CONSENT) where.add("e.evt_type not like '%.%'");
+        if (query.beforeSeq() != null) where.add("e.seq < :beforeSeq");
+        String sql = select + (where.isEmpty() ? "" : " where " + String.join(" and ", where))
                 + " order by e.seq desc limit :limit";
         DatabaseClient.GenericExecuteSpec spec = db.sql(sql).bind("limit", query.limit());
         if (query.cnsReqId() != null) spec = spec.bind("cnsReqId", query.cnsReqId());
         if (query.cnsArtId() != null) spec = spec.bind("cnsArtId", query.cnsArtId());
         if (query.dfId() != null) spec = spec.bind("dfId", query.dfId());
         if (query.dpId() != null) spec = spec.bind("dpId", query.dpId());
-        return spec.map((row, meta) -> toEntry(row)).all();
+        if (query.beforeSeq() != null) spec = spec.bind("beforeSeq", query.beforeSeq());
+        return spec;
     }
 
     @Override

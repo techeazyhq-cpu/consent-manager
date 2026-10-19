@@ -31,6 +31,7 @@ import {
   type SubPln,
 } from "api-client";
 import { Badge, Button, Card, ErrorBanner, Field, Spinner, UsageMeter, friendlyError } from "ui-kit/src/index";
+import { AuditPanel } from "./Audit";
 import { PendingRequest } from "./Billing";
 import DfLogo, { forgetLogo } from "./DfLogo";
 import { checkLogo } from "./logo";
@@ -43,6 +44,7 @@ const TAB_LABELS: Record<TenantTab, string> = {
   subscription: "Subscription",
   consents: "Consents",
   team: "Team",
+  audit: "Audit",
 };
 
 const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleString() : "—");
@@ -146,6 +148,7 @@ export default function TenantDetail({ session, dfId, tab }: { session: Session;
       {tab === "subscription" ? <Subscription session={session} df={df} /> : null}
       {tab === "consents" ? <Consents session={session} df={df} /> : null}
       {tab === "team" ? <Team session={session} df={df} /> : null}
+      {tab === "audit" ? <AuditPanel session={session} dfId={df.id} /> : null}
     </>
   );
 }
