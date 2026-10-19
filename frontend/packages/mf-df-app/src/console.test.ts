@@ -22,6 +22,7 @@ import { MAX_FILE_BYTES, fileProblem, progressOf, sendProblem } from "./Batches"
 import { grantRate } from "./labels";
 import { parseCategories, requestProblem, toCode } from "./Raise";
 import { batchHref, parseRoute, purposeHref, raiseHref } from "./routes";
+import { usageNote } from "./Billing";
 import { OPERATIONS, asCurl, fillPath, pathParams, remembered, tokenCurl, uploadForm } from "./sandbox";
 
 describe("DF Console routes", () => {
@@ -150,5 +151,19 @@ describe("the API playground", () => {
     const file = form.get("file") as File;
     expect(file.name).toBe("list.csv");
     expect(await file.text()).toBe("Email\na@sandbox.example\n");
+  });
+});
+
+describe("billing", () => {
+  const resetsAt = "2026-11-01T00:00:00Z";
+
+  it("has its own page", () => {
+    expect(parseRoute("#/billing")).toEqual({ page: "billing" });
+  });
+
+  it("says how much is left, warns from 80%, and says when a used-up allowance resets", () => {
+    expect(usageNote({ curPeriodUsg: 100, reqPerMonthQta: 1000, resetsAt })).toMatch(/^900 left this month\. It resets/);
+    expect(usageNote({ curPeriodUsg: 850, reqPerMonthQta: 1000, resetsAt })).toMatch(/close to your allowance/);
+    expect(usageNote({ curPeriodUsg: 1200, reqPerMonthQta: 1000, resetsAt })).toMatch(/used up: new requests are refused/);
   });
 });

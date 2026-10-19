@@ -38,7 +38,10 @@ import type {
   DfNameRespDto,
   DfRespDto,
   DfRole,
+  BilOverviewRow,
   DfSubStatusResult,
+  PlnChgReqDto,
+  PlnChgReqSts,
   ExtDpRefTyp,
   ProblemDetail,
   PushDvcRespDto,
@@ -255,5 +258,35 @@ export const bil = {
     request<unknown>(base, `/api/bil/dfs/${dfId}/sub-status`, token, {
       method: "PUT",
       body: JSON.stringify({ active }),
+    }),
+  /** Every tenant's plan and this month's usage, closest to its allowance first (platform staff). */
+  overview: (base: string, token: string) => request<BilOverviewRow[]>(base, "/api/bil/overview", token),
+  /** Plan change requests from every tenant: those waiting, or all (platform staff). */
+  requests: (base: string, token: string, sts?: PlnChgReqSts) =>
+    request<PlnChgReqDto[]>(base, `/api/bil/plan-change-requests${sts ? `?sts=${sts}` : ""}`, token),
+  approve: (base: string, token: string, id: string, note?: string) =>
+    request<PlnChgReqDto>(base, `/api/bil/plan-change-requests/${encodeURIComponent(id)}/approve`, token, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    }),
+  decline: (base: string, token: string, id: string, note: string) =>
+    request<PlnChgReqDto>(base, `/api/bil/plan-change-requests/${encodeURIComponent(id)}/decline`, token, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    }),
+};
+
+/** A fiduciary's own billing (ADR-039): its subscription, and asking for another plan. */
+export const myBilling = {
+  subscription: (base: string, token: string) => request<DfSubStatusResult>(base, "/api/bil/me/subscription", token),
+  requests: (base: string, token: string) => request<PlnChgReqDto[]>(base, "/api/bil/me/plan-change-requests", token),
+  requestPlan: (base: string, token: string, subPlnName: string, note?: string) =>
+    request<PlnChgReqDto>(base, "/api/bil/me/plan-change-requests", token, {
+      method: "POST",
+      body: JSON.stringify({ subPlnName, note }),
+    }),
+  withdraw: (base: string, token: string, id: string) =>
+    request<PlnChgReqDto>(base, `/api/bil/me/plan-change-requests/${encodeURIComponent(id)}/withdraw`, token, {
+      method: "POST",
     }),
 };

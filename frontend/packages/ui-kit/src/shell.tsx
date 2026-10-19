@@ -259,6 +259,12 @@ export const Icons: Record<string, ReactNode> = {
       <path d="M10 13l11-10" />
     </svg>
   ),
+  card: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 10h18M7 15h4" />
+    </svg>
+  ),
   code: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
       <path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" />

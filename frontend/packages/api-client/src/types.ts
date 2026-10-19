@@ -199,6 +199,38 @@ export interface DfSubStatusResult {
   dfSubSts: DfSubSts;
   curPeriodUsg: number;
   reqPerMonthQta: number;
+  reqPerSecQta: number;
+  /** The calendar month (UTC) usage is counted in, e.g. "2026-10". */
+  usagePeriod: string;
+  /** When the count starts again. */
+  resetsAt: string;
+}
+
+/** One tenant on CM Admin's billing overview (ADR-039). */
+export interface BilOverviewRow {
+  dfId: string;
+  subPlnName: string;
+  dfSubSts: DfSubSts;
+  curPeriodUsg: number;
+  reqPerMonthQta: number;
+  reqPerSecQta: number;
+}
+
+export type PlnChgReqSts = "PENDING" | "APPROVED" | "DECLINED" | "WITHDRAWN";
+
+/** A fiduciary asking for another plan, and the platform's decision (ADR-039). */
+export interface PlnChgReqDto {
+  id: string;
+  dfId: string;
+  fromPlnName: string;
+  toPlnName: string;
+  note: string | null;
+  sts: PlnChgReqSts;
+  requestedByName: string | null;
+  requestedAt: string;
+  decidedByName: string | null;
+  decidedAt: string | null;
+  decisionNote: string | null;
 }
 
 export interface UsageRespDto {

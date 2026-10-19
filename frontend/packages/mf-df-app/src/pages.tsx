@@ -272,7 +272,8 @@ export function Organisation({ console: c }: { console: Console }) {
         </dl>
         <p className="cm-note" style={{ marginBottom: 0 }}>
           Your systems raise requests and check consent through the API with this client and its secret, shown once
-          when your organisation was activated. To change your name, logo or plan, contact the platform.
+          when your organisation was activated. To change your name or logo, contact the platform; to change your plan, see{" "}
+          <a href="#/billing">Billing</a>.
         </p>
       </Card>
     </>

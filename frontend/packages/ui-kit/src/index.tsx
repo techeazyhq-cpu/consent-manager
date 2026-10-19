@@ -52,6 +52,20 @@ export function Badge({ status }: { status: string }) {
   return <span className={`cm-badge cm-badge-${status.toLowerCase()}`}>{status.replace(/_/g, " ")}</span>;
 }
 
+/** The share of an allowance used, in whole percent (100 when there is none). */
+export const shareUsed = (used: number, of: number) => (of > 0 ? Math.min(100, Math.round((used / of) * 100)) : 100);
+
+/** How much of an allowance is used: amber from 80%, red from 100%. */
+export function UsageMeter({ used, of, label }: { used: number; of: number; label: string }) {
+  const share = shareUsed(used, of);
+  const level = share >= 100 ? " cm-meter-full" : share >= 80 ? " cm-meter-high" : "";
+  return (
+    <div className={`cm-meter${level}`} role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={share}>
+      <div style={{ width: `${share}%` }} />
+    </div>
+  );
+}
+
 export function Spinner({ label = "Loading…" }: { label?: string }) {
   return <div className="cm-spinner">{label}</div>;
 }

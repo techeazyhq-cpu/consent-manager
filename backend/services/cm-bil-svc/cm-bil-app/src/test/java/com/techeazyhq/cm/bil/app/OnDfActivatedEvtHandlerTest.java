@@ -86,6 +86,11 @@ class OnDfActivatedEvtHandlerTest {
         public Mono<DfSub> findByDfId(String dfId) {
             return Mono.justOrEmpty(subs.get(dfId));
         }
+
+        @Override
+        public reactor.core.publisher.Flux<DfSub> findAll() {
+            return reactor.core.publisher.Flux.fromIterable(subs.values());
+        }
     }
 
     private static final class Catalogue implements SubPlnRepoPort {

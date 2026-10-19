@@ -23,6 +23,7 @@ import { AppShell, ErrorBanner, Icons, PageHeader, useHashRoute, type NavItem } 
 import "./console.css";
 import { useConsole } from "./console";
 import { BatchDetail, Batches, SendToMany } from "./Batches";
+import Billing from "./Billing";
 import { Account, Dashboard, Organisation, PurposeDetail, Requests } from "./pages";
 import Playground from "./Playground";
 import Raise from "./Raise";
@@ -57,6 +58,7 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
     { key: "playground", href: "#/playground", label: "API playground", section: "Developers", icon: Icons.code },
     { key: "team", href: "#/team", label: "Team", section: "Organisation", icon: Icons.people },
     { key: "organisation", href: "#/organisation", label: "Organisation", section: "Organisation", icon: Icons.building },
+    { key: "billing", href: "#/billing", label: "Billing", section: "Organisation", icon: Icons.card },
     { key: "account", href: "#/account", label: "Account", section: "Organisation", icon: Icons.user },
   ];
   // a purpose's page belongs under the dashboard in the menu, and a list's under the lists sent
@@ -104,6 +106,7 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
       ) : null}
       {route.page === "organisation" ? <Organisation console={c} /> : null}
       {route.page === "account" ? <Account console={c} /> : null}
+      {route.page === "billing" ? <Billing console={c} /> : null}
     </AppShell>
   );
 }

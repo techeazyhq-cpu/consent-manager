@@ -44,6 +44,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [036](adr-036-batches-of-consent-requests.md) | Batches of consent requests: one template, many people, from JSON, CSV or Excel | Accepted |
 | [037](adr-037-running-the-sandbox.md) | Running the sandbox: the same images, its own stores, realms and keys, shared servers | Accepted |
 | [038](adr-038-api-playground-and-sandbox-keys.md) | The API playground in the DF Console, and sandbox keys taken with one click | Accepted |
+| [039](adr-039-billing-visible-to-fiduciaries-plan-change-requests.md) | Billing fiduciaries can see, plan changes they ask for, and a platform billing overview | Accepted |
 
 ## Writing one
 
