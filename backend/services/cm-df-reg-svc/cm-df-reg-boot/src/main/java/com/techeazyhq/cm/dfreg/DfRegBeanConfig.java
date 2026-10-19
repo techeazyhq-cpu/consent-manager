@@ -52,6 +52,14 @@ import com.techeazyhq.cm.kckit.KeycloakAdminAuthFilter;
 import com.techeazyhq.cm.dfreg.infra.KeycloakDfApiClientProvisionAdapter;
 import com.techeazyhq.cm.dfreg.infra.KeycloakDfMemberDirectoryAdapter;
 import com.techeazyhq.cm.audkit.AuditTrail;
+import com.techeazyhq.cm.dfreg.app.DfApiKeyHandler;
+import com.techeazyhq.cm.dfreg.app.VerifyApiRequestHandler;
+import com.techeazyhq.cm.dfreg.dom.DfAccessTokenPort;
+import com.techeazyhq.cm.dfreg.dom.SecretSealerPort;
+import com.techeazyhq.cm.dfreg.infra.AesGcmSecretSealer;
+import com.techeazyhq.cm.dfreg.infra.KeycloakDfAccessTokenAdapter;
+import com.techeazyhq.cm.dfreg.infra.NoncePurgeJob;
+import com.techeazyhq.cm.dfreg.infra.R2dbcDfApiKeyAdapter;
 import com.techeazyhq.cm.dfreg.infra.ObxRelay;
 import com.techeazyhq.cm.dfreg.infra.PulsarDfEvtProducer;
 import com.techeazyhq.cm.dfreg.infra.R2dbcDfLogoAdapter;
@@ -183,6 +191,40 @@ public class DfRegBeanConfig {
     @Bean
     public GetDfQryHandler getDfQryHandler(DfRepoPort dfRepo) {
         return new GetDfQryHandler(dfRepo);
+    }
+
+    // ---- API keys and signed requests (ADR-041) ----
+
+    @Bean
+    public R2dbcDfApiKeyAdapter dfApiKeyAdapter(DatabaseClient db) {
+        return new R2dbcDfApiKeyAdapter(db);
+    }
+
+    @Bean
+    public SecretSealerPort secretSealer(@Value("${cm.dfreg.secrets-key}") String secretsKey) {
+        return new AesGcmSecretSealer(secretsKey);
+    }
+
+    @Bean
+    public DfAccessTokenPort dfAccessTokenPort(WebClient.Builder builder, KeycloakProps props,
+                                               @Value("${cm.keycloak.token-host:}") String tokenHost) {
+        return new KeycloakDfAccessTokenAdapter(builder, props.baseUrl(), props.realm(), tokenHost);
+    }
+
+    @Bean
+    public DfApiKeyHandler dfApiKeyHandler(R2dbcDfApiKeyAdapter keys, SecretSealerPort sealer, AuditTrail audit) {
+        return new DfApiKeyHandler(keys, sealer, audit);
+    }
+
+    @Bean
+    public VerifyApiRequestHandler verifyApiRequestHandler(R2dbcDfApiKeyAdapter keys, DfRepoPort dfRepo,
+                                                           SecretSealerPort sealer, DfAccessTokenPort tokens) {
+        return new VerifyApiRequestHandler(keys, dfRepo, keys, sealer, tokens, java.time.Clock.systemUTC());
+    }
+
+    @Bean
+    public NoncePurgeJob noncePurgeJob(R2dbcDfApiKeyAdapter nonces) {
+        return new NoncePurgeJob(nonces);
     }
 
     @ConfigurationProperties(prefix = "cm.keycloak")

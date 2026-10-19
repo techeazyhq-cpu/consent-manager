@@ -216,6 +216,23 @@ export interface BilOverviewRow {
   reqPerSecQta: number;
 }
 
+/** An API key as listed: never the key itself, which is shown once when issued (ADR-041). */
+export interface ApiKeyDto {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  signingRequired: boolean;
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+}
+
+export interface IssuedApiKeyDto {
+  key: ApiKeyDto;
+  apiKey: string;
+  signingSecret: string;
+}
+
 /** One audit ledger entry as people read it (ADR-040). */
 export interface AudActivityRow {
   seq: number;

@@ -30,7 +30,8 @@ export type Route =
   | { page: "send-to-many" }
   | { page: "batches" }
   | { page: "batch"; id: string }
-  | { page: "playground" };
+  | { page: "playground" }
+  | { page: "api-keys" };
 
 /** Anything unrecognised lands on the dashboard, the default page. */
 export function parseRoute(hash: string): Route {
@@ -47,6 +48,8 @@ export function parseRoute(hash: string): Route {
       return { page: parts[0] };
     case "playground":
       return { page: "playground" };
+    case "api-keys":
+      return { page: "api-keys" };
     case "send-to-many":
       return { page: "send-to-many" };
     case "batches":

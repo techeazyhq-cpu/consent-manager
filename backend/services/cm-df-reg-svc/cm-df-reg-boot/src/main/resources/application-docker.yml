@@ -31,3 +31,5 @@ cm:
     bil: http://cm-bil-svc:8085
   keycloak:
     base-url: http://keycloak:8080
+    # Tokens fetched for API-key requests (ADR-041) must carry the issuer browsers and services know.
+    token-host: localhost:8080

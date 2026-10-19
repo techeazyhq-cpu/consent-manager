@@ -25,7 +25,9 @@ import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
 import com.techeazyhq.cm.dfreg.app.ActivateDfCmdHandler;
+import com.techeazyhq.cm.dfreg.app.DfApiKeyHandler;
 import com.techeazyhq.cm.dfreg.app.DfTeamHandler;
+import com.techeazyhq.cm.dfreg.app.VerifyApiRequestHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfActiveQryHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfLogoQryHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfQryHandler;
@@ -44,10 +46,13 @@ public class DfRegRouterConfig {
                                                         GetDfQryHandler getDfHandler,
                                                         UploadDfLogoCmdHandler uploadLogoHandler,
                                                         GetDfLogoQryHandler getLogoHandler,
-                                                        DfTeamHandler teamHandler) {
+                                                        DfTeamHandler teamHandler,
+                                                        DfApiKeyHandler apiKeyHandler,
+                                                        VerifyApiRequestHandler verifyApiRequestHandler) {
         DfHandler dfHandler = new DfHandler(registerHandler, activateHandler, getActiveHandler, listHandler, getDfHandler,
                 uploadLogoHandler, getLogoHandler);
         DfTeamHttpHandler team = new DfTeamHttpHandler(teamHandler);
+        DfApiKeyHttpHandler apiKeys = new DfApiKeyHttpHandler(apiKeyHandler, verifyApiRequestHandler);
         return RouterFunctions.route()
                 .GET("/api/df-reg/dfs", dfHandler::list)
                 .POST("/api/df-reg/dfs", dfHandler::register)
@@ -62,6 +67,11 @@ public class DfRegRouterConfig {
                 .PUT("/api/df-reg/me/members/{memberId}", team::changeRole)
                 .DELETE("/api/df-reg/me/members/{memberId}", team::remove)
                 .GET("/internal/dfs/{id}/active", dfHandler::isActive)
+                .GET("/api/df-reg/me/api-keys", apiKeys::list)
+                .POST("/api/df-reg/me/api-keys", apiKeys::issue)
+                .DELETE("/api/df-reg/me/api-keys/{id}", apiKeys::revoke)
+                .PUT("/api/df-reg/me/api-keys/{id}/signing-required", apiKeys::signingRequired)
+                .POST("/internal/api-keys/verify", apiKeys::verify)
                 .build();
     }
 }

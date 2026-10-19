@@ -1,0 +1,941 @@
+{
+  "info": {
+    "_postman_id": "f2c87b41-63e0-517b-b97c-4f90b53275da",
+    "name": "Consent Manager \u2014 Data Fiduciary API",
+    "description": "The API a data fiduciary's systems call: raise consent requests one at a time or by the thousand, read where each\nstands, verify a consent token before using personal data, and read the fiduciary's own billing and audit trail.\n\n## Authentication\n\nEvery call except the public keys needs one of:\n\n- **An API key** in `X-API-Key` (`cmk_\u2026`), issued in the DF Console under *Developers \u2192 API keys* (ADR-041).\n- **An OAuth 2.0 access token** from client credentials (`df-api-<your fiduciary id>`), in `Authorization: Bearer`.\n\nNever send both.\n\n## Signed requests (replay protection)\n\nEach API key comes with a signing secret (`cms_\u2026`). A signed request carries three more headers:\n\n| Header | Value |\n|---|---|\n| `X-Signature-Timestamp` | The current time in Unix seconds |\n| `X-Signature-Nonce` | A new random value for **every** request: 16\u201364 of `A-Z a-z 0-9 _ -` |\n| `X-Signature` | Lower-case hex HMAC-SHA256 of the text below, keyed by the signing secret's UTF-8 bytes |\n\nThe signed text is these seven lines joined by `\\n`, with no trailing newline:\n\n```text\nCM1-HMAC-SHA256\n{X-Signature-Timestamp}\n{X-Signature-Nonce}\n{HTTP method, upper case}\n{path exactly as sent, without the query}\n{query string exactly as sent, without '?', or empty}\n{lower-case hex SHA-256 of the exact body bytes (of no bytes when there is no body)}\n```\n\n- The timestamp must be within **\u00b1300 seconds** of the server's clock (`signature-expired` otherwise).\n- A nonce is accepted **once** per key: the same signed request sent again is refused with **409\n  `request-replayed`**. Retries are signed afresh with a new nonce.\n- A key can **require** signatures: then every unsigned `POST`, `PUT`, `PATCH` or `DELETE` is refused\n  (`signature-required`). Reads may go unsigned. A request carrying any signature header is always checked.\n- Multipart uploads are signed like any other body: hash the exact bytes you send.\n\n## Errors\n\nErrors are `application/problem+json` (RFC 9457) with a stable `title`, such as `quota-exceeded` or\n`request-replayed`.\n\n## Environments\n\nUse the **sandbox** to integrate: the same API, its own keys and data, test contacts only (`*@sandbox.example`,\n`+44 7700 900000`\u2013`900999`), nothing delivered.\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "noauth"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// CM1-HMAC-SHA256 (ADR-041): sign the method, path, query and exact body with a fresh timestamp and nonce.",
+          "const cryptojs = require('crypto-js');",
+          "const secret = pm.variables.get('signingSecret');",
+          "pm.request.headers.upsert({ key: 'X-API-Key', value: pm.variables.replaceIn('{{apiKey}}') });",
+          "if (!secret || pm.request.body && pm.request.body.mode === 'formdata') {",
+          "  // no secret, or a multipart upload Postman builds after this script: sent unsigned",
+          "  ['X-Signature', 'X-Signature-Timestamp', 'X-Signature-Nonce'].forEach(h => pm.request.headers.remove(h));",
+          "  return;",
+          "}",
+          "const offset = Number(pm.collectionVariables.get('timestampOffset') || 0); // the replay demo backdates one request",
+          "const timestamp = (Math.floor(Date.now() / 1000) + offset).toString();",
+          "const fixed = pm.collectionVariables.get('fixedNonce'); // the replay demo reuses one nonce",
+          "const nonce = fixed || (cryptojs.lib.WordArray.random(16).toString(cryptojs.enc.Hex));",
+          "const method = pm.request.method.toUpperCase();",
+          "const path = '/' + pm.request.url.path.map(p => pm.variables.replaceIn(p)).join('/');",
+          "const query = pm.request.url.query.filter(q => !q.disabled)",
+          "  .map(q => q.key + (q.value === null || q.value === undefined ? '' : '=' + pm.variables.replaceIn(q.value))).join('&');",
+          "const body = pm.request.body && pm.request.body.mode === 'raw' ? pm.variables.replaceIn(pm.request.body.raw) : '';",
+          "if (pm.request.body && pm.request.body.mode === 'raw') {",
+          "  pm.request.body.update(body); // send exactly the bytes signed",
+          "}",
+          "const canonical = ['CM1-HMAC-SHA256', timestamp, nonce, method, path, query, cryptojs.SHA256(body).toString(cryptojs.enc.Hex)].join('\\n');",
+          "pm.request.headers.upsert({ key: 'X-Signature-Timestamp', value: timestamp });",
+          "pm.request.headers.upsert({ key: 'X-Signature-Nonce', value: nonce });",
+          "pm.request.headers.upsert({ key: 'X-Signature', value: cryptojs.HmacSHA256(canonical, secret).toString(cryptojs.enc.Hex) });"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "requestId",
+      "value": ""
+    },
+    {
+      "key": "batchId",
+      "value": ""
+    },
+    {
+      "key": "cnsArtId",
+      "value": ""
+    },
+    {
+      "key": "cnsTkn",
+      "value": ""
+    },
+    {
+      "key": "purpose",
+      "value": "ORDER_UPDATES"
+    },
+    {
+      "key": "fixedNonce",
+      "value": ""
+    },
+    {
+      "key": "timestampOffset",
+      "value": "0"
+    }
+  ],
+  "item": [
+    {
+      "name": "Consent requests",
+      "description": "Ask people for consent and follow each request.",
+      "item": [
+        {
+          "name": "Ask one person for consent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/cns-reqs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "cns-reqs"
+              ],
+              "query": []
+            },
+            "description": "The person is notified and decides in their portal. Counts against the monthly allowance.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"extDpRefTyp\": \"EMAIL\",\n  \"extDpRefVal\": \"asha@sandbox.example\",\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"dCatCodes\": [\n    \"EMAIL\"\n  ],\n  \"ntcTitle\": \"Order updates by email\",\n  \"ntcText\": \"We email you when your order ships. You can withdraw at any time.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('raised', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('requestId', pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Your requests and consents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-qry/cns-arts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-qry",
+                "cns-arts"
+              ],
+              "query": []
+            },
+            "description": "Every request the fiduciary raised, newest first, with where it stands."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ok', () => pm.response.to.have.status(200));",
+                  "const first = pm.response.json()[0]; if (first) { pm.collectionVariables.set('requestId', first.cnsReqId); if (first.cnsArtId) pm.collectionVariables.set('cnsArtId', first.cnsArtId); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "One request and, once given, its consent",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-qry/cns-arts/{{requestId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-qry",
+                "cns-arts",
+                "{{requestId}}"
+              ],
+              "query": []
+            },
+            "description": "One request and, once given, its consent"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('requestId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs requestId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Each change of a request's status, oldest first",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-qry/cns-arts/{{requestId}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-qry",
+                "cns-arts",
+                "{{requestId}}",
+                "history"
+              ],
+              "query": []
+            },
+            "description": "Each change of a request's status, oldest first"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('requestId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs requestId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Batches",
+      "description": "One request for many people, from JSON, CSV or Excel (up to 10,000).",
+      "item": [
+        {
+          "name": "One request for everyone on a list",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/cns-req-batches?dryRun=false",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "cns-req-batches"
+              ],
+              "query": [
+                {
+                  "key": "dryRun",
+                  "value": "false",
+                  "disabled": false,
+                  "description": "Check the list and report, sending nothing."
+                }
+              ]
+            },
+            "description": "The list is checked first: each row is a valid contact, an invalid one (with why) or a repeat. With\n`dryRun=true` nothing is stored, reserved or sent. Otherwise the batch's whole allowance is reserved at once\n(or the batch is refused with 429) and the requests are sent in the background.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"dCatCodes\": [\n    \"EMAIL\"\n  ],\n  \"ntcTitle\": \"Order updates by email\",\n  \"ntcText\": \"We email you when your order ships. You can withdraw at any time.\",\n  \"recipients\": [\n    {\n      \"email\": \"asha@sandbox.example\",\n      \"ref\": \"CUST-001\"\n    },\n    {\n      \"phone\": \"+447700900123\",\n      \"ref\": \"CUST-002\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('accepted or checked', () => pm.expect(pm.response.code).to.be.oneOf([200, 202]));",
+                  "const b = pm.response.json().batch; if (b && pm.response.code === 202) pm.collectionVariables.set('batchId', b.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send a CSV list (unsigned upload)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/cns-req-batches?dryRun=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "cns-req-batches"
+              ],
+              "query": [
+                {
+                  "key": "dryRun",
+                  "value": "true"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "prpsCode",
+                  "value": "ORDER_UPDATES",
+                  "type": "text"
+                },
+                {
+                  "key": "dCatCodes",
+                  "value": "EMAIL",
+                  "type": "text"
+                },
+                {
+                  "key": "ntcTitle",
+                  "value": "Order updates by email",
+                  "type": "text"
+                },
+                {
+                  "key": "ntcText",
+                  "value": "We email you when your order ships. You can withdraw at any time.",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "list.csv",
+                  "description": "Choose a CSV such as:\nEmail,Customer ID\nasha@sandbox.example,CUST-001\nravi@sandbox.example,CUST-002\n"
+                }
+              ]
+            },
+            "description": "Postman builds multipart bodies after the signing script runs, so this goes unsigned: a key that requires signing refuses it (signature-required). Sign uploads from code."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// with a key that requires signing, an unsigned upload is refused, as it should be",
+                  "pm.test('checked, or refused for want of a signature', () => {",
+                  "  if (pm.response.code === 401) pm.expect(pm.response.json().title).to.eql('signature-required');",
+                  "  else pm.expect(pm.response.code).to.eql(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Your lists, newest first",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/cns-req-batches",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "cns-req-batches"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Your lists, newest first"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "One list's progress",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/cns-req-batches/{{batchId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "cns-req-batches",
+                "{{batchId}}"
+              ],
+              "query": []
+            },
+            "description": "One list's progress"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('batchId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs batchId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "One list's rows, with each outcome",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/cns-req-batches/{{batchId}}/rows",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "cns-req-batches",
+                "{{batchId}}",
+                "rows"
+              ],
+              "query": [
+                {
+                  "key": "outcome",
+                  "value": "",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "limit",
+                  "value": "100",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "One list's rows, with each outcome"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('batchId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs batchId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Every row with its outcome, as CSV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/cns-req-batches/{{batchId}}/report.csv",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "cns-req-batches",
+                "{{batchId}}",
+                "report.csv"
+              ],
+              "query": []
+            },
+            "description": "Every row with its outcome, as CSV"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('batchId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs batchId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Consent tokens",
+      "description": "Verify consent before using personal data.",
+      "item": [
+        {
+          "name": "Check a consent before using the person's data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Cns-Tkn",
+                "value": "{{cnsTkn}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-qry/cns-arts/{{cnsArtId}}/verify?purpose={{purpose}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-qry",
+                "cns-arts",
+                "{{cnsArtId}}",
+                "verify"
+              ],
+              "query": [
+                {
+                  "key": "purpose",
+                  "value": "{{purpose}}",
+                  "disabled": false,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "The gateway checks the consent token's signature, that it names your fiduciary and the purpose, and that the\nconsent is still in force right now, so a withdrawal takes effect at once."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('cnsArtId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs cnsArtId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A fresh short-lived consent token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/cns-arts/{{cnsArtId}}/token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "cns-arts",
+                "{{cnsArtId}}",
+                "token"
+              ],
+              "query": []
+            },
+            "description": "Consent tokens live minutes, not months (ADR-027). Refresh before use; a withdrawn consent gives none."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('cnsArtId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs cnsArtId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The keys consent tokens are signed with",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/.well-known/jwks.json",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                ".well-known",
+                "jwks.json"
+              ],
+              "query": []
+            },
+            "description": "To verify consent tokens yourself. The sandbox's keys differ from production's.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Account",
+      "description": "The fiduciary's own subscription and audit trail.",
+      "item": [
+        {
+          "name": "Your plan and this month's usage",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bil/me/subscription",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bil",
+                "me",
+                "subscription"
+              ],
+              "query": []
+            },
+            "description": "Your plan and this month's usage"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The plans",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bil/sub-plns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bil",
+                "sub-plns"
+              ],
+              "query": []
+            },
+            "description": "The plans"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Your audit trail, newest first",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/aud/activity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "aud",
+                "activity"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "ALL",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "before",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Entries before this ledger position, for the next page."
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Who changed what in your account, and every consent request and decision, from the tamper-evident ledger."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Replay protection",
+      "description": "ADR-041's guarantees: a signed request is accepted once, within five minutes of its timestamp.",
+      "item": [
+        {
+          "name": "0. Choose a nonce for the next request",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/bil/me/subscription",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "bil",
+                "me",
+                "subscription"
+              ],
+              "query": []
+            },
+            "description": "Your plan and this month's usage"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('fixedNonce', 'replay-' + Date.now() + '-' + Math.floor(Math.random() * 1e6));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1. A signed request is accepted",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/cns-reqs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "cns-reqs"
+              ],
+              "query": []
+            },
+            "description": "The person is notified and decides in their portal. Counts against the monthly allowance.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"extDpRefTyp\": \"EMAIL\",\n  \"extDpRefVal\": \"asha@sandbox.example\",\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"dCatCodes\": [\n    \"EMAIL\"\n  ],\n  \"ntcTitle\": \"Order updates by email\",\n  \"ntcText\": \"We email you when your order ships. You can withdraw at any time.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('first use is accepted', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. The same nonce again is a replay",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/cns-reqs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "cns-reqs"
+              ],
+              "query": []
+            },
+            "description": "The person is notified and decides in their portal. Counts against the monthly allowance.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"extDpRefTyp\": \"EMAIL\",\n  \"extDpRefVal\": \"asha@sandbox.example\",\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"dCatCodes\": [\n    \"EMAIL\"\n  ],\n  \"ntcTitle\": \"Order updates by email\",\n  \"ntcText\": \"We email you when your order ships. You can withdraw at any time.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('refused as a replay', () => pm.response.to.have.status(409));",
+                  "pm.test('says why', () => pm.expect(pm.response.json().title).to.eql('request-replayed'));",
+                  "pm.collectionVariables.set('fixedNonce', '');",
+                  "pm.collectionVariables.set('timestampOffset', '-600');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. A signature ten minutes old has expired",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/cns-reqs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "cns-reqs"
+              ],
+              "query": []
+            },
+            "description": "The person is notified and decides in their portal. Counts against the monthly allowance.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"extDpRefTyp\": \"EMAIL\",\n  \"extDpRefVal\": \"asha@sandbox.example\",\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"dCatCodes\": [\n    \"EMAIL\"\n  ],\n  \"ntcTitle\": \"Order updates by email\",\n  \"ntcText\": \"We email you when your order ships. You can withdraw at any time.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('refused as expired', () => pm.response.to.have.status(401));",
+                  "pm.test('says why', () => pm.expect(pm.response.json().title).to.eql('signature-expired'));",
+                  "pm.collectionVariables.set('timestampOffset', '0');"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

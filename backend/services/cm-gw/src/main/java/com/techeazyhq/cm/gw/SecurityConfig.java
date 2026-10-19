@@ -93,7 +93,8 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Cns-Tkn"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Cns-Tkn",
+                "X-API-Key", "X-Signature", "X-Signature-Timestamp", "X-Signature-Nonce", "Idempotency-Key"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
