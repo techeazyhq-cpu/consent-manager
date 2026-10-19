@@ -1,0 +1,115 @@
+{{/* The gateway and the services: one Deployment, Service, PDB and (optionally) HPA each (ADR-042). */}}
+{{- $root := . }}
+{{- range $name, $s := .Values.services }}
+{{- $ctx := dict "root" $root "name" $name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels: {{- include "cm.labels" $ctx | nindent 4 }}
+    app.kubernetes.io/component: {{ ternary "gateway" "service" (eq $name "cm-gw") }}
+spec:
+  {{- if not (and $s.autoscaling $s.autoscaling.enabled) }}
+  replicas: {{ $s.replicas }}
+  {{- end }}
+  revisionHistoryLimit: 5
+  strategy: {type: RollingUpdate, rollingUpdate: {maxUnavailable: 0, maxSurge: 1}}
+  selector:
+    matchLabels: {{- include "cm.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "cm.selectorLabels" $ctx | nindent 8 }}
+        app.kubernetes.io/part-of: consent-manager
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 45
+      securityContext: {{- include "cm.podSecurityContext" (dict "uid" 1001) | nindent 8 }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels: {{- include "cm.selectorLabels" $ctx | nindent 14 }}
+      {{- with $root.Values.imagePullSecrets }}
+      imagePullSecrets: {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $name }}
+          image: {{ include "cm.image" $ctx }}
+          imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+          ports:
+            - {name: http, containerPort: {{ $s.port }}}
+          env:
+            - {name: SERVER_PORT, value: {{ $s.port | quote }}}
+            {{- include "cm.serviceEnv" (dict "root" $root "name" $name "settings" $s) | nindent 12 }}
+          startupProbe:
+            httpGet: {path: /actuator/health, port: http}
+            periodSeconds: 5
+            failureThreshold: 48
+          livenessProbe:
+            httpGet: {path: /actuator/health, port: http}
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: {path: /actuator/health, port: http}
+            periodSeconds: 5
+            failureThreshold: 3
+          lifecycle:
+            preStop: {sleep: {seconds: 5}}
+          resources: {{- toYaml $s.resources | nindent 12 }}
+          securityContext: {{- include "cm.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+            {{- if $s.consentTokenKeys }}
+            - {name: cns-tkn-keys, mountPath: /var/lib/cm/keys, readOnly: true}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {sizeLimit: 256Mi}
+        {{- if $s.consentTokenKeys }}
+        # the consent token signing keys (ADR-006), from the secret store, never created in the pod
+        - name: cns-tkn-keys
+          secret:
+            secretName: {{ $root.Values.secrets.existingSecret }}
+            items: [{key: CNS_TKN_JWKS, path: jwks.json}]
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels: {{- include "cm.labels" $ctx | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector: {{- include "cm.selectorLabels" $ctx | nindent 4 }}
+  ports:
+    - {name: http, port: {{ $s.port }}, targetPort: http}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $name }}
+  labels: {{- include "cm.labels" $ctx | nindent 4 }}
+spec:
+  minAvailable: {{ $root.Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels: {{- include "cm.selectorLabels" $ctx | nindent 6 }}
+{{- if and $s.autoscaling $s.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $name }}
+  labels: {{- include "cm.labels" $ctx | nindent 4 }}
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: {{ $name }}}
+  minReplicas: {{ $s.autoscaling.minReplicas }}
+  maxReplicas: {{ $s.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: {{ $s.autoscaling.targetCPUUtilizationPercentage }}}
+{{- end }}
+{{- end }}

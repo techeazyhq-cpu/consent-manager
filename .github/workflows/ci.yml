@@ -113,3 +113,33 @@ jobs:
               --severity CRITICAL --ignore-unfixed --exit-code 0 --quiet "$image" < /dev/null
             echo "::endgroup::"
           done
+
+  infrastructure:
+    name: Infrastructure as code
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Terraform format, validate and module tests (AWS, Azure, GCP)
+        run: |
+          docker run --rm -v "$PWD/deploy/terraform:/tf" -w /tf --entrypoint sh hashicorp/terraform:1.12.2 -ec '
+            terraform fmt -check -recursive
+            for d in aws/production azure/production gcp/production; do
+              (cd $d && terraform init -backend=false -input=false >/dev/null && terraform validate)
+            done
+            for d in aws azure gcp; do
+              (cd $d/modules/datastores && terraform init -backend=false -input=false >/dev/null && terraform test)
+            done'
+      - name: Helm lint, render for each cloud and the sandbox, and check against Kubernetes schemas
+        run: |
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          helm lint consent-manager -f consent-manager/values-aws.yaml
+          for cloud in aws azure gcp; do
+            helm template cm consent-manager -f consent-manager/values-$cloud.yaml > /tmp/$cloud.yaml
+            docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas \
+              -kubernetes-version 1.30.0 < /tmp/$cloud.yaml
+          done
+          helm template cm consent-manager -f consent-manager/values-gcp.yaml -f consent-manager/values-sandbox.yaml \
+            | docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas
+      - name: The chart's OPA policy is the one the services are tested with
+        run: diff infra/opa/policies/cns_authz.rego deploy/helm/consent-manager/files/opa/cns_authz.rego

@@ -1,0 +1,40 @@
+{{- if .Values.ingress.enabled }}
+{{- $ctx := dict "root" . "name" "ingress" }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}
+  labels: {{- include "cm.labels" $ctx | nindent 4 }}
+  annotations:
+    {{- with .Values.ingress.tls.clusterIssuer }}
+    cert-manager.io/cluster-issuer: {{ . }}
+    {{- end }}
+    {{- with .Values.ingress.annotations }}{{ toYaml . | nindent 4 }}{{ end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts: [{{ .Values.ingress.apiHost | quote }}]
+      secretName: {{ .Release.Name }}-api-tls
+    {{- range $name, $w := .Values.webApps }}
+    - hosts: [{{ $w.host | quote }}]
+      secretName: {{ $name }}-tls
+    {{- end }}
+  {{- end }}
+  rules:
+    # only the gateway is public: /internal and the services stay inside the cluster
+    - host: {{ .Values.ingress.apiHost | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend: {service: {name: cm-gw, port: {name: http}}}
+    {{- range $name, $w := .Values.webApps }}
+    - host: {{ $w.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: {service: {name: {{ $name }}, port: {name: http}}}
+    {{- end }}
+{{- end }}
