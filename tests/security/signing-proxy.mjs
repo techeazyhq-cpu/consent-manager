@@ -28,6 +28,8 @@ import { createServer } from 'node:http';
 import { GW, loadKeys, sign } from './lib/cm1.mjs';
 
 const key = loadKeys(process.env.KEYS_FILE)[process.env.KEY ?? 'b'];
+// the gateway's origin alone, fixed at start: every request goes there
+const GATEWAY = new URL(GW).origin;
 const port = Number(process.env.PORT ?? 18990);
 const host = process.env.HOST ?? '127.0.0.1';
 const DROP = new Set(['host', 'connection', 'content-length', 'transfer-encoding', 'x-api-key', 'authorization',
@@ -38,12 +40,20 @@ createServer(async (req, res) => {
   const chunks = [];
   for await (const c of req) chunks.push(c);
   const body = Buffer.concat(chunks);
-  const url = new URL(req.url, GW);
+  // Only the path and query come from the client, and only under /api/: the request always goes to the gateway. An
+  // absolute URL in the request line would otherwise replace the base, and the proxy would sign and send a request
+  // anywhere.
+  const sent = new URL(req.url, 'http://proxy.invalid');
+  if (!req.url.startsWith('/api/') || sent.origin !== 'http://proxy.invalid') {
+    res.writeHead(400, { 'Content-Type': 'text/plain' }).end('proxy: only paths under /api/ are signed');
+    return;
+  }
+  const target = `${GATEWAY}${sent.pathname}${sent.search}`;
   const headers = Object.fromEntries(Object.entries(req.headers).filter(([h]) => !DROP.has(h)));
   Object.assign(headers, { 'X-API-Key': key.apiKey },
-    sign(key.signingSecret, req.method, url.pathname, url.search.slice(1), body));
+    sign(key.signingSecret, req.method, sent.pathname, sent.search.slice(1), body));
   try {
-    const up = await fetch(url, { method: req.method, headers, body: body.length ? body : undefined, redirect: 'manual' });
+    const up = await fetch(target, { method: req.method, headers, body: body.length ? body : undefined, redirect: 'manual' });
     const out = Buffer.from(await up.arrayBuffer());
     res.writeHead(up.status, Object.fromEntries([...up.headers].filter(([h]) => !['content-encoding', 'transfer-encoding', 'content-length'].includes(h))));
     res.end(out);
