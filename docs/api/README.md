@@ -26,6 +26,12 @@ contacts such as `asha@sandbox.example`.
 OAuth 2.0 client credentials still work (`df-api-<fiduciary id>`, in `Authorization: Bearer`). Send one or the other,
 never both.
 
+**Before asking anyone, define and publish a purpose** (ADR-043): `POST /api/cns-cmd/prps-defs`, then
+`POST /api/cns-cmd/prps-defs/{code}/publish`, or under **Consent → Purposes** in the DF Console. Requests then name it
+as `prpsCode` and `prpsVer`. A change to the purpose is a new version; when it is material (more data, new
+recipients, longer retention or validity), requests for the old version are refused with 409
+`purpose-version-superseded`. Ask for the new version instead.
+
 ## 2. Sign each request
 
 Send `X-API-Key`, plus:
@@ -52,7 +58,7 @@ hash it, and send that string.
 ### Shell (curl + openssl)
 
 ```bash
-body='{"extDpRefTyp":"EMAIL","extDpRefVal":"asha@sandbox.example","prpsCode":"ORDER_UPDATES","dCatCodes":["EMAIL"],"ntcTitle":"Order updates","ntcText":"We email you when your order ships. You can withdraw at any time."}'
+body='{"extDpRefTyp":"EMAIL","extDpRefVal":"asha@sandbox.example","prpsCode":"ORDER_UPDATES","prpsVer":1}'
 ts=$(date +%s); nonce=$(openssl rand -hex 16); path=/api/cns-cmd/cns-reqs
 body_hash=$(printf '%s' "$body" | openssl dgst -sha256 -hex | awk '{print $NF}')
 sig=$(printf 'CM1-HMAC-SHA256\n%s\n%s\nPOST\n%s\n\n%s' "$ts" "$nonce" "$path" "$body_hash" \

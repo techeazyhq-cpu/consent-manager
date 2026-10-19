@@ -36,7 +36,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [028](adr-028-accessible-consent-without-deceptive-design.md) | An accessible consent experience, without deceptive design, with recorded evidence | Proposed |
 | [029](adr-029-fiduciary-assurance-and-consent-termination.md) | Fiduciaries are verified at onboarding; termination by a fiduciary or an authority | Proposed |
 | [030](adr-030-contracts-interoperability-and-portability.md) | Contract-first interfaces, interoperability, and moving to another consent manager | Proposed |
-| [031](adr-031-purpose-versions-re-consent-and-sharing-consent.md) | Purpose definitions are versioned; a material change needs re-consent; sharing consent binds both parties | Proposed |
+| [031](adr-031-purpose-versions-re-consent-and-sharing-consent.md) | Purpose definitions are versioned; a material change needs re-consent; sharing consent binds both parties | Accepted for versions and re-consent (043); sharing proposed |
 | [032](adr-032-channels-per-audience-web-mobile-console-developer-portal.md) | Channels per audience: DP web and mobile, DF Console, developer portal | Proposed |
 | [033](adr-033-fiduciary-staff-accounts-separate-from-api-clients.md) | Fiduciaries' people have their own accounts; API clients are for systems only | Proposed |
 | [034](adr-034-sandbox-and-api-playground.md) | A sandbox with synthetic principals, and an API playground in the developer portal | Proposed |
@@ -48,6 +48,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [040](adr-040-audit-every-change-with-who.md) | Audit every change on the platform, with who made it | Accepted |
 | [041](adr-041-api-keys-and-signed-requests.md) | API keys and HMAC-signed requests against replay, for fiduciaries' systems | Accepted |
 | [042](adr-042-deploying-to-aws-azure-and-gcp.md) | Deploying to AWS, Azure and GCP with Terraform and one Helm chart | Accepted |
+| [043](adr-043-purpose-versions-in-the-consent-context.md) | Purpose versions in the Consent context; requests name a published version | Accepted |
 
 ## Writing one
 

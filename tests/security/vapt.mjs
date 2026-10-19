@@ -52,7 +52,13 @@ const refused = (r) => [r.status >= 400 && r.status < 500 && !STACK.test(r.text)
 const LIST = '/api/cns-qry/cns-arts';
 const RAISE = '/api/cns-cmd/cns-reqs';
 const request = (who) => ({ extDpRefTyp: 'EMAIL', extDpRefVal: `vapt-${who}-${randomBytes(3).toString('hex')}@example.test`,
-  prpsCode: 'ORDER_UPDATES', dCatCodes: ['EMAIL'], ntcTitle: 'Security test', ntcText: 'Raised by tests/security/vapt.mjs.' });
+  prpsCode: 'ORDER_UPDATES', prpsVer: (who === 'b' ? K.prpsVerB : K.prpsVerA) ?? 1 });
+const PURPOSES = '/api/cns-cmd/prps-defs';
+/** A purpose definition; `over` replaces parts of its content, `notice` of its one notice. */
+const purpose = (code, over = {}, notice = {}) => ({ code, content: { name: 'Security test', dCats: [{ code: 'EMAIL',
+  sensitivity: 'ORDINARY', necessary: false }], recipients: [], transfers: [], retentionDays: 30, requestedValidityDays: 30,
+  maxValidityDays: 30, flags: [], notices: [{ lang: 'en', title: 'Security test', text: 'Raised by tests/security/vapt.mjs.',
+  ...notice }], ...over } });
 
 // ---------------------------------------------------------------- fixtures: one request each, A's and B's
 const mineA = await call(K.a, 'POST', RAISE, { body: request('a') });
@@ -253,8 +259,9 @@ await check('INP-03', 'Input', 'SQL in a field and in the purpose query', '4xx o
   const b = await call(K.a, 'GET', `/api/cns-qry/cns-arts/${randomUUID()}/verify?purpose=${encodeURIComponent("' OR '1'='1")}`);
   return [a.status < 500 && b.status < 500 && !STACK.test(a.text + b.text), `${a.status}, ${b.status}`];
 });
-await check('INP-04', 'Input', 'Script in a notice title', 'refused or returned as JSON (never HTML)', async () => {
-  const r = await call(K.a, 'POST', RAISE, { body: { ...request('a'), ntcTitle: '<script>alert(1)</script>' } });
+await check('INP-04', 'Input', "Script in a purpose's notice title", 'refused or returned as JSON (never HTML)', async () => {
+  const code = `VAPT_SCRIPT_${randomBytes(3).toString('hex').toUpperCase()}`;
+  const r = await call(K.a, 'POST', PURPOSES, { body: purpose(code, {}, { title: '<script>alert(1)</script>' }) });
   return [r.status < 500 && !String(r.headers.get('content-type')).includes('html'), `${r.status} ${r.headers.get('content-type')}`];
 });
 await check('INP-05', 'Input', 'Not a UUID in the path', '400 or 404, no stack trace', async () =>
@@ -263,25 +270,53 @@ await check('INP-06', 'Input', 'XML instead of JSON', '400 or 415', async () =>
   refused(await call(K.a, 'POST', RAISE, { body: '<?xml version="1.0"?><!DOCTYPE x [<!ENTITY e SYSTEM "file:///etc/passwd">]><x>&e;</x>', headers: { 'Content-Type': 'application/xml' } })));
 await check('INP-07', 'Input', 'A 10 000-entry data category list', '400', async () =>
   refused(await call(K.a, 'POST', RAISE, { body: { ...request('a'), dCatCodes: Array.from({ length: 10000 }, (_, i) => `C${i}`) } })));
-await check('INP-08', 'Input', 'A 65-character purpose; a 300-character title', '400 each (not a database error)', async () => {
-  const a = await call(K.a, 'POST', RAISE, { body: { ...request('a'), prpsCode: 'P'.repeat(65) } });
-  const b = await call(K.a, 'POST', RAISE, { body: { ...request('a'), ntcTitle: 'T'.repeat(300) } });
+await check('INP-08', 'Input', 'A 65-character purpose code; a 300-character notice title', '400 each (not a database error)', async () => {
+  const a = await call(K.a, 'POST', PURPOSES, { body: purpose('P'.repeat(65)) });
+  const b = await call(K.a, 'POST', PURPOSES, { body: purpose('VAPT_LONG_TITLE', {}, { title: 'T'.repeat(300) }) });
   return [a.status === 400 && b.status === 400, `${a.status}, ${b.status}`];
 });
-await check('INP-09', 'Input', 'No data categories', '400', async () =>
-  is(await call(K.a, 'POST', RAISE, { body: { ...request('a'), dCatCodes: [] } }), 400));
+await check('INP-09', 'Input', "Data the purpose doesn't cover; a purpose with none", '400 each', async () => {
+  const a = await call(K.a, 'POST', RAISE, { body: { ...request('a'), dCatCodes: ['EMAIL', 'LOCATION'] } });
+  const b = await call(K.a, 'POST', PURPOSES, { body: purpose('VAPT_NO_DATA', { dCats: [] }) });
+  return [a.status === 400 && b.status === 400, `${a.status}, ${b.status}`];
+});
 // found by the ZAP scan: a NUL reached Postgres (500), and a notice of only a control character was stored empty, after
 // which no listing of that fiduciary's batches worked
-await check('INP-10', 'Input', 'A NUL in the notice, the title, a data category', '400 each', async () => {
-  const rs = await Promise.all([{ ntcText: 'a\u0000b' }, { ntcTitle: 'a\u0000b' }, { dCatCodes: ['EM\u0000AIL'] }]
-    .map((o) => call(K.a, 'POST', RAISE, { body: { ...request('a'), ...o } })));
+await check('INP-10', 'Input', "A NUL in a purpose's notice, its title, a data category", '400 each', async () => {
+  const rs = await Promise.all([
+    purpose('VAPT_NUL_TEXT', {}, { text: 'a\u0000b' }),
+    purpose('VAPT_NUL_TITLE', {}, { title: 'a\u0000b' }),
+    purpose('VAPT_NUL_DCAT', { dCats: [{ code: 'EM\u0000AIL', sensitivity: 'ORDINARY', necessary: false }] }),
+  ].map((body) => call(K.a, 'POST', PURPOSES, { body })));
   return [rs.every((r) => r.status === 400), rs.map((r) => r.status).join(', ')];
 });
-await check('INP-11', 'Input', 'A batch whose notice is one control character; then the batch list', '400; the list 200', async () => {
-  const batch = await call(K.a, 'POST', '/api/cns-cmd/cns-req-batches?dryRun=false', { body: { prpsCode: 'ORDER_UPDATES',
-    dCatCodes: ['EMAIL'], ntcTitle: 'Order updates', ntcText: '\u0001', recipients: [{ email: 'vapt-batch@example.test' }] } });
-  const list = await call(K.a, 'GET', '/api/cns-cmd/cns-req-batches');
-  return [batch.status === 400 && list.status === 200, `${batch.status}; list ${list.status}`];
+await check('INP-11', 'Input', 'A notice of one control character; a batch for a version that was never published; then the batch list',
+  '400; 404; the list 200', async () => {
+    const notice = await call(K.a, 'POST', PURPOSES, { body: purpose('VAPT_CTRL', {}, { text: '\u0001' }) });
+    const batch = await call(K.a, 'POST', '/api/cns-cmd/cns-req-batches?dryRun=false', { body: { prpsCode: 'ORDER_UPDATES',
+      prpsVer: 999, recipients: [{ email: 'vapt-batch@example.test' }] } });
+    const list = await call(K.a, 'GET', '/api/cns-cmd/cns-req-batches');
+    return [notice.status === 400 && batch.status === 404 && list.status === 200,
+      `${notice.status}; ${batch.status}; list ${list.status}`];
+  });
+
+// ---------------------------------------------------------------- purposes (ADR-031)
+const ownCode = `VAPT_A_${randomBytes(3).toString('hex').toUpperCase()}`;
+await call(K.a, 'POST', PURPOSES, { body: purpose(ownCode) });
+await call(K.a, 'POST', `${PURPOSES}/${ownCode}/publish`);
+await check('PRP-01', 'Access control', "B reads or asks for A's purpose", '404 each', async () => {
+  const read = await call(K.b, 'GET', `${PURPOSES}/${ownCode}`);
+  const ask = await call(K.b, 'POST', RAISE, { body: { ...request('b'), prpsCode: ownCode, prpsVer: 1 } });
+  const publish = await call(K.b, 'POST', `${PURPOSES}/${ownCode}/publish`);
+  return [read.status === 404 && ask.status === 404 && publish.status === 404,
+    `${read.status}, ${ask.status}, ${publish.status}`];
+});
+await check('PRP-02', 'Input', 'A request for a superseded version, after a material change', '409 purpose-version-superseded', async () => {
+  await call(K.a, 'PUT', `${PURPOSES}/${ownCode}/draft`, { body: purpose(ownCode, { dCats: [
+    { code: 'EMAIL', sensitivity: 'ORDINARY', necessary: false }, { code: 'NAME', sensitivity: 'ORDINARY', necessary: false }] }).content });
+  await call(K.a, 'POST', `${PURPOSES}/${ownCode}/publish`);
+  return is(await call(K.a, 'POST', RAISE, { body: { ...request('a'), prpsCode: ownCode, prpsVer: 1 } }), 409,
+    'purpose-version-superseded');
 });
 
 // ---------------------------------------------------------------- what responses give away

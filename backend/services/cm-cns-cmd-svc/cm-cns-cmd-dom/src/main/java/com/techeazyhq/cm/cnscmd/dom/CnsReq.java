@@ -32,30 +32,23 @@ import com.techeazyhq.cm.domkit.Agg;
 public final class CnsReq extends Agg<String> {
 
     private final String dfId;
-    private final Prps prps;
-    private final Scp scp;
-    private final String ntcTitle;
-    private final String ntcText;
+    private final CnsReqTemplate template;
     private final Instant createdAt;
     private DpRef dpRef;
     private CnsReqSts sts;
 
-    CnsReq(String id, String dfId, DpRef dpRef, Prps prps, Scp scp, String ntcTitle, String ntcText,
-           CnsReqSts sts, Instant createdAt) {
+    CnsReq(String id, String dfId, DpRef dpRef, CnsReqTemplate template, CnsReqSts sts, Instant createdAt) {
         super(id);
         this.dfId = dfId;
         this.dpRef = dpRef;
-        this.prps = prps;
-        this.scp = scp;
-        this.ntcTitle = ntcTitle;
-        this.ntcText = ntcText;
+        this.template = template;
         this.sts = sts;
         this.createdAt = createdAt;
     }
 
     /** Package-private: only {@link CnsReqFactory} (same package) raises the creation event. */
     void markCreated() {
-        raise(CnsReqCreatedEvt.of(id(), dfId, dpRef, prps, scp, ntcTitle, ntcText));
+        raise(CnsReqCreatedEvt.of(id(), dfId, dpRef, template));
     }
 
     public String dfId() {
@@ -67,19 +60,28 @@ public final class CnsReq extends Agg<String> {
     }
 
     public Prps prps() {
-        return prps;
+        return template.prps();
     }
 
     public Scp scp() {
-        return scp;
+        return template.scp();
     }
 
     public String ntcTitle() {
-        return ntcTitle;
+        return template.ntcTitle();
     }
 
     public String ntcText() {
-        return ntcText;
+        return template.ntcText();
+    }
+
+    /** The purpose version and notice asked about (ADR-031). */
+    public PrpsVerRef prpsVer() {
+        return template.prpsVer();
+    }
+
+    public CnsReqTemplate template() {
+        return template;
     }
 
     public CnsReqSts sts() {

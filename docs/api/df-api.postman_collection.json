@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "f2c87b41-63e0-517b-b97c-4f90b53275da",
     "name": "Consent Manager \u2014 Data Fiduciary API",
-    "description": "The API a data fiduciary's systems call: raise consent requests one at a time or by the thousand, read where each\nstands, verify a consent token before using personal data, and read the fiduciary's own billing and audit trail.\n\n## Authentication\n\nEvery call except the public keys needs one of:\n\n- **An API key** in `X-API-Key` (`cmk_\u2026`), issued in the DF Console under *Developers \u2192 API keys* (ADR-041).\n- **An OAuth 2.0 access token** from client credentials (`df-api-<your fiduciary id>`), in `Authorization: Bearer`.\n\nNever send both.\n\n## Signed requests (replay protection)\n\nEach API key comes with a signing secret (`cms_\u2026`). A signed request carries three more headers:\n\n| Header | Value |\n|---|---|\n| `X-Signature-Timestamp` | The current time in Unix seconds |\n| `X-Signature-Nonce` | A new random value for **every** request: 16\u201364 of `A-Z a-z 0-9 _ -` |\n| `X-Signature` | Lower-case hex HMAC-SHA256 of the text below, keyed by the signing secret's UTF-8 bytes |\n\nThe signed text is these seven lines joined by `\\n`, with no trailing newline:\n\n```text\nCM1-HMAC-SHA256\n{X-Signature-Timestamp}\n{X-Signature-Nonce}\n{HTTP method, upper case}\n{path exactly as sent, without the query}\n{query string exactly as sent, without '?', or empty}\n{lower-case hex SHA-256 of the exact body bytes (of no bytes when there is no body)}\n```\n\n- The timestamp must be within **\u00b1300 seconds** of the server's clock (`signature-expired` otherwise).\n- A nonce is accepted **once** per key: the same signed request sent again is refused with **409\n  `request-replayed`**. Retries are signed afresh with a new nonce.\n- A key can **require** signatures: then every unsigned `POST`, `PUT`, `PATCH` or `DELETE` is refused\n  (`signature-required`). Reads may go unsigned. A request carrying any signature header is always checked.\n- Multipart uploads are signed like any other body: hash the exact bytes you send.\n\n## Errors\n\nErrors are `application/problem+json` (RFC 9457) with a stable `title`, such as `quota-exceeded` or\n`request-replayed`.\n\n## Environments\n\nUse the **sandbox** to integrate: the same API, its own keys and data, test contacts only (`*@sandbox.example`,\n`+44 7700 900000`\u2013`900999`), nothing delivered.\n",
+    "description": "The API a data fiduciary's systems call: raise consent requests one at a time or by the thousand, read where each\nstands, verify a consent token before using personal data, and read the fiduciary's own billing and audit trail.\n\n## Authentication\n\nEvery call except the public keys needs one of:\n\n- **An API key** in `X-API-Key` (`cmk_\u2026`), issued in the DF Console under *Developers \u2192 API keys* (ADR-041).\n- **An OAuth 2.0 access token** from client credentials (`df-api-<your fiduciary id>`), in `Authorization: Bearer`.\n\nNever send both.\n\n## Signed requests (replay protection)\n\nEach API key comes with a signing secret (`cms_\u2026`). A signed request carries three more headers:\n\n| Header | Value |\n|---|---|\n| `X-Signature-Timestamp` | The current time in Unix seconds |\n| `X-Signature-Nonce` | A new random value for **every** request: 16\u201364 of `A-Z a-z 0-9 _ -` |\n| `X-Signature` | Lower-case hex HMAC-SHA256 of the text below, keyed by the signing secret's UTF-8 bytes |\n\nThe signed text is these seven lines joined by `\\n`, with no trailing newline:\n\n```text\nCM1-HMAC-SHA256\n{X-Signature-Timestamp}\n{X-Signature-Nonce}\n{HTTP method, upper case}\n{path exactly as sent, without the query}\n{query string exactly as sent, without '?', or empty}\n{lower-case hex SHA-256 of the exact body bytes (of no bytes when there is no body)}\n```\n\n- The timestamp must be within **\u00b1300 seconds** of the server's clock (`signature-expired` otherwise).\n- A nonce is accepted **once** per key: the same signed request sent again is refused with **409\n  `request-replayed`**. Retries are signed afresh with a new nonce.\n- A key can **require** signatures: then every unsigned `POST`, `PUT`, `PATCH` or `DELETE` is refused\n  (`signature-required`). Reads may go unsigned. A request carrying any signature header is always checked.\n- Multipart uploads are signed like any other body: hash the exact bytes you send.\n\n## Purposes (ADR-031)\n\nA request asks consent for a **published purpose version**: what the data is for, which data, how long it is\nkept, who else receives it, how long consent may last, and the notice people read, in each language. Define a\npurpose, publish it, then raise requests naming `prpsCode` and `prpsVer`. A published version never changes; a\nchange is a new version, which the platform classifies:\n\n- **Material** (more data, new recipients or transfers, longer retention or validity, higher sensitivity, new\n  special processing): existing consents keep their old scope, and requests must name the new version.\n- **Non-material** (wording, fewer categories, shorter retention): consents carry on.\n\nOnly the current version can be asked for. Asking for an older one is refused with **409\n`purpose-version-superseded`**, so an integration can't silently ask for what the purpose no longer says. A\nrequest may ask for some of the version's data categories, never others (purpose limitation).\n\n## Errors\n\nErrors are `application/problem+json` (RFC 9457) with a stable `title`, such as `quota-exceeded` or\n`request-replayed`.\n\n## Environments\n\nUse the **sandbox** to integrate: the same API, its own keys and data, test contacts only (`*@sandbox.example`,\n`+44 7700 900000`\u2013`900999`), nothing delivered.\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -65,6 +65,10 @@
       "value": "ORDER_UPDATES"
     },
     {
+      "key": "prpsCode",
+      "value": "ORDER_UPDATES"
+    },
+    {
       "key": "fixedNonce",
       "value": ""
     },
@@ -74,6 +78,272 @@
     }
   ],
   "item": [
+    {
+      "name": "Purposes",
+      "description": "What you ask consent for, in immutable versions.",
+      "item": [
+        {
+          "name": "Your purposes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/prps-defs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "prps-defs"
+              ],
+              "query": []
+            },
+            "description": "Every purpose, with its current version's content and any draft's."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Define a purpose",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/prps-defs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "prps-defs"
+              ],
+              "query": []
+            },
+            "description": "Its version 1 is a draft until published. Needs a role that raises requests, or an API client.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"ORDER_UPDATES\",\n  \"content\": {\n    \"name\": \"Order updates\",\n    \"description\": \"Emails about the orders you place with us.\",\n    \"dCats\": [\n      {\n        \"code\": \"EMAIL\",\n        \"dpv\": \"dpv-pd:EmailAddress\",\n        \"sensitivity\": \"ORDINARY\",\n        \"necessary\": true,\n        \"consequence\": \"Without your email address we can't tell you when your order ships.\"\n      }\n    ],\n    \"recipients\": [],\n    \"transfers\": [],\n    \"retentionDays\": 365,\n    \"requestedValidityDays\": 180,\n    \"maxValidityDays\": 365,\n    \"flags\": [],\n    \"notices\": [\n      {\n        \"lang\": \"en\",\n        \"title\": \"Order updates by email\",\n        \"text\": \"We email you when your order ships, for as long as you shop with us. You can withdraw at any time.\"\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('defined, or already was', () => pm.expect(pm.response.code).to.be.oneOf([201, 409]));",
+                  "if (pm.response.code === 201) pm.collectionVariables.set('prpsCode', pm.response.json().code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "One purpose, with every version",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/prps-defs/{{prpsCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "prps-defs",
+                "{{prpsCode}}"
+              ],
+              "query": []
+            },
+            "description": "One purpose, with every version"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('prpsCode')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs prpsCode from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Draft the next version",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/prps-defs/{{prpsCode}}/draft",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "prps-defs",
+                "{{prpsCode}}",
+                "draft"
+              ],
+              "query": []
+            },
+            "description": "Starts the draft of the next version, or replaces the draft's content. Published versions never change.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('prpsCode')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs prpsCode from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Discard the draft",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/prps-defs/{{prpsCode}}/draft",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "prps-defs",
+                "{{prpsCode}}",
+                "draft"
+              ],
+              "query": []
+            },
+            "description": "Discard the draft"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('prpsCode')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs prpsCode from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "What publishing the draft would mean",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/prps-defs/{{prpsCode}}/draft/change",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "prps-defs",
+                "{{prpsCode}}",
+                "draft",
+                "change"
+              ],
+              "query": []
+            },
+            "description": "How the draft differs from the current version, and whether it needs re-consent."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('prpsCode')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs prpsCode from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Publish the draft",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/prps-defs/{{prpsCode}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "prps-defs",
+                "{{prpsCode}}",
+                "publish"
+              ],
+              "query": []
+            },
+            "description": "The draft becomes the current version; from now on requests name it. Refused when there is no draft, or when\nthe draft is the same as the current version."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('published, or nothing left to publish', () => pm.expect(pm.response.code).to.be.oneOf([200, 409]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
     {
       "name": "Consent requests",
       "description": "Ask people for consent and follow each request.",
@@ -100,10 +370,10 @@
               ],
               "query": []
             },
-            "description": "The person is notified and decides in their portal. Counts against the monthly allowance.",
+            "description": "Asks for a published purpose version: its notice in `ntcLang` (English, or the first written, when absent) and\nthe data categories named (all the version's when absent). The person is notified and decides in their\nportal. Counts against the monthly allowance.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"extDpRefTyp\": \"EMAIL\",\n  \"extDpRefVal\": \"asha@sandbox.example\",\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"dCatCodes\": [\n    \"EMAIL\"\n  ],\n  \"ntcTitle\": \"Order updates by email\",\n  \"ntcText\": \"We email you when your order ships. You can withdraw at any time.\"\n}",
+              "raw": "{\n  \"extDpRefTyp\": \"EMAIL\",\n  \"extDpRefVal\": \"asha@sandbox.example\",\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"prpsVer\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -261,7 +531,7 @@
             "description": "The list is checked first: each row is a valid contact, an invalid one (with why) or a repeat. With\n`dryRun=true` nothing is stored, reserved or sent. Otherwise the batch's whole allowance is reserved at once\n(or the batch is refused with 429) and the requests are sent in the background.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"dCatCodes\": [\n    \"EMAIL\"\n  ],\n  \"ntcTitle\": \"Order updates by email\",\n  \"ntcText\": \"We email you when your order ships. You can withdraw at any time.\",\n  \"recipients\": [\n    {\n      \"email\": \"asha@sandbox.example\",\n      \"ref\": \"CUST-001\"\n    },\n    {\n      \"phone\": \"+447700900123\",\n      \"ref\": \"CUST-002\"\n    }\n  ]\n}",
+              "raw": "{\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"prpsVer\": 1,\n  \"recipients\": [\n    {\n      \"email\": \"asha@sandbox.example\",\n      \"ref\": \"CUST-001\"\n    },\n    {\n      \"phone\": \"+447700900123\",\n      \"ref\": \"CUST-002\"\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -313,18 +583,8 @@
                   "type": "text"
                 },
                 {
-                  "key": "dCatCodes",
-                  "value": "EMAIL",
-                  "type": "text"
-                },
-                {
-                  "key": "ntcTitle",
-                  "value": "Order updates by email",
-                  "type": "text"
-                },
-                {
-                  "key": "ntcText",
-                  "value": "We email you when your order ships. You can withdraw at any time.",
+                  "key": "prpsVer",
+                  "value": "1",
                   "type": "text"
                 },
                 {
@@ -817,10 +1077,10 @@
               ],
               "query": []
             },
-            "description": "The person is notified and decides in their portal. Counts against the monthly allowance.",
+            "description": "Asks for a published purpose version: its notice in `ntcLang` (English, or the first written, when absent) and\nthe data categories named (all the version's when absent). The person is notified and decides in their\nportal. Counts against the monthly allowance.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"extDpRefTyp\": \"EMAIL\",\n  \"extDpRefVal\": \"asha@sandbox.example\",\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"dCatCodes\": [\n    \"EMAIL\"\n  ],\n  \"ntcTitle\": \"Order updates by email\",\n  \"ntcText\": \"We email you when your order ships. You can withdraw at any time.\"\n}",
+              "raw": "{\n  \"extDpRefTyp\": \"EMAIL\",\n  \"extDpRefVal\": \"asha@sandbox.example\",\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"prpsVer\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -862,10 +1122,10 @@
               ],
               "query": []
             },
-            "description": "The person is notified and decides in their portal. Counts against the monthly allowance.",
+            "description": "Asks for a published purpose version: its notice in `ntcLang` (English, or the first written, when absent) and\nthe data categories named (all the version's when absent). The person is notified and decides in their\nportal. Counts against the monthly allowance.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"extDpRefTyp\": \"EMAIL\",\n  \"extDpRefVal\": \"asha@sandbox.example\",\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"dCatCodes\": [\n    \"EMAIL\"\n  ],\n  \"ntcTitle\": \"Order updates by email\",\n  \"ntcText\": \"We email you when your order ships. You can withdraw at any time.\"\n}",
+              "raw": "{\n  \"extDpRefTyp\": \"EMAIL\",\n  \"extDpRefVal\": \"asha@sandbox.example\",\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"prpsVer\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -910,10 +1170,10 @@
               ],
               "query": []
             },
-            "description": "The person is notified and decides in their portal. Counts against the monthly allowance.",
+            "description": "Asks for a published purpose version: its notice in `ntcLang` (English, or the first written, when absent) and\nthe data categories named (all the version's when absent). The person is notified and decides in their\nportal. Counts against the monthly allowance.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"extDpRefTyp\": \"EMAIL\",\n  \"extDpRefVal\": \"asha@sandbox.example\",\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"dCatCodes\": [\n    \"EMAIL\"\n  ],\n  \"ntcTitle\": \"Order updates by email\",\n  \"ntcText\": \"We email you when your order ships. You can withdraw at any time.\"\n}",
+              "raw": "{\n  \"extDpRefTyp\": \"EMAIL\",\n  \"extDpRefVal\": \"asha@sandbox.example\",\n  \"prpsCode\": \"ORDER_UPDATES\",\n  \"prpsVer\": 1\n}",
               "options": {
                 "raw": {
                   "language": "json"

@@ -33,6 +33,10 @@ import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techeazyhq.cm.cnscmd.app.PrpsDefCmds;
+import com.techeazyhq.cm.cnscmd.app.PrpsResolver;
+import com.techeazyhq.cm.cnscmd.dom.PrpsDefRepoPort;
+import com.techeazyhq.cm.cnscmd.infra.R2dbcPrpsDefRepoAdapter;
 import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.cnscmd.app.SubmitCnsReqBatchHandler;
 import com.techeazyhq.cm.cnscmd.app.CnsReqBatchWorker;
@@ -140,6 +144,22 @@ public class CnsCmdBeanConfig {
         return new WebClientDfUsageAdapter(builder, cbFactory, serviceUrls.bil());
     }
 
+    /** Purposes and their versions (ADR-031), and the check every request makes against them. */
+    @Bean
+    public PrpsDefRepoPort prpsDefRepoPort(DatabaseClient db, ObjectMapper objectMapper) {
+        return new R2dbcPrpsDefRepoAdapter(db, objectMapper);
+    }
+
+    @Bean
+    public PrpsDefCmds prpsDefCmds(PrpsDefRepoPort prpsDefRepo, AuditTrail audit) {
+        return new PrpsDefCmds(prpsDefRepo, audit, java.time.Clock.systemUTC());
+    }
+
+    @Bean
+    public PrpsResolver prpsResolver(PrpsDefRepoPort prpsDefRepo) {
+        return new PrpsResolver(prpsDefRepo);
+    }
+
     @Bean
     public CnsReqBatchRepoPort cnsReqBatchRepoPort(DatabaseClient db, ObjectMapper objectMapper) {
         return new R2dbcCnsReqBatchRepoAdapter(db, objectMapper);
@@ -153,9 +173,9 @@ public class CnsCmdBeanConfig {
 
     @Bean
     public SubmitCnsReqBatchHandler submitCnsReqBatchHandler(CnsReqBatchRepoPort batchRepo, DfActivePort dfActivePort,
-                                                             DfUsagePort dfUsagePort, ContactPolicy contactPolicy,
-                                                             AuditTrail audit) {
-        return new SubmitCnsReqBatchHandler(batchRepo, dfActivePort, dfUsagePort, contactPolicy, audit);
+                                                             DfUsagePort dfUsagePort, PrpsResolver prpsResolver,
+                                                             ContactPolicy contactPolicy, AuditTrail audit) {
+        return new SubmitCnsReqBatchHandler(batchRepo, dfActivePort, dfUsagePort, prpsResolver, contactPolicy, audit);
     }
 
     /** A bean of its own, so its @Transactional send wraps each row's request and outcome together. */
@@ -209,8 +229,8 @@ public class CnsCmdBeanConfig {
     @Bean
     public CreateCnsReqCmdHandler createCnsReqCmdHandler(CnsReqRepoPort cnsReqRepo, DfActivePort dfActivePort,
                                                            DfSubEligiblePolicy dfSubEligiblePolicy,
-                                                           ContactPolicy contactPolicy) {
-        return new CreateCnsReqCmdHandler(cnsReqRepo, dfActivePort, dfSubEligiblePolicy, contactPolicy);
+                                                           PrpsResolver prpsResolver, ContactPolicy contactPolicy) {
+        return new CreateCnsReqCmdHandler(cnsReqRepo, dfActivePort, dfSubEligiblePolicy, prpsResolver, contactPolicy);
     }
 
     @Bean

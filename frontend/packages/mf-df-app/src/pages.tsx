@@ -42,7 +42,7 @@ export function OrgMark({ console: c, size }: { console: Console; size?: number 
 }
 
 /** The counts by status; each one opens the requests with that status. */
-function Counts({ rows, onPick }: { rows: CnsArtRdMdl[]; onPick?: (sts?: CnsLcySts[]) => void }) {
+export function Counts({ rows, onPick }: { rows: CnsArtRdMdl[]; onPick?: (sts?: CnsLcySts[]) => void }) {
   return (
     <div className="cm-summary">
       {COUNTS.map(({ key, label, sts }) =>
@@ -62,7 +62,7 @@ function Counts({ rows, onPick }: { rows: CnsArtRdMdl[]; onPick?: (sts?: CnsLcyS
   );
 }
 
-function RaiseButton({ console: c, prpsCode }: { console: Console; prpsCode?: string }) {
+export function RaiseButton({ console: c, prpsCode }: { console: Console; prpsCode?: string }) {
   if (!raisesRequests(c.role)) return null;
   return (
     <a className="cm-btn cm-btn-primary" href={raiseHref(prpsCode)} style={{ textDecoration: "none" }}>
@@ -102,19 +102,25 @@ export function Dashboard({ console: c, onFilter }: { console: Console; onFilter
       </div>
       {c.purposes.length === 0 ? (
         <Card>
-          <strong>No requests yet.</strong>
+          <strong>No purposes yet.</strong>
           <p className="cm-note">
-            {raisesRequests(c.role)
-              ? "Raise your first consent request: say what you need the data for, which data, and the notice people will read."
-              : "Requests your organisation raises will appear here."}
+            {raisesRequests(c.role) ? (
+              <>
+                Start with a <a href="#/purposes/new">purpose</a>: what you need the data for, which data, and the notice
+                people will read. Then raise requests from it.
+              </>
+            ) : (
+              "Purposes your organisation defines, and the requests raised from them, will appear here."
+            )}
           </p>
         </Card>
       ) : (
         <div className="cm-logo-tiles">
           {c.purposes.map((p) => (
             <a key={p.code} className="cm-logo-tile" href={purposeHref(p.code)} style={{ textDecoration: "none" }}>
-              <OrgLogo id={`prps:${p.code}`} name={humanise(p.code)} load={async () => null} size={56} />
-              <div className="cm-logo-tile-name">{humanise(p.code)}</div>
+              <OrgLogo id={`prps:${p.code}`} name={p.name} load={async () => null} size={56} />
+              <div className="cm-logo-tile-name">{p.name}</div>
+              <div className="cm-note">{p.currentVer ? `Version ${p.currentVer}` : "Not published"}</div>
               <div className="df-tile-counts">
                 <span>
                   <b>{p.sent}</b> sent
@@ -134,7 +140,7 @@ export function Dashboard({ console: c, onFilter }: { console: Console; onFilter
   );
 }
 
-function RequestTable({ rows }: { rows: CnsArtRdMdl[] }) {
+export function RequestTable({ rows }: { rows: CnsArtRdMdl[] }) {
   if (rows.length === 0) return <p className="cm-note">No requests to show.</p>;
   return (
     <div style={{ overflowX: "auto" }}>
@@ -205,41 +211,6 @@ export function Requests({ console: c, initial }: { console: Console; initial?: 
         ))}
       </div>
       <RequestTable rows={shown} />
-    </>
-  );
-}
-
-/** One purpose: its numbers, the notices used for it, and its requests. */
-export function PurposeDetail({ console: c, prpsCode }: { console: Console; prpsCode: string }) {
-  if (!c.rows) return <Spinner />;
-  const rows = c.rows.filter((r) => r.prpsCode === prpsCode).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  const rate = grantRate(rows);
-  const notices = Array.from(new Set(rows.map((r) => r.ntcTitle).filter((t): t is string => !!t)));
-
-  return (
-    <>
-      <a className="cm-back" href="#/dashboard">
-        ← Dashboard
-      </a>
-      <div className="cm-head">
-        <OrgLogo id={`prps:${prpsCode}`} name={humanise(prpsCode)} load={async () => null} size={72} />
-        <div style={{ minWidth: 0 }}>
-          <h1>{humanise(prpsCode)}</h1>
-          <p>
-            <code>{prpsCode}</code>
-            {rate !== null ? ` · ${rate}% of people who decided granted consent` : ""}
-          </p>
-        </div>
-        <div style={{ marginLeft: "auto" }}>
-          <RaiseButton console={c} prpsCode={prpsCode} />
-        </div>
-      </div>
-      <Counts rows={rows} />
-      {notices.length ? (
-        <p className="cm-note">Notices used: {notices.map((n) => `“${n}”`).join(", ")}</p>
-      ) : null}
-      <h3 className="cm-section-title">Requests</h3>
-      <RequestTable rows={rows} />
     </>
   );
 }

@@ -82,6 +82,14 @@ public record AuthCtx(String subject, String dfId, String dpId, Set<String> role
         return !person || roles.contains("DF_OWNER") || roles.contains("DF_ADMIN") || roles.contains("DF_CONSENT_MANAGER");
     }
 
+    /**
+     * Whether this fiduciary caller may define and publish purposes (ADR-031, ADR-033): the same people and systems
+     * that raise requests, since a purpose is what a request asks for.
+     */
+    public boolean mayManagePurposes() {
+        return mayRaiseCnsReqs();
+    }
+
     public boolean isDp() {
         return dpId != null;
     }

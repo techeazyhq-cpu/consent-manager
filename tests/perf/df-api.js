@@ -138,7 +138,7 @@ export function jwks() {
 
 export function raise() {
   const body = JSON.stringify({ extDpRefTyp: 'EMAIL', extDpRefVal: `perf-${__VU}-${__ITER}@example.test`,
-    prpsCode: 'ORDER_UPDATES', dCatCodes: ['EMAIL'], ntcTitle: 'Order updates', ntcText: 'Load test request.' });
+    prpsCode: 'ORDER_UPDATES', prpsVer: K.prpsVerA ?? 1 });
   send('raise', 'POST', '/api/cns-cmd/cns-reqs', '', body);
 }
 

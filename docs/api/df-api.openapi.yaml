@@ -61,6 +61,21 @@ info:
       (`signature-required`). Reads may go unsigned. A request carrying any signature header is always checked.
     - Multipart uploads are signed like any other body: hash the exact bytes you send.
 
+    ## Purposes (ADR-031)
+
+    A request asks consent for a **published purpose version**: what the data is for, which data, how long it is
+    kept, who else receives it, how long consent may last, and the notice people read, in each language. Define a
+    purpose, publish it, then raise requests naming `prpsCode` and `prpsVer`. A published version never changes; a
+    change is a new version, which the platform classifies:
+
+    - **Material** (more data, new recipients or transfers, longer retention or validity, higher sensitivity, new
+      special processing): existing consents keep their old scope, and requests must name the new version.
+    - **Non-material** (wording, fewer categories, shorter retention): consents carry on.
+
+    Only the current version can be asked for. Asking for an older one is refused with **409
+    `purpose-version-superseded`**, so an integration can't silently ask for what the purpose no longer says. A
+    request may ask for some of the version's data categories, never others (purpose limitation).
+
     ## Errors
 
     Errors are `application/problem+json` (RFC 9457) with a stable `title`, such as `quota-exceeded` or
@@ -84,6 +99,8 @@ security:
   - apiKey: []
   - oauth2: []
 tags:
+  - name: Purposes
+    description: What you ask consent for, in immutable versions.
   - name: Consent requests
     description: Ask people for consent and follow each request.
   - name: Batches
@@ -94,12 +111,177 @@ tags:
     description: The fiduciary's own subscription and audit trail.
 
 paths:
+  /api/cns-cmd/prps-defs:
+    get:
+      tags: [Purposes]
+      operationId: listPurposes
+      summary: Your purposes
+      description: Every purpose, with its current version's content and any draft's.
+      responses:
+        '200':
+          description: The purposes, by code.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PrpsSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Purposes]
+      operationId: definePurpose
+      summary: Define a purpose
+      description: Its version 1 is a draft until published. Needs a role that raises requests, or an API client.
+      parameters:
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PrpsCreate' }
+            example:
+              code: ORDER_UPDATES
+              content:
+                name: Order updates
+                description: Emails about the orders you place with us.
+                dCats:
+                  - code: EMAIL
+                    dpv: dpv-pd:EmailAddress
+                    sensitivity: ORDINARY
+                    necessary: true
+                    consequence: Without your email address we can't tell you when your order ships.
+                recipients: []
+                transfers: []
+                retentionDays: 365
+                requestedValidityDays: 180
+                maxValidityDays: 365
+                flags: []
+                notices:
+                  - lang: en
+                    title: Order updates by email
+                    text: We email you when your order ships, for as long as you shop with us. You can withdraw at any time.
+      responses:
+        '201':
+          description: Defined, with version 1 as a draft.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrpsDef' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/cns-cmd/prps-defs/{prpsCode}:
+    get:
+      tags: [Purposes]
+      operationId: getPurpose
+      summary: One purpose, with every version
+      parameters:
+        - $ref: '#/components/parameters/PrpsCode'
+      responses:
+        '200':
+          description: The purpose; versions oldest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrpsDef' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/cns-cmd/prps-defs/{prpsCode}/draft:
+    put:
+      tags: [Purposes]
+      operationId: draftPurposeVersion
+      summary: Draft the next version
+      description: Starts the draft of the next version, or replaces the draft's content. Published versions never change.
+      parameters:
+        - $ref: '#/components/parameters/PrpsCode'
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PrpsContent' }
+      responses:
+        '200':
+          description: The purpose with its draft.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrpsDef' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Replayed' }
+    delete:
+      tags: [Purposes]
+      operationId: discardPurposeDraft
+      summary: Discard the draft
+      parameters:
+        - $ref: '#/components/parameters/PrpsCode'
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: The purpose without the draft.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrpsDef' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/cns-cmd/prps-defs/{prpsCode}/draft/change:
+    get:
+      tags: [Purposes]
+      operationId: previewPurposeChange
+      summary: What publishing the draft would mean
+      description: How the draft differs from the current version, and whether it needs re-consent.
+      parameters:
+        - $ref: '#/components/parameters/PrpsCode'
+      responses:
+        '200':
+          description: The classification and its reasons.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrpsChange' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/cns-cmd/prps-defs/{prpsCode}/publish:
+    post:
+      tags: [Purposes]
+      operationId: publishPurposeVersion
+      summary: Publish the draft
+      description: |
+        The draft becomes the current version; from now on requests name it. Refused when there is no draft, or when
+        the draft is the same as the current version.
+      parameters:
+        - $ref: '#/components/parameters/PrpsCode'
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: The purpose, with the new current version and how it was classified.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrpsDef' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
   /api/cns-cmd/cns-reqs:
     post:
       tags: [Consent requests]
       operationId: raiseConsentRequest
       summary: Ask one person for consent
-      description: The person is notified and decides in their portal. Counts against the monthly allowance.
+      description: |
+        Asks for a published purpose version: its notice in `ntcLang` (English, or the first written, when absent) and
+        the data categories named (all the version's when absent). The person is notified and decides in their
+        portal. Counts against the monthly allowance.
       parameters:
         - $ref: '#/components/parameters/SignatureTimestamp'
         - $ref: '#/components/parameters/SignatureNonce'
@@ -113,9 +295,7 @@ paths:
               extDpRefTyp: EMAIL
               extDpRefVal: asha@sandbox.example
               prpsCode: ORDER_UPDATES
-              dCatCodes: [EMAIL]
-              ntcTitle: Order updates by email
-              ntcText: We email you when your order ships. You can withdraw at any time.
+              prpsVer: 1
       responses:
         '201':
           description: Raised; the person is being notified.
@@ -125,8 +305,18 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '402': { $ref: '#/components/responses/SubscriptionInactive' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Replayed' }
+        '404':
+          description: No such purpose (`purpose-not-found`) or version (`purpose-version-not-found`).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: |
+            The version asked for has been superseded (`purpose-version-superseded`), the purpose has no published
+            version (`purpose-not-published`), or the signed request was already used (`request-replayed`).
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '429': { $ref: '#/components/responses/QuotaExceeded' }
 
   /api/cns-qry/cns-arts:
@@ -202,21 +392,19 @@ paths:
             schema: { $ref: '#/components/schemas/BatchCreate' }
             example:
               prpsCode: ORDER_UPDATES
-              dCatCodes: [EMAIL]
-              ntcTitle: Order updates by email
-              ntcText: We email you when your order ships. You can withdraw at any time.
+              prpsVer: 1
               recipients:
                 - { email: asha@sandbox.example, ref: CUST-001 }
                 - { phone: '+447700900123', ref: CUST-002 }
           multipart/form-data:
             schema:
               type: object
-              required: [prpsCode, dCatCodes, ntcTitle, ntcText, file]
+              required: [prpsCode, prpsVer, file]
               properties:
                 prpsCode: { type: string, example: ORDER_UPDATES }
-                dCatCodes: { type: string, description: Comma-separated, example: 'EMAIL,NAME' }
-                ntcTitle: { type: string }
-                ntcText: { type: string }
+                prpsVer: { type: integer, minimum: 1, example: 1 }
+                ntcLang: { type: string, example: en }
+                dCatCodes: { type: string, description: "Comma-separated; the version's categories when absent", example: 'EMAIL,NAME' }
                 file:
                   type: string
                   format: binary
@@ -234,7 +422,16 @@ paths:
               schema: { $ref: '#/components/schemas/BatchSubmitted' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '409': { $ref: '#/components/responses/Replayed' }
+        '404':
+          description: No such purpose or version.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: The version has been superseded or isn't published, or the signed request was already used.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '413': { $ref: '#/components/responses/TooLarge' }
         '415':
           description: Not JSON, CSV or Excel.
@@ -498,10 +695,20 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    PrpsCode:
+      name: prpsCode
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[A-Z][A-Z0-9_]{0,63}$', example: ORDER_UPDATES }
 
   responses:
     BadRequest:
       description: The request isn't valid; `detail` says what to fix.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: Your role at the fiduciary doesn't allow it (`not-permitted`).
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
@@ -566,19 +773,22 @@ components:
 
     CnsReqCreate:
       type: object
-      required: [prpsCode, dCatCodes, ntcTitle, ntcText]
-      description: Name the person either by `dpId` (already linked) or by `extDpRefTyp` + `extDpRefVal`.
+      required: [prpsCode, prpsVer]
+      description: |
+        Name the person either by `dpId` (already linked) or by `extDpRefTyp` + `extDpRefVal`, and the published
+        purpose version asked for.
       properties:
         dpId: { type: string, description: A linked principal's id. }
         extDpRefTyp: { $ref: '#/components/schemas/ContactType' }
         extDpRefVal: { type: string, description: 'An email address, or a mobile number in E.164 (+ and country code).', example: asha@sandbox.example }
-        prpsCode: { type: string, description: 'The purpose: capitals, digits and underscores.', example: ORDER_UPDATES }
+        prpsCode: { type: string, description: A purpose you defined., example: ORDER_UPDATES }
+        prpsVer: { type: integer, minimum: 1, description: Its current published version., example: 1 }
+        ntcLang: { type: string, description: "The notice's language; English, or the first written, when absent.", example: en }
         dCatCodes:
           type: array
           items: { type: string }
+          description: "Some of the version's data categories; all of them when absent or empty. Any other is refused."
           example: [EMAIL]
-        ntcTitle: { type: string, maxLength: 255 }
-        ntcText: { type: string, description: "What you'll do with the data, for how long, and that they can withdraw." }
 
     CnsReq:
       type: object
@@ -587,6 +797,94 @@ components:
         dfId: { type: string, format: uuid }
         sts: { type: string, example: PENDING }
         prpsCode: { type: string }
+        prpsVer: { type: integer }
+        ntcLang: { type: string }
+        ntcHash: { type: string, description: SHA-256 (hex) of the notice the person is shown. }
+
+    PrpsDCat:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, pattern: '^[A-Z][A-Z0-9_]{0,63}$', example: EMAIL }
+        dpv: { type: [string, 'null'], description: W3C DPV personal data type., example: 'dpv-pd:EmailAddress' }
+        sensitivity: { type: string, enum: [ORDINARY, SENSITIVE, PHI, CHILD], default: ORDINARY }
+        necessary:
+          type: boolean
+          default: false
+          description: Needed for the purpose. The person may still refuse or withdraw it.
+        consequence: { type: [string, 'null'], maxLength: 1000, description: What happens without it; required when necessary. }
+
+    PrpsNtc:
+      type: object
+      required: [lang, title, text]
+      properties:
+        lang: { type: string, description: A BCP 47 tag., example: en }
+        title: { type: string, maxLength: 255 }
+        text: { type: string, maxLength: 20000 }
+        hash: { type: string, readOnly: true, description: 'SHA-256 (hex) of the title, a blank line and the text.' }
+
+    PrpsContent:
+      type: object
+      required: [name, dCats, retentionDays, requestedValidityDays, maxValidityDays, notices]
+      properties:
+        name: { type: string, maxLength: 120 }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        dCats: { type: array, minItems: 1, maxItems: 50, items: { $ref: '#/components/schemas/PrpsDCat' } }
+        recipients: { type: array, maxItems: 20, items: { type: string, maxLength: 200 } }
+        transfers: { type: array, maxItems: 20, items: { type: string, maxLength: 200 } }
+        retentionDays: { type: integer, minimum: 1, maximum: 36500 }
+        requestedValidityDays: { type: integer, minimum: 1, description: At most maxValidityDays. }
+        maxValidityDays: { type: integer, minimum: 1, maximum: 3650 }
+        flags:
+          type: array
+          items: { type: string, enum: [TRACKING, BEHAVIOURAL_MONITORING, TARGETED_ADVERTISING] }
+        notices: { type: array, minItems: 1, maxItems: 30, items: { $ref: '#/components/schemas/PrpsNtc' } }
+
+    PrpsCreate:
+      type: object
+      required: [code, content]
+      properties:
+        code: { type: string, pattern: '^[A-Z][A-Z0-9_]{0,63}$', example: ORDER_UPDATES }
+        content: { $ref: '#/components/schemas/PrpsContent' }
+
+    PrpsChange:
+      type: object
+      properties:
+        kind: { type: string, enum: [INITIAL, MATERIAL, NON_MATERIAL] }
+        material: { type: array, items: { type: string }, description: Why it needs re-consent. }
+        minor: { type: array, items: { type: string } }
+
+    PrpsVer:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        verNo: { type: integer }
+        sts: { type: string, enum: [DRAFT, PUBLISHED] }
+        content: { $ref: '#/components/schemas/PrpsContent' }
+        change: { anyOf: [{ $ref: '#/components/schemas/PrpsChange' }, { type: 'null' }] }
+        createdAt: { type: string, format: date-time }
+        publishedAt: { type: [string, 'null'], format: date-time }
+
+    PrpsDef:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        currentVer: { type: [integer, 'null'], description: The version requests are made from. }
+        draftVer: { type: [integer, 'null'] }
+        createdAt: { type: string, format: date-time }
+        versions: { type: array, items: { $ref: '#/components/schemas/PrpsVer' } }
+
+    PrpsSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        currentVer: { type: [integer, 'null'] }
+        draftVer: { type: [integer, 'null'] }
+        current: { anyOf: [{ $ref: '#/components/schemas/PrpsContent' }, { type: 'null' }] }
+        draft: { anyOf: [{ $ref: '#/components/schemas/PrpsContent' }, { type: 'null' }] }
+        updatedAt: { type: string, format: date-time }
 
     LifecycleStatus:
       type: string
@@ -629,12 +927,13 @@ components:
 
     BatchCreate:
       type: object
-      required: [prpsCode, dCatCodes, ntcTitle, ntcText, recipients]
+      required: [prpsCode, prpsVer, recipients]
+      description: Every recipient is asked for the same published purpose version, as a single request is.
       properties:
         prpsCode: { type: string }
+        prpsVer: { type: integer, minimum: 1 }
+        ntcLang: { type: string }
         dCatCodes: { type: array, items: { type: string } }
-        ntcTitle: { type: string }
-        ntcText: { type: string }
         recipients:
           type: array
           maxItems: 10000
@@ -652,6 +951,8 @@ components:
         source: { type: string, enum: [API, CSV, XLSX] }
         fileName: { type: [string, 'null'] }
         prpsCode: { type: string }
+        prpsVer: { type: [integer, 'null'] }
+        ntcLang: { type: [string, 'null'] }
         dCatCodes: { type: array, items: { type: string } }
         ntcTitle: { type: string }
         total: { type: integer }

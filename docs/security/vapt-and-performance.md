@@ -145,6 +145,11 @@ and every listing of that fiduciary's batches returned 500 from then on.
 **Fix:** the template normalises before it checks, and its constructor, used to read stored batches, no longer
 validates. Check INP-11.
 
+**Since ADR-043**, requests and batches name a published purpose version instead of carrying their own notice and
+data categories. INP-04 and INP-08 to INP-11 now send the same hostile input to the purpose endpoints, where that text
+now lives. PRP-01 checks that one fiduciary can't read, publish or ask for another's purpose. PRP-02 checks that a
+superseded version is refused.
+
 ### V-07 to V-09
 
 Fixed in #221; see its description. In short:

@@ -50,6 +50,10 @@ import type {
   ProblemDetail,
   PushDvcRespDto,
   PushPltf,
+  PrpsChange,
+  PrpsContent,
+  PrpsDefDto,
+  PrpsSummaryDto,
   SubPln,
   UsageRespDto,
 } from "./types";
@@ -129,14 +133,10 @@ export const cnsCmd = {
   create: (
     base: string,
     token: string,
-    body: {
+    body: CnsReqBatchTemplate & {
       dpId?: string;
       extDpRefTyp?: ExtDpRefTyp;
       extDpRefVal?: string;
-      prpsCode: string;
-      dCatCodes: string[];
-      ntcTitle: string;
-      ntcText: string;
     },
   ) => request<CnsReqRespDto>(base, "/api/cns-cmd/cns-reqs", token, { method: "POST", body: JSON.stringify(body) }),
   approve: (base: string, token: string, cnsReqId: string) =>
@@ -171,6 +171,29 @@ export const cnsQry = {
     }),
 };
 
+/** A fiduciary's purposes and their versions (ADR-031): what requests may ask for. */
+export const prps = {
+  list: (base: string, token: string) => request<PrpsSummaryDto[]>(base, "/api/cns-cmd/prps-defs", token),
+  get: (base: string, token: string, code: string) =>
+    request<PrpsDefDto>(base, `/api/cns-cmd/prps-defs/${encodeURIComponent(code)}`, token),
+  /** A new purpose; its version 1 is a draft until published. */
+  create: (base: string, token: string, code: string, content: PrpsContent) =>
+    request<PrpsDefDto>(base, "/api/cns-cmd/prps-defs", token, { method: "POST", body: JSON.stringify({ code, content }) }),
+  /** Starts or replaces the draft of the next version. */
+  saveDraft: (base: string, token: string, code: string, content: PrpsContent) =>
+    request<PrpsDefDto>(base, `/api/cns-cmd/prps-defs/${encodeURIComponent(code)}/draft`, token, {
+      method: "PUT",
+      body: JSON.stringify(content),
+    }),
+  discardDraft: (base: string, token: string, code: string) =>
+    request<PrpsDefDto>(base, `/api/cns-cmd/prps-defs/${encodeURIComponent(code)}/draft`, token, { method: "DELETE" }),
+  /** How the draft differs from the current version: whether publishing it needs re-consent. */
+  draftChange: (base: string, token: string, code: string) =>
+    request<PrpsChange>(base, `/api/cns-cmd/prps-defs/${encodeURIComponent(code)}/draft/change`, token),
+  publish: (base: string, token: string, code: string) =>
+    request<PrpsDefDto>(base, `/api/cns-cmd/prps-defs/${encodeURIComponent(code)}/publish`, token, { method: "POST" }),
+};
+
 /** Batches of consent requests (ADR-036): one template, many people, from JSON or a CSV/Excel upload. */
 export const cnsBatch = {
   /** `dryRun` checks the list and reports, sending nothing. */
@@ -182,9 +205,9 @@ export const cnsBatch = {
   upload: (base: string, token: string, template: CnsReqBatchTemplate, file: File, dryRun = false) => {
     const form = new FormData();
     form.set("prpsCode", template.prpsCode);
-    form.set("dCatCodes", template.dCatCodes.join(","));
-    form.set("ntcTitle", template.ntcTitle);
-    form.set("ntcText", template.ntcText);
+    form.set("prpsVer", String(template.prpsVer));
+    if (template.ntcLang) form.set("ntcLang", template.ntcLang);
+    if (template.dCatCodes?.length) form.set("dCatCodes", template.dCatCodes.join(","));
     form.set("file", file, file.name);
     return request<CnsReqBatchSubmitRespDto>(base, `/api/cns-cmd/cns-req-batches${dryRun ? "?dryRun=true" : ""}`, token, {
       method: "POST",

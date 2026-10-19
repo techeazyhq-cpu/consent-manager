@@ -26,7 +26,9 @@ export type Route =
   | { page: "billing" }
   | { page: "audit" }
   | { page: "account" }
+  | { page: "purposes" }
   | { page: "purpose"; prpsCode: string }
+  | { page: "purpose-edit"; prpsCode?: string }
   | { page: "send-to-many" }
   | { page: "batches" }
   | { page: "batch"; id: string }
@@ -55,13 +57,20 @@ export function parseRoute(hash: string): Route {
     case "batches":
       return parts[1] ? { page: "batch", id: parts[1] } : { page: "batches" };
     case "purposes":
-      return parts[1] ? { page: "purpose", prpsCode: parts[1] } : { page: "dashboard" };
+      // a code is capitals, so "new" is never one
+      if (parts[1] === "new") return { page: "purpose-edit" };
+      if (parts[1] && parts[2] === "edit") return { page: "purpose-edit", prpsCode: parts[1] };
+      return parts[1] ? { page: "purpose", prpsCode: parts[1] } : { page: "purposes" };
     default:
       return { page: "dashboard" };
   }
 }
 
 export const purposeHref = (prpsCode: string) => `#/purposes/${encodeURIComponent(prpsCode)}`;
+
+/** The editor: a new purpose, or the draft of a purpose's next version. */
+export const purposeEditHref = (prpsCode?: string) =>
+  prpsCode ? `#/purposes/${encodeURIComponent(prpsCode)}/edit` : "#/purposes/new";
 
 /** The request form, with the purpose filled in when raised from a purpose's page. */
 export const raiseHref = (prpsCode?: string) => (prpsCode ? `#/raise/${encodeURIComponent(prpsCode)}` : "#/raise");

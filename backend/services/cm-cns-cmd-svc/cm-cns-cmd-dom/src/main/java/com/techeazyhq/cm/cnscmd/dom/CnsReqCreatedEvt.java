@@ -27,15 +27,15 @@ import com.techeazyhq.cm.domkit.DomainEvt;
 /**
  * A fiduciary asked a person for consent. It carries the notice the fiduciary wrote, so the person sees what they're
  * asked to agree to wherever their consents are shown (DPDPA s.5, GDPR art. 7): a decision is only informed if the
- * notice is in front of them. The notice is the fiduciary's text, not personal data.
+ * notice is in front of them. The notice is the fiduciary's text, not personal data; {@code prpsVer} says which
+ * purpose version and notice it came from (ADR-031).
  */
 public record CnsReqCreatedEvt(UUID evtId, Instant occurredAt, String cnsReqId, String dfId, DpRef dpRef, Prps prps,
-                                Scp scp, String ntcTitle, String ntcText)
+                                Scp scp, String ntcTitle, String ntcText, PrpsVerRef prpsVer)
         implements DomainEvt {
 
-    public static CnsReqCreatedEvt of(String cnsReqId, String dfId, DpRef dpRef, Prps prps, Scp scp, String ntcTitle,
-                                      String ntcText) {
-        return new CnsReqCreatedEvt(UUID.randomUUID(), Instant.now(), cnsReqId, dfId, dpRef, prps, scp, ntcTitle,
-                ntcText);
+    public static CnsReqCreatedEvt of(String cnsReqId, String dfId, DpRef dpRef, CnsReqTemplate t) {
+        return new CnsReqCreatedEvt(UUID.randomUUID(), Instant.now(), cnsReqId, dfId, dpRef, t.prps(), t.scp(),
+                t.ntcTitle(), t.ntcText(), t.prpsVer());
     }
 }

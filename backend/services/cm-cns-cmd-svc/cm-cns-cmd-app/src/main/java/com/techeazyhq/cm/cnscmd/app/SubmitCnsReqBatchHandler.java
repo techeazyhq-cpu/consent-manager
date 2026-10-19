@@ -27,7 +27,6 @@ import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqBatch;
 import com.techeazyhq.cm.cnscmd.dom.ContactPolicy;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqBatchRepoPort;
-import com.techeazyhq.cm.cnscmd.dom.CnsReqTemplate;
 import com.techeazyhq.cm.cnscmd.dom.DfActivePort;
 import com.techeazyhq.cm.cnscmd.dom.DfUsagePort;
 import com.techeazyhq.cm.webkit.DomRuleViolation;
@@ -48,30 +47,29 @@ public class SubmitCnsReqBatchHandler {
     private final DfActivePort dfActive;
     private final DfUsagePort usage;
 
+    private final PrpsResolver purposes;
     private final ContactPolicy contacts;
     private final AuditTrail audit;
 
-    public SubmitCnsReqBatchHandler(CnsReqBatchRepoPort batchRepo, DfActivePort dfActive, DfUsagePort usage) {
-        this(batchRepo, dfActive, usage, ContactPolicy.ANYONE);
+    public SubmitCnsReqBatchHandler(CnsReqBatchRepoPort batchRepo, DfActivePort dfActive, DfUsagePort usage,
+                                    PrpsResolver purposes) {
+        this(batchRepo, dfActive, usage, purposes, ContactPolicy.ANYONE, AuditTrail.NONE);
     }
 
     public SubmitCnsReqBatchHandler(CnsReqBatchRepoPort batchRepo, DfActivePort dfActive, DfUsagePort usage,
-                                    ContactPolicy contacts) {
-        this(batchRepo, dfActive, usage, contacts, AuditTrail.NONE);
-    }
-
-    public SubmitCnsReqBatchHandler(CnsReqBatchRepoPort batchRepo, DfActivePort dfActive, DfUsagePort usage,
-                                    ContactPolicy contacts, AuditTrail audit) {
+                                    PrpsResolver purposes, ContactPolicy contacts, AuditTrail audit) {
         this.batchRepo = batchRepo;
         this.dfActive = dfActive;
         this.usage = usage;
+        this.purposes = purposes;
         this.contacts = contacts;
         this.audit = audit;
     }
 
-    public record Cmd(String dfId, String createdBy, String prpsCode, Set<String> dCatCodes, String ntcTitle,
-                      String ntcText, CnsReqBatch.Source source, String fileName, List<CnsReqBatch.Input> inputs,
-                      boolean dryRun) {
+    /** Every recipient is asked for published purpose version {@code prpsVer} (ADR-031), as {@link CreateCnsReqCmd}. */
+    public record Cmd(String dfId, String createdBy, String prpsCode, Integer prpsVer, String ntcLang,
+                      Set<String> dCatCodes, CnsReqBatch.Source source, String fileName,
+                      List<CnsReqBatch.Input> inputs, boolean dryRun) {
     }
 
     /** {@code stored}: false for a dry run; {@code available}: requests left this month after this batch (if stored). */
@@ -81,14 +79,20 @@ public class SubmitCnsReqBatchHandler {
     /** One transaction: the batch, its rows and the record that it was submitted (ADR-040) are stored together. */
     @Transactional
     public Mono<Result> handle(Cmd cmd) {
-        CnsReqBatch.Plan plan;
-        try {
-            CnsReqTemplate template = CnsReqTemplate.of(cmd.prpsCode(), cmd.dCatCodes(), cmd.ntcTitle(), cmd.ntcText());
-            plan = CnsReqBatch.plan(cmd.dfId(), template, cmd.source(), cmd.fileName(), cmd.createdBy(), cmd.inputs(),
-                    contacts);
-        } catch (IllegalArgumentException e) {
-            return Mono.error(new DomRuleViolation(400, "invalid-batch", e.getMessage()));
-        }
+        return purposes.resolve(cmd.dfId(), cmd.prpsCode(), cmd.prpsVer(), cmd.ntcLang(), cmd.dCatCodes())
+                .flatMap(template -> {
+                    CnsReqBatch.Plan plan;
+                    try {
+                        plan = CnsReqBatch.plan(cmd.dfId(), template, cmd.source(), cmd.fileName(), cmd.createdBy(),
+                                cmd.inputs(), contacts);
+                    } catch (IllegalArgumentException e) {
+                        return Mono.error(new DomRuleViolation(400, "invalid-batch", e.getMessage()));
+                    }
+                    return submit(cmd, plan);
+                });
+    }
+
+    private Mono<Result> submit(Cmd cmd, CnsReqBatch.Plan plan) {
         CnsReqBatch batch = plan.batch();
         List<CnsReqBatch.Row> problems = plan.problems().stream().limit(PROBLEMS_SHOWN).toList();
 
@@ -108,7 +112,8 @@ public class SubmitCnsReqBatchHandler {
                             ? batchRepo.create(batch, plan.rows())
                                     .flatMap(stored -> audit.record("batch.submitted", stored.dfId(), stored.id(),
                                             AuditTrail.details("source", stored.source().name(), "file", stored.fileName(),
-                                                    "purpose", cmd.prpsCode(), "rows", String.valueOf(stored.total()),
+                                                    "purpose", cmd.prpsCode(), "version",
+                                                    String.valueOf(stored.template().prpsVer().verNo()), "rows", String.valueOf(stored.total()),
                                                     "toSend", String.valueOf(stored.valid()))).thenReturn(stored))
                                     // never keep a reservation for a batch that wasn't stored
                                     .onErrorResume(e -> usage.release(cmd.dfId(), batch.valid()).then(Mono.error(e)))

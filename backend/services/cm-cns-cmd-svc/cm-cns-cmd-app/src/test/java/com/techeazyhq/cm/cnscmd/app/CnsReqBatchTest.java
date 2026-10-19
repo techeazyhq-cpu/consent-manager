@@ -148,7 +148,8 @@ class CnsReqBatchTest {
     };
 
     private final SubmitCnsReqBatchHandler submit =
-            new SubmitCnsReqBatchHandler(batchRepo, dfId -> Mono.just(true), usage);
+            new SubmitCnsReqBatchHandler(batchRepo, dfId -> Mono.just(true), usage,
+                    new PrpsResolver(new InMemoryPrpsDefs().orderUpdates()));
     private final CnsReqBatchWorker worker =
             new CnsReqBatchWorker(batchRepo, new CnsReqBatchSender(cnsReqRepo, batchRepo), usage);
 
@@ -157,8 +158,8 @@ class CnsReqBatchTest {
         for (String c : contacts) {
             inputs.add(new Input(c, null, null));
         }
-        return new SubmitCnsReqBatchHandler.Cmd("df-1", "u-1", "ORDER_UPDATES", Set.of("EMAIL"), "Order updates",
-                "We email you about your orders.", CnsReqBatch.Source.API, null, inputs, dryRun);
+        return new SubmitCnsReqBatchHandler.Cmd("df-1", "u-1", "ORDER_UPDATES", 1, null, Set.of("EMAIL"),
+                CnsReqBatch.Source.API, null, inputs, dryRun);
     }
 
     @Test

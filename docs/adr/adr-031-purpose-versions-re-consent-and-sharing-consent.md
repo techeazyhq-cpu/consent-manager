@@ -1,6 +1,6 @@
 # ADR-031: Purpose definitions are versioned; a material change needs re-consent; sharing consent binds both parties
 
-- **Status:** Proposed
+- **Status:** Accepted for §1 and §2, implemented by [ADR-043](adr-043-purpose-versions-in-the-consent-context.md); §3 and §4 proposed
 - **Date:** 2026-10-11
 - **Design:** [compliance architecture §6.2, Appendix B findings R4, R10](../compliance/compliance-architecture.md)
 
