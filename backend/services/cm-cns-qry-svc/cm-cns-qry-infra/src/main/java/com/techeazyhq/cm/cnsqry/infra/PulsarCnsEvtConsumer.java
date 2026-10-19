@@ -47,6 +47,12 @@ import reactor.core.publisher.Mono;
  */
 public class PulsarCnsEvtConsumer {
 
+    /**
+     * Messages handled at once. Unbounded (flatMap's 256), a backlog drained by taking every database connection, so
+     * requests timed out (the load test, docs/security/vapt-and-performance.md).
+     */
+    private static final int CONCURRENCY = 4;
+
     private static final String CTX = "cnscmd";
 
     private final ReactivePulsarClient reactivePulsarClient;
@@ -102,7 +108,7 @@ public class PulsarCnsEvtConsumer {
                             }
                             return Mono.just(MessageResult.negativeAcknowledge(message.getMessageId(),
                                     message.getValue()));
-                        })))
+                        }), CONCURRENCY))
                 .subscribe();
     }
 }

@@ -34,6 +34,10 @@ spring:
     port: 1025 # Mailpit's SMTP port
   r2dbc:
     url: r2dbc:postgresql://localhost:5432/consent_manager?schema=ntf
+    pool:
+      # Wait at most 3 s for a connection, then fail, rather than queue until the gateway gives up at 10 s: under
+      # overload a saturated pool held requests that long (docs/security/vapt-and-performance.md).
+      max-acquire-time: 3s
     username: cm
     password: cm
   flyway:
@@ -66,6 +70,14 @@ cm:
 # the last 20 calls failed because the dependency is unhealthy (cm-res-kit's RemoteFailures: unreachable, timed out,
 # 5xx or 429; any other 4xx is the dependency working), refuses calls for 30s, then lets 3 trial calls through.
 resilience4j:
+  # Spring Cloud CircuitBreaker also puts each call in a semaphore bulkhead, by default 25 calls at once with no wait;
+  # past that a call fails as if the dependency were down (the VAPT found API-key requests refused with 503 from 30 at
+  # once). The time limiter and the breaker already guard against a slow dependency; this only bounds a runaway.
+  bulkhead:
+    configs:
+      default:
+        max-concurrent-calls: 1000
+        max-wait-duration: 0
   circuitbreaker:
     configs:
       default:

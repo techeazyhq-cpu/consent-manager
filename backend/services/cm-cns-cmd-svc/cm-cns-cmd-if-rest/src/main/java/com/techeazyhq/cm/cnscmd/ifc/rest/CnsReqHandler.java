@@ -69,6 +69,10 @@ public class CnsReqHandler {
                             body.prpsCode(), body.dCatCodes(), body.ntcTitle(), body.ntcText());
                     return createHandler.handle(cmd);
                 })
+                // the domain refusing what was asked (no data categories, sizes over the limits) is the caller's
+                // mistake, not a server error (VAPT INP-07 to INP-09)
+                .onErrorMap(IllegalArgumentException.class, e -> new DomRuleViolation(400, "invalid-request",
+                        e.getMessage()))
                 .flatMap(cnsReq -> ServerResponse.status(HttpStatus.CREATED).bodyValue(CnsReqRespDto.of(cnsReq)));
     }
 

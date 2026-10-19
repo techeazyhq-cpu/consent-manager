@@ -38,6 +38,31 @@ subprojects {
     tasks.withType<Test> {
         useJUnitPlatform()
     }
+
+    // Patched releases of libraries that Spring Boot 3.5 brings in, within the lines it uses, until its own managed
+    // versions catch up. Trivy found HIGH and CRITICAL vulnerabilities in the versions before these (VAPT, docs/security).
+    // Spring's dependency-management plugin sets Netty and Jackson from its BOM after any rule below; these are the
+    // BOM's own overrides.
+    extra["netty.version"] = "4.1.137.Final"
+    extra["jackson-bom.version"] = "2.21.7"
+    configurations.configureEach {
+        resolutionStrategy.eachDependency {
+            val v = requested.version ?: return@eachDependency
+            val patched = when {
+                requested.group == "io.netty" && v.startsWith("4.1.") -> "4.1.137.Final"
+                requested.group == "com.fasterxml.jackson.core" && requested.name != "jackson-annotations"
+                        && v.startsWith("2.21.") -> "2.21.7"
+                requested.group == "org.bouncycastle"
+                        && requested.name in setOf("bcprov-jdk18on", "bcpkix-jdk18on", "bcutil-jdk18on") -> "1.85"
+                requested.group == "com.ongres.scram" && v.startsWith("3.") -> "3.3"
+                else -> null
+            }
+            if (patched != null && patched != v) {
+                useVersion(patched)
+                because("patched release (VAPT dependency findings)")
+            }
+        }
+    }
 }
 
 // Quality gate (CONTRIBUTING.md, CI): one coverage figure across every module, since most modules are tested
