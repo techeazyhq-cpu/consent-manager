@@ -27,6 +27,8 @@ import com.techeazyhq.cm.bil.dom.DfSubFactory;
 import com.techeazyhq.cm.bil.dom.DfSubRepoPort;
 import com.techeazyhq.cm.bil.dom.DfSubSts;
 
+import io.r2dbc.spi.Readable;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public class R2dbcDfSubRepoAdapter implements DfSubRepoPort {
@@ -60,12 +62,21 @@ public class R2dbcDfSubRepoAdapter implements DfSubRepoPort {
     public Mono<DfSub> findByDfId(String dfId) {
         return db.sql("select * from bil.df_sub where df_id = :dfId")
                 .bind("dfId", dfId)
-                .map((row, meta) -> DfSubFactory.rehydrate(
-                        row.get("df_id", String.class),
-                        row.get("sub_pln_id", String.class),
-                        DfSubSts.valueOf(row.get("sts", String.class)),
-                        row.get("cur_period_from", Instant.class),
-                        row.get("cur_period_to", Instant.class)))
+                .map(R2dbcDfSubRepoAdapter::row)
                 .one();
+    }
+
+    @Override
+    public Flux<DfSub> findAll() {
+        return db.sql("select * from bil.df_sub").map(R2dbcDfSubRepoAdapter::row).all();
+    }
+
+    private static DfSub row(Readable row) {
+        return DfSubFactory.rehydrate(
+                row.get("df_id", String.class),
+                row.get("sub_pln_id", String.class),
+                DfSubSts.valueOf(row.get("sts", String.class)),
+                row.get("cur_period_from", Instant.class),
+                row.get("cur_period_to", Instant.class));
     }
 }

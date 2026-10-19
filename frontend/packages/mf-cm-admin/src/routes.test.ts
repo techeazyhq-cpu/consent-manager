@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { parseRoute, tenantHref } from "./routes";
+import { billingHref, parseRoute, tenantHref } from "./routes";
 
 describe("CM Admin routes", () => {
   it("lands on the dashboard by default and for anything unknown", () => {
@@ -36,5 +36,12 @@ describe("CM Admin routes", () => {
     expect(parseRoute("#/onboard").page).toBe("onboard");
     expect(parseRoute("#/staff").page).toBe("staff");
     expect(parseRoute("#/security").page).toBe("security");
+  });
+
+  it("opens billing on its overview, or the tab named", () => {
+    expect(parseRoute(billingHref())).toEqual({ page: "billing", tab: "overview" });
+    expect(parseRoute(billingHref("requests"))).toEqual({ page: "billing", tab: "requests" });
+    expect(parseRoute("#/billing/plans")).toEqual({ page: "billing", tab: "plans" });
+    expect(parseRoute("#/billing/bogus")).toEqual({ page: "billing", tab: "overview" });
   });
 });

@@ -23,6 +23,7 @@ export type Route =
   | { page: "requests" }
   | { page: "team" }
   | { page: "organisation" }
+  | { page: "billing" }
   | { page: "account" }
   | { page: "purpose"; prpsCode: string }
   | { page: "send-to-many" }
@@ -39,6 +40,7 @@ export function parseRoute(hash: string): Route {
     case "requests":
     case "team":
     case "organisation":
+    case "billing":
     case "account":
       return { page: parts[0] };
     case "playground":

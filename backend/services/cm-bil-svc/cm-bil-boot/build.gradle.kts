@@ -27,11 +27,13 @@ dependencies {
     implementation(project(":cm-bil-infra"))
     implementation(project(":cm-bil-if-rest"))
     implementation(project(":cm-web-kit"))
+    implementation(project(":cm-sec-kit"))
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
     implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.postgresql:r2dbc-postgresql:1.1.3.RELEASE")
     implementation("org.postgresql:postgresql:42.7.14")
     implementation("org.flywaydb:flyway-core:10.22.0")

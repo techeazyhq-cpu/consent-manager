@@ -18,7 +18,12 @@
 
 package com.techeazyhq.cm.bil.app;
 
+import java.time.YearMonth;
+import java.time.ZoneOffset;
+
+import com.techeazyhq.cm.bil.dom.DfSub;
 import com.techeazyhq.cm.bil.dom.DfSubRepoPort;
+import com.techeazyhq.cm.bil.dom.SubPln;
 import com.techeazyhq.cm.bil.dom.SubPlnRepoPort;
 import com.techeazyhq.cm.bil.dom.UsgPort;
 import com.techeazyhq.cm.webkit.DomRuleViolation;
@@ -44,7 +49,12 @@ public class GetDfSubStatusQryHandler {
                 .flatMap(dfSub -> subPlnRepo.findById(dfSub.subPlnId())
                         .switchIfEmpty(Mono.error(new DomRuleViolation(500, "sub-pln-missing", "SubPln " + dfSub.subPlnId() + " not found")))
                         .zipWith(usgPort.currentPeriodUsage(dfId))
-                        .map(tuple -> new DfSubStatusResult(
-                                dfSub.subPlnId(), tuple.getT1().name(), dfSub.sts(), tuple.getT2(), tuple.getT1().reqPerMonthQta())));
+                        .map(tuple -> of(dfSub, tuple.getT1(), tuple.getT2())));
+    }
+
+    static DfSubStatusResult of(DfSub dfSub, SubPln plan, long usage) {
+        YearMonth month = YearMonth.now(ZoneOffset.UTC);
+        return new DfSubStatusResult(dfSub.subPlnId(), plan.name(), dfSub.sts(), usage, plan.reqPerMonthQta(),
+                plan.reqPerSecQta(), month.toString(), month.plusMonths(1).atDay(1).atStartOfDay().toInstant(ZoneOffset.UTC));
     }
 }

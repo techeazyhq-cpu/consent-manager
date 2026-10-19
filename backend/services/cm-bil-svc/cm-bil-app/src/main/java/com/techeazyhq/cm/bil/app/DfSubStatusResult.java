@@ -18,8 +18,14 @@
 
 package com.techeazyhq.cm.bil.app;
 
+import java.time.Instant;
+
 import com.techeazyhq.cm.bil.dom.DfSubSts;
 
-/** Public-facing counterpart to {@link SubEligResult}, adding the plan name for mf-cm-admin's DF table. */
-public record DfSubStatusResult(String subPlnId, String subPlnName, DfSubSts dfSubSts, long curPeriodUsg, long reqPerMonthQta) {
+/**
+ * A fiduciary's subscription as it stands: plan, status and this month's usage against the plan's allowance.
+ * {@code usagePeriod} is the calendar month (UTC) usage is counted in; {@code resetsAt} is when the count starts again.
+ */
+public record DfSubStatusResult(String subPlnId, String subPlnName, DfSubSts dfSubSts, long curPeriodUsg,
+                                long reqPerMonthQta, long reqPerSecQta, String usagePeriod, Instant resetsAt) {
 }

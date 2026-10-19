@@ -67,6 +67,9 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.PUT, "/api/df-reg/dfs/*/logo").hasAnyRole(STAFF)
                         .pathMatchers("/api/df-reg/dfs", "/api/df-reg/dfs/*/activate", "/api/df-reg/dfs/*/profile")
                                 .hasRole("CM_ADMIN")
+                        // A fiduciary's own subscription and plan change requests (ADR-039), and the plans it can ask for.
+                        .pathMatchers("/api/bil/me/**").authenticated()
+                        .pathMatchers(HttpMethod.GET, "/api/bil/sub-plns").authenticated()
                         .pathMatchers(HttpMethod.GET, "/api/bil/**").hasAnyRole(STAFF)
                         .pathMatchers("/api/bil/**").hasRole("CM_ADMIN")
                         // A tenant's consent counts and masked requests, for CM Admin's tenant detail.

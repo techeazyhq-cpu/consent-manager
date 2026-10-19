@@ -19,6 +19,7 @@
 import { useMemo } from "react";
 import type { AuthInfo } from "auth-kit";
 import { AppShell, Icons, useHashRoute, type NavItem } from "ui-kit/src/index";
+import Billing from "./Billing";
 import Dashboard from "./Dashboard";
 import Onboard from "./Onboard";
 import TenantDetail from "./TenantDetail";
@@ -43,6 +44,7 @@ export default function CmAdminApp({ auth, gwBase }: Props) {
   const items: NavItem[] = [
     { key: "dashboard", href: "#/dashboard", label: "Dashboard", section: "Tenants", icon: Icons.dashboard },
     { key: "onboard", href: "#/onboard", label: "Onboard tenant", section: "Tenants", icon: Icons.building },
+    { key: "billing", href: "#/billing", label: "Billing", section: "Tenants", icon: Icons.card },
     // only administrators manage staff
     ...(session.isAdmin
       ? [{ key: "staff", href: "#/staff", label: "Platform staff", section: "Platform", icon: Icons.people }]
@@ -68,6 +70,7 @@ export default function CmAdminApp({ auth, gwBase }: Props) {
       {route.page === "tenant" ? <TenantDetail key={route.dfId} session={session} dfId={route.dfId} tab={route.tab} /> : null}
       {route.page === "staff" ? (session.isAdmin ? <Staff session={session} /> : <Dashboard session={session} />) : null}
       {route.page === "security" ? <Security session={session} /> : null}
+      {route.page === "billing" ? <Billing session={session} tab={route.tab} /> : null}
     </AppShell>
   );
 }

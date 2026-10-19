@@ -24,5 +24,9 @@ spring:
       host: redis
 
 cm:
+  # Tokens come from the realms (ADR-035): their issuer is the browser-facing address (cm.security.issuer-base,
+  # http://localhost:8080/realms/ by default), but keys are fetched from Keycloak on the container network.
+  security:
+    jwks-base: http://keycloak:8080/realms/
   pulsar:
     service-url: pulsar://pulsar:6650

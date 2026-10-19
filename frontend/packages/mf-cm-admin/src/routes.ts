@@ -20,11 +20,15 @@
 export const TENANT_TABS = ["overview", "subscription", "consents", "team"] as const;
 export type TenantTab = (typeof TENANT_TABS)[number];
 
+export const BILLING_TABS = ["overview", "requests", "plans"] as const;
+export type BillingTab = (typeof BILLING_TABS)[number];
+
 export type Route =
   | { page: "dashboard" }
   | { page: "onboard" }
   | { page: "staff" }
   | { page: "security" }
+  | { page: "billing"; tab: BillingTab }
   | { page: "tenant"; dfId: string; tab: TenantTab };
 
 /** Anything unrecognised lands on the dashboard, the default page. */
@@ -35,6 +39,11 @@ export function parseRoute(hash: string): Route {
     case "staff":
     case "security":
       return { page: parts[0] };
+    case "billing":
+      return {
+        page: "billing",
+        tab: (BILLING_TABS as readonly string[]).includes(parts[1]) ? (parts[1] as BillingTab) : "overview",
+      };
     case "tenants":
       if (parts[1]) {
         const tab = (TENANT_TABS as readonly string[]).includes(parts[2]) ? (parts[2] as TenantTab) : "overview";
@@ -49,3 +58,5 @@ export function parseRoute(hash: string): Route {
 export function tenantHref(dfId: string, tab: TenantTab = "overview"): string {
   return `#/tenants/${encodeURIComponent(dfId)}${tab === "overview" ? "" : `/${tab}`}`;
 }
+
+export const billingHref = (tab: BillingTab = "overview") => (tab === "overview" ? "#/billing" : `#/billing/${tab}`);

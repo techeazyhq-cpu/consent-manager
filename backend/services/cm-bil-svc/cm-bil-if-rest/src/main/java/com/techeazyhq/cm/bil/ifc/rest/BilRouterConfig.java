@@ -25,6 +25,8 @@ import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
 import com.techeazyhq.cm.bil.app.AssignSubPlnCmdHandler;
+import com.techeazyhq.cm.bil.app.BilOverviewQryHandler;
+import com.techeazyhq.cm.bil.app.PlnChgReqHandler;
 import com.techeazyhq.cm.bil.app.GetDfSubStatusQryHandler;
 import com.techeazyhq.cm.bil.app.GetUsgQryHandler;
 import com.techeazyhq.cm.bil.app.ListSubPlnsQryHandler;
@@ -42,10 +44,21 @@ public class BilRouterConfig {
                                                       SubEligQryHandler subEligHandler,
                                                       ListSubPlnsQryHandler listSubPlnsHandler,
                                                       GetDfSubStatusQryHandler getDfSubStatusHandler,
-                                                      UsgReservationHandler usgReservationHandler) {
+                                                      UsgReservationHandler usgReservationHandler,
+                                                      BilOverviewQryHandler overviewHandler,
+                                                      PlnChgReqHandler plnChgReqHandler) {
         BilHandler handler = new BilHandler(assignSubPlnHandler, setDfSubStsHandler, getUsgHandler, subEligHandler,
                 listSubPlnsHandler, getDfSubStatusHandler, usgReservationHandler);
+        BilAccountHttpHandler account = new BilAccountHttpHandler(getDfSubStatusHandler, overviewHandler, plnChgReqHandler);
         return RouterFunctions.route()
+                .GET("/api/bil/me/subscription", account::mySubscription)
+                .GET("/api/bil/me/plan-change-requests", account::myRequests)
+                .POST("/api/bil/me/plan-change-requests", account::requestChange)
+                .POST("/api/bil/me/plan-change-requests/{id}/withdraw", account::withdraw)
+                .GET("/api/bil/overview", account::overview)
+                .GET("/api/bil/plan-change-requests", account::list)
+                .POST("/api/bil/plan-change-requests/{id}/approve", account::approve)
+                .POST("/api/bil/plan-change-requests/{id}/decline", account::decline)
                 .GET("/api/bil/sub-plns", handler::listSubPlns)
                 .PUT("/api/bil/dfs/{id}/sub-pln", handler::assignSubPln)
                 .PUT("/api/bil/dfs/{id}/sub-status", handler::setSubSts)

@@ -18,6 +18,7 @@
 
 package com.techeazyhq.cm.bil.dom;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 public interface DfSubRepoPort {
@@ -25,4 +26,7 @@ public interface DfSubRepoPort {
     Mono<DfSub> save(DfSub dfSub);
 
     Mono<DfSub> findByDfId(String dfId);
+
+    /** Every fiduciary's subscription, for the platform's billing overview. */
+    Flux<DfSub> findAll();
 }

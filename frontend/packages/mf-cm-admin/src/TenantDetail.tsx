@@ -27,9 +27,11 @@ import {
   type CnsStats,
   type DfProfileRespDto,
   type DfSubStatusResult,
+  type PlnChgReqDto,
   type SubPln,
 } from "api-client";
-import { Badge, Button, Card, ErrorBanner, Field, Spinner, friendlyError } from "ui-kit/src/index";
+import { Badge, Button, Card, ErrorBanner, Field, Spinner, UsageMeter, friendlyError } from "ui-kit/src/index";
+import { PendingRequest } from "./Billing";
 import DfLogo, { forgetLogo } from "./DfLogo";
 import { checkLogo } from "./logo";
 import { TENANT_TABS, tenantHref, type TenantTab } from "./routes";
@@ -262,6 +264,7 @@ function Overview({
 function Subscription({ session, df }: { session: Session; df: DfProfileRespDto }) {
   const [status, setStatus] = useState<DfSubStatusResult | null>(null);
   const [plans, setPlans] = useState<SubPln[]>([]);
+  const [waiting, setWaiting] = useState<PlnChgReqDto | null>(null);
   const [plan, setPlan] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -269,7 +272,12 @@ function Subscription({ session, df }: { session: Session; df: DfProfileRespDto 
   const load = async (attempt = 0) => {
     try {
       const token = await freshToken(session.auth);
-      const [s, p] = await Promise.all([bil.subStatus(session.gwBase, token, df.id), bil.listSubPlns(session.gwBase, token)]);
+      const [s, p, pending] = await Promise.all([
+        bil.subStatus(session.gwBase, token, df.id),
+        bil.listSubPlns(session.gwBase, token),
+        bil.requests(session.gwBase, token, "PENDING"),
+      ]);
+      setWaiting(pending.find((r) => r.dfId === df.id) ?? null);
       setStatus(s);
       setPlan(s.subPlnName);
       setPlans(p);
@@ -291,7 +299,6 @@ function Subscription({ session, df }: { session: Session; df: DfProfileRespDto 
   if (df.sts !== "ACTIVE") return <p className="cm-note">The subscription starts when the tenant is activated.</p>;
   if (!status) return error ? <ErrorBanner message={error} /> : <Spinner label="Loading subscription…" />;
 
-  const used = status.reqPerMonthQta > 0 ? Math.min(100, (status.curPeriodUsg / status.reqPerMonthQta) * 100) : 0;
   const run = async (action: (token: string) => Promise<unknown>) => {
     setBusy(true);
     setError(null);
@@ -324,25 +331,16 @@ function Subscription({ session, df }: { session: Session; df: DfProfileRespDto 
             {status.curPeriodUsg.toLocaleString()} / {status.reqPerMonthQta.toLocaleString()}
           </b>
           <span>API calls this month</span>
-          <div
-            role="meter"
-            aria-label="Share of the monthly API allowance used"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(used)}
-            style={{ height: 6, background: "var(--cm-surface-2)", borderRadius: 3, marginTop: 8 }}
-          >
-            <div
-              style={{
-                width: `${used}%`,
-                height: "100%",
-                borderRadius: 3,
-                background: used >= 90 ? "var(--cm-danger)" : "var(--cm-primary)",
-              }}
-            />
-          </div>
+          <UsageMeter used={status.curPeriodUsg} of={status.reqPerMonthQta} label="Share of the monthly API allowance used" />
         </div>
       </div>
+
+      {waiting ? (
+        <>
+          <h3 className="cm-section-title">Plan change asked for</h3>
+          <PendingRequest session={session} req={waiting} onDecided={() => load()} />
+        </>
+      ) : null}
 
       {session.isAdmin ? (
         <Card>
