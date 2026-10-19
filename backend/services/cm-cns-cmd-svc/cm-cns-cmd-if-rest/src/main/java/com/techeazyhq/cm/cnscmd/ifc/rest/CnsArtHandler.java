@@ -46,10 +46,11 @@ public class CnsArtHandler {
         this.liveStatusHandler = liveStatusHandler;
     }
 
+    /** {@code POST .../cns-arts/{id}/revoke}: the principal withdraws their consent; no one else can. */
     public Mono<ServerResponse> revoke(ServerRequest request) {
         String id = request.pathVariable("id");
-        return revokeHandler.handle(new RevokeCnsArtCmd(id))
-                .flatMap(cnsArt -> ServerResponse.ok().bodyValue(CnsArtRespDto.of(cnsArt)));
+        return CnsReqHandler.asPrincipal(request, ctx -> revokeHandler.handle(new RevokeCnsArtCmd(id, ctx.dpId()))
+                .flatMap(cnsArt -> ServerResponse.ok().bodyValue(CnsArtRespDto.of(cnsArt))));
     }
 
     /** {@code POST /api/cns-cmd/cns-arts/{id}/token}: a fresh short-lived token for the fiduciary the artefact names. */

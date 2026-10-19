@@ -19,7 +19,7 @@
 import { describe, expect, it } from "vitest";
 import type { CnsArtRdMdl, CnsLcySts, CnsReqBatchDto, PrpsContent, PrpsSummaryDto } from "api-client";
 import { MAX_FILE_BYTES, fileProblem, progressOf, sendProblem } from "./Batches";
-import { grantRate } from "./labels";
+import { dataLabel, grantRate } from "./labels";
 import { purposeTiles } from "./console";
 import { contentProblem, emptyContent, linesOf, tidy } from "./Purposes";
 import { requestProblem, toCode } from "./Raise";
@@ -143,6 +143,16 @@ describe("purposes", () => {
     expect(contentProblem(content({ dCats: [{ code: "EMAIL", sensitivity: "ORDINARY", necessary: true }] }))).toMatch(/refuses/);
     expect(contentProblem(content({ requestedValidityDays: 400, maxValidityDays: 365 }))).toMatch(/validity/);
     expect(contentProblem(content({ notices: [{ lang: "en", title: "", text: "X" }] }))).toMatch(/notice/);
+  });
+});
+
+describe("what a consent covers", () => {
+  const word = (c: string) => c.toLowerCase();
+
+  it("is what was asked until given, then what was granted, naming what wasn't", () => {
+    expect(dataLabel({ dCatCodes: ["EMAIL", "NAME"], grantedDCatCodes: null }, word)).toBe("email, name");
+    expect(dataLabel({ dCatCodes: ["EMAIL", "NAME"], grantedDCatCodes: ["EMAIL", "NAME"] }, word)).toBe("email, name");
+    expect(dataLabel({ dCatCodes: ["EMAIL", "NAME"], grantedDCatCodes: ["EMAIL"] }, word)).toBe("email (not given: name)");
   });
 });
 

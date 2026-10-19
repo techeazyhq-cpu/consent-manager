@@ -41,8 +41,7 @@ public class DenyCnsReqCmdHandler implements CmdHandler<DenyCnsReqCmd, CnsReq> {
     @Override
     @Transactional
     public Mono<CnsReq> handle(DenyCnsReqCmd cmd) {
-        return cnsReqRepo.findById(cmd.cnsReqId())
-                .switchIfEmpty(Mono.error(new DomRuleViolation(404, "cns-req-not-found", "No CnsReq " + cmd.cnsReqId())))
+        return CnsReqTerms.ownRequest(cnsReqRepo, cmd.cnsReqId(), cmd.dpId())
                 .flatMap(cnsReq -> {
                     Spec.SpecResult result = decidablePolicy.evaluate(cnsReq);
                     if (!result.satisfied()) {

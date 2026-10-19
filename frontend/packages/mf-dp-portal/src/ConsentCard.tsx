@@ -19,6 +19,7 @@
 import { dfReg, type CnsArtRdMdl, type CnsLcySts } from "api-client";
 import { Button, OrgLogo } from "ui-kit/src/index";
 import { STATUS, awaitsDecision, fmtDate, humanise } from "./labels";
+import Decide from "./Decide";
 import { freshToken, type Portal } from "./portal";
 import { orgHref } from "./routes";
 
@@ -71,11 +72,18 @@ export default function ConsentCard({
           <StatusPill sts={row.lcySts} />
         </div>
         <div className="dp-chips" aria-label="Your data it covers">
-          {row.dCatCodes.map((c) => (
-            <span key={c} className="dp-chip">
-              {humanise(c)}
-            </span>
-          ))}
+          {row.dCatCodes.map((c) =>
+            // partial consent (ADR-026): what wasn't given stays visible, marked as not shared
+            row.grantedDCatCodes && !row.grantedDCatCodes.includes(c) ? (
+              <span key={c} className="dp-chip dp-chip-refused" title="You didn't share this">
+                {humanise(c)}
+              </span>
+            ) : (
+              <span key={c} className="dp-chip">
+                {humanise(c)}
+              </span>
+            ),
+          )}
         </div>
         <Notice row={row} />
         <div className="cm-note">
@@ -83,17 +91,8 @@ export default function ConsentCard({
           {until ? ` · ${row.lcySts === "ISSUED" ? "Valid until" : "Would be valid until"} ${until}` : ""}
         </div>
       </div>
+      {awaitsDecision(row.lcySts) ? <Decide portal={portal} row={row} /> : null}
       <div className="dp-consent-actions">
-        {awaitsDecision(row.lcySts) ? (
-          <>
-            <Button variant="primary" disabled={busy} onClick={() => portal.decide(row, "give")}>
-              Give consent
-            </Button>
-            <Button disabled={busy} onClick={() => portal.decide(row, "decline")}>
-              Decline
-            </Button>
-          </>
-        ) : null}
         {row.lcySts === "ISSUED" && row.cnsArtId ? (
           <Button
             variant="danger"

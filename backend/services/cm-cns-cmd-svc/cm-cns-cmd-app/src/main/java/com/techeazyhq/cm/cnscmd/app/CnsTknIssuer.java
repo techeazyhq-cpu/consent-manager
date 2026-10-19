@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.util.List;
 
 import com.techeazyhq.cm.cnscmd.dom.CnsArt;
+import com.techeazyhq.cm.cnscmd.dom.DCat;
 import com.techeazyhq.cm.cnscmd.dom.DpRef;
 import com.techeazyhq.cm.seckit.CnsTknClaims;
 import com.techeazyhq.cm.seckit.CnsTknSigner;
@@ -52,8 +53,10 @@ public class CnsTknIssuer {
         Instant now = clock.instant();
         Instant byLifetime = now.plus(lifetime);
         Instant exp = cnsArt.valPrd().until().isBefore(byLifetime) ? cnsArt.valPrd().until() : byLifetime;
+        // the data the consent covers (ADR-026): with partial consent, fewer categories than were asked
+        List<String> scope = cnsArt.scp().dCats().stream().map(DCat::code).sorted().toList();
         String token = signer.sign(new CnsTknClaims(cnsArt.id(), dpIdOf(cnsArt), cnsArt.dfId(), cnsArt.prps().code(),
-                CnsTknClaims.AccessType.ALLOW, List.of(), exp));
+                CnsTknClaims.AccessType.ALLOW, scope, exp));
         return new Issued(token, exp);
     }
 

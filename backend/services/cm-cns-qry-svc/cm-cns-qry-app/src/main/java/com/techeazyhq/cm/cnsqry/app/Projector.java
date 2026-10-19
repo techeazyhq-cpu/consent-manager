@@ -65,7 +65,7 @@ public class Projector {
                     : evt.scp().dCats().stream().map(ScpPayload.DCatPayload::code).collect(java.util.stream.Collectors.toSet());
             CnsArtRdMdl row = new CnsArtRdMdl(evt.cnsReqId(), null, evt.dfId(), dpIdOf(evt.dpRef()), evt.prps().code(),
                     dCats, CnsLcySts.PENDING, null, null, evt.occurredAt(), evt.occurredAt(), evt.ntcTitle(),
-                    evt.ntcText());
+                    evt.ntcText(), null);
             return rdMdlRepo.upsert(row)
                     .then(hstRepo.append(new CnsHstRdMdl(evt.cnsReqId(), null, CnsLcySts.PENDING, evt.occurredAt(), evt.evtId())));
         });
@@ -74,9 +74,13 @@ public class Projector {
     public Mono<Void> onCnsGranted(CnsGrantedEvtPayload evt) {
         return dedupe(evt.evtId(), () -> rowOf(rdMdlRepo.findByCnsReqId(evt.cnsReqId()), "request " + evt.cnsReqId())
                 .flatMap(existing -> unlessStale(existing, evt.occurredAt(), () -> {
+                    // partial consent (ADR-026): what was granted; a grant from before it gave everything asked
+                    Set<String> granted = evt.scp() == null ? existing.dCatCodes()
+                            : evt.scp().dCats().stream().map(ScpPayload.DCatPayload::code)
+                                    .collect(java.util.stream.Collectors.toSet());
                     CnsArtRdMdl updated = existing.with(evt.cnsArtId(),
                             dpIdOf(evt.dpRef()) != null ? dpIdOf(evt.dpRef()) : existing.dpId(), CnsLcySts.ISSUED,
-                            evt.valPrd().from(), evt.valPrd().until(), evt.occurredAt());
+                            evt.valPrd().from(), evt.valPrd().until(), evt.occurredAt()).granted(granted);
                     return rdMdlRepo.upsert(updated)
                             .then(hstRepo.append(new CnsHstRdMdl(evt.cnsReqId(), existing.lcySts(), CnsLcySts.ISSUED, evt.occurredAt(), evt.evtId())));
                 })));

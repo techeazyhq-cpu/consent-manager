@@ -32,6 +32,7 @@ import com.techeazyhq.cm.cnscmd.app.ApproveCnsCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.CreateCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.DenyCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.GetCnsArtLiveStatusQryHandler;
+import com.techeazyhq.cm.cnscmd.app.CnsReqTerms;
 import com.techeazyhq.cm.cnscmd.app.LinkDpCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.PrpsDefCmds;
 import com.techeazyhq.cm.cnscmd.app.RefreshCnsTknCmdHandler;
@@ -66,8 +67,9 @@ public class CnsCmdRouterConfig {
                                                          CnsTknKeys cnsTknKeys,
                                                          SubmitCnsReqBatchHandler submitBatchHandler,
                                                          CnsReqBatchQueries batchQueries,
-                                                         PrpsDefCmds prpsDefCmds) {
-        CnsReqHandler cnsReqHandler = new CnsReqHandler(createHandler, approveHandler, denyHandler);
+                                                         PrpsDefCmds prpsDefCmds,
+                                                         CnsReqTerms cnsReqTerms) {
+        CnsReqHandler cnsReqHandler = new CnsReqHandler(createHandler, approveHandler, denyHandler, cnsReqTerms);
         CnsArtHandler cnsArtHandler = new CnsArtHandler(revokeHandler, refreshTknHandler, liveStatusHandler);
         DpLinkHandler dpLinkHandler = new DpLinkHandler(linkDpHandler);
         CnsReqBatchHttpHandler batches = new CnsReqBatchHttpHandler(submitBatchHandler, batchQueries);
@@ -89,6 +91,7 @@ public class CnsCmdRouterConfig {
                 .GET("/api/cns-cmd/cns-req-batches/{id}", batches::get)
                 .GET("/api/cns-cmd/cns-req-batches/{id}/rows", batches::rows)
                 .GET("/api/cns-cmd/cns-req-batches/{id}/report.csv", batches::report)
+                .GET("/api/cns-cmd/cns-reqs/{id}/terms", cnsReqHandler::terms)
                 .POST("/api/cns-cmd/cns-reqs/{id}/approve", cnsReqHandler::approve)
                 .POST("/api/cns-cmd/cns-reqs/{id}/deny", cnsReqHandler::deny)
                 .POST("/api/cns-cmd/cns-arts/{id}/revoke", cnsArtHandler::revoke)

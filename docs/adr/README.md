@@ -31,7 +31,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [023](adr-023-pure-consent-manager-boundary-and-neutrality.md) | A pure consent manager: its boundary, neutrality and First Schedule duties | Proposed |
 | [024](adr-024-hipaa-authorisations-and-fhir-consent.md) | HIPAA authorisations in the consent model; FHIR Consent at the boundary | Proposed |
 | [025](adr-025-iso-27560-consent-records-and-receipts.md) | Consent records and receipts to ISO/IEC TS 27560, in DPV | Proposed |
-| [026](adr-026-consent-validity-requested-maximum-principal-adjustable.md) | Consent validity: requested and maximum per purpose, adjustable by the principal | Proposed |
+| [026](adr-026-consent-validity-requested-maximum-principal-adjustable.md) | Consent validity: requested and maximum per purpose, adjustable by the principal | Accepted for grant (044); shortening and renewal proposed |
 | [027](adr-027-short-lived-tokens-status-list-and-verification-availability.md) | Short-lived consent tokens, a revocation status list, and verification availability | Proposed |
 | [028](adr-028-accessible-consent-without-deceptive-design.md) | An accessible consent experience, without deceptive design, with recorded evidence | Proposed |
 | [029](adr-029-fiduciary-assurance-and-consent-termination.md) | Fiduciaries are verified at onboarding; termination by a fiduciary or an authority | Proposed |
@@ -49,6 +49,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [041](adr-041-api-keys-and-signed-requests.md) | API keys and HMAC-signed requests against replay, for fiduciaries' systems | Accepted |
 | [042](adr-042-deploying-to-aws-azure-and-gcp.md) | Deploying to AWS, Azure and GCP with Terraform and one Helm chart | Accepted |
 | [043](adr-043-purpose-versions-in-the-consent-context.md) | Purpose versions in the Consent context; requests name a published version | Accepted |
+| [044](adr-044-partial-consent-and-validity-at-grant-by-the-principal-only.md) | Partial consent and the validity chosen at grant, by the principal only | Accepted |
 
 ## Writing one
 

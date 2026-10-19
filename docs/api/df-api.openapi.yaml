@@ -351,6 +351,26 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /api/cns-cmd/cns-reqs/{requestId}/terms:
+    get:
+      tags: [Consent requests]
+      operationId: getRequestTerms
+      summary: What a request asks
+      description: |
+        The purpose version a request was made from, as the person sees it when deciding: each category asked for,
+        whether it is needed and what refusing it means, the validity requested and the longest the person may
+        choose. Only the person can give, decline or withdraw consent; a fiduciary's call to do so is refused (403).
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: The terms.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CnsReqTerms' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /api/cns-qry/cns-arts/{requestId}/history:
     get:
       tags: [Consent requests]
@@ -898,7 +918,13 @@ components:
         dfId: { type: string, format: uuid }
         dpId: { type: [string, 'null'] }
         prpsCode: { type: string }
-        dCatCodes: { type: array, items: { type: string } }
+        dCatCodes: { type: array, items: { type: string }, description: What the request asked for. }
+        grantedDCatCodes:
+          type: [array, 'null']
+          items: { type: string }
+          description: |
+            What the person granted (ADR-026): some or all of dCatCodes, null until consent is given. Use only
+            these; the consent token's scope says the same.
         lcySts: { $ref: '#/components/schemas/LifecycleStatus' }
         validFrom: { type: [string, 'null'], format: date-time }
         validUntil: { type: [string, 'null'], format: date-time }
@@ -906,6 +932,29 @@ components:
         updatedAt: { type: string, format: date-time }
         ntcTitle: { type: [string, 'null'] }
         ntcText: { type: [string, 'null'] }
+
+    CnsReqTerms:
+      type: object
+      properties:
+        cnsReqId: { type: string, format: uuid }
+        prpsCode: { type: string }
+        prpsVer: { type: [integer, 'null'] }
+        name: { type: [string, 'null'] }
+        description: { type: [string, 'null'] }
+        dCats:
+          type: array
+          description: The categories asked for, needed ones first.
+          items: { $ref: '#/components/schemas/PrpsDCat' }
+        requestedValidityDays: { type: integer }
+        maxValidityDays: { type: integer }
+        retentionDays: { type: [integer, 'null'] }
+        recipients: { type: array, items: { type: string } }
+        transfers: { type: array, items: { type: string } }
+        flags: { type: array, items: { type: string } }
+        ntcLang: { type: [string, 'null'] }
+        ntcTitle: { type: string }
+        ntcText: { type: [string, 'null'] }
+        ntcHash: { type: [string, 'null'] }
 
     CnsHst:
       type: object

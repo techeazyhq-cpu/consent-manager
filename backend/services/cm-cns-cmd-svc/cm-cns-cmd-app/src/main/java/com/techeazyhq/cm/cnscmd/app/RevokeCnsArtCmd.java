@@ -18,5 +18,6 @@
 
 package com.techeazyhq.cm.cnscmd.app;
 
-public record RevokeCnsArtCmd(String cnsArtId) {
+/** The principal {@code dpId} withdraws their consent. */
+public record RevokeCnsArtCmd(String cnsArtId, String dpId) {
 }

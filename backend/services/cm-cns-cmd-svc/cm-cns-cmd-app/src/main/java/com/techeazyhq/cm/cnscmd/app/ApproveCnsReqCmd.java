@@ -18,5 +18,11 @@
 
 package com.techeazyhq.cm.cnscmd.app;
 
-public record ApproveCnsReqCmd(String cnsReqId) {
+import java.util.Set;
+
+/**
+ * The principal {@code dpId} gives consent (ADR-026): to {@code dCatCodes} (all that were asked when null) for
+ * {@code validityDays} (the requested validity when null).
+ */
+public record ApproveCnsReqCmd(String cnsReqId, String dpId, Set<String> dCatCodes, Integer validityDays) {
 }

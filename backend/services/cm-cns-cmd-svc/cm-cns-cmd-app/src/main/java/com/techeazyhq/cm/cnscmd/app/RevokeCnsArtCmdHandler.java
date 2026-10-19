@@ -39,6 +39,8 @@ public class RevokeCnsArtCmdHandler implements CmdHandler<RevokeCnsArtCmd, CnsAr
     @Transactional
     public Mono<CnsArt> handle(RevokeCnsArtCmd cmd) {
         return cnsArtRepo.findById(cmd.cnsArtId())
+                // someone else's consent is reported as not found, so its existence isn't given away
+                .filter(cnsArt -> cnsArt.dpRef().isOf(cmd.dpId()))
                 .switchIfEmpty(Mono.error(new DomRuleViolation(404, "cns-art-not-found", "No CnsArt " + cmd.cnsArtId())))
                 .flatMap(cnsArt -> {
                     try {

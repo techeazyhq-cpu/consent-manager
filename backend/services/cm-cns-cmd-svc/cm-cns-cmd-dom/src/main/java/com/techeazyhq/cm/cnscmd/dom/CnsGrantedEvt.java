@@ -23,13 +23,19 @@ import java.util.UUID;
 
 import com.techeazyhq.cm.domkit.DomainEvt;
 
-/** Stage 2 decided: approve (plan §7c step 3). Carries the signed {@code CnsTkn} and the artefact's ValPrd. */
+/**
+ * Stage 2 decided: approve (plan §7c step 3). Carries the signed {@code CnsTkn}, the artefact's ValPrd, and what was
+ * granted (ADR-026): {@code scp} may be fewer categories than the request asked for, and {@code validityDays} is the
+ * validity the principal chose.
+ */
 public record CnsGrantedEvt(
         UUID evtId, Instant occurredAt, String cnsReqId, String cnsArtId, String dfId, DpRef dpRef, String cnsTkn,
-        ValPrd valPrd)
+        ValPrd valPrd, Scp scp, int validityDays)
         implements DomainEvt {
 
-    public static CnsGrantedEvt of(String cnsReqId, String cnsArtId, String dfId, DpRef dpRef, String cnsTkn, ValPrd valPrd) {
-        return new CnsGrantedEvt(UUID.randomUUID(), Instant.now(), cnsReqId, cnsArtId, dfId, dpRef, cnsTkn, valPrd);
+    public static CnsGrantedEvt of(String cnsReqId, String cnsArtId, String dfId, DpRef dpRef, String cnsTkn,
+                                   CnsGrant grant) {
+        return new CnsGrantedEvt(UUID.randomUUID(), Instant.now(), cnsReqId, cnsArtId, dfId, dpRef, cnsTkn,
+                grant.valPrd(), grant.scp(), grant.validityDays());
     }
 }

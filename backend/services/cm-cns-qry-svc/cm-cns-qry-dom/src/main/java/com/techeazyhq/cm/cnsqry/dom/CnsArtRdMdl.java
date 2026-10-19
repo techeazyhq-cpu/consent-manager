@@ -38,12 +38,19 @@ public record CnsArtRdMdl(
         Instant createdAt,
         Instant updatedAt,
         String ntcTitle,
-        String ntcText) {
+        String ntcText,
+        Set<String> grantedDCatCodes) {
 
     /** The same record in a new state; everything the fiduciary asked, the notice included, stays as it was. */
     public CnsArtRdMdl with(String newCnsArtId, String newDpId, CnsLcySts newSts, Instant newValidFrom,
                             Instant newValidUntil, Instant newUpdatedAt) {
         return new CnsArtRdMdl(cnsReqId, newCnsArtId, dfId, newDpId, prpsCode, dCatCodes, newSts, newValidFrom,
-                newValidUntil, createdAt, newUpdatedAt, ntcTitle, ntcText);
+                newValidUntil, createdAt, newUpdatedAt, ntcTitle, ntcText, grantedDCatCodes);
+    }
+
+    /** What the principal granted (ADR-026): some or all of {@code dCatCodes}. */
+    public CnsArtRdMdl granted(Set<String> codes) {
+        return new CnsArtRdMdl(cnsReqId, cnsArtId, dfId, dpId, prpsCode, dCatCodes, lcySts, validFrom, validUntil,
+                createdAt, updatedAt, ntcTitle, ntcText, codes);
     }
 }

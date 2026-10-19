@@ -51,10 +51,10 @@ public class R2dbcCnsArtRdMdlRepoAdapter implements CnsArtRdMdlRepoPort {
         DatabaseClient.GenericExecuteSpec spec = db.sql("""
                         insert into cns_qry.cns_art_rd_mdl
                             (cns_req_id, cns_art_id, df_id, dp_id, prps_code, d_cats, lcy_sts, valid_from, valid_until, created_at, updated_at,
-                             ntc_title, ntc_text)
+                             ntc_title, ntc_text, granted_d_cats)
                         values
                             (:cnsReqId, :cnsArtId, :dfId, :dpId, :prpsCode, cast(:dCats as jsonb), :lcySts, :validFrom, :validUntil, :createdAt, :updatedAt,
-                             :ntcTitle, :ntcText)
+                             :ntcTitle, :ntcText, cast(:grantedDCats as jsonb))
                         on conflict (cns_req_id) do update set
                             cns_art_id = coalesce(excluded.cns_art_id, cns_art_rd_mdl.cns_art_id),
                             dp_id = coalesce(excluded.dp_id, cns_art_rd_mdl.dp_id),
@@ -63,7 +63,8 @@ public class R2dbcCnsArtRdMdlRepoAdapter implements CnsArtRdMdlRepoPort {
                             valid_until = coalesce(excluded.valid_until, cns_art_rd_mdl.valid_until),
                             updated_at = excluded.updated_at,
                             ntc_title = coalesce(excluded.ntc_title, cns_art_rd_mdl.ntc_title),
-                            ntc_text = coalesce(excluded.ntc_text, cns_art_rd_mdl.ntc_text)
+                            ntc_text = coalesce(excluded.ntc_text, cns_art_rd_mdl.ntc_text),
+                            granted_d_cats = coalesce(excluded.granted_d_cats, cns_art_rd_mdl.granted_d_cats)
                         """)
                 .bind("cnsReqId", row.cnsReqId())
                 .bind("dfId", row.dfId())
@@ -78,6 +79,8 @@ public class R2dbcCnsArtRdMdlRepoAdapter implements CnsArtRdMdlRepoPort {
         spec = bindNullable(spec, "validUntil", row.validUntil(), Instant.class);
         spec = bindNullable(spec, "ntcTitle", row.ntcTitle(), String.class);
         spec = bindNullable(spec, "ntcText", row.ntcText(), String.class);
+        spec = bindNullable(spec, "grantedDCats",
+                row.grantedDCatCodes() == null ? null : writeDCats(row.grantedDCatCodes()), String.class);
 
         return spec.then().thenReturn(row);
     }
@@ -171,7 +174,9 @@ public class R2dbcCnsArtRdMdlRepoAdapter implements CnsArtRdMdlRepoPort {
                 row.get("created_at", Instant.class),
                 row.get("updated_at", Instant.class),
                 row.get("ntc_title", String.class),
-                row.get("ntc_text", String.class));
+                row.get("ntc_text", String.class),
+                row.get("granted_d_cats", String.class) == null ? null
+                        : readDCats(row.get("granted_d_cats", String.class)));
     }
 
     private String writeDCats(Set<String> dCats) {

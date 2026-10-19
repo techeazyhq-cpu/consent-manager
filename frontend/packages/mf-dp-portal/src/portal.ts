@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ensureFreshToken, getKeycloak, type AuthInfo } from "auth-kit";
-import { cnsCmd, cnsQry, dfReg, type CnsArtRdMdl, type CnsLcySts } from "api-client";
+import { cnsCmd, cnsQry, dfReg, type CnsArtRdMdl, type CnsLcySts, type GrantChoice } from "api-client";
 import { friendlyError } from "ui-kit/src/index";
 import { awaitsDecision } from "./labels";
 
@@ -53,7 +53,8 @@ export interface Portal {
   /** The consent record being changed, so its buttons can show it. */
   busy: string | null;
   reload: () => Promise<void>;
-  decide: (row: CnsArtRdMdl, decision: Decision) => Promise<boolean>;
+  /** Gives (with the person's choice of data and validity), declines or withdraws. */
+  decide: (row: CnsArtRdMdl, decision: Decision, choice?: GrantChoice) => Promise<boolean>;
   orgName: (dfId: string) => string;
 }
 
@@ -116,14 +117,14 @@ export function usePortal(auth: AuthInfo, gwBase: string): Portal {
    * the event that follows, so it is re-read briefly until the record shows its new status.
    */
   const decide = useCallback(
-    async (row: CnsArtRdMdl, decision: Decision): Promise<boolean> => {
+    async (row: CnsArtRdMdl, decision: Decision, choice?: GrantChoice): Promise<boolean> => {
       const key = row.cnsArtId ?? row.cnsReqId;
       setBusy(key);
       setError(null);
       const before: CnsLcySts = row.lcySts;
       try {
         const token = await freshToken(auth);
-        if (decision === "give") await cnsCmd.approve(gwBase, token, row.cnsReqId);
+        if (decision === "give") await cnsCmd.approve(gwBase, token, row.cnsReqId, choice);
         else if (decision === "decline") await cnsCmd.deny(gwBase, token, row.cnsReqId);
         else if (row.cnsArtId) await cnsCmd.revoke(gwBase, token, row.cnsArtId);
         for (let attempt = 0; attempt < 8; attempt++) {
