@@ -33,7 +33,9 @@ import reactor.core.publisher.Mono;
 public class ObxRelay {
 
     private static final String CTX = "dfreg";
-    private static final Map<String, String> EVT_TYPE_TO_TOPIC_NAME = Map.of("DfActivatedEvt", "df-activated");
+    private static final Map<String, String> EVT_TYPE_TO_TOPIC_NAME = Map.of("DfActivatedEvt", "df-activated",
+            // what people did, for the audit ledger (ADR-040)
+            "PlatformActionEvt", "platform-action");
 
     private final DatabaseClient db;
     private final PulsarDfEvtProducer producer;

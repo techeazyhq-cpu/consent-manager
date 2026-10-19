@@ -133,4 +133,5 @@ export function friendlyError(err: unknown): string {
   return "Something went wrong";
 }
 
+export { AuditTable, describeAudit, type AuditRow } from "./audit";
 export { AppShell, Icons, OrgLogo, forgetLogo, humanise, useHashRoute, type NavItem } from "./shell";

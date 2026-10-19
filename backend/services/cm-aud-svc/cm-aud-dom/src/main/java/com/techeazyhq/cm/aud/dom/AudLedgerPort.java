@@ -39,6 +39,9 @@ public interface AudLedgerPort {
     /** Entries matching the query, newest first. */
     Flux<AudEntry> find(AudQuery query);
 
+    /** As {@link #find}, with each entry's payload (null once erased). */
+    Flux<AudRecord> findRecords(AudQuery query);
+
     /** Whether entry {@code seq} is about principal {@code dpId} (false once their data is erased). */
     Mono<Boolean> concerns(long seq, String dpId);
 

@@ -18,6 +18,7 @@
 
 package com.techeazyhq.cm.stf.app;
 
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.stf.dom.StfAcct;
 import com.techeazyhq.cm.stf.dom.StfDirectoryPort;
 import com.techeazyhq.cm.stf.dom.StfRole;
@@ -35,9 +36,15 @@ public class SetStfEnabledCmdHandler {
     }
 
     private final StfDirectoryPort directory;
+    private final AuditTrail audit;
 
     public SetStfEnabledCmdHandler(StfDirectoryPort directory) {
+        this(directory, AuditTrail.NONE);
+    }
+
+    public SetStfEnabledCmdHandler(StfDirectoryPort directory, AuditTrail audit) {
         this.directory = directory;
+        this.audit = audit;
     }
 
     public Mono<StfAcct> handle(Cmd cmd) {
@@ -54,6 +61,8 @@ public class SetStfEnabledCmdHandler {
                                 "Administrators are managed in Keycloak, not here"));
                     }
                     return directory.setEnabled(acct.id(), cmd.enabled())
+                            .then(audit.record(cmd.enabled() ? "staff.enabled" : "staff.disabled", null, acct.id(),
+                                    AuditTrail.details("staff", acct.email())))
                             .thenReturn(new StfAcct(acct.id(), acct.email(), acct.name(), acct.role(), cmd.enabled(),
                                     acct.createdAt()));
                 });

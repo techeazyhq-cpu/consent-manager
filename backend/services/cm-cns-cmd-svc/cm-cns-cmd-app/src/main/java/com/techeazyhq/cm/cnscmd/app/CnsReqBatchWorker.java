@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqBatch;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqBatchRepoPort;
 import com.techeazyhq.cm.cnscmd.dom.DfUsagePort;
@@ -46,12 +47,19 @@ public class CnsReqBatchWorker {
     private final CnsReqBatchRepoPort batchRepo;
     private final CnsReqBatchSender sender;
     private final DfUsagePort usage;
+    private final AuditTrail audit;
     private final AtomicBoolean running = new AtomicBoolean();
 
     public CnsReqBatchWorker(CnsReqBatchRepoPort batchRepo, CnsReqBatchSender sender, DfUsagePort usage) {
+        this(batchRepo, sender, usage, AuditTrail.NONE);
+    }
+
+    public CnsReqBatchWorker(CnsReqBatchRepoPort batchRepo, CnsReqBatchSender sender, DfUsagePort usage,
+                             AuditTrail audit) {
         this.batchRepo = batchRepo;
         this.sender = sender;
         this.usage = usage;
+        this.audit = audit;
     }
 
     @Scheduled(fixedDelayString = "${cm.cnscmd.batch-worker.fixed-delay-ms:2000}")
@@ -90,7 +98,12 @@ public class CnsReqBatchWorker {
                                 LOG.warn("Batch {} could not give back {} reserved requests", batch.id(), unused, err);
                                 return Mono.empty();
                             }) : Mono.empty();
-                    return giveBack.then(batchRepo.save(batch));
+                    return giveBack.then(batchRepo.save(batch))
+                            .flatMap(saved -> audit.record("batch.finished", saved.dfId(), saved.id(),
+                                    AuditTrail.details("sent", String.valueOf(saved.sent()),
+                                            "failed", String.valueOf(saved.failed()),
+                                            "skipped", String.valueOf(saved.invalid() + saved.duplicate())))
+                                    .thenReturn(saved));
                 });
     }
 

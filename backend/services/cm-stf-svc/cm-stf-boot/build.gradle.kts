@@ -30,6 +30,9 @@ dependencies {
     implementation(project(":cm-web-kit"))
     implementation(project(":cm-res-kit"))
     implementation(project(":cm-kc-kit"))
+    implementation(project(":cm-aud-kit"))
+    implementation("org.apache.pulsar:pulsar-client-reactive-adapter:0.5.2")
+    implementation("org.apache.pulsar:pulsar-client:3.3.9")
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")

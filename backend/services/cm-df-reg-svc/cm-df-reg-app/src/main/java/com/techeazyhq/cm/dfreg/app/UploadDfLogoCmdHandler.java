@@ -18,6 +18,7 @@
 
 package com.techeazyhq.cm.dfreg.app;
 
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.dfreg.dom.DfLogo;
 import com.techeazyhq.cm.dfreg.dom.DfLogoRepoPort;
 import com.techeazyhq.cm.dfreg.dom.DfRepoPort;
@@ -30,10 +31,16 @@ public class UploadDfLogoCmdHandler implements CmdHandler<UploadDfLogoCmd, DfLog
 
     private final DfRepoPort dfRepo;
     private final DfLogoRepoPort logoRepo;
+    private final AuditTrail audit;
 
     public UploadDfLogoCmdHandler(DfRepoPort dfRepo, DfLogoRepoPort logoRepo) {
+        this(dfRepo, logoRepo, AuditTrail.NONE);
+    }
+
+    public UploadDfLogoCmdHandler(DfRepoPort dfRepo, DfLogoRepoPort logoRepo, AuditTrail audit) {
         this.dfRepo = dfRepo;
         this.logoRepo = logoRepo;
+        this.audit = audit;
     }
 
     @Override
@@ -42,6 +49,8 @@ public class UploadDfLogoCmdHandler implements CmdHandler<UploadDfLogoCmd, DfLog
                 .switchIfEmpty(Mono.error(new DomRuleViolation(404, "df-not-found", "No DF " + cmd.dfId())))
                 .map(df -> DfLogo.of(df.id(), cmd.contentType(), cmd.bytes()))
                 .onErrorMap(IllegalArgumentException.class, e -> new DomRuleViolation(400, "invalid-logo", e.getMessage()))
-                .flatMap(logoRepo::save);
+                .flatMap(logoRepo::save)
+                .flatMap(logo -> audit.record("tenant.logo-changed", cmd.dfId(), cmd.dfId(),
+                        AuditTrail.details("contentType", cmd.contentType())).thenReturn(logo));
     }
 }

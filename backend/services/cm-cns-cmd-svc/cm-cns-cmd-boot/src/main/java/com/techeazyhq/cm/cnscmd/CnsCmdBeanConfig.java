@@ -33,6 +33,7 @@ import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.cnscmd.app.SubmitCnsReqBatchHandler;
 import com.techeazyhq.cm.cnscmd.app.CnsReqBatchWorker;
 import com.techeazyhq.cm.cnscmd.app.CnsReqBatchSender;
@@ -96,6 +97,12 @@ public class CnsCmdBeanConfig {
         return new R2dbcObxAdapter(db, objectMapper);
     }
 
+    /** What people and the batch worker do, through the outbox to the audit ledger (ADR-040). */
+    @Bean
+    public AuditTrail auditTrail(ObxPort obxPort) {
+        return AuditTrail.to("cnscmd", evt -> obxPort.enqueue(evt, "PlatformAction", evt.target() != null ? evt.target() : "cnscmd"));
+    }
+
     @Bean
     public ObxRelay obxRelay(DatabaseClient db, PulsarCnsEvtProducer producer) {
         return new ObxRelay(db, producer);
@@ -146,8 +153,9 @@ public class CnsCmdBeanConfig {
 
     @Bean
     public SubmitCnsReqBatchHandler submitCnsReqBatchHandler(CnsReqBatchRepoPort batchRepo, DfActivePort dfActivePort,
-                                                             DfUsagePort dfUsagePort, ContactPolicy contactPolicy) {
-        return new SubmitCnsReqBatchHandler(batchRepo, dfActivePort, dfUsagePort, contactPolicy);
+                                                             DfUsagePort dfUsagePort, ContactPolicy contactPolicy,
+                                                             AuditTrail audit) {
+        return new SubmitCnsReqBatchHandler(batchRepo, dfActivePort, dfUsagePort, contactPolicy, audit);
     }
 
     /** A bean of its own, so its @Transactional send wraps each row's request and outcome together. */
@@ -158,8 +166,8 @@ public class CnsCmdBeanConfig {
 
     @Bean
     public CnsReqBatchWorker cnsReqBatchWorker(CnsReqBatchRepoPort batchRepo, CnsReqBatchSender sender,
-                                               DfUsagePort dfUsagePort) {
-        return new CnsReqBatchWorker(batchRepo, sender, dfUsagePort);
+                                               DfUsagePort dfUsagePort, AuditTrail audit) {
+        return new CnsReqBatchWorker(batchRepo, sender, dfUsagePort, audit);
     }
 
     @Bean

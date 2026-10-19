@@ -23,6 +23,7 @@ import com.techeazyhq.cm.aud.dom.AudDraft;
 import com.techeazyhq.cm.aud.dom.AudEntry;
 import com.techeazyhq.cm.aud.dom.AudLedgerPort;
 import com.techeazyhq.cm.aud.dom.AudQuery;
+import com.techeazyhq.cm.aud.dom.AudRecord;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -46,6 +47,10 @@ public class AudLedgerService {
 
     public Flux<AudEntry> find(AudQuery query) {
         return ledger.find(query);
+    }
+
+    public Flux<AudRecord> findRecords(AudQuery query) {
+        return ledger.findRecords(query);
     }
 
     public Mono<AudEntry> head() {

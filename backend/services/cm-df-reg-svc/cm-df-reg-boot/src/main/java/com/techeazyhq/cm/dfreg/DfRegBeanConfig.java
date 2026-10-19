@@ -51,6 +51,7 @@ import com.techeazyhq.cm.dfreg.dom.SubPlnCatalogPort;
 import com.techeazyhq.cm.kckit.KeycloakAdminAuthFilter;
 import com.techeazyhq.cm.dfreg.infra.KeycloakDfApiClientProvisionAdapter;
 import com.techeazyhq.cm.dfreg.infra.KeycloakDfMemberDirectoryAdapter;
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.dfreg.infra.ObxRelay;
 import com.techeazyhq.cm.dfreg.infra.PulsarDfEvtProducer;
 import com.techeazyhq.cm.dfreg.infra.R2dbcDfLogoAdapter;
@@ -83,6 +84,12 @@ public class DfRegBeanConfig {
     @Bean
     public ObxPort obxPort(DatabaseClient db, ObjectMapper objectMapper) {
         return new R2dbcObxAdapter(db, objectMapper);
+    }
+
+    /** What people do to tenants and their teams, through the outbox to the audit ledger (ADR-040). */
+    @Bean
+    public AuditTrail auditTrail(ObxPort obxPort) {
+        return AuditTrail.to("dfreg", evt -> obxPort.enqueue(evt, "PlatformAction", evt.target() != null ? evt.target() : "dfreg"));
     }
 
     @Bean
@@ -122,8 +129,8 @@ public class DfRegBeanConfig {
     }
 
     @Bean
-    public DfTeamHandler dfTeamHandler(DfMemberDirectoryPort dfMemberDirectory, DfRepoPort dfRepo) {
-        return new DfTeamHandler(dfMemberDirectory, dfRepo);
+    public DfTeamHandler dfTeamHandler(DfMemberDirectoryPort dfMemberDirectory, DfRepoPort dfRepo, AuditTrail audit) {
+        return new DfTeamHandler(dfMemberDirectory, dfRepo, audit);
     }
 
     @Bean(destroyMethod = "close")
@@ -143,13 +150,13 @@ public class DfRegBeanConfig {
     }
 
     @Bean
-    public RegisterDfCmdHandler registerDfCmdHandler(DfRepoPort dfRepo, SubPlnCatalogPort subPlnCatalog) {
-        return new RegisterDfCmdHandler(dfRepo, subPlnCatalog);
+    public RegisterDfCmdHandler registerDfCmdHandler(DfRepoPort dfRepo, SubPlnCatalogPort subPlnCatalog, AuditTrail audit) {
+        return new RegisterDfCmdHandler(dfRepo, subPlnCatalog, audit);
     }
 
     @Bean
-    public UploadDfLogoCmdHandler uploadDfLogoCmdHandler(DfRepoPort dfRepo, DfLogoRepoPort logoRepo) {
-        return new UploadDfLogoCmdHandler(dfRepo, logoRepo);
+    public UploadDfLogoCmdHandler uploadDfLogoCmdHandler(DfRepoPort dfRepo, DfLogoRepoPort logoRepo, AuditTrail audit) {
+        return new UploadDfLogoCmdHandler(dfRepo, logoRepo, audit);
     }
 
     @Bean
@@ -159,8 +166,8 @@ public class DfRegBeanConfig {
 
     @Bean
     public ActivateDfCmdHandler activateDfCmdHandler(DfRepoPort dfRepo, DfApiClientProvisionPort provisionPort,
-                                                     DfMemberDirectoryPort dfMemberDirectory) {
-        return new ActivateDfCmdHandler(dfRepo, provisionPort, dfMemberDirectory);
+                                                     DfMemberDirectoryPort dfMemberDirectory, AuditTrail audit) {
+        return new ActivateDfCmdHandler(dfRepo, provisionPort, dfMemberDirectory, audit);
     }
 
     @Bean

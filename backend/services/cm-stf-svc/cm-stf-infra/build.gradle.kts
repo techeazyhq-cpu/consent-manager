@@ -23,6 +23,11 @@ plugins {
 dependencies {
     api(project(":cm-stf-app"))
     implementation(project(":cm-res-kit"))
+    implementation(project(":cm-evt-kit"))
+    implementation(project(":cm-aud-kit"))
+    implementation("org.apache.pulsar:pulsar-client-reactive-api:0.5.2")
+    implementation("org.apache.pulsar:pulsar-client-reactive-adapter:0.5.2")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.3")
     implementation("org.springframework.boot:spring-boot-starter-webflux:3.5.16")
     implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:3.3.3")
 

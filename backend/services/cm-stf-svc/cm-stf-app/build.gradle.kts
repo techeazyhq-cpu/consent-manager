@@ -23,6 +23,7 @@ plugins {
 dependencies {
     api(project(":cm-stf-dom"))
     api(project(":cm-web-kit"))
+    api(project(":cm-aud-kit"))
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")

@@ -20,6 +20,7 @@ package com.techeazyhq.cm.bil.app;
 
 import org.springframework.transaction.annotation.Transactional;
 
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.bil.dom.DfSub;
 import com.techeazyhq.cm.bil.dom.DfSubRepoPort;
 import com.techeazyhq.cm.bil.dom.SubPlnRepoPort;
@@ -32,10 +33,16 @@ public class AssignSubPlnCmdHandler {
 
     private final DfSubRepoPort dfSubRepo;
     private final SubPlnRepoPort subPlnRepo;
+    private final AuditTrail audit;
 
     public AssignSubPlnCmdHandler(DfSubRepoPort dfSubRepo, SubPlnRepoPort subPlnRepo) {
+        this(dfSubRepo, subPlnRepo, AuditTrail.NONE);
+    }
+
+    public AssignSubPlnCmdHandler(DfSubRepoPort dfSubRepo, SubPlnRepoPort subPlnRepo, AuditTrail audit) {
         this.dfSubRepo = dfSubRepo;
         this.subPlnRepo = subPlnRepo;
+        this.audit = audit;
     }
 
     @Transactional
@@ -46,8 +53,13 @@ public class AssignSubPlnCmdHandler {
                         .switchIfEmpty(Mono.error(new DomRuleViolation(404, "sub-pln-not-found", "No SubPln " + cmd.subPlnName()))))
                 .flatMap(tuple -> {
                     DfSub dfSub = tuple.getT1();
+                    String fromPlnId = dfSub.subPlnId();
                     dfSub.assignPlan(tuple.getT2().id());
-                    return dfSubRepo.save(dfSub);
+                    return subPlnRepo.findById(fromPlnId).map(p -> p.name()).defaultIfEmpty(fromPlnId)
+                            .flatMap(from -> dfSubRepo.save(dfSub)
+                                    .flatMap(saved -> audit.record("subscription.plan-changed", cmd.dfId(), cmd.dfId(),
+                                                    AuditTrail.details("from", from, "to", tuple.getT2().name()))
+                                            .thenReturn(saved)));
                 });
     }
 }

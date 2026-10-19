@@ -32,7 +32,9 @@ public class AudRouterConfig {
     @Bean
     public RouterFunction<ServerResponse> audRoutes(AudLedgerService ledger, AudAnchoringService anchoring) {
         AudHandler handler = new AudHandler(ledger, anchoring);
+        AudActivityHttpHandler activity = new AudActivityHttpHandler(ledger);
         return RouterFunctions.route()
+                .GET("/api/aud/activity", activity::activity)
                 .GET("/api/aud/entries", handler::entries)
                 .GET("/api/aud/chain/head", handler::head)
                 .GET("/api/aud/chain/verify", handler::verify)

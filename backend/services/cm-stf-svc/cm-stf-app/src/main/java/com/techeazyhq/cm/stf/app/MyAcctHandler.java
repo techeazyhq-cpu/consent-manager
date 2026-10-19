@@ -20,6 +20,7 @@ package com.techeazyhq.cm.stf.app;
 
 import java.util.Comparator;
 
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.stf.dom.StfAcct;
 import com.techeazyhq.cm.stf.dom.StfDirectoryPort;
 import com.techeazyhq.cm.stf.dom.StfSession;
@@ -35,9 +36,15 @@ import reactor.core.publisher.Mono;
 public class MyAcctHandler {
 
     private final StfDirectoryPort directory;
+    private final AuditTrail audit;
 
     public MyAcctHandler(StfDirectoryPort directory) {
+        this(directory, AuditTrail.NONE);
+    }
+
+    public MyAcctHandler(StfDirectoryPort directory, AuditTrail audit) {
         this.directory = directory;
+        this.audit = audit;
     }
 
     public Mono<StfAcct> profile(StfCaller caller) {
@@ -52,6 +59,7 @@ public class MyAcctHandler {
     }
 
     public Mono<Void> signOutEverywhere(StfCaller caller) {
-        return directory.signOutEverywhere(caller.id());
+        return directory.signOutEverywhere(caller.id())
+                .then(audit.record("staff.signed-out-everywhere", null, caller.id()));
     }
 }

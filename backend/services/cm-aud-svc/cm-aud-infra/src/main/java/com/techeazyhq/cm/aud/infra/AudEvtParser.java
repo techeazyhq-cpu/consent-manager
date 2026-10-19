@@ -19,6 +19,7 @@
 package com.techeazyhq.cm.aud.infra;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.techeazyhq.cm.audkit.PlatformActionEvt;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.techeazyhq.cm.aud.dom.AudChain;
@@ -42,6 +43,7 @@ public class AudEvtParser {
         this.objectMapper = objectMapper;
     }
 
+    /** @param evtType the event's type, or null for a platform action, whose type is its {@code action} */
     public AudDraft parse(String evtType, String json) throws IOException {
         JsonNode node = objectMapper.readTree(json);
         if (!(node instanceof ObjectNode event)) {
@@ -51,6 +53,13 @@ public class AudEvtParser {
         if (token != null) {
             event.remove("cnsTkn");
             event.put("cnsTknSha256", AudChain.sha256Hex(token));
+        }
+        if (evtType == null) {
+            // a platform action (ADR-040): its type is the action it names
+            evtType = text(event, "action");
+            if (!PlatformActionEvt.isAction(evtType)) {
+                throw new IOException("A platform action has no action name");
+            }
         }
         String evtId = text(event, "evtId");
         String occurredAt = text(event, "occurredAt");

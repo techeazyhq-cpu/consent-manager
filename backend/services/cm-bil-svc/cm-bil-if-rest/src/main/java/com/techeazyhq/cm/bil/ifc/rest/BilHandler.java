@@ -77,14 +77,17 @@ public class BilHandler {
         String dfId = request.pathVariable("id");
         return request.bodyToMono(AssignSubPlnReqDto.class)
                 .flatMap(body -> assignSubPlnHandler.handle(new AssignSubPlnCmd(dfId, body.subPlnName())))
-                .flatMap(dfSub -> ServerResponse.ok().bodyValue(dfSub));
+                // the subscription as it now stands; the aggregate itself has no JSON form
+                .flatMap(dfSub -> getDfSubStatusHandler.handle(dfId))
+                .flatMap(status -> ServerResponse.ok().bodyValue(status));
     }
 
     public Mono<ServerResponse> setSubSts(ServerRequest request) {
         String dfId = request.pathVariable("id");
         return request.bodyToMono(SetSubStsReqDto.class)
                 .flatMap(body -> setDfSubStsHandler.handle(new SetDfSubStsCmd(dfId, body.active())))
-                .flatMap(dfSub -> ServerResponse.ok().bodyValue(dfSub));
+                .flatMap(dfSub -> getDfSubStatusHandler.handle(dfId))
+                .flatMap(status -> ServerResponse.ok().bodyValue(status));
     }
 
     public Mono<ServerResponse> usage(ServerRequest request) {

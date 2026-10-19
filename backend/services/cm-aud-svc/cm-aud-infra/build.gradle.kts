@@ -23,6 +23,7 @@ plugins {
 dependencies {
     api(project(":cm-aud-app"))
     implementation(project(":cm-evt-kit"))
+    implementation(project(":cm-aud-kit"))
     implementation(project(":cm-res-kit"))
     implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:3.3.3")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc:3.5.16")

@@ -22,11 +22,22 @@ package com.techeazyhq.cm.aud.dom;
  * What to look up in the ledger; null fields do not filter. Whoever asks, the interface layer fixes {@code dfId} or
  * {@code dpId} to the caller's own when the caller is a fiduciary or a principal.
  */
-public record AudQuery(String cnsReqId, String cnsArtId, String dfId, String dpId, int limit) {
+public record AudQuery(String cnsReqId, String cnsArtId, String dfId, String dpId, int limit, Category category,
+                       Long beforeSeq) {
+
+    /** The consent lifecycle's events, or what people did on the platform (ADR-040), or both. */
+    public enum Category {
+        ALL, CONSENT, PLATFORM
+    }
 
     public static final int MAX_LIMIT = 500;
 
     public AudQuery {
         limit = limit <= 0 ? 100 : Math.min(limit, MAX_LIMIT);
+        category = category == null ? Category.ALL : category;
+    }
+
+    public AudQuery(String cnsReqId, String cnsArtId, String dfId, String dpId, int limit) {
+        this(cnsReqId, cnsArtId, dfId, dpId, limit, Category.ALL, null);
     }
 }

@@ -216,6 +216,34 @@ export interface BilOverviewRow {
   reqPerSecQta: number;
 }
 
+/** One audit ledger entry as people read it (ADR-040). */
+export interface AudActivityRow {
+  seq: number;
+  evtType: string;
+  occurredAt: string;
+  dfId: string | null;
+  cnsReqId: string | null;
+  entryHash: string;
+  actor: { kind: string; name: string | null };
+  target?: string | null;
+  details: Record<string, string>;
+  erased: boolean;
+}
+
+/** The ledger's own check of itself: every hash recomputed, every checkpoint's timestamp checked. */
+export interface AudVerifyResult {
+  chain: {
+    intact: boolean;
+    entriesChecked: number;
+    payloadsErased: number;
+    firstBrokenSeq: number | null;
+    reason: string | null;
+    headSeq: number;
+    headHash: string;
+  };
+  checkpoints: { intact: boolean; checkpoints: number; anchored: number; firstBrokenId: number | null; reason: string | null };
+}
+
 export type PlnChgReqSts = "PENDING" | "APPROVED" | "DECLINED" | "WITHDRAWN";
 
 /** A fiduciary asking for another plan, and the platform's decision (ADR-039). */

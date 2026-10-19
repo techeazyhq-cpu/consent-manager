@@ -17,7 +17,7 @@
  */
 
 /** CM Admin's pages, addressed by the URL hash so each can be bookmarked, reloaded and reached with Back. */
-export const TENANT_TABS = ["overview", "subscription", "consents", "team"] as const;
+export const TENANT_TABS = ["overview", "subscription", "consents", "team", "audit"] as const;
 export type TenantTab = (typeof TENANT_TABS)[number];
 
 export const BILLING_TABS = ["overview", "requests", "plans"] as const;
@@ -29,6 +29,7 @@ export type Route =
   | { page: "staff" }
   | { page: "security" }
   | { page: "billing"; tab: BillingTab }
+  | { page: "audit" }
   | { page: "tenant"; dfId: string; tab: TenantTab };
 
 /** Anything unrecognised lands on the dashboard, the default page. */
@@ -38,6 +39,7 @@ export function parseRoute(hash: string): Route {
     case "onboard":
     case "staff":
     case "security":
+    case "audit":
       return { page: parts[0] };
     case "billing":
       return {

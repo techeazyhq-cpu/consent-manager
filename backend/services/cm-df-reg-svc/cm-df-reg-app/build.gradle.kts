@@ -23,6 +23,7 @@ plugins {
 dependencies {
     api(project(":cm-df-reg-dom"))
     api(project(":cm-web-kit"))
+    api(project(":cm-aud-kit"))
     compileOnly("org.springframework:spring-tx:6.2.19")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))

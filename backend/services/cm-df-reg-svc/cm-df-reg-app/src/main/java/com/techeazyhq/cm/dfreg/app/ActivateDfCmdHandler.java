@@ -20,6 +20,7 @@ package com.techeazyhq.cm.dfreg.app;
 
 import org.springframework.transaction.annotation.Transactional;
 
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.dfreg.dom.Df;
 import com.techeazyhq.cm.dfreg.dom.DfApiClientProvisionPort;
 import com.techeazyhq.cm.dfreg.dom.DfMemberDirectoryPort;
@@ -42,12 +43,19 @@ public class ActivateDfCmdHandler implements CmdHandler<ActivateDfCmd, Df> {
     private final DfRepoPort dfRepo;
     private final DfApiClientProvisionPort provisionPort;
     private final DfMemberDirectoryPort members;
+    private final AuditTrail audit;
 
     public ActivateDfCmdHandler(DfRepoPort dfRepo, DfApiClientProvisionPort provisionPort,
                                 DfMemberDirectoryPort members) {
+        this(dfRepo, provisionPort, members, AuditTrail.NONE);
+    }
+
+    public ActivateDfCmdHandler(DfRepoPort dfRepo, DfApiClientProvisionPort provisionPort,
+                                DfMemberDirectoryPort members, AuditTrail audit) {
         this.dfRepo = dfRepo;
         this.provisionPort = provisionPort;
         this.members = members;
+        this.audit = audit;
     }
 
     @Override
@@ -66,6 +74,8 @@ public class ActivateDfCmdHandler implements CmdHandler<ActivateDfCmd, Df> {
                         // state. Found via Postgres inspection during Phase 1 verification:
                         // the REST response showed ACTIVE, but the DB row stayed PENDING.
                         .then(Mono.defer(() -> dfRepo.save(df))))
+                .flatMap(active -> audit.record("tenant.activated", active.id(), active.id(),
+                        AuditTrail.details("apiClient", "df-api-" + active.id())).thenReturn(active))
                 .flatMap(active -> inviteFirstOwner(active).thenReturn(active));
     }
 

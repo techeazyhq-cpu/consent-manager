@@ -21,7 +21,7 @@
 set -euo pipefail
 ADMIN=${PULSAR_ADMIN_URL:-http://pulsar:8080}/admin/v2
 TENANT=${TENANT:-cm}
-NAMESPACES=${NAMESPACES:-dfreg cnscmd cnsqry ntf bil}
+NAMESPACES=${NAMESPACES:-dfreg cnscmd cnsqry ntf bil stf}
 
 put() { # PUT, treating 409 (already there) as done
   code=$(curl -s -o /tmp/out -w '%{http_code}' -X PUT -H 'Content-Type: application/json' "$ADMIN/$1" -d "${2:-}")

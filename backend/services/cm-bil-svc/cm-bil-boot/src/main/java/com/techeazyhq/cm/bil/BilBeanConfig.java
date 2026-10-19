@@ -34,7 +34,9 @@ import com.techeazyhq.cm.bil.app.AssignSubPlnCmdHandler;
 import com.techeazyhq.cm.bil.app.BilOverviewQryHandler;
 import com.techeazyhq.cm.bil.app.PlnChgReqHandler;
 import com.techeazyhq.cm.bil.dom.PlnChgReqRepoPort;
+import com.techeazyhq.cm.bil.infra.R2dbcBilOutbox;
 import com.techeazyhq.cm.bil.infra.R2dbcPlnChgReqRepoAdapter;
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.bil.app.GetDfSubStatusQryHandler;
 import com.techeazyhq.cm.bil.app.GetUsgQryHandler;
 import com.techeazyhq.cm.bil.app.ListSubPlnsQryHandler;
@@ -63,14 +65,26 @@ public class BilBeanConfig {
         return new R2dbcSubPlnRepoAdapter(db);
     }
 
+    /** What billing does, through its outbox to the audit ledger (ADR-040). */
+    @Bean
+    public R2dbcBilOutbox bilOutbox(DatabaseClient db, ObjectMapper objectMapper, ReactivePulsarClient reactivePulsarClient) {
+        return new R2dbcBilOutbox(db, objectMapper, reactivePulsarClient);
+    }
+
+    @Bean
+    public AuditTrail auditTrail(R2dbcBilOutbox outbox) {
+        return AuditTrail.to("bil", outbox::enqueue);
+    }
+
     @Bean
     public PlnChgReqRepoPort plnChgReqRepoPort(DatabaseClient db) {
         return new R2dbcPlnChgReqRepoAdapter(db);
     }
 
     @Bean
-    public PlnChgReqHandler plnChgReqHandler(PlnChgReqRepoPort reqs, DfSubRepoPort subs, SubPlnRepoPort plans) {
-        return new PlnChgReqHandler(reqs, subs, plans);
+    public PlnChgReqHandler plnChgReqHandler(PlnChgReqRepoPort reqs, DfSubRepoPort subs, SubPlnRepoPort plans,
+                                             AuditTrail audit) {
+        return new PlnChgReqHandler(reqs, subs, plans, audit);
     }
 
     @Bean
@@ -84,18 +98,20 @@ public class BilBeanConfig {
     }
 
     @Bean
-    public OnDfActivatedEvtHandler onDfActivatedEvtHandler(DfSubRepoPort dfSubRepo, SubPlnRepoPort subPlnRepo) {
-        return new OnDfActivatedEvtHandler(dfSubRepo, subPlnRepo);
+    public OnDfActivatedEvtHandler onDfActivatedEvtHandler(DfSubRepoPort dfSubRepo, SubPlnRepoPort subPlnRepo,
+                                                           AuditTrail audit) {
+        return new OnDfActivatedEvtHandler(dfSubRepo, subPlnRepo, audit);
     }
 
     @Bean
-    public AssignSubPlnCmdHandler assignSubPlnCmdHandler(DfSubRepoPort dfSubRepo, SubPlnRepoPort subPlnRepo) {
-        return new AssignSubPlnCmdHandler(dfSubRepo, subPlnRepo);
+    public AssignSubPlnCmdHandler assignSubPlnCmdHandler(DfSubRepoPort dfSubRepo, SubPlnRepoPort subPlnRepo,
+                                                         AuditTrail audit) {
+        return new AssignSubPlnCmdHandler(dfSubRepo, subPlnRepo, audit);
     }
 
     @Bean
-    public SetDfSubStsCmdHandler setDfSubStsCmdHandler(DfSubRepoPort dfSubRepo) {
-        return new SetDfSubStsCmdHandler(dfSubRepo);
+    public SetDfSubStsCmdHandler setDfSubStsCmdHandler(DfSubRepoPort dfSubRepo, AuditTrail audit) {
+        return new SetDfSubStsCmdHandler(dfSubRepo, audit);
     }
 
     @Bean

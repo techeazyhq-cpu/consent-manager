@@ -18,6 +18,7 @@
 
 package com.techeazyhq.cm.stf.app;
 
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.stf.dom.NewOperator;
 import com.techeazyhq.cm.stf.dom.StfAcct;
 import com.techeazyhq.cm.stf.dom.StfAcctExistsException;
@@ -37,9 +38,15 @@ public class CreateOperatorCmdHandler {
     }
 
     private final StfDirectoryPort directory;
+    private final AuditTrail audit;
 
     public CreateOperatorCmdHandler(StfDirectoryPort directory) {
+        this(directory, AuditTrail.NONE);
+    }
+
+    public CreateOperatorCmdHandler(StfDirectoryPort directory, AuditTrail audit) {
         this.directory = directory;
+        this.audit = audit;
     }
 
     public Mono<StfAcct> handle(Cmd cmd) {
@@ -50,6 +57,8 @@ public class CreateOperatorCmdHandler {
                 .onErrorMap(IllegalArgumentException.class,
                         e -> new DomRuleViolation(400, "invalid-operator", e.getMessage()))
                 .flatMap(directory::createOperator)
+                .flatMap(acct -> audit.record("staff.operator-added", null, acct.id(),
+                        AuditTrail.details("staff", acct.email())).thenReturn(acct))
                 .onErrorMap(StfAcctExistsException.class,
                         e -> new DomRuleViolation(409, "account-exists", e.getMessage()));
     }

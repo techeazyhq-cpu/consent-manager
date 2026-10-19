@@ -24,6 +24,8 @@ spring:
     name: cm-stf-svc
 
 cm:
+  pulsar:
+    service-url: pulsar://localhost:6650
   keycloak:
     base-url: http://localhost:8080
     realm: cm-staff

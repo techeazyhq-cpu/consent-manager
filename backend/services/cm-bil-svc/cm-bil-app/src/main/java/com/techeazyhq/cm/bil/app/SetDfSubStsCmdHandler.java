@@ -20,6 +20,7 @@ package com.techeazyhq.cm.bil.app;
 
 import org.springframework.transaction.annotation.Transactional;
 
+import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.bil.dom.DfSub;
 import com.techeazyhq.cm.bil.dom.DfSubRepoPort;
 import com.techeazyhq.cm.webkit.DomRuleViolation;
@@ -30,9 +31,15 @@ import reactor.core.publisher.Mono;
 public class SetDfSubStsCmdHandler {
 
     private final DfSubRepoPort dfSubRepo;
+    private final AuditTrail audit;
 
     public SetDfSubStsCmdHandler(DfSubRepoPort dfSubRepo) {
+        this(dfSubRepo, AuditTrail.NONE);
+    }
+
+    public SetDfSubStsCmdHandler(DfSubRepoPort dfSubRepo, AuditTrail audit) {
         this.dfSubRepo = dfSubRepo;
+        this.audit = audit;
     }
 
     @Transactional
@@ -45,7 +52,9 @@ public class SetDfSubStsCmdHandler {
                     } else {
                         dfSub.suspend();
                     }
-                    return dfSubRepo.save(dfSub);
+                    return dfSubRepo.save(dfSub)
+                            .flatMap(saved -> audit.record(cmd.active() ? "subscription.reactivated" : "subscription.suspended",
+                                    cmd.dfId(), cmd.dfId()).thenReturn(saved));
                 });
     }
 }

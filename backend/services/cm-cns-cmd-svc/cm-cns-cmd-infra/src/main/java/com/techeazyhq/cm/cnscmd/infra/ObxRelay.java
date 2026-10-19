@@ -46,7 +46,9 @@ public class ObxRelay {
             "CnsRevokedEvt", "cns-revoked",
             "CnsDpLinkedEvt", "cns-dp-linked",
             "CnsExpiredEvt", "cns-expired",
-            "CnsNotificationFailedEvt", "cns-notification-failed");
+            "CnsNotificationFailedEvt", "cns-notification-failed",
+            // what people did, for the audit ledger (ADR-040)
+            "PlatformActionEvt", "platform-action");
 
     private final DatabaseClient db;
     private final PulsarCnsEvtProducer producer;

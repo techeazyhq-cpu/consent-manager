@@ -20,8 +20,10 @@ package com.techeazyhq.cm.bil;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(scanBasePackages = "com.techeazyhq.cm.bil")
+@EnableScheduling
 public class BilSvcApplication {
 
     public static void main(String[] args) {
