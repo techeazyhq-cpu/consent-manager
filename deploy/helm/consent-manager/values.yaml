@@ -1,0 +1,168 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# Install as release "cm". Services keep the names they have in docker-compose (cm-gw, cm-df-reg-svc, ...), so the
+# services' own "docker" Spring profile finds each other unchanged; only datastores and Keycloak are set here.
+# A sandbox (ADR-037) is the same chart in its own namespace with sandbox.enabled: true and its own datastores.
+
+image:
+  # <registry>/<component>:<tag>, e.g. ghcr.io/techeazyhq-cpu/cm-gw:0.1.0. Pin by digest in production.
+  registry: ghcr.io/techeazyhq-cpu
+  tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# Never stored in the chart. A Secret with these keys, synced from the cloud's secret store by External Secrets
+# (externalSecrets below) or created another way: DB_PASSWORD, MIGRATION_DB_PASSWORD, DFREG_SECRETS_KEY,
+# CNS_TKN_JWKS, KEYCLOAK_ADMIN_PASSWORD, REDIS_PASSWORD (optional), NTF_SVC_API_KEY, NTF_SVC_SIGNING_SECRET.
+secrets:
+  existingSecret: cm-secrets
+
+externalSecrets:
+  enabled: false
+  # A ClusterSecretStore pointing at AWS Secrets Manager, Azure Key Vault or GCP Secret Manager (see values-<cloud>).
+  storeRef: {kind: ClusterSecretStore, name: cm-secret-store}
+  refreshInterval: 1h
+  # remote key per Secret key; values-<cloud>.yaml fills these in with Terraform's names
+  data: {}
+
+config:
+  database:
+    host: postgres
+    port: 5432
+    name: consent_manager
+    user: cm
+    # appended to every JDBC and R2DBC URL; verify-full with the cloud's CA in production
+    jdbcParams: "sslmode=require"
+    r2dbcParams: "sslMode=require"
+  redis:
+    host: redis
+    port: 6379
+    ssl: false
+    passwordFromSecret: false
+  pulsar:
+    url: pulsar://pulsar-broker:6650
+  keycloak:
+    # what browsers and tokens use (the issuer); services fetch keys from internalUrl
+    publicUrl: https://id.example.com
+    internalUrl: http://keycloak:8080
+    adminUser: admin
+  notificationService:
+    # cm-ntf-svc delivers through TechEazyHQ's notification-service; "local" (Mailpit) is for development only
+    provider: notification-service
+    baseUrl: https://notifications.example.com
+  # browser origins allowed to call the gateway
+  corsOrigins: https://dp.example.com,https://df.example.com,https://admin.example.com
+  logFormat: ecs
+  extraEnv: {}
+
+# A sandbox deployment (ADR-037): its own realms (prefix), Pulsar tenant and test contacts only.
+sandbox:
+  enabled: false
+  realmPrefix: sbx-
+  pulsarTenant: cm-sbx
+  # whose fiduciary realm the sandbox believes for taking sandbox keys (ADR-038)
+  productionIssuerBase: https://id.example.com/realms/
+
+services:
+  cm-gw:
+    port: 9000
+    replicas: 2
+    public: true
+    redis: true
+    resources: {requests: {cpu: 500m, memory: 640Mi}, limits: {memory: 768Mi}}
+    autoscaling: {enabled: true, minReplicas: 2, maxReplicas: 10, targetCPUUtilizationPercentage: 70}
+  cm-df-reg-svc:
+    port: 8081
+    replicas: 2
+    schema: df_reg
+    keycloakAdmin: true
+    resources: {requests: {cpu: 250m, memory: 512Mi}, limits: {memory: 640Mi}}
+    autoscaling: {enabled: false}
+  cm-cns-cmd-svc:
+    port: 8082
+    replicas: 2
+    schema: cns_cmd
+    consentTokenKeys: true
+    resources: {requests: {cpu: 500m, memory: 640Mi}, limits: {memory: 768Mi}}
+    autoscaling: {enabled: true, minReplicas: 2, maxReplicas: 8, targetCPUUtilizationPercentage: 70}
+  cm-cns-qry-svc:
+    port: 8083
+    replicas: 2
+    schema: cns_qry
+    resources: {requests: {cpu: 250m, memory: 512Mi}, limits: {memory: 640Mi}}
+    autoscaling: {enabled: true, minReplicas: 2, maxReplicas: 8, targetCPUUtilizationPercentage: 70}
+  cm-ntf-svc:
+    port: 8084
+    replicas: 2
+    schema: ntf
+    resources: {requests: {cpu: 250m, memory: 512Mi}, limits: {memory: 640Mi}}
+    autoscaling: {enabled: false}
+  cm-bil-svc:
+    port: 8085
+    replicas: 2
+    schema: bil
+    redis: true
+    resources: {requests: {cpu: 250m, memory: 512Mi}, limits: {memory: 640Mi}}
+    autoscaling: {enabled: false}
+  cm-aud-svc:
+    port: 8086
+    replicas: 2
+    schema: aud
+    resources: {requests: {cpu: 250m, memory: 512Mi}, limits: {memory: 640Mi}}
+    autoscaling: {enabled: false}
+  cm-stf-svc:
+    port: 8087
+    replicas: 2
+    keycloakAdmin: true
+    resources: {requests: {cpu: 100m, memory: 384Mi}, limits: {memory: 512Mi}}
+    autoscaling: {enabled: false}
+
+# The web apps, built per environment (infra/docker/Dockerfile.ui) and served by unprivileged nginx on 8080.
+webApps:
+  cm-dp-portal: {host: dp.example.com, replicas: 2}
+  cm-df-app: {host: df.example.com, replicas: 2}
+  cm-cm-admin: {host: admin.example.com, replicas: 2}
+
+opa:
+  image: openpolicyagent/opa:1.20.1
+  replicas: 2
+  resources: {requests: {cpu: 100m, memory: 64Mi}, limits: {memory: 128Mi}}
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  # the gateway's public host
+  apiHost: api.example.com
+  tls:
+    enabled: true
+    # a cert-manager ClusterIssuer, or leave empty and provide the secrets
+    clusterIssuer: letsencrypt
+
+# Creates the Keycloak database next to consent_manager where the cloud creates only one (AWS RDS). A pre-install hook.
+databaseInit:
+  enabled: true
+  image: postgres:16-alpine
+  extraDatabases: [keycloak]
+
+networkPolicy:
+  enabled: true
+  # the ingress controller's namespace label, for traffic into the gateway and the web apps
+  ingressNamespaceLabels: {kubernetes.io/metadata.name: ingress-nginx}
+
+podDisruptionBudget:
+  minAvailable: 1

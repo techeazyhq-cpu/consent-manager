@@ -1,0 +1,57 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+{{- if .Values.databaseInit.enabled }}
+{{- $ctx := dict "root" . "name" "database-init" }}
+{{- $db := .Values.config.database }}
+{{/* Creates the databases the cloud doesn't (Keycloak's, beside consent_manager), once, before install or upgrade. */}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-database-init
+  labels: {{- include "cm.labels" $ctx | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels: {{- include "cm.selectorLabels" $ctx | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext: {{- include "cm.podSecurityContext" (dict "uid" 70) | nindent 8 }}
+      containers:
+        - name: database-init
+          image: {{ .Values.databaseInit.image }}
+          env:
+            - {name: PGHOST, value: {{ $db.host | quote }}}
+            - {name: PGPORT, value: {{ $db.port | quote }}}
+            - {name: PGUSER, value: {{ $db.user | quote }}}
+            - {name: PGDATABASE, value: {{ $db.name | quote }}}
+            - {name: PGSSLMODE, value: require}
+            - name: PGPASSWORD
+              {{- include "cm.secretRef" (dict "root" . "key" "MIGRATION_DB_PASSWORD") | nindent 14 }}
+          command: ["/bin/sh", "-ec"]
+          args:
+            - |
+              {{- range .Values.databaseInit.extraDatabases }}
+              psql -tAc "select 1 from pg_database where datname = '{{ . }}'" | grep -q 1 || psql -c 'create database "{{ . }}"'
+              {{- end }}
+          resources: {requests: {cpu: 50m, memory: 32Mi}, limits: {memory: 64Mi}}
+          securityContext: {{- include "cm.containerSecurityContext" . | nindent 12 }}
+{{- end }}

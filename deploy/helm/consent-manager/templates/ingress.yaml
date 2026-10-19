@@ -1,0 +1,56 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+{{- if .Values.ingress.enabled }}
+{{- $ctx := dict "root" . "name" "ingress" }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}
+  labels: {{- include "cm.labels" $ctx | nindent 4 }}
+  annotations:
+    {{- with .Values.ingress.tls.clusterIssuer }}
+    cert-manager.io/cluster-issuer: {{ . }}
+    {{- end }}
+    {{- with .Values.ingress.annotations }}{{ toYaml . | nindent 4 }}{{ end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts: [{{ .Values.ingress.apiHost | quote }}]
+      secretName: {{ .Release.Name }}-api-tls
+    {{- range $name, $w := .Values.webApps }}
+    - hosts: [{{ $w.host | quote }}]
+      secretName: {{ $name }}-tls
+    {{- end }}
+  {{- end }}
+  rules:
+    # only the gateway is public: /internal and the services stay inside the cluster
+    - host: {{ .Values.ingress.apiHost | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend: {service: {name: cm-gw, port: {name: http}}}
+    {{- range $name, $w := .Values.webApps }}
+    - host: {{ $w.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: {service: {name: {{ $name }}, port: {name: http}}}
+    {{- end }}
+{{- end }}
