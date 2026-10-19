@@ -34,9 +34,7 @@ import com.techeazyhq.cm.bil.app.AssignSubPlnCmdHandler;
 import com.techeazyhq.cm.bil.app.BilOverviewQryHandler;
 import com.techeazyhq.cm.bil.app.PlnChgReqHandler;
 import com.techeazyhq.cm.bil.dom.PlnChgReqRepoPort;
-import com.techeazyhq.cm.bil.infra.R2dbcBilOutbox;
 import com.techeazyhq.cm.bil.infra.R2dbcPlnChgReqRepoAdapter;
-import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.bil.app.GetDfSubStatusQryHandler;
 import com.techeazyhq.cm.bil.app.GetUsgQryHandler;
 import com.techeazyhq.cm.bil.app.ListSubPlnsQryHandler;
@@ -85,6 +83,21 @@ public class BilBeanConfig {
     public PlnChgReqHandler plnChgReqHandler(PlnChgReqRepoPort reqs, DfSubRepoPort subs, SubPlnRepoPort plans,
                                              AuditTrail audit) {
         return new PlnChgReqHandler(reqs, subs, plans, audit);
+    }
+
+    @Bean
+    public BilOverviewQryHandler bilOverviewQryHandler(DfSubRepoPort subs, SubPlnRepoPort plans, UsgPort usage) {
+        return new BilOverviewQryHandler(subs, plans, usage);
+    }
+
+    @Bean
+    public PlnChgReqRepoPort plnChgReqRepoPort(DatabaseClient db) {
+        return new R2dbcPlnChgReqRepoAdapter(db);
+    }
+
+    @Bean
+    public PlnChgReqHandler plnChgReqHandler(PlnChgReqRepoPort reqs, DfSubRepoPort subs, SubPlnRepoPort plans) {
+        return new PlnChgReqHandler(reqs, subs, plans);
     }
 
     @Bean

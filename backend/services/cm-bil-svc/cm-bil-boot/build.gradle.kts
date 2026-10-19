@@ -28,7 +28,6 @@ dependencies {
     implementation(project(":cm-bil-if-rest"))
     implementation(project(":cm-web-kit"))
     implementation(project(":cm-sec-kit"))
-    implementation(project(":cm-aud-kit"))
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
