@@ -47,6 +47,9 @@ cm:
   dfreg:
     obx-relay:
       fixed-delay-ms: 1000
+    # Seals API key signing secrets (ADR-041): base64 of 32 bytes. This value is for local development only;
+    # production sets CM_DFREG_SECRETS_KEY from AWS KMS / Azure Key Vault / GCP Secret Manager.
+    secrets-key: ${CM_DFREG_SECRETS_KEY:bG9jYWwtZGV2LW9ubHktc2VjcmV0cy1rZXktMzJieXQ=}
 
 # Circuit breakers on calls to other services (ADR-016). One breaker per dependency: it opens when at least half of
 # the last 20 calls failed because the dependency is unhealthy (cm-res-kit's RemoteFailures: unreachable, timed out,

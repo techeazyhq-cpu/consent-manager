@@ -55,4 +55,5 @@ cm:
   pdp:
     base-url: http://sbx-opa:8181 # verifies consent tokens against the sandbox's own keys
   service-urls:
+    df-reg: http://cm-sbx-df-reg-svc:8081 # checks API keys and signed requests (ADR-041)
     bil: http://cm-sbx-bil-svc:8085

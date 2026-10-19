@@ -50,6 +50,9 @@ export const usesSandbox = (role: DfRole) => role === "OWNER" || role === "ADMIN
 /** Who reads the organisation's audit (ADR-040): Owners, Administrators and Auditors. */
 export const readsAudit = (role: DfRole) => role === "OWNER" || role === "ADMIN" || role === "AUDITOR";
 
+/** Who manages the organisation's API keys (ADR-041): Owners, Administrators and Developers. */
+export const managesApiKeys = (role: DfRole) => role === "OWNER" || role === "ADMIN" || role === "DEVELOPER";
+
 export const raisesRequests = (role: DfRole) => role === "OWNER" || role === "ADMIN" || role === "CONSENT_MANAGER";
 
 /** The roles {@code role} may give: only an Owner gives ownership. */

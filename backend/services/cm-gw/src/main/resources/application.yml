@@ -69,6 +69,7 @@ cm:
   pdp:
     base-url: http://localhost:8181
   service-urls:
+    df-reg: http://localhost:8081 # checks API keys and signed requests (ADR-041)
     bil: http://localhost:8085
 
 # Circuit breakers on calls to other services (ADR-016). One breaker per dependency: it opens when at least half of

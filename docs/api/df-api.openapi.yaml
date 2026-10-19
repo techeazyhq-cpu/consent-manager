@@ -1,0 +1,724 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+openapi: 3.1.0
+info:
+  title: Consent Manager — Data Fiduciary API
+  version: 1.0.0
+  summary: Ask people for consent, check it before you use their data, and follow what happened.
+  description: |
+    The API a data fiduciary's systems call: raise consent requests one at a time or by the thousand, read where each
+    stands, verify a consent token before using personal data, and read the fiduciary's own billing and audit trail.
+
+    ## Authentication
+
+    Every call except the public keys needs one of:
+
+    - **An API key** in `X-API-Key` (`cmk_…`), issued in the DF Console under *Developers → API keys* (ADR-041).
+    - **An OAuth 2.0 access token** from client credentials (`df-api-<your fiduciary id>`), in `Authorization: Bearer`.
+
+    Never send both.
+
+    ## Signed requests (replay protection)
+
+    Each API key comes with a signing secret (`cms_…`). A signed request carries three more headers:
+
+    | Header | Value |
+    |---|---|
+    | `X-Signature-Timestamp` | The current time in Unix seconds |
+    | `X-Signature-Nonce` | A new random value for **every** request: 16–64 of `A-Z a-z 0-9 _ -` |
+    | `X-Signature` | Lower-case hex HMAC-SHA256 of the text below, keyed by the signing secret's UTF-8 bytes |
+
+    The signed text is these seven lines joined by `\n`, with no trailing newline:
+
+    ```text
+    CM1-HMAC-SHA256
+    {X-Signature-Timestamp}
+    {X-Signature-Nonce}
+    {HTTP method, upper case}
+    {path exactly as sent, without the query}
+    {query string exactly as sent, without '?', or empty}
+    {lower-case hex SHA-256 of the exact body bytes (of no bytes when there is no body)}
+    ```
+
+    - The timestamp must be within **±300 seconds** of the server's clock (`signature-expired` otherwise).
+    - A nonce is accepted **once** per key: the same signed request sent again is refused with **409
+      `request-replayed`**. Retries are signed afresh with a new nonce.
+    - A key can **require** signatures: then every unsigned `POST`, `PUT`, `PATCH` or `DELETE` is refused
+      (`signature-required`). Reads may go unsigned. A request carrying any signature header is always checked.
+    - Multipart uploads are signed like any other body: hash the exact bytes you send.
+
+    ## Errors
+
+    Errors are `application/problem+json` (RFC 9457) with a stable `title`, such as `quota-exceeded` or
+    `request-replayed`.
+
+    ## Environments
+
+    Use the **sandbox** to integrate: the same API, its own keys and data, test contacts only (`*@sandbox.example`,
+    `+44 7700 900000`–`900999`), nothing delivered.
+  contact:
+    name: Consent Manager
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+servers:
+  - url: http://localhost:9000
+    description: Local
+  - url: http://localhost:9100
+    description: Local sandbox
+security:
+  - apiKey: []
+  - oauth2: []
+tags:
+  - name: Consent requests
+    description: Ask people for consent and follow each request.
+  - name: Batches
+    description: One request for many people, from JSON, CSV or Excel (up to 10,000).
+  - name: Consent tokens
+    description: Verify consent before using personal data.
+  - name: Account
+    description: The fiduciary's own subscription and audit trail.
+
+paths:
+  /api/cns-cmd/cns-reqs:
+    post:
+      tags: [Consent requests]
+      operationId: raiseConsentRequest
+      summary: Ask one person for consent
+      description: The person is notified and decides in their portal. Counts against the monthly allowance.
+      parameters:
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CnsReqCreate' }
+            example:
+              extDpRefTyp: EMAIL
+              extDpRefVal: asha@sandbox.example
+              prpsCode: ORDER_UPDATES
+              dCatCodes: [EMAIL]
+              ntcTitle: Order updates by email
+              ntcText: We email you when your order ships. You can withdraw at any time.
+      responses:
+        '201':
+          description: Raised; the person is being notified.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CnsReq' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '402': { $ref: '#/components/responses/SubscriptionInactive' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Replayed' }
+        '429': { $ref: '#/components/responses/QuotaExceeded' }
+
+  /api/cns-qry/cns-arts:
+    get:
+      tags: [Consent requests]
+      operationId: listConsentRequests
+      summary: Your requests and consents
+      description: Every request the fiduciary raised, newest first, with where it stands.
+      responses:
+        '200':
+          description: The requests.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CnsArtRdMdl' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/cns-qry/cns-arts/{requestId}:
+    get:
+      tags: [Consent requests]
+      operationId: getConsentRequest
+      summary: One request and, once given, its consent
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: The request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CnsArtRdMdl' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/cns-qry/cns-arts/{requestId}/history:
+    get:
+      tags: [Consent requests]
+      operationId: getConsentRequestHistory
+      summary: Each change of a request's status, oldest first
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: The history.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CnsHst' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/cns-cmd/cns-req-batches:
+    post:
+      tags: [Batches]
+      operationId: sendToMany
+      summary: One request for everyone on a list
+      description: |
+        The list is checked first: each row is a valid contact, an invalid one (with why) or a repeat. With
+        `dryRun=true` nothing is stored, reserved or sent. Otherwise the batch's whole allowance is reserved at once
+        (or the batch is refused with 429) and the requests are sent in the background.
+      parameters:
+        - name: dryRun
+          in: query
+          description: Check the list and report, sending nothing.
+          schema: { type: boolean, default: false }
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BatchCreate' }
+            example:
+              prpsCode: ORDER_UPDATES
+              dCatCodes: [EMAIL]
+              ntcTitle: Order updates by email
+              ntcText: We email you when your order ships. You can withdraw at any time.
+              recipients:
+                - { email: asha@sandbox.example, ref: CUST-001 }
+                - { phone: '+447700900123', ref: CUST-002 }
+          multipart/form-data:
+            schema:
+              type: object
+              required: [prpsCode, dCatCodes, ntcTitle, ntcText, file]
+              properties:
+                prpsCode: { type: string, example: ORDER_UPDATES }
+                dCatCodes: { type: string, description: Comma-separated, example: 'EMAIL,NAME' }
+                ntcTitle: { type: string }
+                ntcText: { type: string }
+                file:
+                  type: string
+                  format: binary
+                  description: CSV or Excel (.xlsx), up to 5 MB and 10,000 rows. Columns found by header name (email, mobile, contact, reference).
+      responses:
+        '200':
+          description: 'Dry run: what would happen.'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BatchSubmitted' }
+        '202':
+          description: Stored; sending in the background.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BatchSubmitted' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Replayed' }
+        '413': { $ref: '#/components/responses/TooLarge' }
+        '415':
+          description: Not JSON, CSV or Excel.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429': { $ref: '#/components/responses/QuotaExceeded' }
+    get:
+      tags: [Batches]
+      operationId: listBatches
+      summary: Your lists, newest first
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        '200':
+          description: The batches.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Batch' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/cns-cmd/cns-req-batches/{batchId}:
+    get:
+      tags: [Batches]
+      operationId: getBatch
+      summary: One list's progress
+      parameters:
+        - $ref: '#/components/parameters/BatchId'
+      responses:
+        '200':
+          description: The batch.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Batch' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/cns-cmd/cns-req-batches/{batchId}/rows:
+    get:
+      tags: [Batches]
+      operationId: getBatchRows
+      summary: One list's rows, with each outcome
+      parameters:
+        - $ref: '#/components/parameters/BatchId'
+        - name: outcome
+          in: query
+          schema: { $ref: '#/components/schemas/BatchOutcome' }
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 500 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses:
+        '200':
+          description: The rows.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BatchRow' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/cns-cmd/cns-req-batches/{batchId}/report.csv:
+    get:
+      tags: [Batches]
+      operationId: getBatchReport
+      summary: Every row with its outcome, as CSV
+      parameters:
+        - $ref: '#/components/parameters/BatchId'
+      responses:
+        '200':
+          description: The report. Cells starting with = + - @ are prefixed so spreadsheets don't run them.
+          content:
+            text/csv:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/cns-qry/cns-arts/{cnsArtId}/verify:
+    get:
+      tags: [Consent tokens]
+      operationId: verifyConsent
+      summary: Check a consent before using the person's data
+      description: |
+        The gateway checks the consent token's signature, that it names your fiduciary and the purpose, and that the
+        consent is still in force right now, so a withdrawal takes effect at once.
+      parameters:
+        - name: cnsArtId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: purpose
+          in: query
+          required: true
+          schema: { type: string, example: ORDER_UPDATES }
+        - name: X-Cns-Tkn
+          in: header
+          required: true
+          description: The consent token.
+          schema: { type: string }
+      responses:
+        '200':
+          description: Allowed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result: { type: string, const: ALLOW }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: 'Not allowed: no consent, withdrawn, expired, another purpose, or another fiduciary''s token.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /api/cns-cmd/cns-arts/{cnsArtId}/token:
+    post:
+      tags: [Consent tokens]
+      operationId: refreshConsentToken
+      summary: A fresh short-lived consent token
+      description: Consent tokens live minutes, not months (ADR-027). Refresh before use; a withdrawn consent gives none.
+      parameters:
+        - name: cnsArtId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: A token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cnsTkn: { type: string, description: A signed JWT (RS256) }
+                  exp: { type: string, format: date-time }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/cns-cmd/.well-known/jwks.json:
+    get:
+      tags: [Consent tokens]
+      operationId: getConsentTokenKeys
+      summary: The keys consent tokens are signed with
+      description: To verify consent tokens yourself. The sandbox's keys differ from production's.
+      security: []
+      responses:
+        '200':
+          description: A JSON Web Key Set.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  keys:
+                    type: array
+                    items: { type: object, additionalProperties: true }
+        '503':
+          description: The keys can't be read right now; keep using the ones you cached.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /api/bil/me/subscription:
+    get:
+      tags: [Account]
+      operationId: getSubscription
+      summary: Your plan and this month's usage
+      responses:
+        '200':
+          description: The subscription.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Subscription' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/bil/sub-plns:
+    get:
+      tags: [Account]
+      operationId: listPlans
+      summary: The plans
+      responses:
+        '200':
+          description: The plans.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Plan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/aud/activity:
+    get:
+      tags: [Account]
+      operationId: getAuditActivity
+      summary: Your audit trail, newest first
+      description: Who changed what in your account, and every consent request and decision, from the tamper-evident ledger.
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string, enum: [ALL, PLATFORM, CONSENT], default: ALL }
+        - name: before
+          in: query
+          description: Entries before this ledger position, for the next page.
+          schema: { type: integer, format: int64 }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 500 } }
+      responses:
+        '200':
+          description: The entries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AuditEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: An API key (`cmk_…`). Sign requests too; see *Signed requests*.
+    oauth2:
+      type: oauth2
+      description: Client credentials for the fiduciary's API client `df-api-<fiduciary id>`.
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:8080/realms/cm-df/protocol/openid-connect/token
+          scopes: {}
+
+  parameters:
+    SignatureTimestamp:
+      name: X-Signature-Timestamp
+      in: header
+      description: Unix seconds; within ±300 s of the server's clock. Required with a key that requires signing.
+      schema: { type: string, pattern: '^[0-9]{1,12}$', example: '1767225600' }
+    SignatureNonce:
+      name: X-Signature-Nonce
+      in: header
+      description: New for every request; accepted once per key.
+      schema: { type: string, pattern: '^[A-Za-z0-9_-]{16,64}$', example: 3f9c2a7be1d84c0a9b6e2f1d7c5a8e40 }
+    Signature:
+      name: X-Signature
+      in: header
+      description: Lower-case hex HMAC-SHA256 of the CM1-HMAC-SHA256 text, keyed by the signing secret.
+      schema: { type: string, pattern: '^[0-9a-f]{64}$' }
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    BatchId:
+      name: batchId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    BadRequest:
+      description: The request isn't valid; `detail` says what to fix.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: |
+        No valid credentials, or a bad signature: `api-key-invalid`, `signature-required`, `signature-invalid`,
+        `signature-expired`, or an invalid bearer token.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: 'urn:cm:problem:signature-expired', title: signature-expired, status: 401, detail: X-Signature-Timestamp is more than 5 minutes from the server's clock }
+    SubscriptionInactive:
+      description: The subscription is suspended (`subscription-inactive`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: Not found, or not yours.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Replayed:
+      description: This signed request was already used (`request-replayed`). Sign the retry with a new nonce.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: 'urn:cm:problem:request-replayed', title: request-replayed, status: 409, detail: 'This nonce was already used: sign every request, retries too, with a new one' }
+    Conflict:
+      description: The state doesn't allow it, such as a withdrawn consent.
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    TooLarge:
+      description: The body is too large (`payload-too-large`).
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    QuotaExceeded:
+      description: |
+        The monthly allowance is used up (`quota-exceeded`), or more than the per-second rate. A batch that doesn't fit
+        is refused whole; nothing is sent.
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Problem:
+      type: object
+      description: RFC 9457 problem details.
+      properties:
+        type: { type: string, example: 'urn:cm:problem:quota-exceeded' }
+        title: { type: string, example: quota-exceeded }
+        status: { type: integer, example: 429 }
+        detail: { type: string }
+
+    ContactType:
+      type: string
+      enum: [EMAIL, PHONE]
+
+    CnsReqCreate:
+      type: object
+      required: [prpsCode, dCatCodes, ntcTitle, ntcText]
+      description: Name the person either by `dpId` (already linked) or by `extDpRefTyp` + `extDpRefVal`.
+      properties:
+        dpId: { type: string, description: A linked principal's id. }
+        extDpRefTyp: { $ref: '#/components/schemas/ContactType' }
+        extDpRefVal: { type: string, description: 'An email address, or a mobile number in E.164 (+ and country code).', example: asha@sandbox.example }
+        prpsCode: { type: string, description: 'The purpose: capitals, digits and underscores.', example: ORDER_UPDATES }
+        dCatCodes:
+          type: array
+          items: { type: string }
+          example: [EMAIL]
+        ntcTitle: { type: string, maxLength: 255 }
+        ntcText: { type: string, description: "What you'll do with the data, for how long, and that they can withdraw." }
+
+    CnsReq:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        dfId: { type: string, format: uuid }
+        sts: { type: string, example: PENDING }
+        prpsCode: { type: string }
+
+    LifecycleStatus:
+      type: string
+      enum: [PENDING, NOTIFICATION_FAILED, ISSUED, DENIED, REVOKED, EXPIRED]
+
+    CnsArtRdMdl:
+      type: object
+      properties:
+        cnsReqId: { type: string, format: uuid }
+        cnsArtId: { type: [string, 'null'], format: uuid, description: Set once consent is given. }
+        dfId: { type: string, format: uuid }
+        dpId: { type: [string, 'null'] }
+        prpsCode: { type: string }
+        dCatCodes: { type: array, items: { type: string } }
+        lcySts: { $ref: '#/components/schemas/LifecycleStatus' }
+        validFrom: { type: [string, 'null'], format: date-time }
+        validUntil: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        ntcTitle: { type: [string, 'null'] }
+        ntcText: { type: [string, 'null'] }
+
+    CnsHst:
+      type: object
+      properties:
+        cnsReqId: { type: string, format: uuid }
+        fromSts: { anyOf: [{ $ref: '#/components/schemas/LifecycleStatus' }, { type: 'null' }] }
+        toSts: { $ref: '#/components/schemas/LifecycleStatus' }
+        occurredAt: { type: string, format: date-time }
+        evtId: { type: string, format: uuid }
+
+    BatchRecipient:
+      type: object
+      description: One of `contact` (email or mobile, detected), `email` or `phone`; `ref` is your own reference.
+      properties:
+        contact: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        ref: { type: string, maxLength: 128 }
+
+    BatchCreate:
+      type: object
+      required: [prpsCode, dCatCodes, ntcTitle, ntcText, recipients]
+      properties:
+        prpsCode: { type: string }
+        dCatCodes: { type: array, items: { type: string } }
+        ntcTitle: { type: string }
+        ntcText: { type: string }
+        recipients:
+          type: array
+          maxItems: 10000
+          items: { $ref: '#/components/schemas/BatchRecipient' }
+
+    BatchOutcome:
+      type: string
+      enum: [PENDING, SENT, INVALID, DUPLICATE, FAILED]
+
+    Batch:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        sts: { type: string, enum: [QUEUED, SENDING, DONE] }
+        source: { type: string, enum: [API, CSV, XLSX] }
+        fileName: { type: [string, 'null'] }
+        prpsCode: { type: string }
+        dCatCodes: { type: array, items: { type: string } }
+        ntcTitle: { type: string }
+        total: { type: integer }
+        valid: { type: integer }
+        invalid: { type: integer }
+        duplicate: { type: integer }
+        sent: { type: integer }
+        failed: { type: integer }
+        pending: { type: integer }
+        createdAt: { type: string, format: date-time }
+        finishedAt: { type: [string, 'null'], format: date-time }
+
+    BatchRow:
+      type: object
+      properties:
+        rowNo: { type: integer }
+        contact: { type: string }
+        ref: { type: [string, 'null'] }
+        outcome: { $ref: '#/components/schemas/BatchOutcome' }
+        cnsReqId: { type: [string, 'null'], format: uuid }
+        problem: { type: [string, 'null'] }
+
+    BatchSubmitted:
+      type: object
+      properties:
+        stored: { type: boolean, description: False for a dry run. }
+        batch: { $ref: '#/components/schemas/Batch' }
+        problems:
+          type: array
+          description: The first rows that won't be sent, and why (all of them are in the batch's rows).
+          items: { $ref: '#/components/schemas/BatchRow' }
+        available: { type: integer, description: "Requests left this month (after this batch, if stored)." }
+
+    Subscription:
+      type: object
+      properties:
+        subPlnId: { type: string }
+        subPlnName: { type: string, example: STANDARD }
+        dfSubSts: { type: string, enum: [ACTIVE, SUSPENDED] }
+        curPeriodUsg: { type: integer, description: API calls this month. }
+        reqPerMonthQta: { type: integer }
+        reqPerSecQta: { type: integer }
+        usagePeriod: { type: string, example: '2026-10' }
+        resetsAt: { type: string, format: date-time }
+
+    Plan:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        reqPerSecQta: { type: integer }
+        reqPerMonthQta: { type: integer }
+
+    AuditEntry:
+      type: object
+      properties:
+        seq: { type: integer, format: int64, description: Position in the hash chain. }
+        evtType: { type: string, example: plan-change.approved }
+        occurredAt: { type: string, format: date-time }
+        dfId: { type: [string, 'null'] }
+        cnsReqId: { type: [string, 'null'] }
+        entryHash: { type: string }
+        actor:
+          type: object
+          properties:
+            kind: { type: string, enum: [STAFF, DF_MEMBER, DF_SYSTEM, DF, DP, SYSTEM] }
+            name: { type: [string, 'null'] }
+        target: { type: [string, 'null'] }
+        details: { type: object, additionalProperties: { type: string } }
+        erased: { type: boolean }

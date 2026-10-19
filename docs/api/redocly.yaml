@@ -1,0 +1,5 @@
+# Lint rules for docs/api (Redocly). The servers are the local stack on purpose: deployments set their own.
+extends:
+  - recommended
+rules:
+  no-server-example.com: off

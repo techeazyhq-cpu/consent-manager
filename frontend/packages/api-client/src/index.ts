@@ -38,7 +38,9 @@ import type {
   DfNameRespDto,
   DfRespDto,
   DfRole,
+  ApiKeyDto,
   AudActivityRow,
+  IssuedApiKeyDto,
   AudVerifyResult,
   BilOverviewRow,
   DfSubStatusResult,
@@ -294,6 +296,24 @@ export const aud = {
   /** The chain and its anchored checkpoints, each with its verdict (administrators). */
   verify: (base: string, token: string) => request<AudVerifyResult>(base, "/api/aud/chain/verify", token),
   head: (base: string, token: string) => request<{ seq: number; entryHash: string }>(base, "/api/aud/chain/head", token),
+};
+
+/** A fiduciary's API keys (ADR-041): issued, listed, revoked, and whether writes must be signed. */
+export const apiKeys = {
+  list: (base: string, token: string) => request<ApiKeyDto[]>(base, "/api/df-reg/me/api-keys", token),
+  /** The key and signing secret are in this answer only. */
+  issue: (base: string, token: string, name: string, signingRequired: boolean) =>
+    request<IssuedApiKeyDto>(base, "/api/df-reg/me/api-keys", token, {
+      method: "POST",
+      body: JSON.stringify({ name, signingRequired }),
+    }),
+  revoke: (base: string, token: string, id: string) =>
+    request<ApiKeyDto>(base, `/api/df-reg/me/api-keys/${encodeURIComponent(id)}`, token, { method: "DELETE" }),
+  setSigningRequired: (base: string, token: string, id: string, required: boolean) =>
+    request<ApiKeyDto>(base, `/api/df-reg/me/api-keys/${encodeURIComponent(id)}/signing-required`, token, {
+      method: "PUT",
+      body: JSON.stringify({ required }),
+    }),
 };
 
 /** A fiduciary's own billing (ADR-039): its subscription, and asking for another plan. */

@@ -54,6 +54,11 @@ public enum DfRole {
         return this == OWNER || this == ADMIN || this == DEVELOPER;
     }
 
+    /** Who issues and revokes the organisation's API keys (ADR-041): Owners, Administrators and Developers. */
+    public boolean managesApiKeys() {
+        return this == OWNER || this == ADMIN || this == DEVELOPER;
+    }
+
     public boolean raisesRequests() {
         return this == OWNER || this == ADMIN || this == CONSENT_MANAGER;
     }

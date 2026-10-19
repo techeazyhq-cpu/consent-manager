@@ -23,13 +23,14 @@ import { AppShell, ErrorBanner, Icons, PageHeader, useHashRoute, type NavItem } 
 import "./console.css";
 import { useConsole } from "./console";
 import { BatchDetail, Batches, SendToMany } from "./Batches";
+import ApiKeys from "./ApiKeys";
 import Audit from "./Audit";
 import Billing from "./Billing";
 import { Account, Dashboard, Organisation, PurposeDetail, Requests } from "./pages";
 import Playground from "./Playground";
 import Raise from "./Raise";
 import Team from "./Team";
-import { ROLE_LABELS, managesTeam, raisesRequests, readsAudit } from "./roles";
+import { ROLE_LABELS, managesApiKeys, managesTeam, raisesRequests, readsAudit } from "./roles";
 import { parseRoute } from "./routes";
 
 interface Props {
@@ -57,6 +58,9 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
     { key: "requests", href: "#/requests", label: "Requests", section: "Consent", icon: Icons.list },
     { key: "batches", href: "#/batches", label: "Lists sent", section: "Consent", icon: Icons.inbox },
     { key: "playground", href: "#/playground", label: "API playground", section: "Developers", icon: Icons.code },
+    ...(managesApiKeys(role)
+      ? [{ key: "api-keys", href: "#/api-keys", label: "API keys", section: "Developers", icon: Icons.shield }]
+      : []),
     { key: "team", href: "#/team", label: "Team", section: "Organisation", icon: Icons.people },
     { key: "organisation", href: "#/organisation", label: "Organisation", section: "Organisation", icon: Icons.building },
     { key: "billing", href: "#/billing", label: "Billing", section: "Organisation", icon: Icons.card },
@@ -98,6 +102,7 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
       ) : null}
       {route.page === "requests" ? <Requests key={statusFilter?.join() ?? "all"} console={c} initial={statusFilter} /> : null}
       {route.page === "playground" ? <Playground console={c} /> : null}
+      {route.page === "api-keys" ? <ApiKeys console={c} /> : null}
       {route.page === "send-to-many" ? <SendToMany console={c} /> : null}
       {route.page === "batches" ? <Batches console={c} /> : null}
       {route.page === "batch" ? <BatchDetail key={route.id} console={c} id={route.id} /> : null}

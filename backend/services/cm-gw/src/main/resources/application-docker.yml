@@ -65,4 +65,5 @@ cm:
   pdp:
     base-url: http://opa:8181
   service-urls:
+    df-reg: http://cm-df-reg-svc:8081 # checks API keys and signed requests (ADR-041)
     bil: http://cm-bil-svc:8085
