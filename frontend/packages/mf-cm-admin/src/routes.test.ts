@@ -46,11 +46,4 @@ describe("CM Admin routes", () => {
     expect(parseRoute("#/billing/plans")).toEqual({ page: "billing", tab: "plans" });
     expect(parseRoute("#/billing/bogus")).toEqual({ page: "billing", tab: "overview" });
   });
-
-  it("opens billing on its overview, or the tab named", () => {
-    expect(parseRoute(billingHref())).toEqual({ page: "billing", tab: "overview" });
-    expect(parseRoute(billingHref("requests"))).toEqual({ page: "billing", tab: "requests" });
-    expect(parseRoute("#/billing/plans")).toEqual({ page: "billing", tab: "plans" });
-    expect(parseRoute("#/billing/bogus")).toEqual({ page: "billing", tab: "overview" });
-  });
 });
