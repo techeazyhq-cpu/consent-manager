@@ -50,3 +50,10 @@ scripts/.tmp-body-*.md
 
 # Claude Code session-local runtime state
 .claude/scheduled_tasks.lock
+
+# Terraform (ADR-042): providers and modules downloaded by init, and state, which lives in a remote backend
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log

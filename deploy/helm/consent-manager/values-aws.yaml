@@ -1,0 +1,40 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# EKS (deploy/terraform/aws): ALB or NGINX ingress, RDS PostgreSQL, ElastiCache Redis, secrets from Secrets Manager.
+ingress:
+  className: nginx
+config:
+  database:
+    # terraform output postgres_endpoint; the RDS CA bundle is mounted with extraEnv/volumes in a hardened setup
+    host: REPLACE_WITH_RDS_ENDPOINT
+    jdbcParams: "sslmode=require"
+  redis:
+    host: REPLACE_WITH_ELASTICACHE_ENDPOINT
+    ssl: true
+externalSecrets:
+  enabled: true
+  storeRef: {kind: ClusterSecretStore, name: aws-secrets-manager}
+  data:
+    DB_PASSWORD: {key: cm-production/application, property: DB_PASSWORD}
+    DFREG_SECRETS_KEY: {key: cm-production/application, property: DFREG_SECRETS_KEY}
+    CNS_TKN_JWKS: {key: cm-production/application, property: CNS_TKN_JWKS}
+    KEYCLOAK_ADMIN_PASSWORD: {key: cm-production/application, property: KEYCLOAK_ADMIN_PASSWORD}
+    NTF_SVC_API_KEY: {key: cm-production/application, property: NTF_SVC_API_KEY}
+    NTF_SVC_SIGNING_SECRET: {key: cm-production/application, property: NTF_SVC_SIGNING_SECRET}
+databaseInit:
+  # RDS creates only consent_manager
+  enabled: true

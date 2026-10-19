@@ -1,0 +1,43 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# AKS (deploy/terraform/azure): Azure PostgreSQL Flexible Server, Azure Managed Redis, secrets from Key Vault.
+ingress:
+  className: nginx
+config:
+  database:
+    host: REPLACE_WITH_FLEXIBLE_SERVER_FQDN
+    jdbcParams: "sslmode=require"
+  redis:
+    host: REPLACE_WITH_MANAGED_REDIS_HOST
+    port: 10000
+    ssl: true
+    passwordFromSecret: true
+externalSecrets:
+  enabled: true
+  storeRef: {kind: ClusterSecretStore, name: azure-key-vault}
+  data:
+    DB_PASSWORD: {key: db-password}
+    MIGRATION_DB_PASSWORD: {key: migration-db-password}
+    DFREG_SECRETS_KEY: {key: dfreg-secrets-key}
+    CNS_TKN_JWKS: {key: cns-tkn-jwks}
+    KEYCLOAK_ADMIN_PASSWORD: {key: keycloak-admin-password}
+    REDIS_PASSWORD: {key: redis-password}
+    NTF_SVC_API_KEY: {key: ntf-svc-api-key}
+    NTF_SVC_SIGNING_SECRET: {key: ntf-svc-signing-secret}
+databaseInit:
+  # Terraform creates both consent_manager and keycloak
+  enabled: false
