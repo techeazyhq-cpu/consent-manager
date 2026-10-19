@@ -20,9 +20,10 @@ package com.techeazyhq.cm.cnsqry.app.evt;
 
 import java.time.Instant;
 
+/** {@code scp} and {@code validityDays} are absent (null) in grants made before partial consent (ADR-026). */
 public record CnsGrantedEvtPayload(
         String evtId, Instant occurredAt, String cnsReqId, String cnsArtId, String dfId, DpRefPayload dpRef,
-        String cnsTkn, ValPrdPayload valPrd) {
+        String cnsTkn, ValPrdPayload valPrd, ScpPayload scp, Integer validityDays) {
 
     public record ValPrdPayload(Instant from, Instant until) {
     }

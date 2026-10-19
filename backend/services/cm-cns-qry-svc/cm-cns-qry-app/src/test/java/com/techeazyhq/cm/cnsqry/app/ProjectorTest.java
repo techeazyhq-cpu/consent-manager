@@ -74,6 +74,30 @@ class ProjectorTest {
     }
 
     @Test
+    void aPartialGrantRecordsWhatWasGrantedAndKeepsWhatWasAsked() {
+        projector.onCnsReqCreated(new CnsReqCreatedEvtPayload("evt-created", T0, "req-1", "df-1", null,
+                new CnsReqCreatedEvtPayload.PrpsPayload("ORDER_UPDATES"),
+                new ScpPayload(List.of(new ScpPayload.DCatPayload("EMAIL"), new ScpPayload.DCatPayload("NAME"))),
+                "Order updates", "Notice")).block();
+        projector.onCnsGranted(new CnsGrantedEvtPayload("evt-granted", T0.plusSeconds(5), "req-1", "art-1", "df-1",
+                null, "token", new CnsGrantedEvtPayload.ValPrdPayload(T0, T0.plusSeconds(86_400)),
+                new ScpPayload(List.of(new ScpPayload.DCatPayload("EMAIL"))), 30)).block();
+
+        CnsArtRdMdl row = rows.byReq.get("req-1");
+        assertEquals(Set.of("EMAIL", "NAME"), row.dCatCodes());
+        assertEquals(Set.of("EMAIL"), row.grantedDCatCodes());
+        assertEquals(CnsLcySts.ISSUED, row.lcySts());
+    }
+
+    @Test
+    void aGrantFromBeforePartialConsentGaveEverythingAsked() {
+        projector.onCnsReqCreated(created(T0)).block();
+        projector.onCnsGranted(granted(T0.plusSeconds(5))).block();
+
+        assertEquals(Set.of("EMAIL"), rows.byReq.get("req-1").grantedDCatCodes());
+    }
+
+    @Test
     void aLateNotificationFailureDoesNotUndoAGrant() {
         projector.onCnsReqCreated(created(T0)).block();
         projector.onCnsGranted(granted(T0.plusSeconds(10))).block();
@@ -106,7 +130,7 @@ class ProjectorTest {
 
     private static CnsGrantedEvtPayload granted(Instant at) {
         return new CnsGrantedEvtPayload("evt-granted", at, "req-1", "art-1", "df-1", null, "token",
-                new CnsGrantedEvtPayload.ValPrdPayload(at, at.plusSeconds(86_400)));
+                new CnsGrantedEvtPayload.ValPrdPayload(at, at.plusSeconds(86_400)), null, null);
     }
 
     private static final class ReadModel implements CnsArtRdMdlRepoPort {

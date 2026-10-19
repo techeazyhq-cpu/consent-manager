@@ -20,7 +20,7 @@ import { useMemo, useState } from "react";
 import { dfReg, type CnsArtRdMdl, type CnsLcySts } from "api-client";
 import { Button, Card, OrgLogo, PageHeader, Spinner, humanise } from "ui-kit/src/index";
 import type { Console } from "./console";
-import { COUNTS, STATUS, countOf, fmtDate, grantRate } from "./labels";
+import { COUNTS, STATUS, countOf, dataLabel, fmtDate, grantRate } from "./labels";
 import { ROLE_HINTS, ROLE_LABELS, raisesRequests } from "./roles";
 import { purposeHref, raiseHref } from "./routes";
 import { freshToken } from "./token";
@@ -161,7 +161,7 @@ export function RequestTable({ rows }: { rows: CnsArtRdMdl[] }) {
               <td>
                 <a href={purposeHref(r.prpsCode)}>{humanise(r.prpsCode)}</a>
               </td>
-              <td>{r.dCatCodes.map(humanise).join(", ")}</td>
+              <td>{dataLabel(r, humanise)}</td>
               <td title={r.ntcText ?? undefined}>{r.ntcTitle ?? "—"}</td>
               <td>
                 <StatusPill sts={r.lcySts} />

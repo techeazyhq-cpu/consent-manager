@@ -111,7 +111,7 @@ class AdminCnsQryHandlerTest {
                 new CnsReqCreatedEvtPayload.PrpsPayload("ORDER_FULFILLMENT"), null, "Order updates",
                 "We email you about your orders until they arrive.")).block();
         projector.onCnsGranted(new CnsGrantedEvtPayload("e2", T0.plusSeconds(5), "r1", "a1", "df-1", null, "tkn",
-                new CnsGrantedEvtPayload.ValPrdPayload(T0, T0.plusSeconds(3600)))).block();
+                new CnsGrantedEvtPayload.ValPrdPayload(T0, T0.plusSeconds(3600)), null, null)).block();
         projector.onCnsRevoked(new CnsRevokedEvtPayload("e3", T0.plusSeconds(9), "a1", null, "df-1")).block();
 
         CnsArtRdMdl revoked = rows.get("r1");
@@ -147,7 +147,7 @@ class AdminCnsQryHandlerTest {
     private void row(String cnsReqId, String dfId, String dpId, CnsLcySts sts, int minute) {
         Instant at = T0.plusSeconds(60L * minute);
         rows.put(cnsReqId, new CnsArtRdMdl(cnsReqId, null, dfId, dpId, "ORDER_FULFILLMENT", Set.of("EMAIL"), sts,
-                null, null, at, at, "Order updates", "We email you about your orders."));
+                null, null, at, at, "Order updates", "We email you about your orders.", null));
     }
 
     private final class InMemoryReadModel implements CnsArtRdMdlRepoPort {

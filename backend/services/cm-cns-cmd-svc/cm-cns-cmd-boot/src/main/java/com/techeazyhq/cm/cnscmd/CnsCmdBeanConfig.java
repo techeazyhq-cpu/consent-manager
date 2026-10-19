@@ -33,6 +33,7 @@ import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techeazyhq.cm.cnscmd.app.CnsReqTerms;
 import com.techeazyhq.cm.cnscmd.app.PrpsDefCmds;
 import com.techeazyhq.cm.cnscmd.app.PrpsResolver;
 import com.techeazyhq.cm.cnscmd.dom.PrpsDefRepoPort;
@@ -249,10 +250,17 @@ public class CnsCmdBeanConfig {
         return new GetCnsArtLiveStatusQryHandler(cnsArtRepo, java.time.Clock.systemUTC());
     }
 
+    /** A request's purpose version: what the decision screen shows and the grant is checked against (ADR-026). */
+    @Bean
+    public CnsReqTerms cnsReqTerms(CnsReqRepoPort cnsReqRepo, PrpsDefRepoPort prpsDefRepo) {
+        return new CnsReqTerms(cnsReqRepo, prpsDefRepo);
+    }
+
     @Bean
     public ApproveCnsCmdHandler approveCnsCmdHandler(CnsReqRepoPort cnsReqRepo, CnsArtRepoPort cnsArtRepo,
-                                                       ObxPort obxPort, CnsTknIssuer cnsTknIssuer) {
-        return new ApproveCnsCmdHandler(cnsReqRepo, cnsArtRepo, obxPort, cnsTknIssuer);
+                                                       ObxPort obxPort, CnsTknIssuer cnsTknIssuer,
+                                                       CnsReqTerms cnsReqTerms) {
+        return new ApproveCnsCmdHandler(cnsReqRepo, cnsArtRepo, obxPort, cnsTknIssuer, cnsReqTerms);
     }
 
     @Bean

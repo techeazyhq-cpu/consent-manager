@@ -18,5 +18,6 @@
 
 package com.techeazyhq.cm.cnscmd.app;
 
-public record DenyCnsReqCmd(String cnsReqId) {
+/** The principal {@code dpId} declines the request. */
+public record DenyCnsReqCmd(String cnsReqId, String dpId) {
 }

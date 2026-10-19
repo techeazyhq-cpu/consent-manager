@@ -48,7 +48,7 @@ import reactor.core.publisher.Mono;
 class CnsQryHandlerTest {
 
     private static final CnsArtRdMdl ROW = new CnsArtRdMdl("req-1", null, "df-a", "dp-1", "ORDER_UPDATES",
-            Set.of("EMAIL"), CnsLcySts.PENDING, null, null, Instant.EPOCH, Instant.EPOCH, "Order updates", "Notice");
+            Set.of("EMAIL"), CnsLcySts.PENDING, null, null, Instant.EPOCH, Instant.EPOCH, "Order updates", "Notice", null);
 
     private final CnsQryHandler handler = new CnsQryHandler(new GetCnsArtQryHandler(new OneRow()),
             new GetCnsHstQryHandler(new NoHistory()), null, null);

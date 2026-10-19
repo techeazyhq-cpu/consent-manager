@@ -20,6 +20,8 @@ import type {
   CnsArtRdMdl,
   CnsArtRespDto,
   CnsReqRespDto,
+  CnsReqTermsDto,
+  GrantChoice,
   DfListItemRespDto,
   DfMemberRespDto,
   DfProfileRespDto,
@@ -139,8 +141,15 @@ export const cnsCmd = {
       extDpRefVal?: string;
     },
   ) => request<CnsReqRespDto>(base, "/api/cns-cmd/cns-reqs", token, { method: "POST", body: JSON.stringify(body) }),
-  approve: (base: string, token: string, cnsReqId: string) =>
-    request<CnsArtRespDto>(base, `/api/cns-cmd/cns-reqs/${cnsReqId}/approve`, token, { method: "POST" }),
+  /** Only the person asked can give consent: to some of the data, for a validity they choose (ADR-026). */
+  approve: (base: string, token: string, cnsReqId: string, choice: GrantChoice = {}) =>
+    request<CnsArtRespDto>(base, `/api/cns-cmd/cns-reqs/${cnsReqId}/approve`, token, {
+      method: "POST",
+      body: JSON.stringify(choice),
+    }),
+  /** What the request asks: its data with what refusing each means, and the validity bounds. */
+  terms: (base: string, token: string, cnsReqId: string) =>
+    request<CnsReqTermsDto>(base, `/api/cns-cmd/cns-reqs/${encodeURIComponent(cnsReqId)}/terms`, token),
   deny: (base: string, token: string, cnsReqId: string) =>
     request<CnsReqRespDto>(base, `/api/cns-cmd/cns-reqs/${cnsReqId}/deny`, token, { method: "POST" }),
   revoke: (base: string, token: string, cnsArtId: string) =>

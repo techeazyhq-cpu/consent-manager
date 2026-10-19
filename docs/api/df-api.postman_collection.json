@@ -460,6 +460,40 @@
           ]
         },
         {
+          "name": "What a request asks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/cns-reqs/{{requestId}}/terms",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "cns-reqs",
+                "{{requestId}}",
+                "terms"
+              ],
+              "query": []
+            },
+            "description": "The purpose version a request was made from, as the person sees it when deciding: each category asked for,\nwhether it is needed and what refusing it means, the validity requested and the longest the person may\nchoose. Only the person can give, decline or withdraw consent; a fiduciary's call to do so is refused (403)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('requestId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs requestId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Each change of a request's status, oldest first",
           "request": {
             "method": "GET",

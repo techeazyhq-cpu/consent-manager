@@ -53,3 +53,14 @@ export function grantRate(rows: CnsArtRdMdl[]): number | null {
 
 export const fmtDate = (iso?: string | null) =>
   iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—";
+
+/**
+ * The data a request covers, as the fiduciary must read it (ADR-026): once given, only what the person granted; what
+ * they didn't grant is named, since the fiduciary may not use it.
+ */
+export function dataLabel(r: Pick<CnsArtRdMdl, "dCatCodes" | "grantedDCatCodes">, humanise: (code: string) => string): string {
+  const granted = r.grantedDCatCodes;
+  if (!granted) return r.dCatCodes.map(humanise).join(", ");
+  const refused = r.dCatCodes.filter((c) => !granted.includes(c));
+  return granted.map(humanise).join(", ") + (refused.length ? ` (not given: ${refused.map(humanise).join(", ")})` : "");
+}

@@ -52,6 +52,20 @@ and one is open and tracked.
 | V-12 | Accepted | A signing key needs signatures on writes only, so a leaked key alone can read | Accepted, as notification-service |
 | V-13 | Accepted | Spring WebFlux and the Pulsar client's bundled BouncyCastle (part of V-04) | #216, #217 |
 | V-14 | False positive | ZAP's SQL injection on `/api/aud/activity` | Closed |
+| V-15 | Critical | Anyone signed in, a fiduciary's API key included, could approve, decline or withdraw any consent by its id | Fixed (ADR-044) |
+
+### V-15: consent given by someone other than the principal (Critical)
+
+Found while building partial consent (ADR-044), not by the test run. `approve`, `deny` and `revoke` checked only that
+the caller was signed in. A fiduciary could raise a request naming a principal's `dpId` (from its own read model),
+then approve it with its own API key, and the platform issued a consent token for consent the person never gave.
+Another principal could also decline or withdraw someone else's consent by its id.
+
+**Fix:**
+- Only a principal's token can approve, decline or withdraw. A fiduciary's people and systems get 403
+  `principal-only`.
+- A principal who isn't the one the record names gets 404, as if it didn't exist.
+- Covered by `DecideCnsReqTest` and check PRN-01.
 
 ### V-01: one fiduciary reading another's requests (High)
 

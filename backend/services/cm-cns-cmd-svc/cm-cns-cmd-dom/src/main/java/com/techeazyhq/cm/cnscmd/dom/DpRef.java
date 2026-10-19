@@ -66,6 +66,11 @@ public sealed interface DpRef {
         return this instanceof LnkdDpRef;
     }
 
+    /** Whether this is the linked principal {@code dpId}: only they decide on, or withdraw, their consent. */
+    default boolean isOf(String dpId) {
+        return dpId != null && this instanceof LnkdDpRef linked && linked.dpId().equals(dpId);
+    }
+
     /** True if this ref would be resolved by linking the given external contact info (plan §7a). */
     default boolean matches(ExtDpRefTyp typ, String val) {
         return this instanceof UnlnkDpRef unlnk

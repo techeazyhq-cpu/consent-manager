@@ -319,6 +319,16 @@ await check('PRP-02', 'Input', 'A request for a superseded version, after a mate
     'purpose-version-superseded');
 });
 
+// ---------------------------------------------------------------- only the principal decides (V-15)
+await check('PRN-01', 'Access control', "A's key approves, declines or withdraws consent on a principal's behalf",
+  '403 principal-only each', async () => {
+    const approve = await call(K.a, 'POST', `/api/cns-cmd/cns-reqs/${reqA}/approve`, { body: {} });
+    const decline = await call(K.a, 'POST', `/api/cns-cmd/cns-reqs/${reqA}/deny`);
+    const withdraw = await call(K.a, 'POST', `/api/cns-cmd/cns-arts/${K.grantedA.cnsArtId}/revoke`);
+    return [[approve, decline, withdraw].every((r) => r.status === 403 && r.json?.title === 'principal-only'),
+      `${approve.status}, ${decline.status}, ${withdraw.status}`];
+  });
+
 // ---------------------------------------------------------------- what responses give away
 await check('HDR-01', 'Headers', 'API responses: nosniff, no caching', 'X-Content-Type-Options, Cache-Control no-store', async () => {
   const r = await call(K.a, 'GET', LIST);

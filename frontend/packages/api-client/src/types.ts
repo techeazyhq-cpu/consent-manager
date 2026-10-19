@@ -181,6 +181,34 @@ export interface CnsArtRdMdl {
   /** The notice the fiduciary wrote with its request; absent on requests raised before notices were recorded here. */
   ntcTitle?: string | null;
   ntcText?: string | null;
+  /** What the person granted (ADR-026): some or all of dCatCodes; null until consent is given. */
+  grantedDCatCodes?: string[] | null;
+}
+
+/** What a person chooses when giving consent; either may be left out (everything asked, the requested validity). */
+export interface GrantChoice {
+  dCatCodes?: string[];
+  validityDays?: number;
+}
+
+/** What a request asks, for the decision screen (ADR-026, ADR-028). Needed categories come first. */
+export interface CnsReqTermsDto {
+  cnsReqId: string;
+  prpsCode: string;
+  prpsVer: number | null;
+  name: string | null;
+  description: string | null;
+  dCats: { code: string; dpv: string | null; sensitivity: PrpsSensitivity; necessary: boolean; consequence: string | null }[];
+  requestedValidityDays: number;
+  maxValidityDays: number;
+  retentionDays: number | null;
+  recipients: string[];
+  transfers: string[];
+  flags: string[];
+  ntcLang: string | null;
+  ntcTitle: string;
+  ntcText: string | null;
+  ntcHash: string | null;
 }
 
 export interface DpDashboardRow {
