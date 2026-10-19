@@ -60,7 +60,6 @@ Requires JDK 21, Docker, Node 20+ and pnpm.
 ```bash
 ./gradlew build                                       # services, Keycloak providers, tests
 docker compose -f infra/docker-compose.yml up -d --build
-bash infra/pulsar/init-tenant-namespaces.sh           # once, after Pulsar first starts
 cd frontend && pnpm install && pnpm dev:dp-portal     # or dev:df-app, dev:cm-admin
 ```
 

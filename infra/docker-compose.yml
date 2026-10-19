@@ -85,6 +85,19 @@ services:
       timeout: 10s
       retries: 10
 
+  # The cm tenant and its namespaces, created on every start if missing (ADR-004), so a fresh or reset broker needs
+  # nothing by hand. Services that use Pulsar wait for it.
+  pulsar-init:
+    image: apachepulsar/pulsar:3.3.1
+    entrypoint: ["/bin/bash", "/pulsar-init/init-tenant.sh"]
+    environment:
+      TENANT: cm
+    volumes:
+      - ./pulsar:/pulsar-init:ro
+    depends_on:
+      pulsar:
+        condition: service_started
+
   redis:
     image: redis:7-alpine
     ports:
@@ -139,8 +152,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      pulsar:
-        condition: service_healthy
+      pulsar-init:
+        condition: service_completed_successfully
       keycloak:
         condition: service_started
 
@@ -159,8 +172,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      pulsar:
-        condition: service_healthy
+      pulsar-init:
+        condition: service_completed_successfully
       cm-df-reg-svc:
         condition: service_started
       cm-bil-svc:
@@ -179,8 +192,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      pulsar:
-        condition: service_healthy
+      pulsar-init:
+        condition: service_completed_successfully
 
   cm-ntf-svc:
     build:
@@ -202,8 +215,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      pulsar:
-        condition: service_healthy
+      pulsar-init:
+        condition: service_completed_successfully
       keycloak:
         condition: service_started
       mailpit:
@@ -222,8 +235,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      pulsar:
-        condition: service_healthy
+      pulsar-init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
 
@@ -240,8 +253,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      pulsar:
-        condition: service_healthy
+      pulsar-init:
+        condition: service_completed_successfully
       keycloak:
         condition: service_started
 
@@ -301,9 +314,11 @@ services:
   sbx-pulsar-init:
     profiles: [sandbox]
     image: apachepulsar/pulsar:3.3.1
-    entrypoint: ["/bin/bash", "/sandbox/pulsar-init.sh"]
+    entrypoint: ["/bin/bash", "/pulsar-init/init-tenant.sh"]
+    environment:
+      TENANT: cm-sbx
     volumes:
-      - ./sandbox:/sandbox:ro
+      - ./pulsar:/pulsar-init:ro
     depends_on:
       pulsar:
         condition: service_started
