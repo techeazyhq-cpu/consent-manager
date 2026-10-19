@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.pulsar.client.api.Schema;
 import org.apache.pulsar.reactive.client.adapter.AdaptedReactivePulsarClientFactory;
@@ -38,6 +39,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techeazyhq.cm.audkit.PlatformActionEvt;
 import com.techeazyhq.cm.evtkit.PulsarTopics;
 
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -76,13 +78,27 @@ public class R2dbcBilOutbox {
                         .then());
     }
 
+    private final AtomicBoolean passRunning = new AtomicBoolean();
+
+    /**
+     * One pass at a time, and the batch read in full before publishing. Before, the scheduler started a pass every
+     * second whether or not the last had finished, and each pass held the select's connection while it published and
+     * each row's update waited for another: a backlog took every connection in the pool and deadlocked the service
+     * (found by the load test, docs/security/vapt-and-performance.md). Overlapping passes also published rows twice.
+     */
     @Scheduled(fixedDelayString = "${cm.bil.obx-relay.fixed-delay-ms:1000}")
     public void relay() {
+        if (!passRunning.compareAndSet(false, true)) {
+            return;
+        }
         db.sql("select id, payload_json from bil.outbox_evt where published_at is null order by created_at limit 100")
                 .map((row, meta) -> new Row(row.get("id", UUID.class), row.get("payload_json", String.class)))
                 .all()
+                .collectList()
+                .flatMapMany(Flux::fromIterable)
                 .concatMap(this::publishAndMark)
                 .then()
+                .doFinally(signal -> passRunning.set(false))
                 .subscribe(v -> {
                 }, err -> LOG.warn("Outbox relay iteration failed", err));
     }

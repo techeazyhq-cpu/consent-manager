@@ -41,6 +41,12 @@ import reactor.core.publisher.Mono;
  */
 public class PulsarNtfCmdConsumer {
 
+    /**
+     * Messages handled at once. Unbounded (flatMap's 256), a backlog drained by taking every database connection, so
+     * requests timed out (the load test, docs/security/vapt-and-performance.md).
+     */
+    private static final int CONCURRENCY = 4;
+
     private final ReactivePulsarClient reactivePulsarClient;
     private final ObjectMapper objectMapper;
     private final NotifyDpCmdHandler notifyDpCmdHandler;
@@ -88,7 +94,7 @@ public class PulsarNtfCmdConsumer {
                                     org.slf4j.LoggerFactory.getLogger(PulsarNtfCmdConsumer.class)
                                             .warn("Failed to handle message on {}, negatively acknowledging", topic, err);
                                     return Mono.just(MessageResult.negativeAcknowledge(message.getMessageId(), message.getValue()));
-                                })))
+                                }), CONCURRENCY))
                 .subscribe();
     }
 

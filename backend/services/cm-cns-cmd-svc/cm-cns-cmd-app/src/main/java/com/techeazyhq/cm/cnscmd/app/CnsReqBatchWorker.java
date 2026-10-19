@@ -72,13 +72,18 @@ public class CnsReqBatchWorker {
                 }, err -> LOG.warn("Batch worker pass failed", err));
     }
 
-    /** One chunk from each unfinished batch. */
+    /**
+     * One chunk from each unfinished batch. Each list is read in full before the work it drives, so a pass holds one
+     * connection at a time: streaming the batches, then the rows, around each row's transaction held three, and under
+     * load the pool ran dry (docs/security/vapt-and-performance.md).
+     */
     public Mono<Void> pass() {
-        return batchRepo.findUnfinished(BATCHES_PER_PASS).concatMap(this::sendChunk).then();
+        return batchRepo.findUnfinished(BATCHES_PER_PASS).collectList().flatMapMany(Flux::fromIterable)
+                .concatMap(this::sendChunk).then();
     }
 
     Mono<CnsReqBatch> sendChunk(CnsReqBatch batch) {
-        return batchRepo.claimPending(batch.id(), ROWS_PER_CHUNK)
+        return batchRepo.claimPending(batch.id(), ROWS_PER_CHUNK).collectList().flatMapMany(Flux::fromIterable)
                 .concatMap(row -> sender.send(batch, row)
                         .onErrorResume(err -> {
                             LOG.warn("Batch {} row {} was not sent: {}", batch.id(), row.rowNo(), err.getMessage());

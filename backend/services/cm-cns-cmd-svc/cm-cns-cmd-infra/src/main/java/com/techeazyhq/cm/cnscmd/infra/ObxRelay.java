@@ -21,6 +21,7 @@ package com.techeazyhq.cm.cnscmd.infra;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -58,11 +59,25 @@ public class ObxRelay {
         this.producer = producer;
     }
 
+    private final AtomicBoolean passRunning = new AtomicBoolean();
+
+    /**
+     * One pass at a time, and the batch read in full before publishing. Before, the scheduler started a pass every
+     * second whether or not the last had finished, and each pass held the select's connection while it published and
+     * each row's update waited for another: a backlog took every connection in the pool and deadlocked the service
+     * (found by the load test, docs/security/vapt-and-performance.md). Overlapping passes also published rows twice.
+     */
     @Scheduled(fixedDelayString = "${cm.ntf.obx-relay.fixed-delay-ms:1000}")
     public void relayPendingEvents() {
+        if (!passRunning.compareAndSet(false, true)) {
+            return;
+        }
         fetchUnpublished()
+                .collectList()
+                .flatMapMany(Flux::fromIterable)
                 .concatMap(this::publishAndMark)
                 .then()
+                .doFinally(signal -> passRunning.set(false))
                 .subscribe(v -> {
                 }, err -> org.slf4j.LoggerFactory.getLogger(ObxRelay.class).warn("Outbox relay iteration failed", err));
     }

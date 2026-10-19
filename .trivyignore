@@ -1,0 +1,27 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# Known vulnerabilities accepted for now, each with why and until when (docs/security/vapt-and-performance.md). An
+# entry past its date stops being ignored, and CI's image scan fails again until it is fixed or decided anew.
+
+# spring-webflux 6.2.19: fixed only in Spring Framework 7 (Spring Boot 4), a migration of its own (#216).
+CVE-2026-47890 exp:2027-01-31
+CVE-2026-47892 exp:2027-01-31
+
+# bcprov-jdk18on 1.84 bundled inside Pulsar client's bouncy-castle-bc package jar, out of Gradle's reach; the services'
+# own BouncyCastle is 1.85. Until a Pulsar client release bundles 1.85 (#217).
+CVE-2026-8763 exp:2027-01-31
+CVE-2026-13506 exp:2027-01-31

@@ -24,6 +24,10 @@ spring:
     name: cm-cns-qry-svc
   r2dbc:
     url: r2dbc:postgresql://localhost:5432/consent_manager?schema=cns_qry
+    pool:
+      # Wait at most 3 s for a connection, then fail, rather than queue until the gateway gives up at 10 s: under
+      # overload a saturated pool held requests that long (docs/security/vapt-and-performance.md).
+      max-acquire-time: 3s
     username: cm
     password: cm
   flyway:

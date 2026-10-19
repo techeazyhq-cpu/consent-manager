@@ -27,7 +27,8 @@ import java.util.regex.Pattern;
  */
 public record Recipient(ExtDpRefTyp typ, String val) {
 
-    private static final Pattern EMAIL = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
+    // no control characters: a NUL would reach the database as a server error (VAPT)
+    private static final Pattern EMAIL = Pattern.compile("^[^@\\s\\p{Cntrl}]+@[^@\\s\\p{Cntrl}]+\\.[^@\\s\\p{Cntrl}]+$");
     /** International numbering (E.164): + and 8 to 15 digits. A text can't reach a number without its country code. */
     private static final Pattern PHONE = Pattern.compile("^\\+[1-9][0-9]{7,14}$");
     private static final Pattern NATIONAL = Pattern.compile("^0?[0-9]{8,15}$");

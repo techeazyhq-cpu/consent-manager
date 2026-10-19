@@ -70,13 +70,26 @@ public class CnsQryHandler {
     }
 
     public Mono<ServerResponse> getCnsArt(ServerRequest request) {
-        return getCnsArtHandler.byId(request.pathVariable("id"))
+        return owned(request, request.pathVariable("id"))
                 .flatMap(row -> ServerResponse.ok().bodyValue(row))
                 .switchIfEmpty(ServerResponse.notFound().build());
     }
 
     public Mono<ServerResponse> getCnsHst(ServerRequest request) {
-        return ServerResponse.ok().body(getCnsHstHandler.handle(request.pathVariable("id")), CnsHstRdMdl.class);
+        String id = request.pathVariable("id");
+        return owned(request, id)
+                .flatMap(row -> ServerResponse.ok().body(getCnsHstHandler.handle(id), CnsHstRdMdl.class))
+                .switchIfEmpty(ServerResponse.notFound().build());
+    }
+
+    /**
+     * The row, only for its own fiduciary or data principal, as {@link #listCnsArts} scopes the list. Anyone else's is
+     * "not found", the same as an unknown id, so an id reveals nothing (VAPT IDOR-01, -02, -05).
+     */
+    private Mono<CnsArtRdMdl> owned(ServerRequest request, String id) {
+        return authCtx(request).flatMap(ctx -> getCnsArtHandler.byId(id)
+                .filter(row -> (ctx.isDf() && ctx.dfId().equals(row.dfId()))
+                        || (ctx.isDp() && ctx.dpId().equals(row.dpId()))));
     }
 
     public Mono<ServerResponse> dpDashboard(ServerRequest request) {

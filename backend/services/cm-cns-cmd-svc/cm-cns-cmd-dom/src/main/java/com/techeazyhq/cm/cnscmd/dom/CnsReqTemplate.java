@@ -24,22 +24,12 @@ import java.util.stream.Collectors;
 /**
  * What a batch asks every recipient (ADR-036): one purpose, one set of data, one notice. Each recipient still gets a
  * request of their own, made from this.
+ *
+ * <p>The constructor takes values as they are, as stored batches are read back with it; a new template is made with
+ * {@link #of}, which checks them. A stored batch that no longer passes today's checks must still be readable (VAPT:
+ * one that couldn't be made every listing of its fiduciary's batches fail).
  */
 public record CnsReqTemplate(Prps prps, Scp scp, String ntcTitle, String ntcText) {
-
-    public CnsReqTemplate {
-        if (ntcTitle == null || ntcTitle.isBlank()) {
-            throw new IllegalArgumentException("notice title must not be blank");
-        }
-        if (ntcTitle.length() > 255) {
-            throw new IllegalArgumentException("notice title must be at most 255 characters");
-        }
-        if (ntcText == null || ntcText.isBlank()) {
-            throw new IllegalArgumentException("notice text must not be blank: people decide on it");
-        }
-        ntcTitle = ntcTitle.trim();
-        ntcText = ntcText.trim();
-    }
 
     public static CnsReqTemplate of(String prpsCode, Collection<String> dCatCodes, String ntcTitle, String ntcText) {
         if (prpsCode == null) {
@@ -47,7 +37,18 @@ public record CnsReqTemplate(Prps prps, Scp scp, String ntcTitle, String ntcText
         }
         Scp scp = new Scp(dCatCodes == null ? java.util.Set.of()
                 : dCatCodes.stream().filter(c -> c != null && !c.isBlank()).map(DCat::new).collect(Collectors.toSet()));
-        return new CnsReqTemplate(new Prps(prpsCode.trim()), scp, ntcTitle, ntcText);
+        // normalised before it is checked, so what is checked is what is stored
+        String title = ntcTitle == null ? null : ntcTitle.strip();
+        String text = ntcText == null ? null : ntcText.strip();
+        if (title == null || title.isEmpty()) {
+            throw new IllegalArgumentException("notice title must not be blank");
+        }
+        if (text == null || text.isEmpty()) {
+            throw new IllegalArgumentException("notice text must not be blank: people decide on it");
+        }
+        Prps prps = new Prps(prpsCode.strip());
+        CnsReqFactory.checkInput(prps, scp, title, text);
+        return new CnsReqTemplate(prps, scp, title, text);
     }
 
     /** This template's request for one person. */

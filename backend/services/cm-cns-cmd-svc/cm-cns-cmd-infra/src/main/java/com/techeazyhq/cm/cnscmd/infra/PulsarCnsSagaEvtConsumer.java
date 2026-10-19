@@ -68,6 +68,13 @@ public class PulsarCnsSagaEvtConsumer {
                 NtfDpDeliveryFailedEvtPayload.class, payload -> orchestrator.onDpDeliveryFailed(payload.cnsReqId()));
     }
 
+    /**
+     * Messages handled at once per topic. Unbounded (flatMap's 256), a backlog drained by taking every database
+     * connection, so requests timed out and the nacked messages came back for more (the load test,
+     * docs/security/vapt-and-performance.md); well under the pool of 10, the requests keep their share.
+     */
+    private static final int CONCURRENCY = 4;
+
     private <T> void consume(String eventNameKebab, String subscriptionSuffix, Class<T> payloadType,
                               java.util.function.Function<T, Mono<Void>> handler) {
         consumeTopic(PulsarTopics.evt(CTX, eventNameKebab), subscriptionSuffix + "-" + eventNameKebab, payloadType, handler);
@@ -92,7 +99,7 @@ public class PulsarCnsSagaEvtConsumer {
                                     .warn("Failed to process saga message on {}, negatively acknowledging", topic, e);
                             return Mono.just(MessageResult.negativeAcknowledge(message.getMessageId(),
                                     message.getValue()));
-                        })))
+                        }), CONCURRENCY))
                 .subscribe();
     }
 

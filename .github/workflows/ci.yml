@@ -101,18 +101,22 @@ jobs:
             echo "cm/$name:ci" >> images.txt
           done
           cat images.txt
-      # Reported, not yet blocking: the services still bundle older Netty, Pulsar and Bouncy Castle
-      # releases with known CRITICAL flaws. The dependency upgrade turns this into a gate (exit-code 1 on CRITICAL),
-      # as notification-service has it.
-      - name: Scan each image for known vulnerabilities (report only until the dependency upgrade)
+      # A gate since the dependency upgrade (VAPT): a CRITICAL flaw with a fix fails the build, unless .trivyignore
+      # accepts it with a reason and an expiry date. HIGH is reported.
+      - name: Scan each image for known vulnerabilities
         run: |
+          status=0
           for image in $(cat images.txt); do
             echo "::group::$image"
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v trivy-cache:/root/.cache \
-              aquasec/trivy:0.65.0 image \
-              --severity CRITICAL --ignore-unfixed --exit-code 0 --quiet "$image" < /dev/null
+              -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.69.3 image --ignorefile /.trivyignore \
+              --severity HIGH --ignore-unfixed --exit-code 0 --quiet "$image" < /dev/null
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v trivy-cache:/root/.cache \
+              -v "$PWD/.trivyignore:/.trivyignore:ro" aquasec/trivy:0.69.3 image --ignorefile /.trivyignore \
+              --severity CRITICAL --ignore-unfixed --exit-code 1 --quiet "$image" < /dev/null || status=1
             echo "::endgroup::"
           done
+          exit $status
 
   infrastructure:
     name: Infrastructure as code
