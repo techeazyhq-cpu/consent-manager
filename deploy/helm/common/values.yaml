@@ -1,0 +1,143 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# Install as release "common" in the namespace "common" (ADR-054). Each server's Service is named as the apps expect:
+# postgres:5432, redis:6379, pulsar:6650 (admin 8080), keycloak:8080, mailpit:1025 (UI 8025), all reached as
+# <name>.common.svc.cluster.local. Requests and limits follow the local stack's (ADR-052).
+
+clusterDomain: cluster.local
+
+# Never stored in the chart. A Secret with these keys, created by hand on a dev cluster (deploy/README.md) or synced by
+# External Secrets (externalSecrets below): POSTGRES_PASSWORD (the superuser), CM_DB_PASSWORD, NOTIFICATION_DB_PASSWORD,
+# NOTIFICATION_APP_DB_PASSWORD, KEYCLOAK_DB_PASSWORD, KEYCLOAK_ADMIN_PASSWORD. Only the keys the enabled servers use
+# need to exist.
+secrets:
+  existingSecret: common-secrets
+
+externalSecrets:
+  enabled: false
+  storeRef: {kind: ClusterSecretStore, name: cm-secret-store}
+  refreshInterval: 1h
+  # remote key per Secret key, as in the consent-manager chart
+  data: {}
+
+postgres:
+  enabled: true
+  image: postgres:16-alpine
+  storage: 5Gi
+  storageClassName: ""
+  resources: {requests: {cpu: 100m, memory: 256Mi}, limits: {cpu: "1", memory: 768Mi}}
+  # The roles and databases the init Job creates if missing. Each role's password comes from the Secret's key and is
+  # set again on every run, so changing the Secret and upgrading rotates it. A database with an appRole gets
+  # notification-service's split (ADR-012 there): the owner runs the migrations, the app role gets DML only.
+  roles:
+    - {name: cm, passwordKey: CM_DB_PASSWORD}
+    - {name: notification, passwordKey: NOTIFICATION_DB_PASSWORD}
+    - {name: notification_app, passwordKey: NOTIFICATION_APP_DB_PASSWORD}
+    - {name: keycloak, passwordKey: KEYCLOAK_DB_PASSWORD}
+  databases:
+    - {name: consent_manager, owner: cm}
+    - {name: cm_sandbox, owner: cm} # a sandbox release (ADR-037)
+    - {name: notification, owner: notification, appRole: notification_app}
+    - {name: keycloak, owner: keycloak}
+
+redis:
+  enabled: true
+  image: redis:7-alpine
+  storage: 1Gi
+  storageClassName: ""
+  # database 0 consent-manager, 1 its sandbox, 2 notification-service
+  resources: {requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 250m, memory: 256Mi}}
+
+pulsar:
+  enabled: true
+  image: apachepulsar/pulsar:3.3.3
+  storage: 5Gi
+  storageClassName: ""
+  # no functions worker or stream storage: neither app uses them, and they cost memory
+  mem: "-Xms256m -Xmx768m -XX:MaxDirectMemorySize=384m"
+  resources: {requests: {cpu: 250m, memory: 1Gi}, limits: {cpu: 1500m, memory: 1536Mi}}
+
+keycloak:
+  enabled: true
+  # Keycloak 25, as locally. A production image can have the providers built in; then leave providersConfigMap empty.
+  image: quay.io/keycloak/keycloak:25.0.6
+  adminUser: admin
+  # The URL browsers and tokens use (the issuer), the same as the consent-manager chart's config.keycloak.publicUrl.
+  # Empty: any host (port-forward on a dev cluster).
+  hostname: ""
+  database:
+    host: postgres
+    port: 5432
+    name: keycloak
+    user: keycloak
+    # appended to the JDBC URL; require on a managed server
+    params: ""
+  # ConfigMap of infra/keycloak/realm-export, imported on start (a realm that exists is skipped)
+  realmsConfigMap: keycloak-realms
+  # ConfigMap of backend/keycloak-ext/build/providers (cm-idn-otp-spi, cm-idn-theme); empty when the image has them
+  providersConfigMap: keycloak-providers
+  # The realms' passwordless sign-in posts codes to cm-ntf-svc (ntfBaseUrl in each realm's cm-otp config). The realm
+  # files name it as compose does; these are its addresses from this namespace.
+  otp:
+    ntfBaseUrl: http://cm-ntf-svc.consent-manager.svc.cluster.local:8084
+    sandboxNtfBaseUrl: http://cm-ntf-svc.consent-manager-sandbox.svc.cluster.local:8084
+  helperImage: busybox:1.37
+  resources: {requests: {cpu: 250m, memory: 768Mi}, limits: {cpu: 1500m, memory: 1Gi}}
+  ingress:
+    enabled: false
+    className: nginx
+    host: id.example.com
+    annotations: {}
+    tls:
+      enabled: true
+      clusterIssuer: letsencrypt
+
+mailpit:
+  enabled: true
+  image: axllent/mailpit:v1.31.3
+  resources: {requests: {cpu: 25m, memory: 32Mi}, limits: {cpu: 250m, memory: 128Mi}}
+
+# Creates what the servers above need, after every install and upgrade; with everything there it changes nothing.
+init:
+  postgres:
+    enabled: true
+  pulsar:
+    enabled: true
+    # this chart's broker, or an alias of another one (serviceAliases)
+    adminUrl: http://pulsar:8080
+    # "standalone" for this chart's broker; the Apache Pulsar chart's cluster is its release name
+    clusterName: standalone
+    # consent-manager's tenants (ADR-004) and the sandbox's (ADR-037)
+    tenants: [cm, cm-sbx]
+    namespaces: [dfreg, cnscmd, cnsqry, ntf, bil, stf]
+    # notification-service's namespace and its retention
+    retention:
+      - {namespace: public/default, minutes: 60, sizeMB: 1024}
+  resources: {requests: {cpu: 50m, memory: 64Mi}, limits: {cpu: 500m, memory: 256Mi}}
+
+# Services of another name in this namespace under the names the apps use, e.g. {pulsar: pulsar-broker} for the Apache
+# Pulsar chart, or {keycloak: keycloak-service} for the Keycloak Operator. ExternalName: the ports are the target's.
+serviceAliases: {}
+
+networkPolicy:
+  enabled: true
+  # the only namespaces that may reach the servers; add consent-manager-sandbox for a sandbox release (ADR-037)
+  clientNamespaces: [consent-manager, notification]
+  # the ingress controller's namespace, for Keycloak's public route only
+  ingressNamespaceLabels: {kubernetes.io/metadata.name: ingress-nginx}
+  # Keycloak's pods, here or from its own chart or operator
+  keycloakPodLabels: {app.kubernetes.io/name: keycloak}

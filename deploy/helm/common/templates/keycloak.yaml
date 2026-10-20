@@ -1,0 +1,167 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+{{- if .Values.keycloak.enabled }}
+{{- $ctx := dict "root" . "name" "keycloak" }}
+{{- $k := .Values.keycloak }}
+{{- $db := $k.database }}
+{{/* Keycloak on its own database, importing the realms (ADR-035, ADR-037) with the cm-idn providers. The realms send
+     sign-in codes to cm-ntf-svc in the consent-manager namespace (keycloak.otp). */}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  labels: {{- include "common.labels" $ctx | nindent 4 }}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {{- include "common.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "common.labels" $ctx | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {{- include "common.podSecurityContext" (dict "uid" 1000) | nindent 8 }}
+      initContainers:
+        # The realm files with cm-ntf-svc's in-cluster address, and the provider JARs as plain files (a ConfigMap
+        # mount is symlinks and hidden directories).
+        - name: prepare
+          image: {{ $k.helperImage }}
+          command: [/bin/sh, -ec]
+          args:
+            - |
+              for f in /realms-src/*.json; do
+                sed -e "s#http://cm-ntf-svc:8084#$NTF_BASE_URL#g" -e "s#http://cm-sbx-ntf-svc:8084#$SBX_NTF_BASE_URL#g" \
+                  "$f" > "/import/$(basename "$f")"
+              done
+              if [ -d /providers-src ]; then cp /providers-src/*.jar /providers/; fi
+          env:
+            - {name: NTF_BASE_URL, value: {{ $k.otp.ntfBaseUrl | quote }}}
+            - {name: SBX_NTF_BASE_URL, value: {{ $k.otp.sandboxNtfBaseUrl | quote }}}
+          resources: {requests: {cpu: 10m, memory: 16Mi}, limits: {cpu: 100m, memory: 32Mi}}
+          securityContext: {{- include "common.containerSecurityContext" (dict "readOnly" true) | nindent 12 }}
+          volumeMounts:
+            - {name: realms-src, mountPath: /realms-src, readOnly: true}
+            - {name: import, mountPath: /import}
+            {{- if $k.providersConfigMap }}
+            - {name: providers-src, mountPath: /providers-src, readOnly: true}
+            - {name: providers, mountPath: /providers}
+            {{- end }}
+      containers:
+        - name: keycloak
+          image: {{ $k.image }}
+          args: [start, --import-realm]
+          env:
+            - {name: KEYCLOAK_ADMIN, value: {{ $k.adminUser | quote }}}
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              {{- include "common.secretRef" (dict "root" . "key" "KEYCLOAK_ADMIN_PASSWORD") | nindent 14 }}
+            - {name: KC_DB, value: postgres}
+            - name: KC_DB_URL
+              value: {{ printf "jdbc:postgresql://%s:%v/%s%s" $db.host $db.port $db.name (ternary (printf "?%s" $db.params) "" (ne $db.params "")) | quote }}
+            - {name: KC_DB_USERNAME, value: {{ $db.user | quote }}}
+            - name: KC_DB_PASSWORD
+              {{- include "common.secretRef" (dict "root" . "key" "KEYCLOAK_DB_PASSWORD") | nindent 14 }}
+            # plain HTTP inside the cluster; TLS ends at the ingress, which forwards X-Forwarded-*
+            - {name: KC_HTTP_ENABLED, value: "true"}
+            - {name: KC_PROXY_HEADERS, value: xforwarded}
+            - {name: KC_HEALTH_ENABLED, value: "true"}
+            {{- if $k.hostname }}
+            - {name: KC_HOSTNAME, value: {{ $k.hostname | quote }}}
+            # the services fetch keys from keycloak:8080 while tokens carry the public issuer
+            - {name: KC_HOSTNAME_BACKCHANNEL_DYNAMIC, value: "true"}
+            {{- else }}
+            - {name: KC_HOSTNAME_STRICT, value: "false"}
+            {{- end }}
+          ports:
+            - {name: http, containerPort: 8080}
+            - {name: management, containerPort: 9000}
+          startupProbe:
+            httpGet: {path: /health/started, port: management}
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: {path: /health/ready, port: management}
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet: {path: /health/live, port: management}
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 4
+          resources: {{- toYaml $k.resources | nindent 12 }}
+          # start rebuilds Keycloak for the database and providers, under /opt/keycloak
+          securityContext: {{- include "common.containerSecurityContext" (dict "readOnly" false) | nindent 12 }}
+          volumeMounts:
+            - {name: import, mountPath: /opt/keycloak/data/import, readOnly: true}
+            {{- if $k.providersConfigMap }}
+            - {name: providers, mountPath: /opt/keycloak/providers, readOnly: true}
+            {{- end }}
+      volumes:
+        - name: realms-src
+          configMap: {name: {{ $k.realmsConfigMap }}}
+        - name: import
+          emptyDir: {sizeLimit: 16Mi}
+        {{- if $k.providersConfigMap }}
+        - name: providers-src
+          configMap: {name: {{ $k.providersConfigMap }}}
+        - name: providers
+          emptyDir: {sizeLimit: 64Mi}
+        {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  labels: {{- include "common.labels" $ctx | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector: {{- include "common.selectorLabels" $ctx | nindent 4 }}
+  ports:
+    - {name: http, port: 8080, targetPort: http}
+{{- if $k.ingress.enabled }}
+---
+# The public route: browsers sign in here and tokens name it as their issuer.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak
+  labels: {{- include "common.labels" $ctx | nindent 4 }}
+  annotations:
+    {{- with $k.ingress.tls.clusterIssuer }}
+    cert-manager.io/cluster-issuer: {{ . }}
+    {{- end }}
+    {{- with $k.ingress.annotations }}{{ toYaml . | nindent 4 }}{{ end }}
+spec:
+  ingressClassName: {{ $k.ingress.className }}
+  {{- if $k.ingress.tls.enabled }}
+  tls:
+    - hosts: [{{ $k.ingress.host | quote }}]
+      secretName: keycloak-tls
+  {{- end }}
+  rules:
+    - host: {{ $k.ingress.host | quote }}
+      http:
+        paths:
+          # the realms and their resources; the admin console stays behind port-forward
+          - path: /realms
+            pathType: Prefix
+            backend: {service: {name: keycloak, port: {name: http}}}
+          - path: /resources
+            pathType: Prefix
+            backend: {service: {name: keycloak, port: {name: http}}}
+{{- end }}
+{{- end }}

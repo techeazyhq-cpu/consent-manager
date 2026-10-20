@@ -21,6 +21,7 @@ config:
   database:
     host: REPLACE_WITH_FLEXIBLE_SERVER_FQDN
     jdbcParams: "sslmode=require"
+    r2dbcParams: "sslMode=require"
   redis:
     host: REPLACE_WITH_MANAGED_REDIS_HOST
     port: 10000
@@ -43,3 +44,8 @@ externalSecrets:
 databaseInit:
   # Terraform creates both consent_manager and keycloak
   enabled: false
+networkPolicy:
+  # The managed PostgreSQL and Redis are private addresses in the network Terraform builds: merge Terraform's
+  # helm_values output, whose networkPolicy.datastoreEgress opens exactly those (deploy/README.md). Pulsar and
+  # Keycloak are in the common namespace (ADR-054).
+  datastoreEgress: []

@@ -5,5 +5,5 @@ The API:   https://{{ .Values.ingress.apiHost }}/api
 {{ $name }}: https://{{ $w.host }}
 {{- end }}
 
-The services wait for PostgreSQL, Pulsar (tenant and namespaces: infra/pulsar/init-tenant.sh) and Keycloak (realms:
-infra/keycloak/realm-export) at the addresses in config. Their secrets come from the Secret "{{ .Values.secrets.existingSecret }}".
+The services wait for PostgreSQL, Redis, Pulsar (tenants and namespaces) and Keycloak (realms) at the addresses in
+config: the "common" namespace's (deploy/helm/common, ADR-054), whose init Job creates the databases and tenants. Their secrets come from the Secret "{{ .Values.secrets.existingSecret }}".

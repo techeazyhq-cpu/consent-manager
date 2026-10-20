@@ -16,8 +16,8 @@
 
 {{- if .Values.networkPolicy.enabled }}
 {{- $ctx := dict "root" . "name" "network" }}
-{{/* Default deny into this release's pods; then only what each needs (ADR-042). Egress stays open: datastores are
-     managed services outside the cluster, reached over TLS. */}}
+{{/* Default deny into this release's pods; then only what each needs (ADR-042). Out of them: DNS, the release, the
+     shared servers in the common namespace (ADR-054), and what networkPolicy.egress and datastoreEgress add. */}}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -60,4 +60,66 @@ spec:
         - podSelector:
             matchExpressions:
               - {key: app.kubernetes.io/name, operator: In, values: [opa{{ range $name, $s := .Values.services }}, {{ $name }}{{ end }}]}
+{{- with index .Values.services "cm-ntf-svc" }}
+---
+# Keycloak, in the common namespace, posts sign-in codes to cm-ntf-svc (the realms' cm-otp config).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $.Release.Name }}-from-keycloak
+  labels: {{- include "cm.labels" $ctx | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/name: cm-ntf-svc}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: {{ $.Values.networkPolicy.commonNamespace }}}
+          podSelector:
+            matchLabels: {{- toYaml $.Values.networkPolicy.keycloakPodLabels | nindent 14 }}
+      ports:
+        - {protocol: TCP, port: {{ .port }}}
+{{- end }}
+{{- with .Values.networkPolicy.egress }}
+{{- if .enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $.Release.Name }}-egress
+  labels: {{- include "cm.labels" $ctx | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/part-of: consent-manager}
+  policyTypes: [Egress]
+  egress:
+    # DNS, wherever the cluster runs it
+    - ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    # the gateway, the services, OPA and the web apps, among themselves
+    - to:
+        - podSelector:
+            matchLabels: {app.kubernetes.io/part-of: consent-manager}
+    # PostgreSQL, Redis, Pulsar, Keycloak and Mailpit
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: {{ $.Values.networkPolicy.commonNamespace }}}
+    {{- with .namespaces }}
+    - to:
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values: {{- toYaml . | nindent 18 }}
+    {{- end }}
+    {{- with .external }}
+    - to: {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with $.Values.networkPolicy.datastoreEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}
 {{- end }}

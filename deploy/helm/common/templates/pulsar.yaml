@@ -1,0 +1,99 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+{{- if .Values.pulsar.enabled }}
+{{- $ctx := dict "root" . "name" "pulsar" }}
+{{- $p := .Values.pulsar }}
+{{- $advertised := printf "pulsar-0.pulsar-headless.%s.svc.%s" .Release.Namespace .Values.clusterDomain }}
+{{/* Pulsar standalone: broker, bookie and metadata store in one JVM. Clients look topics up through the Service and
+     are sent to the broker's advertised address, so that is the pod's own DNS name, resolvable from any namespace. */}}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pulsar
+  labels: {{- include "common.labels" $ctx | nindent 4 }}
+spec:
+  serviceName: pulsar-headless
+  replicas: 1
+  selector:
+    matchLabels: {{- include "common.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "common.labels" $ctx | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60
+      securityContext: {{- include "common.podSecurityContext" (dict "uid" 10000) | nindent 8 }}
+      containers:
+        - name: pulsar
+          image: {{ $p.image }}
+          command: [sh, -c, "bin/apply-config-from-env.py conf/standalone.conf && exec bin/pulsar standalone -nfw -nss"]
+          env:
+            - {name: PULSAR_MEM, value: {{ $p.mem | quote }}}
+            - {name: advertisedAddress, value: {{ $advertised | quote }}}
+          ports:
+            - {name: pulsar, containerPort: 6650}
+            - {name: admin, containerPort: 8080}
+          # The broker's own check over HTTP, answered in-process. Never bin/pulsar-admin: it starts a JVM per check
+          # (ADR-052).
+          startupProbe:
+            httpGet: {path: /admin/v2/brokers/health, port: admin}
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 36
+          readinessProbe:
+            httpGet: {path: /admin/v2/brokers/health, port: admin}
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket: {port: pulsar}
+            periodSeconds: 20
+            failureThreshold: 6
+          resources: {{- toYaml $p.resources | nindent 12 }}
+          # apply-config-from-env.py writes conf/standalone.conf
+          securityContext: {{- include "common.containerSecurityContext" (dict "readOnly" false) | nindent 12 }}
+          volumeMounts:
+            - {name: data, mountPath: /pulsar/data}
+  volumeClaimTemplates:
+    {{- include "common.volumeClaim" $p | nindent 4 }}
+---
+# the pod's own name (the advertised address), resolvable before the broker is ready, as the bookie needs it to start
+apiVersion: v1
+kind: Service
+metadata:
+  name: pulsar-headless
+  labels: {{- include "common.labels" $ctx | nindent 4 }}
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector: {{- include "common.selectorLabels" $ctx | nindent 4 }}
+  ports:
+    - {name: pulsar, port: 6650, targetPort: pulsar}
+    - {name: admin, port: 8080, targetPort: admin}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pulsar
+  labels: {{- include "common.labels" $ctx | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector: {{- include "common.selectorLabels" $ctx | nindent 4 }}
+  ports:
+    - {name: pulsar, port: 6650, targetPort: pulsar}
+    - {name: admin, port: 8080, targetPort: admin}
+{{- end }}
