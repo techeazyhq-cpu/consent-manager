@@ -33,6 +33,7 @@ externalSecrets:
     DFREG_SECRETS_KEY: {key: cm-production/application, property: DFREG_SECRETS_KEY}
     CNS_TKN_JWKS: {key: cm-production/application, property: CNS_TKN_JWKS}
     CNS_RCPT_JWKS: {key: cm-production/application, property: CNS_RCPT_JWKS}
+    CNSCMD_SECRETS_KEY: {key: cm-production/application, property: CNSCMD_SECRETS_KEY}
     KEYCLOAK_ADMIN_PASSWORD: {key: cm-production/application, property: KEYCLOAK_ADMIN_PASSWORD}
     NTF_SVC_API_KEY: {key: cm-production/application, property: NTF_SVC_API_KEY}
     NTF_SVC_SIGNING_SECRET: {key: cm-production/application, property: NTF_SVC_SIGNING_SECRET}

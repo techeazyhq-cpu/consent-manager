@@ -21,6 +21,7 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":cm-sec-kit")) // the platform's AES-GCM sealer (ADR-041)
     api(project(":cm-df-reg-app"))
     implementation(project(":cm-evt-kit"))
     implementation(project(":cm-res-kit"))

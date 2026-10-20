@@ -60,6 +60,11 @@ import type {
   PrpsSummaryDto,
   SubPln,
   UsageRespDto,
+  WebhookDeliveryDetailDto,
+  WebhookDeliveryDto,
+  WebhookDeliverySts,
+  WebhookEndpointDto,
+  WebhookWithSecretDto,
 } from "./types";
 
 export * from "./types";
@@ -380,6 +385,41 @@ export const apiKeys = {
       method: "PUT",
       body: JSON.stringify({ required }),
     }),
+};
+
+const whk = (path: string) => `/api/cns-cmd/webhooks${path}`;
+
+/** A fiduciary's webhooks (ADR-047): its endpoints and what was delivered to them. */
+export const webhooks = {
+  types: (base: string, token: string) => request<string[]>(base, whk("/types"), token),
+  list: (base: string, token: string) => request<WebhookEndpointDto[]>(base, whk("/endpoints"), token),
+  /** The signing secret is in this answer only. */
+  create: (base: string, token: string, url: string, description: string, types: string[]) =>
+    request<WebhookWithSecretDto>(base, whk("/endpoints"), token, {
+      method: "POST",
+      body: JSON.stringify({ url, description: description || null, types }),
+    }),
+  rotateSecret: (base: string, token: string, id: string) =>
+    request<WebhookWithSecretDto>(base, whk(`/endpoints/${encodeURIComponent(id)}/rotate-secret`), token, { method: "POST" }),
+  setActive: (base: string, token: string, id: string, active: boolean) =>
+    request<WebhookEndpointDto>(base, whk(`/endpoints/${encodeURIComponent(id)}/${active ? "enable" : "disable"}`), token, {
+      method: "POST",
+    }),
+  remove: (base: string, token: string, id: string) =>
+    request<void>(base, whk(`/endpoints/${encodeURIComponent(id)}`), token, { method: "DELETE" }),
+  test: (base: string, token: string, id: string) =>
+    request<WebhookDeliveryDto>(base, whk(`/endpoints/${encodeURIComponent(id)}/test`), token, { method: "POST" }),
+  deliveries: (base: string, token: string, filter: { endpointId?: string; sts?: WebhookDeliverySts; limit?: number } = {}) => {
+    const q = new URLSearchParams();
+    if (filter.endpointId) q.set("endpointId", filter.endpointId);
+    if (filter.sts) q.set("sts", filter.sts);
+    q.set("limit", String(filter.limit ?? 50));
+    return request<WebhookDeliveryDto[]>(base, whk(`/deliveries?${q}`), token);
+  },
+  delivery: (base: string, token: string, id: string) =>
+    request<WebhookDeliveryDetailDto>(base, whk(`/deliveries/${encodeURIComponent(id)}`), token),
+  replay: (base: string, token: string, id: string) =>
+    request<WebhookDeliveryDto>(base, whk(`/deliveries/${encodeURIComponent(id)}/replay`), token, { method: "POST" }),
 };
 
 /** A fiduciary's own billing (ADR-039): its subscription, and asking for another plan. */

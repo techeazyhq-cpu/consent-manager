@@ -55,6 +55,9 @@ cm:
   cnscmd:
     expiry-sweep:
       fixed-delay-ms: 60000
+    # Seals secrets this service keeps, such as webhook signing secrets (ADR-047): base64 of 32 bytes. A development
+    # key here; production sets CM_CNSCMD_SECRETS_KEY from the cloud's key management.
+    secrets-key: ${CM_CNSCMD_SECRETS_KEY:Y25zLWNtZC1sb2NhbC1kZXYtb25seS1zZWNyZXRzLWs=}
   ntf:
     obx-relay:
       fixed-delay-ms: 1000
@@ -71,6 +74,11 @@ cm:
   cns-rcpt:
     keys-path: ${CM_CNS_RCPT_KEYS_PATH:build/cns-rcpt-keys/receipt-jwks.json}
     create-keys-if-missing: ${CM_CNS_RCPT_CREATE_KEYS:true}
+  # Fiduciary webhooks (ADR-047). Private and loopback addresses are refused as endpoints (SSRF) unless allowed here,
+  # for local development only; retry-delays overrides the delivery schedule (comma-separated ISO durations).
+  webhooks:
+    allow-private: ${CM_WEBHOOKS_ALLOW_PRIVATE:false}
+    retry-delays: ${CM_WEBHOOKS_RETRY_DELAYS:}
   # What every consent record says about the platform itself (ADR-023, ADR-025)
   platform:
     name: ${CM_PLATFORM_NAME:Consent Manager}

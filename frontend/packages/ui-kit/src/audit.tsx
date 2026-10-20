@@ -84,6 +84,18 @@ export function describeAudit(row: AuditRow): string {
       return `Published ${word(d(row, "purpose"))} version ${d(row, "version")}${
         row.details.change === "MATERIAL" ? " (needs re-consent)" : ""
       }`;
+    case "webhook.created":
+      return `Added the webhook ${d(row, "url")}`;
+    case "webhook.secret-rotated":
+      return `Rotated the signing secret of ${d(row, "url")}`;
+    case "webhook.enabled":
+      return `Turned on the webhook ${d(row, "url")}`;
+    case "webhook.disabled":
+      return `Paused the webhook ${d(row, "url")}`;
+    case "webhook.deleted":
+      return `Removed the webhook ${d(row, "url")}`;
+    case "webhook.replayed":
+      return `Sent a ${d(row, "type")} webhook again`;
     case "batch.submitted":
       return `Sent a list of ${d(row, "rows")} (${d(row, "toSend")} to ask)${row.details.file ? `, ${row.details.file}` : ""}`;
     case "batch.finished":

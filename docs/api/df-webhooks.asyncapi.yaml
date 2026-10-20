@@ -1,0 +1,269 @@
+# Copyright 2026 Vasantha Kumar
+# Licensed under the Apache License, Version 2.0. See LICENSE.
+asyncapi: 3.0.0
+info:
+  title: Consent Manager webhooks
+  version: 1.0.0
+  description: |
+    What the Consent Manager posts to a data fiduciary's webhook endpoints when one of its consents changes (ADR-047).
+    Add endpoints in the DF Console (Developers, Webhooks) or with `POST /api/cns-cmd/webhooks/endpoints`.
+
+    **Delivery:** at least once. Answer any 2xx within 10 seconds. Anything else is tried again after 1 and 5 minutes,
+    then 30 minutes, 2, 6, 12 and 24 hours. After that the delivery is failed, until you send it again from the
+    console or with `POST /api/cns-cmd/webhooks/deliveries/{id}/replay`. Redirects aren't followed.
+
+    **Verify every message** as Standard Webhooks does. Compute HMAC-SHA256 over `webhook-id.webhook-timestamp.body`,
+    keyed by the base64-decoded secret after `whsec_`, and compare its base64 with each `v1,` signature in
+    `webhook-signature`. Refuse a timestamp more than 5 minutes off. After a rotation, two signatures are sent for 24
+    hours; either may match.
+
+    **De-duplicate** on `webhook-id`: it is the same on every attempt and every replay. Messages carry no personal
+    data; read more, such as the consent record, through the API.
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+defaultContentType: application/json
+
+servers:
+  fiduciary:
+    host: '{host}'
+    protocol: https
+    description: Your endpoint. HTTPS, on a public address.
+    variables:
+      host:
+        default: example.com
+
+channels:
+  consentEvents:
+    address: '{path}'
+    description: The URL you registered. One endpoint can receive every type, or the types you choose.
+    parameters:
+      path:
+        description: The path of your endpoint's URL.
+    messages:
+      consentRequested: { $ref: '#/components/messages/consentRequested' }
+      consentNotificationFailed: { $ref: '#/components/messages/consentNotificationFailed' }
+      consentGiven: { $ref: '#/components/messages/consentGiven' }
+      consentRefused: { $ref: '#/components/messages/consentRefused' }
+      consentModified: { $ref: '#/components/messages/consentModified' }
+      consentRenewed: { $ref: '#/components/messages/consentRenewed' }
+      consentWithdrawn: { $ref: '#/components/messages/consentWithdrawn' }
+      consentLapsed: { $ref: '#/components/messages/consentLapsed' }
+      receiptIssued: { $ref: '#/components/messages/receiptIssued' }
+      webhookTest: { $ref: '#/components/messages/webhookTest' }
+
+operations:
+  receiveConsentEvent:
+    action: receive
+    channel: { $ref: '#/channels/consentEvents' }
+    summary: Your endpoint receives a signed POST for each change of a consent.
+    bindings:
+      http:
+        method: POST
+    messages:
+      - $ref: '#/channels/consentEvents/messages/consentRequested'
+      - $ref: '#/channels/consentEvents/messages/consentNotificationFailed'
+      - $ref: '#/channels/consentEvents/messages/consentGiven'
+      - $ref: '#/channels/consentEvents/messages/consentRefused'
+      - $ref: '#/channels/consentEvents/messages/consentModified'
+      - $ref: '#/channels/consentEvents/messages/consentRenewed'
+      - $ref: '#/channels/consentEvents/messages/consentWithdrawn'
+      - $ref: '#/channels/consentEvents/messages/consentLapsed'
+      - $ref: '#/channels/consentEvents/messages/receiptIssued'
+      - $ref: '#/channels/consentEvents/messages/webhookTest'
+
+components:
+  messageTraits:
+    signed:
+      headers:
+        type: object
+        required: [webhook-id, webhook-timestamp, webhook-signature]
+        properties:
+          webhook-id:
+            type: string
+            description: The message id. The same on every attempt and replay; de-duplicate on it.
+          webhook-timestamp:
+            type: string
+            pattern: '^[0-9]+$'
+            description: When this attempt was signed, in Unix seconds.
+          webhook-signature:
+            type: string
+            pattern: '^v1,[A-Za-z0-9+/=]+( v1,[A-Za-z0-9+/=]+)?$'
+            description: One `v1,<base64 HMAC-SHA256>` per secret in force, separated by a space.
+          User-Agent:
+            type: string
+            const: ConsentManager-Webhooks/1
+
+  schemas:
+    Envelope:
+      type: object
+      required: [id, type, occurredAt, data]
+      properties:
+        id: { type: string, description: Equal to webhook-id. }
+        type: { type: string }
+        occurredAt: { type: string, format: date-time, description: When the change happened. }
+        data: { type: object }
+    ConsentData:
+      type: object
+      required: [cnsReqId, status]
+      properties:
+        cnsReqId: { type: string, format: uuid, description: The consent request. }
+        cnsArtId: { type: string, format: uuid, description: The consent artefact, once given. }
+        prpsCode: { type: string, example: ORDER_UPDATES }
+        prpsVer: { type: integer, description: The purpose version asked for (consent.requested). }
+        status:
+          type: string
+          description: The W3C DPV consent status.
+          enum: [dpv:ConsentRequested, dpv:ConsentGiven, dpv:ConsentRefused, dpv:RenewedConsentGiven,
+                 dpv:ConsentWithdrawn, dpv:ConsentExpired]
+        dCatCodes:
+          type: array
+          items: { type: string }
+          description: The data categories now in force.
+        validFrom: { type: string, format: date-time }
+        validUntil: { type: string, format: date-time }
+
+  messages:
+    consentRequested:
+      name: consent.requested
+      title: Consent asked for
+      traits: [{ $ref: '#/components/messageTraits/signed' }]
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - properties:
+              type: { const: consent.requested }
+              data: { $ref: '#/components/schemas/ConsentData' }
+      examples:
+        - name: requested
+          payload:
+            id: 0b7f2d5e-4a9c-4e1f-9d3a-6c2b8e1f0a47
+            type: consent.requested
+            occurredAt: '2026-10-20T06:00:00Z'
+            data:
+              cnsReqId: 6f1c2b9e-0d4a-4c8e-a7b5-3e2f1d0c9b8a
+              prpsCode: ORDER_UPDATES
+              prpsVer: 2
+              status: dpv:ConsentRequested
+              dCatCodes: [EMAIL, NAME]
+    consentNotificationFailed:
+      name: consent.notification_failed
+      title: The person couldn't be notified of a request
+      traits: [{ $ref: '#/components/messageTraits/signed' }]
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - properties:
+              type: { const: consent.notification_failed }
+              data: { $ref: '#/components/schemas/ConsentData' }
+    consentGiven:
+      name: consent.given
+      title: Consent given, for all or some of the categories asked
+      traits: [{ $ref: '#/components/messageTraits/signed' }]
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - properties:
+              type: { const: consent.given }
+              data: { $ref: '#/components/schemas/ConsentData' }
+      examples:
+        - name: given
+          payload:
+            id: 9a3e1c7d-2b4f-4d6a-8e0c-1f5b7d9a3c2e
+            type: consent.given
+            occurredAt: '2026-10-20T06:05:00Z'
+            data:
+              cnsReqId: 6f1c2b9e-0d4a-4c8e-a7b5-3e2f1d0c9b8a
+              cnsArtId: 2d8b4f6a-1c3e-4a5b-9d7f-0e2c4a6b8d1f
+              status: dpv:ConsentGiven
+              dCatCodes: [EMAIL]
+              validFrom: '2026-10-20T06:05:00Z'
+              validUntil: '2027-04-18T06:05:00Z'
+    consentRefused:
+      name: consent.refused
+      title: Consent refused
+      traits: [{ $ref: '#/components/messageTraits/signed' }]
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - properties:
+              type: { const: consent.refused }
+              data: { $ref: '#/components/schemas/ConsentData' }
+    consentModified:
+      name: consent.modified
+      title: Consent narrowed or shortened by the person
+      traits: [{ $ref: '#/components/messageTraits/signed' }]
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - properties:
+              type: { const: consent.modified }
+              data:
+                allOf:
+                  - $ref: '#/components/schemas/ConsentData'
+                  - properties:
+                      change: { type: string, enum: [SHORTENED, CATEGORY_WITHDRAWN] }
+                      dCatWithdrawn: { type: string, description: The category no longer shared. }
+    consentRenewed:
+      name: consent.renewed
+      title: Consent renewed before it lapsed
+      traits: [{ $ref: '#/components/messageTraits/signed' }]
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - properties:
+              type: { const: consent.renewed }
+              data: { $ref: '#/components/schemas/ConsentData' }
+    consentWithdrawn:
+      name: consent.withdrawn
+      title: Consent withdrawn. Stop processing.
+      traits: [{ $ref: '#/components/messageTraits/signed' }]
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - properties:
+              type: { const: consent.withdrawn }
+              data: { $ref: '#/components/schemas/ConsentData' }
+    consentLapsed:
+      name: consent.lapsed
+      title: Consent lapsed at the end of its validity
+      traits: [{ $ref: '#/components/messageTraits/signed' }]
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - properties:
+              type: { const: consent.lapsed }
+              data:
+                allOf:
+                  - $ref: '#/components/schemas/ConsentData'
+                  - properties:
+                      lapsedAt: { type: string, format: date-time }
+    receiptIssued:
+      name: receipt.issued
+      title: A signed receipt was issued for a record event
+      traits: [{ $ref: '#/components/messageTraits/signed' }]
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - properties:
+              type: { const: receipt.issued }
+              data:
+                type: object
+                properties:
+                  cnsReqId: { type: string, format: uuid }
+                  receiptId: { type: string, format: uuid }
+                  forEvent: { type: integer, description: The record event it is for. }
+                  sha256: { type: string, description: The receipt's hash, as in the audit ledger. }
+    webhookTest:
+      name: webhook.test
+      title: A test, sent on request
+      traits: [{ $ref: '#/components/messageTraits/signed' }]
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - properties:
+              type: { const: webhook.test }
+              data:
+                type: object
+                properties:
+                  message: { type: string }

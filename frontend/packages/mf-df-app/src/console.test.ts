@@ -26,6 +26,8 @@ import { requestProblem, toCode } from "./Raise";
 import { batchHref, parseRoute, purposeEditHref, purposeHref, raiseHref } from "./routes";
 import { askable, noticeIn } from "./Template";
 import { usageNote } from "./Billing";
+import { WEBHOOK_TYPES, WEBHOOK_TYPE_LABELS, lastOutcome } from "./Webhooks";
+import { managesWebhooks } from "./roles";
 import { OPERATIONS, asCurl, fillPath, pathParams, remembered, tokenCurl, uploadForm } from "./sandbox";
 
 describe("DF Console routes", () => {
@@ -175,6 +177,10 @@ describe("sending to many", () => {
     expect(parseRoute(batchHref("b-1"))).toEqual({ page: "batch", id: "b-1" });
   });
 
+  it("routes to the webhooks", () => {
+    expect(parseRoute("#/webhooks")).toEqual({ page: "webhooks" });
+  });
+
   it("takes CSV and Excel files up to 5 MB", () => {
     expect(fileProblem(null)).toMatch(/Choose/);
     expect(fileProblem(new File(["x"], "list.CSV"))).toBeNull();
@@ -269,5 +275,30 @@ describe("billing", () => {
     expect(usageNote({ curPeriodUsg: 100, reqPerMonthQta: 1000, resetsAt })).toMatch(/^900 left this month\. It resets/);
     expect(usageNote({ curPeriodUsg: 850, reqPerMonthQta: 1000, resetsAt })).toMatch(/close to your allowance/);
     expect(usageNote({ curPeriodUsg: 1200, reqPerMonthQta: 1000, resetsAt })).toMatch(/used up: new requests are refused/);
+  });
+});
+
+describe("webhooks", () => {
+  it("says how a delivery last went", () => {
+    expect(lastOutcome({ attempts: 0, lastStatus: null, lastError: null })).toBe("Not tried yet");
+    expect(lastOutcome({ attempts: 2, lastStatus: 503, lastError: null })).toBe("HTTP 503");
+    expect(lastOutcome({ attempts: 1, lastStatus: null, lastError: "timeout" })).toBe("timeout");
+  });
+
+  it("offers every type the API sends", () => {
+    expect(WEBHOOK_TYPES).toEqual(["consent.requested", "consent.notification_failed", "consent.given", "consent.refused",
+      "consent.modified", "consent.renewed", "consent.withdrawn", "consent.lapsed", "receipt.issued"]);
+  });
+
+  it("labels every message type", () => {
+    for (const t of ["consent.given", "consent.withdrawn", "consent.lapsed", "receipt.issued", "webhook.test"]) {
+      expect(WEBHOOK_TYPE_LABELS[t]).toBeTruthy();
+    }
+  });
+
+  it("lets the people who build integrations manage them", () => {
+    expect(managesWebhooks("DEVELOPER")).toBe(true);
+    expect(managesWebhooks("CONSENT_MANAGER")).toBe(false);
+    expect(managesWebhooks("AUDITOR")).toBe(false);
   });
 });
