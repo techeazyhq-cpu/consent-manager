@@ -60,6 +60,7 @@ import type {
   PrpsSummaryDto,
   SubPln,
   UsageRespDto,
+  DfInsightsDto,
   WebhookDeliveryDetailDto,
   WebhookDeliveryDto,
   WebhookDeliverySts,
@@ -385,6 +386,12 @@ export const apiKeys = {
       method: "PUT",
       body: JSON.stringify({ required }),
     }),
+};
+
+/** The DF Console dashboard (ADR-048): outcomes and times to decide over the last {@code days}. */
+export const insights = {
+  get: (base: string, token: string, days: number) =>
+    request<DfInsightsDto>(base, `/api/cns-qry/insights?days=${days}`, token),
 };
 
 const whk = (path: string) => `/api/cns-cmd/webhooks${path}`;

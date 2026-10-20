@@ -311,6 +311,27 @@ export interface IssuedApiKeyDto {
   signingSecret: string;
 }
 
+/** Outcomes of requests: given, refused, still awaiting, or never reached the person (ADR-048). */
+export interface InsightOutcomes {
+  raised: number;
+  given: number;
+  refused: number;
+  awaiting: number;
+  notNotified: number;
+}
+
+/** How a fiduciary's requests went over a window (ADR-048). Durations in seconds. */
+export interface DfInsightsDto {
+  from: string;
+  to: string;
+  outcomes: InsightOutcomes;
+  decisions: { decided: number; medianSeconds: number | null; p90Seconds: number | null; withinADay: number };
+  purposes: { prpsCode: string; outcomes: InsightOutcomes; medianSeconds: number | null }[];
+  /** Every day of the window, UTC: raised that day, and given or refused that day. */
+  days: { date: string; raised: number; given: number; refused: number }[];
+  changes: { withdrawn: number; narrowed: number; renewed: number; lapsed: number };
+}
+
 /** A fiduciary's webhook endpoint (ADR-047); its secret is never shown again after it's made or rotated. */
 export interface WebhookEndpointDto {
   id: string;

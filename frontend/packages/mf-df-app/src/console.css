@@ -370,3 +370,103 @@ textarea.df-code {
   border-bottom: 1px dashed var(--cm-border);
   margin-bottom: 8px;
 }
+
+/* dashboard (ADR-048) */
+.df-stat-note {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+}
+
+.df-periods .cm-btn {
+  padding: 6px 12px;
+}
+
+.df-chart {
+  background: var(--cm-surface);
+  border: 1px solid var(--cm-border);
+  border-radius: var(--cm-radius);
+  padding: 14px 16px;
+  margin-top: 18px;
+}
+
+.df-chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.df-chart-head .df-link-button {
+  margin-left: auto;
+}
+
+.df-legend,
+.df-tooltip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cm-text-dim);
+  font-size: 13px;
+}
+
+.df-legend i,
+.df-tooltip i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.df-legend i:not(:first-child) {
+  margin-left: 10px;
+}
+
+.df-tooltip {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--cm-surface-2);
+  border: 1px solid var(--cm-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+/* developer docs (ADR-048) */
+.df-doc-step h4 {
+  margin: 16px 0 4px;
+}
+
+.df-copy {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+}
+
+.df-conn {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  margin: 0 0 12px;
+}
+
+.df-conn dt {
+  color: var(--cm-text-dim);
+}
+
+.df-conn dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  .df-conn {
+    grid-template-columns: 1fr;
+  }
+}

@@ -146,12 +146,14 @@
   max-width: 1180px;
 }
 
-/* Links inside tables read as links on the dark surface. */
+/* Links inside tables and notes read as links on the dark surface. */
+.cm-note a,
 .cm-table a {
   color: var(--cm-primary);
   text-decoration: none;
 }
 
+.cm-note a:hover,
 .cm-table a:hover {
   text-decoration: underline;
 }
