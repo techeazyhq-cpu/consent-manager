@@ -75,6 +75,17 @@ export class ApiError extends Error {
   }
 }
 
+/** What went wrong, for a person to read: the API's own explanation when it gave one. */
+export function friendlyError(err: unknown): string {
+  if (err && typeof err === "object" && "problem" in err) {
+    const p = (err as { problem?: { title?: string; detail?: string } }).problem;
+    if (p?.detail) return p.detail;
+    if (p?.title) return p.title;
+  }
+  if (err instanceof Error) return err.message;
+  return "Something went wrong";
+}
+
 async function request<T>(baseUrl: string, path: string, token: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${baseUrl}${path}`, {
     ...init,

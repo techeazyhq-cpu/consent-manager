@@ -116,9 +116,10 @@ class CmLoginThemesTest {
         }
     }
 
+    /** A realm per audience (ADR-035) holds only that audience's apps: for principals, the web portal and the mobile app (ADR-032). */
     @ParameterizedTest
-    @CsvSource({"cm-dp, cm-dp-portal, cm-dp", "cm-df, cm-df-app, cm-df", "cm-staff, cm-cm-admin, cm-admin"})
-    void eachAudienceHasItsOwnRealmWithOnlyItsFrontendShowingItsTheme(String realm, String clientId, String theme)
+    @CsvSource({"cm-dp, cm-dp-portal|cm-dp-mobile, cm-dp", "cm-df, cm-df-app, cm-df", "cm-staff, cm-cm-admin, cm-admin"})
+    void eachAudienceHasItsOwnRealmWithOnlyItsFrontendsShowingItsTheme(String realm, String clientIds, String theme)
             throws IOException {
         JsonNode export = realmExport(realm);
         assertEquals(realm, export.path("realm").asText());
@@ -126,11 +127,14 @@ class CmLoginThemesTest {
 
         List<String> clients = new java.util.ArrayList<>();
         export.get("clients").forEach(c -> clients.add(c.get("clientId").asText()));
-        assertEquals(List.of(clientId), clients, realm + " holds only its own frontend");
+        assertEquals(List.of(clientIds.split("[|]")), clients, realm + " holds only its own frontends");
 
-        JsonNode client = export.get("clients").get(0);
-        assertTrue(client.path("publicClient").asBoolean(), clientId + " must be public (PKCE, no secret)");
-        assertEquals(theme, client.path("attributes").path("login_theme").asText());
+        for (JsonNode client : export.get("clients")) {
+            String clientId = client.path("clientId").asText();
+            assertTrue(client.path("publicClient").asBoolean(), clientId + " must be public (PKCE, no secret)");
+            assertEquals("S256", client.path("attributes").path("pkce.code.challenge.method").asText(), clientId);
+            assertEquals(theme, client.path("attributes").path("login_theme").asText());
+        }
     }
 
     @ParameterizedTest

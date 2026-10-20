@@ -37,7 +37,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [029](adr-029-fiduciary-assurance-and-consent-termination.md) | Fiduciaries are verified at onboarding; termination by a fiduciary or an authority | Proposed |
 | [030](adr-030-contracts-interoperability-and-portability.md) | Contract-first interfaces, interoperability, and moving to another consent manager | Proposed |
 | [031](adr-031-purpose-versions-re-consent-and-sharing-consent.md) | Purpose definitions are versioned; a material change needs re-consent; sharing consent binds both parties | Accepted for versions and re-consent (043); sharing proposed |
-| [032](adr-032-channels-per-audience-web-mobile-console-developer-portal.md) | Channels per audience: DP web and mobile, DF Console, developer portal | Proposed |
+| [032](adr-032-channels-per-audience-web-mobile-console-developer-portal.md) | Channels per audience: DP web and mobile, DF Console, developer portal | Proposed; DP mobile app accepted in 050 |
 | [033](adr-033-fiduciary-staff-accounts-separate-from-api-clients.md) | Fiduciaries' people have their own accounts; API clients are for systems only | Proposed |
 | [034](adr-034-sandbox-and-api-playground.md) | A sandbox with synthetic principals, and an API playground in the developer portal | Proposed |
 | [035](adr-035-a-keycloak-realm-per-audience.md) | A Keycloak realm per audience: data principals, fiduciaries, platform staff | Accepted |
@@ -53,6 +53,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [045](adr-045-shorten-withdraw-a-category-renew-and-lapse.md) | Shortening, withdrawing a category, renewing, and lapse | Accepted |
 | [046](adr-046-consent-records-receipts-and-export.md) | Consent records written with each change; receipts signed with their own key; export | Accepted |
 | [047](adr-047-fiduciary-webhooks.md) | Fiduciary webhooks, signed and delivered at least once from the outbox | Accepted |
+| [050](adr-050-dp-mobile-app.md) | The DP mobile app: Expo in the frontend workspace, shared rules, PKCE sign-in, secure storage | Accepted |
 
 ## Writing one
 

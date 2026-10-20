@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Consent Manager",
+    "slug": "cm-dp-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.techeazyhq.cm.dp"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.techeazyhq.cm.dp"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-web-browser",
+      "expo-secure-store",
+      "expo-sharing"
+    ],
+    "scheme": "cmdp",
+    "description": "Your consents in one place: decide on requests, change or withdraw what you gave, and keep the signed records.",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

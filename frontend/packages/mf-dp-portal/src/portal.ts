@@ -20,7 +20,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ensureFreshToken, getKeycloak, type AuthInfo } from "auth-kit";
 import { cnsCmd, cnsQry, dfReg, type CnsArtRdMdl, type CnsLcySts, type GrantChoice } from "api-client";
 import { friendlyError } from "ui-kit/src/index";
-import { awaitsDecision } from "./labels";
+import { awaitsDecision, endingSoon, type Change, type Decision } from "dp-kit";
 
 /** A token valid for at least the next 30 seconds, refreshed if need be. */
 export async function freshToken(auth: AuthInfo): Promise<string> {
@@ -39,24 +39,7 @@ export interface Org {
   lastUpdatedAt: string;
 }
 
-export type Decision = "give" | "decline" | "withdraw";
-
-/** A change to a consent in force (ADR-026 §4): end it sooner, stop sharing one category, or renew it. */
-export type Change =
-  | { kind: "shorten"; until: string }
-  | { kind: "withdraw-dcat"; dCat: string }
-  | { kind: "renew"; days: number };
-
-/** How close to its end a consent is when the person is prompted to renew it. */
-export const RENEW_PROMPT_DAYS = 14;
-
-/** Consents in force that end within {@link RENEW_PROMPT_DAYS}, soonest first: prompts to renew before a lapse. */
-export function endingSoon(rows: CnsArtRdMdl[], now: Date = new Date()): CnsArtRdMdl[] {
-  const limit = now.getTime() + RENEW_PROMPT_DAYS * 86_400_000;
-  return rows
-    .filter((r) => r.lcySts === "ISSUED" && r.validUntil && new Date(r.validUntil).getTime() <= limit)
-    .sort((a, b) => (a.validUntil ?? "").localeCompare(b.validUntil ?? ""));
-}
+export { RENEW_PROMPT_DAYS, endingSoon, type Change, type Decision } from "dp-kit";
 
 export interface Portal {
   auth: AuthInfo;

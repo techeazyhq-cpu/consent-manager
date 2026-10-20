@@ -92,7 +92,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
-                "http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176"));
+                "http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176",
+                // the DP mobile app's web preview (Expo, ADR-032); the native apps send no Origin
+                "http://localhost:19006"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Cns-Tkn",
                 "X-API-Key", "X-Signature", "X-Signature-Timestamp", "X-Signature-Nonce", "Idempotency-Key"));

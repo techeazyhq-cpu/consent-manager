@@ -23,6 +23,7 @@ export default defineConfig({
   esbuild: { jsx: "automatic" },
   test: {
     environment: "jsdom",
-    include: ["packages/*/src/**/*.test.{ts,tsx}"],
+    // the mobile app's plain-TypeScript parts only: its screens need React Native, not jsdom
+    include: ["packages/*/src/**/*.test.{ts,tsx}", "apps/*/src/lib/**/*.test.ts"],
   },
 });

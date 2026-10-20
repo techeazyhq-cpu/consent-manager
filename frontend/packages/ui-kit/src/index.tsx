@@ -122,16 +122,8 @@ export function Field({ label, children }: PropsWithChildren<{ label: string }>)
   );
 }
 
-/** A problem's human sentence ({@code detail}) before its short type name ({@code title}). */
-export function friendlyError(err: unknown): string {
-  if (err && typeof err === "object" && "problem" in err) {
-    const p = (err as { problem?: { title?: string; detail?: string } }).problem;
-    if (p?.detail) return p.detail;
-    if (p?.title) return p.title;
-  }
-  if (err instanceof Error) return err.message;
-  return "Something went wrong";
-}
+/** A problem's human sentence before its short name; in api-client, so the mobile app shares it (ADR-050). */
+export { friendlyError } from "api-client";
 
 export { AuditTable, describeAudit, type AuditRow } from "./audit";
 export { AppShell, Icons, OrgLogo, forgetLogo, humanise, useHashRoute, type NavItem } from "./shell";
