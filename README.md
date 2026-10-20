@@ -59,6 +59,7 @@ Requires JDK 21, Docker, Node 20+ and pnpm.
 
 ```bash
 ./gradlew build                                       # services, Keycloak providers, tests
+docker compose -f infra/common/compose.yml up -d --wait   # shared servers: Postgres, Redis, Pulsar, Keycloak, Mailpit
 docker compose -f infra/docker-compose.yml up -d --build
 cd frontend && pnpm install && pnpm dev:dp-portal     # or dev:df-app, dev:cm-admin
 ```
@@ -85,6 +86,11 @@ responsive whatever Docker does, cap Docker itself in `%UserProfile%\.wslconfig`
 processors=8
 memory=8GB
 ```
+
+The servers run once for both applications, in the `common` project
+([ADR-053](docs/adr/adr-053-common-servers-for-both-applications.md)): start it first. consent-manager and
+notification-service each run as their own project on its network, with their own database, Redis index and Pulsar
+tenant, and one inbox for both at http://localhost:8025.
 
 To deliver email, SMS and push through notification-service instead of the local catchers, follow
 [infra/notification-service/README.md](infra/notification-service/README.md).
