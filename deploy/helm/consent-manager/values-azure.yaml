@@ -34,6 +34,7 @@ externalSecrets:
     MIGRATION_DB_PASSWORD: {key: migration-db-password}
     DFREG_SECRETS_KEY: {key: dfreg-secrets-key}
     CNS_TKN_JWKS: {key: cns-tkn-jwks}
+    CNS_RCPT_JWKS: {key: cns-rcpt-jwks}
     KEYCLOAK_ADMIN_PASSWORD: {key: keycloak-admin-password}
     REDIS_PASSWORD: {key: redis-password}
     NTF_SVC_API_KEY: {key: ntf-svc-api-key}

@@ -30,7 +30,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [022](adr-022-children-guardians-and-representatives.md) | Children, guardians and other representatives | Proposed |
 | [023](adr-023-pure-consent-manager-boundary-and-neutrality.md) | A pure consent manager: its boundary, neutrality and First Schedule duties | Proposed |
 | [024](adr-024-hipaa-authorisations-and-fhir-consent.md) | HIPAA authorisations in the consent model; FHIR Consent at the boundary | Proposed |
-| [025](adr-025-iso-27560-consent-records-and-receipts.md) | Consent records and receipts to ISO/IEC TS 27560, in DPV | Proposed |
+| [025](adr-025-iso-27560-consent-records-and-receipts.md) | Consent records and receipts to ISO/IEC TS 27560, in DPV | Accepted (046); inclusion proofs, PDF/UA and archive proposed |
 | [026](adr-026-consent-validity-requested-maximum-principal-adjustable.md) | Consent validity: requested and maximum per purpose, adjustable by the principal | Accepted (044, 045); renewal reminders proposed |
 | [027](adr-027-short-lived-tokens-status-list-and-verification-availability.md) | Short-lived consent tokens, a revocation status list, and verification availability | Proposed |
 | [028](adr-028-accessible-consent-without-deceptive-design.md) | An accessible consent experience, without deceptive design, with recorded evidence | Proposed |
@@ -51,6 +51,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [043](adr-043-purpose-versions-in-the-consent-context.md) | Purpose versions in the Consent context; requests name a published version | Accepted |
 | [044](adr-044-partial-consent-and-validity-at-grant-by-the-principal-only.md) | Partial consent and the validity chosen at grant, by the principal only | Accepted |
 | [045](adr-045-shorten-withdraw-a-category-renew-and-lapse.md) | Shortening, withdrawing a category, renewing, and lapse | Accepted |
+| [046](adr-046-consent-records-receipts-and-export.md) | Consent records written with each change; receipts signed with their own key; export | Accepted |
 
 ## Writing one
 

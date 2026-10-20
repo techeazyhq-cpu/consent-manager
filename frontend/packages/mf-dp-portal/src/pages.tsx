@@ -20,6 +20,7 @@ import { useMemo, useState } from "react";
 import type { CnsArtRdMdl } from "api-client";
 import { Button, Card, PageHeader, Spinner } from "ui-kit/src/index";
 import ConsentCard, { DfLogo, statusOrder } from "./ConsentCard";
+import { ExportRecords } from "./History";
 import PushToggle from "./PushToggle";
 import { awaitsDecision } from "./labels";
 import type { Portal } from "./portal";
@@ -273,6 +274,7 @@ export function Account({ portal, onSignOut }: { portal: Portal; onSignOut: () =
         Organisations find you by this email address. Requests sent to it before you first signed in are already
         here.
       </p>
+      <ExportRecords portal={portal} />
       <Button onClick={onSignOut}>Sign out</Button>
     </>
   );

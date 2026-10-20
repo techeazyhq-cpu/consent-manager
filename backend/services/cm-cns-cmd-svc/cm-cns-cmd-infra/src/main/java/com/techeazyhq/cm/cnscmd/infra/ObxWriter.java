@@ -23,6 +23,7 @@ import java.util.UUID;
 import org.springframework.r2dbc.core.DatabaseClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techeazyhq.cm.cnscmd.dom.CnsRecording;
 import com.techeazyhq.cm.domkit.DomainEvt;
 import com.techeazyhq.cm.evtkit.ObxRow;
 
@@ -39,16 +40,23 @@ final class ObxWriter {
 
     private final DatabaseClient db;
     private final ObjectMapper objectMapper;
+    private final R2dbcCnsRecRepoAdapter records;
 
     ObxWriter(DatabaseClient db, ObjectMapper objectMapper) {
         this.db = db;
         this.objectMapper = objectMapper;
+        this.records = new R2dbcCnsRecRepoAdapter(db, objectMapper);
     }
 
+    /**
+     * Writes the event to the outbox and, for a change of a consent, to its 27560 record (ADR-025), in the caller's
+     * transaction: every change passes here, so none goes unrecorded and the record never disagrees with the consent.
+     */
     Mono<Void> insert(DomainEvt evt, String aggType, String aggId) {
         return Mono.fromCallable(() -> objectMapper.writeValueAsString(evt))
                 .map(payload -> ObxRow.pending(evt.evtId(), aggType, aggId, evt.getClass().getSimpleName(), payload))
-                .flatMap(this::insertRow);
+                .flatMap(this::insertRow)
+                .then(Mono.defer(() -> CnsRecording.of(evt).map(records::record).orElse(Mono.empty())));
     }
 
     private Mono<Void> insertRow(ObxRow row) {

@@ -33,6 +33,15 @@ import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techeazyhq.cm.cnscmd.app.CnsRcptJob;
+import com.techeazyhq.cm.cnscmd.app.CnsRecDoc;
+import com.techeazyhq.cm.cnscmd.app.CnsRecords;
+import com.techeazyhq.cm.cnscmd.dom.CnsRecRepoPort;
+import com.techeazyhq.cm.cnscmd.dom.DfNamePort;
+import com.techeazyhq.cm.cnscmd.dom.RcptSignerPort;
+import com.techeazyhq.cm.cnscmd.infra.JwsRcptSigner;
+import com.techeazyhq.cm.cnscmd.infra.R2dbcCnsRecRepoAdapter;
+import com.techeazyhq.cm.cnscmd.infra.WebClientDfNameAdapter;
 import com.techeazyhq.cm.cnscmd.app.ChangeCnsArtCmds;
 import com.techeazyhq.cm.cnscmd.app.CnsReqTerms;
 import com.techeazyhq.cm.cnscmd.app.PrpsDefCmds;
@@ -255,6 +264,44 @@ public class CnsCmdBeanConfig {
     @Bean
     public CnsReqTerms cnsReqTerms(CnsReqRepoPort cnsReqRepo, PrpsDefRepoPort prpsDefRepo) {
         return new CnsReqTerms(cnsReqRepo, prpsDefRepo);
+    }
+
+    // ---- consent records and receipts (ADR-025) ----
+
+    @Bean
+    public CnsRecRepoPort cnsRecRepoPort(DatabaseClient db, ObjectMapper objectMapper) {
+        return new R2dbcCnsRecRepoAdapter(db, objectMapper);
+    }
+
+    /** The receipt keys: a set of their own, never the token keys (finding R8), created on first start when allowed. */
+    @Bean
+    public RcptSignerPort rcptSignerPort(@Value("${cm.cns-rcpt.keys-path}") String keysPath,
+                                         @Value("${cm.cns-rcpt.create-keys-if-missing:true}") boolean createIfMissing,
+                                         ObjectMapper objectMapper) throws java.io.IOException {
+        return new JwsRcptSigner(CnsTknKeys.loadOrCreate(java.nio.file.Path.of(keysPath), createIfMissing,
+                java.time.Clock.systemUTC(), "cns-rcpt-"), objectMapper);
+    }
+
+    @Bean
+    public DfNamePort dfNamePort(WebClient.Builder builder, ReactiveCircuitBreakerFactory cbFactory,
+                                 ServiceUrls serviceUrls) {
+        return new WebClientDfNameAdapter(builder, cbFactory, serviceUrls.dfReg());
+    }
+
+    @Bean
+    public CnsRecords cnsRecords(CnsRecRepoPort recs, PrpsDefRepoPort prpsDefs, DfNamePort dfNames,
+                                 RcptSignerPort signer, ObxPort obxPort,
+                                 @Value("${cm.platform.name}") String name,
+                                 @Value("${cm.platform.jurisdiction}") String jurisdiction,
+                                 @Value("${cm.platform.grievance-contact}") String grievanceContact,
+                                 @Value("${cm.platform.withdrawal-url}") String withdrawalUrl) {
+        return new CnsRecords(recs, prpsDefs, dfNames, signer, obxPort,
+                new CnsRecDoc.Platform(name, jurisdiction, grievanceContact, withdrawalUrl), java.time.Clock.systemUTC());
+    }
+
+    @Bean
+    public CnsRcptJob cnsRcptJob(CnsRecRepoPort recs, CnsRecords records) {
+        return new CnsRcptJob(recs, records);
     }
 
     @Bean

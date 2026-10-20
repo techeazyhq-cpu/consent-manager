@@ -280,6 +280,43 @@
   color-scheme: dark;
 }
 
+/* one consent's history (ADR-025) */
+.dp-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 16px;
+  border-left: 2px solid var(--cm-border);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dp-timeline li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.dp-timeline li::before {
+  content: "";
+  position: absolute;
+  left: -23px;
+  top: 5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--cm-primary);
+}
+
+.dp-timeline-head {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
 @media (max-width: 760px) {
   .dp-consent,
   .dp-consent.dp-no-org {

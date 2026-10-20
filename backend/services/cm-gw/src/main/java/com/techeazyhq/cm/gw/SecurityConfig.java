@@ -57,7 +57,8 @@ public class SecurityConfig {
                 .authorizeExchange(ex -> ex
                         .pathMatchers("/actuator/health", "/actuator/info").permitAll()
                         // Consent token public keys (ADR-006), for fiduciaries verifying tokens themselves.
-                        .pathMatchers(HttpMethod.GET, "/api/cns-cmd/.well-known/jwks.json").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/api/cns-cmd/.well-known/jwks.json",
+                                "/api/cns-cmd/.well-known/receipt-jwks.json").permitAll()
                         // Platform staff (ADR-017): operators view, onboard and activate tenants; changing a
                         // tenant's plan or suspending it, and managing staff, stays with administrators.
                         .pathMatchers(HttpMethod.GET, "/api/df-reg/dfs", "/api/df-reg/dfs/*/profile").hasAnyRole(STAFF)

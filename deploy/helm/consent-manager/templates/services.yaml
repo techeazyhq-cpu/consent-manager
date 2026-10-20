@@ -84,11 +84,14 @@ spec:
         - name: tmp
           emptyDir: {sizeLimit: 256Mi}
         {{- if $s.consentTokenKeys }}
-        # the consent token signing keys (ADR-006), from the secret store, never created in the pod
+        # the consent token signing keys (ADR-006) and the receipt signing keys (ADR-025), each its own set, from the
+        # secret store, never created in the pod
         - name: cns-tkn-keys
           secret:
             secretName: {{ $root.Values.secrets.existingSecret }}
-            items: [{key: CNS_TKN_JWKS, path: jwks.json}]
+            items:
+              - {key: CNS_TKN_JWKS, path: jwks.json}
+              - {key: CNS_RCPT_JWKS, path: receipt-jwks.json}
         {{- end }}
 ---
 apiVersion: v1

@@ -65,6 +65,15 @@ public final class CnsTknKeys {
      * key, writes it there readable by the owner only, and uses it.
      */
     public static CnsTknKeys loadOrCreate(Path file, boolean createIfMissing, Clock clock) throws IOException {
+        return loadOrCreate(file, createIfMissing, clock, "cns-tkn-");
+    }
+
+    /**
+     * The same, for another key set of its own, such as the receipt keys (ADR-025): {@code kidPrefix} names the keys
+     * it generates, so a key's id says what it signs.
+     */
+    public static CnsTknKeys loadOrCreate(Path file, boolean createIfMissing, Clock clock, String kidPrefix)
+            throws IOException {
         if (Files.exists(file)) {
             try {
                 return new CnsTknKeys(JWKSet.parse(Files.readString(file, StandardCharsets.UTF_8)));
@@ -76,13 +85,17 @@ public final class CnsTknKeys {
             throw new IOException("No consent token signing keys at " + file
                     + "; provide a key set there, or allow creating one");
         }
-        CnsTknKeys created = new CnsTknKeys(new JWKSet(generate(clock)));
+        CnsTknKeys created = new CnsTknKeys(new JWKSet(generate(clock, kidPrefix)));
         write(file, created.keys.toString(false));
         return created;
     }
 
     static RSAKey generate(Clock clock) {
-        String kid = "cns-tkn-" + DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC).format(clock.instant());
+        return generate(clock, "cns-tkn-");
+    }
+
+    static RSAKey generate(Clock clock, String kidPrefix) {
+        String kid = kidPrefix + DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC).format(clock.instant());
         try {
             return new RSAKeyGenerator(2048).keyID(kid).keyUse(KeyUse.SIGNATURE).algorithm(JWSAlgorithm.RS256).generate();
         } catch (JOSEException e) {

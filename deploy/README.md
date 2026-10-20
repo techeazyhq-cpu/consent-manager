@@ -34,6 +34,7 @@ Terraform creates the secret entries without values. An operator sets them once:
 | `DB_PASSWORD` | The services' database password (`MIGRATION_DB_PASSWORD` is the schema owner's, managed by the cloud) |
 | `DFREG_SECRETS_KEY` | Base64 of 32 random bytes: seals API key signing secrets (ADR-041) |
 | `CNS_TKN_JWKS` | The consent token signing key set (ADR-006), a JSON Web Key Set with private keys |
+| `CNS_RCPT_JWKS` | The consent receipt signing key set (ADR-025), the same form, never the same keys. Keep retired keys in it, after the current one, for as long as receipts they signed are kept |
 | `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_DB_PASSWORD` | Keycloak's admin and database passwords |
 | `NTF_SVC_API_KEY`, `NTF_SVC_SIGNING_SECRET` | The notification-service client credentials |
 

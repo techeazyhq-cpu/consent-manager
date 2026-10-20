@@ -25,6 +25,7 @@ import { onForegroundPush } from "./push";
 import { usePortal } from "./portal";
 import { Account, Consents, Dashboard, Notifications, OrgDetail, Requests } from "./pages";
 import { parseRoute } from "./routes";
+import { History } from "./History";
 
 interface Props {
   auth: AuthInfo;
@@ -69,7 +70,7 @@ export default function DpPortalApp({ auth, gwBase }: Props) {
     { key: "account", href: "#/account", label: "Account", section: "You", icon: Icons.user },
   ];
   // An organisation's page belongs under the dashboard in the menu.
-  const current = route.page === "org" ? "dashboard" : route.page;
+  const current = route.page === "org" ? "dashboard" : route.page === "history" ? "consents" : route.page;
 
   return (
     <AppShell
@@ -94,6 +95,7 @@ export default function DpPortalApp({ auth, gwBase }: Props) {
       {route.page === "dashboard" ? <Dashboard portal={portal} /> : null}
       {route.page === "requests" ? <Requests portal={portal} /> : null}
       {route.page === "consents" ? <Consents portal={portal} /> : null}
+      {route.page === "history" ? <History key={route.cnsReqId} portal={portal} cnsReqId={route.cnsReqId} /> : null}
       {route.page === "org" ? <OrgDetail portal={portal} dfId={route.dfId} /> : null}
       {route.page === "notifications" ? <Notifications portal={portal} /> : null}
       {route.page === "account" ? <Account portal={portal} onSignOut={signOut} /> : null}

@@ -66,6 +66,17 @@ cm:
     # How long a consent token lives (ADR-027): the longest an offline verifier can keep honouring a withdrawn consent.
     # Never longer than the consent itself. Interim setting until regime profiles (ADR-020) supply it per law and purpose.
     lifetime: ${CM_CNS_TKN_LIFETIME:PT15M}
+  # Consent receipts (ADR-025): signed with their own key set, never the token keys. Retired keys stay in the set,
+  # after the current one, and stay published, so every receipt kept can still be verified.
+  cns-rcpt:
+    keys-path: ${CM_CNS_RCPT_KEYS_PATH:build/cns-rcpt-keys/receipt-jwks.json}
+    create-keys-if-missing: ${CM_CNS_RCPT_CREATE_KEYS:true}
+  # What every consent record says about the platform itself (ADR-023, ADR-025)
+  platform:
+    name: ${CM_PLATFORM_NAME:Consent Manager}
+    jurisdiction: ${CM_CELL_JURISDICTION:IN}
+    grievance-contact: ${CM_PLATFORM_GRIEVANCE_CONTACT:grievance@consent-manager.example}
+    withdrawal-url: ${CM_PLATFORM_WITHDRAWAL_URL:http://localhost:5174/#/consents}
 
 # Circuit breakers on calls to other services (ADR-016). One breaker per dependency: it opens when at least half of
 # the last 20 calls failed because the dependency is unhealthy (cm-res-kit's RemoteFailures: unreachable, timed out,

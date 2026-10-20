@@ -23,14 +23,17 @@ export type Route =
   | { page: "consents" }
   | { page: "notifications" }
   | { page: "account" }
-  | { page: "org"; dfId: string };
+  | { page: "org"; dfId: string }
+  | { page: "history"; cnsReqId: string };
 
 /** Anything unrecognised lands on the dashboard, the default page. */
 export function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
   switch (parts[0]) {
-    case "requests":
     case "consents":
+      // one consent's history and receipts (ADR-025)
+      return parts[1] ? { page: "history", cnsReqId: parts[1] } : { page: "consents" };
+    case "requests":
     case "notifications":
     case "account":
       return { page: parts[0] };
@@ -42,3 +45,6 @@ export function parseRoute(hash: string): Route {
 }
 
 export const orgHref = (dfId: string) => `#/organisations/${encodeURIComponent(dfId)}`;
+
+/** One consent's history, its record and its receipts. */
+export const historyHref = (cnsReqId: string) => `#/consents/${encodeURIComponent(cnsReqId)}`;

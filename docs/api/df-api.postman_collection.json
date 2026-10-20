@@ -494,6 +494,73 @@
           ]
         },
         {
+          "name": "The consent's ISO/IEC TS 27560 record",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/records/{{requestId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "records",
+                "{{requestId}}"
+              ],
+              "query": []
+            },
+            "description": "JSON-LD with W3C DPV (ADR-046). Contains Header, Notice, Processing, Parties and every event so far. Written\nin the same transaction as each change of the consent, and readable by the fiduciary that is its controller\nand the person it names."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('requestId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs requestId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The consent's signed receipts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/records/{{requestId}}/receipts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "records",
+                "{{requestId}}",
+                "receipts"
+              ],
+              "query": []
+            },
+            "description": "One per record event. Each is a compact JWS (RS256, typ cm-receipt+json) over the record as it stood after\nthat event, signed with a receipt key. Verify it offline with the receipt keys. Its SHA-256 is in the audit\nledger."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('requestId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs requestId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Each change of a request's status, oldest first",
           "request": {
             "method": "GET",
@@ -817,6 +884,41 @@
       "name": "Consent tokens",
       "description": "Verify consent before using personal data.",
       "item": [
+        {
+          "name": "Public keys that verify receipts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/.well-known/receipt-jwks.json",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                ".well-known",
+                "receipt-jwks.json"
+              ],
+              "query": []
+            },
+            "description": "The receipt keys, retired ones included, never the consent token keys. No credentials needed.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300));"
+                ]
+              }
+            }
+          ]
+        },
         {
           "name": "Check a consent before using the person's data",
           "request": {

@@ -21,7 +21,8 @@ import type { CnsArtRdMdl } from "api-client";
 import { STATUS, awaitsDecision, humanise } from "./labels";
 import { daysLeft, shortenedUntil } from "./Manage";
 import { endingSoon } from "./portal";
-import { orgHref, parseRoute } from "./routes";
+import { changeLabel, jwsPayload } from "./History";
+import { historyHref, orgHref, parseRoute } from "./routes";
 
 describe("DP Portal routes", () => {
   it("lands on the dashboard by default and for anything unknown", () => {
@@ -76,5 +77,29 @@ describe("changing a consent in force", () => {
   it("ends a consent sooner at the same time of day, whole days earlier", () => {
     const until = new Date(2026, 11, 1, 9, 30).toISOString();
     expect(shortenedUntil(until, "2026-11-24")).toBe(new Date(2026, 10, 24, 9, 30).toISOString());
+  });
+});
+
+describe("a consent's history and receipts", () => {
+  it("has a page per consent, under My consents", () => {
+    expect(parseRoute(historyHref("req 1"))).toEqual({ page: "history", cnsReqId: "req 1" });
+    expect(parseRoute("#/consents")).toEqual({ page: "consents" });
+  });
+
+  it("says what each change was", () => {
+    expect(changeLabel("SHORTENED")).toBe("Ended sooner");
+    expect(changeLabel("CATEGORY_WITHDRAWN:PHONE_NUMBER")).toBe("Stopped sharing Phone number");
+    expect(changeLabel("BACKFILLED: time in the audit ledger")).toMatch(/records began/);
+    expect(changeLabel(undefined)).toBeNull();
+  });
+
+  it("reads what a signed receipt says, UTF-8 included", () => {
+    const payload = { "@type": "cm:ConsentReceipt", forEvent: 2, note: "समाचार" };
+    const b64url = btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(payload))))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+    expect(jwsPayload(`header.${b64url}.signature`)).toEqual(payload);
+    expect(jwsPayload("not a jws")).toBeNull();
   });
 });

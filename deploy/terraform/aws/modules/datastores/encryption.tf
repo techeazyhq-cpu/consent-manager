@@ -76,7 +76,7 @@ resource "aws_secretsmanager_secret" "application" {
   name        = "${var.name}/application"
   description = <<-EOT
     Values for the chart's cm-secrets Secret, set by an operator and synced by External Secrets:
-    DB_PASSWORD, DFREG_SECRETS_KEY, CNS_TKN_JWKS, KEYCLOAK_ADMIN_PASSWORD, KEYCLOAK_DB_PASSWORD,
+    DB_PASSWORD, DFREG_SECRETS_KEY, CNS_TKN_JWKS, CNS_RCPT_JWKS, KEYCLOAK_ADMIN_PASSWORD, KEYCLOAK_DB_PASSWORD,
     NTF_SVC_API_KEY and NTF_SVC_SIGNING_SECRET.
     MIGRATION_DB_PASSWORD comes from the RDS-managed master user secret.
   EOT

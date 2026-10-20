@@ -52,6 +52,7 @@ public class PulsarAudEvtConsumer {
             Map.entry("CnsRenewedEvt", new String[] {"cnscmd", "cns-renewed"}),
             Map.entry("CnsDpLinkedEvt", new String[] {"cnscmd", "cns-dp-linked"}),
             Map.entry("CnsExpiredEvt", new String[] {"cnscmd", "cns-expired"}),
+            Map.entry("CnsRcptIssuedEvt", new String[] {"cnscmd", "cns-rcpt-issued"}),
             Map.entry("CnsNotificationFailedEvt", new String[] {"cnscmd", "cns-notification-failed"}),
             Map.entry("DfActivatedEvt", new String[] {"dfreg", "df-activated"}),
             Map.entry("NtfDpDeliveryFailedEvt", new String[] {"ntf", "dp-delivery-failed"}));
