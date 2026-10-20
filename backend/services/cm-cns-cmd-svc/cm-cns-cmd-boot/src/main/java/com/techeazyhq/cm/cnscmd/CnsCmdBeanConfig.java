@@ -33,6 +33,15 @@ import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techeazyhq.cm.cnscmd.app.Webhooks;
+import com.techeazyhq.cm.cnscmd.app.WhkDeliveryWorker;
+import com.techeazyhq.cm.cnscmd.dom.SecretSealerPort;
+import com.techeazyhq.cm.cnscmd.dom.WhkDelivery;
+import com.techeazyhq.cm.cnscmd.dom.WhkRepoPort;
+import com.techeazyhq.cm.cnscmd.dom.WhkSenderPort;
+import com.techeazyhq.cm.cnscmd.infra.AesGcmSecretSealer;
+import com.techeazyhq.cm.cnscmd.infra.R2dbcWhkRepoAdapter;
+import com.techeazyhq.cm.cnscmd.infra.WebClientWhkSender;
 import com.techeazyhq.cm.cnscmd.app.CnsRcptJob;
 import com.techeazyhq.cm.cnscmd.app.CnsRecDoc;
 import com.techeazyhq.cm.cnscmd.app.CnsRecords;
@@ -264,6 +273,39 @@ public class CnsCmdBeanConfig {
     @Bean
     public CnsReqTerms cnsReqTerms(CnsReqRepoPort cnsReqRepo, PrpsDefRepoPort prpsDefRepo) {
         return new CnsReqTerms(cnsReqRepo, prpsDefRepo);
+    }
+
+    // ---- fiduciary webhooks (ADR-047) ----
+
+    @Bean
+    public WhkRepoPort whkRepoPort(DatabaseClient db, ObjectMapper objectMapper) {
+        return new R2dbcWhkRepoAdapter(db, objectMapper);
+    }
+
+    /** Private addresses only where explicitly allowed, for local development; never in production (SSRF). */
+    @Bean
+    public WhkSenderPort whkSenderPort(WebClient.Builder builder,
+                                       @Value("${cm.webhooks.allow-private:false}") boolean allowPrivate) {
+        return new WebClientWhkSender(builder, allowPrivate);
+    }
+
+    @Bean
+    public SecretSealerPort cnsCmdSecretSealer(@Value("${cm.cnscmd.secrets-key}") String key) {
+        return new AesGcmSecretSealer(key);
+    }
+
+    @Bean
+    public Webhooks webhooks(WhkRepoPort repo, WhkSenderPort sender, SecretSealerPort sealer, AuditTrail audit,
+                             @Value("${cm.webhooks.allow-private:false}") boolean allowPrivate) {
+        // plain http only where private addresses are allowed: local development
+        return new Webhooks(repo, sender, sealer, audit, java.time.Clock.systemUTC(), allowPrivate);
+    }
+
+    @Bean
+    public WhkDeliveryWorker whkDeliveryWorker(WhkRepoPort repo, WhkSenderPort sender, SecretSealerPort sealer,
+                                               @Value("${cm.webhooks.retry-delays:}") java.util.List<java.time.Duration> delays) {
+        return new WhkDeliveryWorker(repo, sender, sealer, java.time.Clock.systemUTC(),
+                delays == null || delays.isEmpty() ? WhkDelivery.RETRY_DELAYS : delays);
     }
 
     // ---- consent records and receipts (ADR-025) ----

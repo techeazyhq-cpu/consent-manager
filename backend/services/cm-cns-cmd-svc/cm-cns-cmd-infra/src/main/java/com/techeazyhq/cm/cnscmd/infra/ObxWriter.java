@@ -24,6 +24,7 @@ import org.springframework.r2dbc.core.DatabaseClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techeazyhq.cm.cnscmd.dom.CnsRecording;
+import com.techeazyhq.cm.cnscmd.dom.WhkMessage;
 import com.techeazyhq.cm.domkit.DomainEvt;
 import com.techeazyhq.cm.evtkit.ObxRow;
 
@@ -41,22 +42,26 @@ final class ObxWriter {
     private final DatabaseClient db;
     private final ObjectMapper objectMapper;
     private final R2dbcCnsRecRepoAdapter records;
+    private final R2dbcWhkRepoAdapter webhooks;
 
     ObxWriter(DatabaseClient db, ObjectMapper objectMapper) {
         this.db = db;
         this.objectMapper = objectMapper;
         this.records = new R2dbcCnsRecRepoAdapter(db, objectMapper);
+        this.webhooks = new R2dbcWhkRepoAdapter(db, objectMapper);
     }
 
     /**
-     * Writes the event to the outbox and, for a change of a consent, to its 27560 record (ADR-025), in the caller's
-     * transaction: every change passes here, so none goes unrecorded and the record never disagrees with the consent.
+     * Writes the event to the outbox and, for a change of a consent, to its 27560 record (ADR-025) and a webhook
+     * delivery for each of its fiduciary's endpoints that wants it (ADR-047), all in the caller's transaction: every
+     * change passes here, so none goes unrecorded or untold, and a fiduciary is told at least once.
      */
     Mono<Void> insert(DomainEvt evt, String aggType, String aggId) {
         return Mono.fromCallable(() -> objectMapper.writeValueAsString(evt))
                 .map(payload -> ObxRow.pending(evt.evtId(), aggType, aggId, evt.getClass().getSimpleName(), payload))
                 .flatMap(this::insertRow)
-                .then(Mono.defer(() -> CnsRecording.of(evt).map(records::record).orElse(Mono.empty())));
+                .then(Mono.defer(() -> CnsRecording.of(evt).map(records::record).orElse(Mono.empty())))
+                .then(Mono.defer(() -> WhkMessage.of(evt).map(webhooks::enqueue).orElse(Mono.empty())));
     }
 
     private Mono<Void> insertRow(ObxRow row) {

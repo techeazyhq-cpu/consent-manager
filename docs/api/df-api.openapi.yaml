@@ -109,6 +109,11 @@ tags:
     description: Verify consent before using personal data.
   - name: Account
     description: The fiduciary's own subscription and audit trail.
+  - name: Webhooks
+    description: |
+      Be told of every change to your consents (ADR-047). What is posted to your endpoints is in
+      df-webhooks.asyncapi.yaml. Reading is open to every member; changes need an Owner, Administrator, Developer or
+      an API client.
 
 paths:
   /api/cns-cmd/prps-defs:
@@ -738,6 +743,245 @@ paths:
                 items: { $ref: '#/components/schemas/AuditEntry' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /api/cns-cmd/webhooks/types:
+    get:
+      tags: [Webhooks]
+      operationId: listWebhookTypes
+      summary: The message types an endpoint can receive
+      responses:
+        '200':
+          description: The types.
+          content:
+            application/json:
+              schema: { type: array, items: { type: string, example: consent.withdrawn } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/cns-cmd/webhooks/endpoints:
+    get:
+      tags: [Webhooks]
+      operationId: listWebhookEndpoints
+      summary: Your webhook endpoints
+      responses:
+        '200':
+          description: The endpoints, oldest first. Secrets are never listed.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WebhookEndpoint' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Webhooks]
+      operationId: createWebhookEndpoint
+      summary: Add an endpoint
+      description: |
+        An HTTPS URL on a public address; private, loopback and link-local hosts are refused. At most 10 endpoints.
+        The signing secret is in this answer only.
+      parameters:
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WebhookCreate' }
+      responses:
+        '201':
+          description: Added, with its signing secret.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookWithSecret' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/cns-cmd/webhooks/endpoints/{endpointId}:
+    parameters:
+      - $ref: '#/components/parameters/EndpointId'
+    get:
+      tags: [Webhooks]
+      operationId: getWebhookEndpoint
+      summary: One endpoint
+      responses:
+        '200':
+          description: The endpoint.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookEndpoint' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Webhooks]
+      operationId: deleteWebhookEndpoint
+      summary: Remove an endpoint and its deliveries
+      parameters:
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '204': { description: Removed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/cns-cmd/webhooks/endpoints/{endpointId}/rotate-secret:
+    post:
+      tags: [Webhooks]
+      operationId: rotateWebhookSecret
+      summary: Make a new signing secret
+      description: The old secret keeps signing too for 24 hours, so you can switch without missing a message.
+      parameters:
+        - $ref: '#/components/parameters/EndpointId'
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: The new secret, shown this once.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookWithSecret' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/cns-cmd/webhooks/endpoints/{endpointId}/enable:
+    post:
+      tags: [Webhooks]
+      operationId: enableWebhookEndpoint
+      summary: Resume an endpoint
+      parameters:
+        - $ref: '#/components/parameters/EndpointId'
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: Resumed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookEndpoint' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/cns-cmd/webhooks/endpoints/{endpointId}/disable:
+    post:
+      tags: [Webhooks]
+      operationId: disableWebhookEndpoint
+      summary: Pause an endpoint
+      description: Nothing new is queued for it; deliveries already queued fail and can be replayed after resuming.
+      parameters:
+        - $ref: '#/components/parameters/EndpointId'
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: Paused.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookEndpoint' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/cns-cmd/webhooks/endpoints/{endpointId}/test:
+    post:
+      tags: [Webhooks]
+      operationId: testWebhookEndpoint
+      summary: Send a webhook.test message
+      parameters:
+        - $ref: '#/components/parameters/EndpointId'
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '202':
+          description: Queued; it goes out within seconds.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookDelivery' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /api/cns-cmd/webhooks/deliveries:
+    get:
+      tags: [Webhooks]
+      operationId: listWebhookDeliveries
+      summary: What was sent, newest first
+      parameters:
+        - name: endpointId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: sts
+          in: query
+          schema: { type: string, enum: [PENDING, DELIVERED, FAILED] }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        '200':
+          description: The deliveries.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/WebhookDelivery' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/cns-cmd/webhooks/deliveries/{deliveryId}:
+    get:
+      tags: [Webhooks]
+      operationId: getWebhookDelivery
+      summary: One delivery, its message and every attempt
+      parameters:
+        - $ref: '#/components/parameters/DeliveryId'
+      responses:
+        '200':
+          description: The delivery.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  delivery: { $ref: '#/components/schemas/WebhookDelivery' }
+                  attempts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        n: { type: integer }
+                        at: { type: string, format: date-time }
+                        status: { type: [integer, 'null'], description: 'The HTTP status, if there was an answer.' }
+                        error: { type: [string, 'null'], description: Why there was no answer. }
+                        millis: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/cns-cmd/webhooks/deliveries/{deliveryId}/replay:
+    post:
+      tags: [Webhooks]
+      operationId: replayWebhookDelivery
+      summary: Send a delivered or failed message again
+      description: It goes out now with the same webhook-id, so your receiver can de-duplicate it.
+      parameters:
+        - $ref: '#/components/parameters/DeliveryId'
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '202':
+          description: Queued.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WebhookDelivery' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
 components:
   securitySchemes:
     apiKey:
@@ -776,6 +1020,16 @@ components:
       schema: { type: string, format: uuid }
     BatchId:
       name: batchId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    EndpointId:
+      name: endpointId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    DeliveryId:
+      name: deliveryId
       in: path
       required: true
       schema: { type: string, format: uuid }
@@ -1124,6 +1378,49 @@ components:
         reqPerSecQta: { type: integer }
         reqPerMonthQta: { type: integer }
 
+    WebhookCreate:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string, format: uri, maxLength: 2000, example: 'https://example.com/consent-webhooks' }
+        description: { type: [string, 'null'], maxLength: 200 }
+        types:
+          type: array
+          items: { type: string }
+          description: The message types to receive; every type when empty or left out.
+    WebhookEndpoint:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, format: uri }
+        description: { type: [string, 'null'] }
+        types: { type: array, items: { type: string } }
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        previousSecretUntil:
+          type: [string, 'null']
+          format: date-time
+          description: After a rotation, until when the old secret still signs.
+    WebhookWithSecret:
+      type: object
+      properties:
+        endpoint: { $ref: '#/components/schemas/WebhookEndpoint' }
+        secret: { type: string, example: whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw, description: Shown this once. }
+    WebhookDelivery:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        endpointId: { type: string, format: uuid }
+        msgId: { type: string, description: The webhook-id. }
+        type: { type: string, example: consent.withdrawn }
+        sts: { type: string, enum: [PENDING, DELIVERED, FAILED] }
+        attempts: { type: integer }
+        nextAttemptAt: { type: [string, 'null'], format: date-time }
+        lastStatus: { type: [integer, 'null'] }
+        lastError: { type: [string, 'null'] }
+        deliveredAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        payload: { type: [string, 'null'], description: The body as sent; in a single delivery only. }
     AuditEntry:
       type: object
       properties:

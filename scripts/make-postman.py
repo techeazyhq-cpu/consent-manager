@@ -193,11 +193,16 @@ def replay_folder(spec: dict) -> dict:
             ]}
 
 
+METHODS = {"get", "put", "post", "delete", "patch"}
+
+
 def main() -> None:
     spec = yaml.safe_load(SPEC.read_text(encoding="utf-8"))
     folders: dict[str, list] = {}
     for path, ops in spec["paths"].items():
         for method, op in ops.items():
+            if method not in METHODS:
+                continue  # path-level parameters, summary
             folders.setdefault(op["tags"][0], []).append(item(path, method, op))
     folders["Batches"].insert(1, upload_item())
     collection = {

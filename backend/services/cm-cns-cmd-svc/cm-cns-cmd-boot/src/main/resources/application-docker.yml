@@ -34,3 +34,6 @@ cm:
     keys-path: ${CM_CNS_TKN_KEYS_PATH:/var/lib/cm/keys/jwks.json}
   cns-rcpt:
     keys-path: ${CM_CNS_RCPT_KEYS_PATH:/var/lib/cm/keys/receipt-jwks.json}
+  # the local stack's test receivers run on this machine: allowed here, never in production (ADR-047)
+  webhooks:
+    allow-private: ${CM_WEBHOOKS_ALLOW_PRIVATE:true}
