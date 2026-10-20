@@ -32,6 +32,8 @@ import com.techeazyhq.cm.cnsqry.app.evt.CnsNotificationFailedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsDpLinkedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsExpiredEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsGrantedEvtPayload;
+import com.techeazyhq.cm.cnsqry.app.evt.CnsModifiedEvtPayload;
+import com.techeazyhq.cm.cnsqry.app.evt.CnsRenewedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsRevokedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsReqCreatedEvtPayload;
 import com.techeazyhq.cm.evtkit.PulsarTopics;
@@ -70,6 +72,8 @@ public class PulsarCnsEvtConsumer {
         consume("cns-granted", CnsGrantedEvtPayload.class, projector::onCnsGranted);
         consume("cns-denied", CnsDeniedEvtPayload.class, projector::onCnsDenied);
         consume("cns-revoked", CnsRevokedEvtPayload.class, projector::onCnsRevoked);
+        consume("cns-modified", CnsModifiedEvtPayload.class, projector::onCnsModified);
+        consume("cns-renewed", CnsRenewedEvtPayload.class, projector::onCnsRenewed);
         consume("cns-expired", CnsExpiredEvtPayload.class, projector::onCnsExpired);
         consume("cns-dp-linked", CnsDpLinkedEvtPayload.class, projector::onCnsDpLinked);
         consume("cns-notification-failed", CnsNotificationFailedEvtPayload.class, projector::onCnsNotificationFailed);

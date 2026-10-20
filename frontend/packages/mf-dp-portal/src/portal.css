@@ -239,6 +239,47 @@
   color: var(--cm-text-dim);
 }
 
+/* changing a consent in force (ADR-026 §4) */
+.dp-manage {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--cm-border);
+  padding-top: 10px;
+}
+
+.dp-manage summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.dp-ending {
+  color: var(--cm-warning);
+  font-weight: 400;
+}
+
+.dp-manage-part {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dp-manage-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.dp-manage-row input {
+  background: var(--cm-surface-2);
+  border: 1px solid var(--cm-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--cm-text);
+  font: inherit;
+  color-scheme: dark;
+}
+
 @media (max-width: 760px) {
   .dp-consent,
   .dp-consent.dp-no-org {

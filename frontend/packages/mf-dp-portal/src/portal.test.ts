@@ -17,7 +17,10 @@
  */
 
 import { describe, expect, it } from "vitest";
+import type { CnsArtRdMdl } from "api-client";
 import { STATUS, awaitsDecision, humanise } from "./labels";
+import { daysLeft, shortenedUntil } from "./Manage";
+import { endingSoon } from "./portal";
 import { orgHref, parseRoute } from "./routes";
 
 describe("DP Portal routes", () => {
@@ -46,5 +49,32 @@ describe("DP Portal wording", () => {
     expect(STATUS.NOTIFICATION_FAILED.label).toBe(STATUS.PENDING.label);
     expect(awaitsDecision("ISSUED")).toBe(false);
     expect(STATUS.REVOKED.label).toBe("Withdrawn");
+  });
+});
+
+describe("changing a consent in force", () => {
+  const now = new Date("2026-10-20T12:00:00Z");
+  const row = (cnsReqId: string, lcySts: CnsArtRdMdl["lcySts"], validUntil: string) =>
+    ({ cnsReqId, lcySts, validUntil }) as CnsArtRdMdl;
+
+  it("prompts to renew only consents in force that end within two weeks, soonest first", () => {
+    const rows = [
+      row("later", "ISSUED", "2026-12-01T12:00:00Z"),
+      row("soon", "ISSUED", "2026-10-30T12:00:00Z"),
+      row("sooner", "ISSUED", "2026-10-22T12:00:00Z"),
+      row("withdrawn", "REVOKED", "2026-10-22T12:00:00Z"),
+    ];
+    expect(endingSoon(rows, now).map((r) => r.cnsReqId)).toEqual(["sooner", "soon"]);
+  });
+
+  it("counts the days left, a consent ending later today having one", () => {
+    expect(daysLeft("2026-10-20T18:00:00Z", now)).toBe(1);
+    expect(daysLeft("2026-10-27T12:00:00Z", now)).toBe(7);
+    expect(daysLeft("2026-10-19T12:00:00Z", now)).toBe(0);
+  });
+
+  it("ends a consent sooner at the same time of day, whole days earlier", () => {
+    const until = new Date(2026, 11, 1, 9, 30).toISOString();
+    expect(shortenedUntil(until, "2026-11-24")).toBe(new Date(2026, 10, 24, 9, 30).toISOString());
   });
 });

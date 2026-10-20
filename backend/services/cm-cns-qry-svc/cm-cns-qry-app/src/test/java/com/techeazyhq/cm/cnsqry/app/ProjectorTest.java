@@ -34,6 +34,8 @@ import org.junit.jupiter.api.Test;
 
 import com.techeazyhq.cm.cnsqry.app.evt.CnsDpLinkedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsGrantedEvtPayload;
+import com.techeazyhq.cm.cnsqry.app.evt.CnsModifiedEvtPayload;
+import com.techeazyhq.cm.cnsqry.app.evt.CnsRenewedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsNotificationFailedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsReqCreatedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.DpRefPayload;
@@ -56,7 +58,8 @@ class ProjectorTest {
 
     private final ReadModel rows = new ReadModel();
     private final Set<String> processed = new HashSet<>();
-    private final Projector projector = new Projector(rows, new History(), new Checkpoints());
+    private final History history = new History();
+    private final Projector projector = new Projector(rows, history, new Checkpoints());
 
     @Test
     void aGrantProjectedBeforeItsRequestIsRetriedNotLost() {
@@ -87,6 +90,58 @@ class ProjectorTest {
         assertEquals(Set.of("EMAIL", "NAME"), row.dCatCodes());
         assertEquals(Set.of("EMAIL"), row.grantedDCatCodes());
         assertEquals(CnsLcySts.ISSUED, row.lcySts());
+    }
+
+    @Test
+    void aShortenedConsentOrAWithdrawnCategoryStaysInForceWithItsNewScopeAndEnd() {
+        projector.onCnsReqCreated(created(T0)).block();
+        projector.onCnsGranted(granted(T0.plusSeconds(5))).block();
+        Instant sooner = T0.plusSeconds(3_600);
+
+        projector.onCnsModified(new CnsModifiedEvtPayload("evt-mod", T0.plusSeconds(10), "art-1", "req-1", "df-1",
+                "CATEGORY_WITHDRAWN", "NAME", new ScpPayload(List.of(new ScpPayload.DCatPayload("EMAIL"))),
+                new CnsGrantedEvtPayload.ValPrdPayload(T0, sooner))).block();
+
+        CnsArtRdMdl row = rows.byReq.get("req-1");
+        assertEquals(CnsLcySts.ISSUED, row.lcySts());
+        assertEquals(Set.of("EMAIL"), row.grantedDCatCodes());
+        assertEquals(sooner, row.validUntil());
+        assertEquals("CATEGORY_WITHDRAWN:NAME", history.rows.get(history.rows.size() - 1).chg());
+    }
+
+    @Test
+    void anEarlierChangeProjectedAfterALaterOneIsInTheHistoryButDoesntUndoIt() {
+        projector.onCnsReqCreated(created(T0)).block();
+        projector.onCnsGranted(granted(T0.plusSeconds(5))).block();
+        Instant renewedAt = T0.plusSeconds(60);
+        projector.onCnsRenewed(new CnsRenewedEvtPayload("evt-renew", renewedAt, "art-1", "req-1", "df-1", null,
+                new CnsGrantedEvtPayload.ValPrdPayload(renewedAt, renewedAt.plusSeconds(86_400 * 90L)), 90)).block();
+
+        // shortened before the renewal, but delivered after it on its own topic
+        projector.onCnsModified(new CnsModifiedEvtPayload("evt-mod", T0.plusSeconds(30), "art-1", "req-1", "df-1",
+                "SHORTENED", null, null, new CnsGrantedEvtPayload.ValPrdPayload(T0, T0.plusSeconds(3_600)))).block();
+
+        assertEquals(renewedAt.plusSeconds(86_400 * 90L), rows.byReq.get("req-1").validUntil(), "the newest state stays");
+        assertEquals(List.of("RENEWED", "SHORTENED"),
+                history.rows.stream().map(CnsHstRdMdl::chg).filter(java.util.Objects::nonNull).toList());
+    }
+
+    @Test
+    void aRenewalRecordsItsNewValidity() {
+        projector.onCnsReqCreated(created(T0)).block();
+        projector.onCnsGranted(granted(T0.plusSeconds(5))).block();
+        Instant renewedAt = T0.plusSeconds(60);
+
+        // the renewal carries the consent's scope as it stands, so it can't restore a category withdrawn meanwhile
+        projector.onCnsRenewed(new CnsRenewedEvtPayload("evt-renew", renewedAt, "art-1", "req-1", "df-1",
+                new ScpPayload(List.of(new ScpPayload.DCatPayload("EMAIL"))),
+                new CnsGrantedEvtPayload.ValPrdPayload(renewedAt, renewedAt.plusSeconds(86_400 * 90L)), 90)).block();
+
+        CnsArtRdMdl row = rows.byReq.get("req-1");
+        assertEquals(Set.of("EMAIL"), row.grantedDCatCodes());
+        assertEquals(renewedAt, row.validFrom());
+        assertEquals(renewedAt.plusSeconds(86_400 * 90L), row.validUntil());
+        assertEquals("RENEWED", history.rows.get(history.rows.size() - 1).chg());
     }
 
     @Test

@@ -40,17 +40,19 @@ import reactor.core.publisher.Mono;
 public class ObxRelay {
 
     private static final String CTX = "cnscmd";
-    private static final Map<String, String> EVT_TYPE_TO_TOPIC_NAME = Map.of(
-            "CnsReqCreatedEvt", "cns-req-created",
-            "CnsGrantedEvt", "cns-granted",
-            "CnsDeniedEvt", "cns-denied",
-            "CnsRevokedEvt", "cns-revoked",
-            "CnsDpLinkedEvt", "cns-dp-linked",
-            "CnsExpiredEvt", "cns-expired",
-            "CnsNotificationFailedEvt", "cns-notification-failed",
-            "PrpsVerPublishedEvt", "prps-ver-published",
+    private static final Map<String, String> EVT_TYPE_TO_TOPIC_NAME = Map.ofEntries(
+            Map.entry("CnsReqCreatedEvt", "cns-req-created"),
+            Map.entry("CnsGrantedEvt", "cns-granted"),
+            Map.entry("CnsDeniedEvt", "cns-denied"),
+            Map.entry("CnsRevokedEvt", "cns-revoked"),
+            Map.entry("CnsModifiedEvt", "cns-modified"),
+            Map.entry("CnsRenewedEvt", "cns-renewed"),
+            Map.entry("CnsDpLinkedEvt", "cns-dp-linked"),
+            Map.entry("CnsExpiredEvt", "cns-expired"),
+            Map.entry("CnsNotificationFailedEvt", "cns-notification-failed"),
+            Map.entry("PrpsVerPublishedEvt", "prps-ver-published"),
             // what people did, for the audit ledger (ADR-040)
-            "PlatformActionEvt", "platform-action");
+            Map.entry("PlatformActionEvt", "platform-action"));
 
     private final DatabaseClient db;
     private final PulsarCnsEvtProducer producer;

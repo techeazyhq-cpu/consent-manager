@@ -64,6 +64,19 @@ export function Dashboard({ portal }: { portal: Portal }) {
         </div>
       ) : null}
 
+      {portal.endingSoon.length > 0 ? (
+        <div className="dp-callout" role="status">
+          <span>
+            <strong>{portal.endingSoon.length}</strong>{" "}
+            {portal.endingSoon.length === 1 ? "consent ends" : "consents end"} soon. Renew to keep sharing, or let{" "}
+            {portal.endingSoon.length === 1 ? "it" : "them"} end.
+          </span>
+          <a className="cm-btn" href="#/consents" style={{ textDecoration: "none" }}>
+            See {portal.endingSoon.length === 1 ? "it" : "them"}
+          </a>
+        </div>
+      ) : null}
+
       <div className="cm-summary">
         <a className="cm-stat" href="#/requests" style={{ color: "inherit", textDecoration: "none" }}>
           <b>{portal.awaiting.length}</b>

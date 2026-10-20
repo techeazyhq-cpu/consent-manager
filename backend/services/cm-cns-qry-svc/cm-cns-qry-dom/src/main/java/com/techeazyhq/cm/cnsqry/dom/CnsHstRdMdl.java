@@ -21,5 +21,15 @@ package com.techeazyhq.cm.cnsqry.dom;
 import java.time.Instant;
 
 /** Append-only audit trail row (plan §8 — Stage 5 "Audit & Lineage"). */
-public record CnsHstRdMdl(String cnsReqId, CnsLcySts fromSts, CnsLcySts toSts, Instant occurredAt, String evtId) {
+/**
+ * One entry in a consent's history. {@code chg} names a change that kept it in force (ADR-026 §4):
+ * {@code SHORTENED}, {@code CATEGORY_WITHDRAWN:<code>} or {@code RENEWED}; null for a change of status.
+ */
+public record CnsHstRdMdl(String cnsReqId, CnsLcySts fromSts, CnsLcySts toSts, Instant occurredAt, String evtId,
+                          String chg) {
+
+    /** A change of status. */
+    public CnsHstRdMdl(String cnsReqId, CnsLcySts fromSts, CnsLcySts toSts, Instant occurredAt, String evtId) {
+        this(cnsReqId, fromSts, toSts, occurredAt, evtId, null);
+    }
 }

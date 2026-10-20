@@ -328,6 +328,16 @@ await check('PRN-01', 'Access control', "A's key approves, declines or withdraws
     return [[approve, decline, withdraw].every((r) => r.status === 403 && r.json?.title === 'principal-only'),
       `${approve.status}, ${decline.status}, ${withdraw.status}`];
   });
+await check('PRN-02', 'Access control', "A's key shortens, narrows or renews a principal's consent", '403 principal-only each',
+  async () => {
+    const art = `/api/cns-cmd/cns-arts/${K.grantedA.cnsArtId}`;
+    const rs = await Promise.all([
+      call(K.a, 'POST', `${art}/shorten`, { body: { until: new Date(Date.now() + 86_400_000).toISOString() } }),
+      call(K.a, 'POST', `${art}/withdraw-dcat`, { body: { dCatCode: 'EMAIL' } }),
+      call(K.a, 'POST', `${art}/renew`, { body: { validityDays: 30 } }),
+    ]);
+    return [rs.every((r) => r.status === 403 && r.json?.title === 'principal-only'), rs.map((r) => r.status).join(', ')];
+  });
 
 // ---------------------------------------------------------------- what responses give away
 await check('HDR-01', 'Headers', 'API responses: nosniff, no caching', 'X-Content-Type-Options, Cache-Control no-store', async () => {

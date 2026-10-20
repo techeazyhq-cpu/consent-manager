@@ -119,6 +119,17 @@ public class AudActivityHttpHandler {
             if (payload.hasNonNull("channel")) {
                 details.put("channel", payload.get("channel").asText());
             }
+            // a change to a consent in force (ADR-026 §4): which, the category withdrawn, the new end
+            if (payload.hasNonNull("change")) {
+                details.put("change", payload.get("change").asText());
+            }
+            if (payload.hasNonNull("dCat")) {
+                details.put("dCat", payload.get("dCat").asText());
+            }
+            JsonNode until = payload.path("valPrd").path("until");
+            if (("CnsModifiedEvt".equals(e.evtType()) || "CnsRenewedEvt".equals(e.evtType())) && until.isTextual()) {
+                details.put("until", until.asText());
+            }
             if (forStaff && payload.hasNonNull("code")) {
                 details.put("code", payload.get("code").asText());
             }
@@ -133,7 +144,8 @@ public class AudActivityHttpHandler {
     private static Map<String, String> consentActor(String evtType) {
         return switch (evtType) {
             case "CnsReqCreatedEvt" -> actorView("DF", "The fiduciary");
-            case "CnsGrantedEvt", "CnsDeniedEvt", "CnsRevokedEvt", "CnsDpLinkedEvt" -> actorView("DP", "The person");
+            case "CnsGrantedEvt", "CnsDeniedEvt", "CnsRevokedEvt", "CnsModifiedEvt", "CnsRenewedEvt", "CnsDpLinkedEvt" ->
+                    actorView("DP", "The person");
             default -> actorView("SYSTEM", "Consent Manager");
         };
     }
