@@ -15,29 +15,62 @@
 # @author Vasantha Kumar <vasantha.kumar@hotmail.com>
 
 # Overlay for notification-service's own docker-compose.yml so it runs next to the consent-manager stack.
+# Every container also gets a CPU and memory ceiling, as the consent-manager stack does (ADR-052), and Pulsar is
+# health-checked over HTTP instead of by starting a pulsar-admin JVM every 10 seconds.
+#
 # Both stacks use the same well-known ports (Postgres, Redis, Pulsar, Mailpit, 8080-8082, 9000, 5174), so every
 # notification-service port is moved up by 10000. See README.md in this directory for the full sequence.
 #
 #   docker compose -f ../notification-service/docker-compose.yml -f infra/notification-service/compose.cm-ports.yml \
 #     up -d --build client-api admin-api dispatcher
+x-app: &app
+  deploy:
+    resources:
+      limits:
+        cpus: "${NS_APP_CPUS:-1.0}"
+        memory: ${NS_APP_MEM:-512m}
+
+x-small: &small
+  deploy:
+    resources:
+      limits: {cpus: "0.25", memory: 128m}
+
 services:
   postgres:
     ports: !override ["15432:5432"]
+    deploy:
+      resources:
+        limits: {cpus: "1.0", memory: 512m}
   redis:
+    <<: *small
     ports: !override ["16379:6379"]
   pulsar:
     ports: !override ["16650:6650", "18088:8080"]
+    deploy:
+      resources:
+        limits: {cpus: "1.5", memory: 1536m}
+    healthcheck:
+      test: !override ["CMD", "curl", "-fsS", "http://localhost:8080/admin/v2/brokers/health"]
   mailpit:
+    <<: *small
     ports: !override ["11025:1025", "18025:8025"]
   catcher:
+    <<: *small
     ports: !override ["19000:9000"]
+  db-migrate:
+    <<: *app
   client-api:
+    <<: *app
     ports: !override ["18080:8080", "127.0.0.1:19080:9080"]
   admin-api:
+    <<: *app
     ports: !override ["18081:8081", "127.0.0.1:19081:9081"]
   dispatcher:
+    <<: *app
     ports: !override ["127.0.0.1:18082:8082"]
   admin-ui:
+    <<: *small
     ports: !override ["15173:8080"]
   client-ui:
+    <<: *small
     ports: !override ["15174:8080"]
