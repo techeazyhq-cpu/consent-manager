@@ -27,14 +27,38 @@
 # so overriding even one field of one route via an env var silently drops the rest of that
 # route list; discovered and fixed during Phase 1 verification.
 
+# Every container has a CPU and memory ceiling, so the stack runs on a laptop without starving it: a service can't
+# take more than its share, and startup bursts are spread out (ADR-052). Each JVM sizes its heap from its own limit.
+# Raise them for performance runs, for example CM_SVC_MEM=1g CM_SVC_CPUS=2 docker compose up -d.
+x-svc-jvm: &svc-jvm -XX:MaxRAMPercentage=60 -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError
+
+x-svc-limits: &svc-limits
+  deploy:
+    resources:
+      limits:
+        cpus: "${CM_SVC_CPUS:-1.0}"
+        memory: ${CM_SVC_MEM:-512m}
+
+x-small-limits: &small-limits
+  deploy:
+    resources:
+      limits:
+        cpus: "0.25"
+        memory: 128m
+
 x-sbx-env: &sbx-env
   SPRING_PROFILES_ACTIVE: docker,sandbox
   CM_PULSAR_TENANT: cm-sbx
   # small heaps: the sandbox carries test traffic only
-  JAVA_TOOL_OPTIONS: -Xmx256m -XX:+UseSerialGC
+  JAVA_TOOL_OPTIONS: *svc-jvm
 
 x-sbx-service: &sbx-service
   profiles: [sandbox]
+  deploy:
+    resources:
+      limits:
+        cpus: "${CM_SBX_CPUS:-0.5}"
+        memory: ${CM_SBX_MEM:-384m}
   environment: *sbx-env
   depends_on:
     sbx-pg-init:
@@ -53,6 +77,9 @@ x-sbx-service: &sbx-service
 services:
   postgres:
     image: postgres:16-alpine
+    deploy:
+      resources:
+        limits: {cpus: "1.0", memory: 512m}
     environment:
       POSTGRES_USER: cm
       POSTGRES_PASSWORD: cm
@@ -70,6 +97,9 @@ services:
   pulsar:
     image: apachepulsar/pulsar:3.3.1
     command: bin/pulsar standalone
+    deploy:
+      resources:
+        limits: {cpus: "1.5", memory: 1g}
     environment:
       # Standalone runs ZooKeeper, a bookie and a broker in one JVM; its defaults take ~1.7 GB. Capped for laptops,
       # which also run the sandbox (ADR-037): plenty for development traffic.
@@ -80,15 +110,19 @@ services:
     volumes:
       - pulsar-data:/pulsar/data
     healthcheck:
-      test: ["CMD", "bin/pulsar-admin", "brokers", "healthcheck"]
+      # the broker's own check over HTTP: `pulsar-admin brokers healthcheck` started a JVM every 10 s, several cores each
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/admin/v2/brokers/health"]
       interval: 10s
       timeout: 10s
-      retries: 10
+      retries: 30
 
   # The cm tenant and its namespaces, created on every start if missing (ADR-004), so a fresh or reset broker needs
   # nothing by hand. Services that use Pulsar wait for it.
   pulsar-init:
     image: apachepulsar/pulsar:3.3.1
+    deploy:
+      resources:
+        limits: {cpus: "1.0", memory: 512m}
     entrypoint: ["/bin/bash", "/pulsar-init/init-tenant.sh"]
     environment:
       TENANT: cm
@@ -99,6 +133,7 @@ services:
         condition: service_started
 
   redis:
+    <<: *small-limits
     image: redis:7-alpine
     ports:
       - "6379:6379"
@@ -109,6 +144,7 @@ services:
       retries: 10
 
   mailpit:
+    <<: *small-limits
     image: axllent/mailpit:latest
     ports:
       - "1025:1025" # SMTP
@@ -116,6 +152,9 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0
+    deploy:
+      resources:
+        limits: {cpus: "1.5", memory: 1g}
     command: start-dev --import-realm
     environment:
       KEYCLOAK_ADMIN: admin
@@ -130,6 +169,7 @@ services:
       - ../backend/keycloak-ext/build/providers:/opt/keycloak/providers
 
   opa:
+    <<: *small-limits
     image: openpolicyagent/opa:1.20.1
     command: ["run", "--server", "--addr=0.0.0.0:8181", "/policies"]
     ports:
@@ -138,6 +178,7 @@ services:
       - ./opa/policies:/policies
 
   cm-df-reg-svc:
+    <<: *svc-limits
     build:
       context: ../
       dockerfile: infra/docker/Dockerfile.service
@@ -147,6 +188,7 @@ services:
       - "8081:8081"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: *svc-jvm
       CM_KEYCLOAK_ADMIN-USERNAME: admin
       CM_KEYCLOAK_ADMIN-PASSWORD: admin
     depends_on:
@@ -158,6 +200,7 @@ services:
         condition: service_started
 
   cm-cns-cmd-svc:
+    <<: *svc-limits
     build:
       context: ../
       dockerfile: infra/docker/Dockerfile.service
@@ -167,6 +210,7 @@ services:
       - "8082:8082"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: *svc-jvm
     volumes:
       - cns-tkn-keys:/var/lib/cm/keys # consent token and receipt signing keys, each its own set, kept across restarts (ADR-006, ADR-025)
     depends_on:
@@ -180,6 +224,7 @@ services:
         condition: service_started
 
   cm-cns-qry-svc:
+    <<: *svc-limits
     build:
       context: ../
       dockerfile: infra/docker/Dockerfile.service
@@ -189,6 +234,7 @@ services:
       - "8083:8083"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: *svc-jvm
     depends_on:
       postgres:
         condition: service_healthy
@@ -196,6 +242,7 @@ services:
         condition: service_completed_successfully
 
   cm-ntf-svc:
+    <<: *svc-limits
     build:
       context: ../
       dockerfile: infra/docker/Dockerfile.service
@@ -205,6 +252,7 @@ services:
       - "8084:8084"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: *svc-jvm
     # Written by notification-service/register-cm-client.mjs: switches delivery to notification-service
     # (cm.ntf.provider). Without it, cm-ntf-svc keeps using Mailpit and its in-memory catchers.
     env_file:
@@ -223,6 +271,7 @@ services:
         condition: service_started
 
   cm-bil-svc:
+    <<: *svc-limits
     build:
       context: ../
       dockerfile: infra/docker/Dockerfile.service
@@ -232,6 +281,7 @@ services:
       - "8085:8085"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: *svc-jvm
     depends_on:
       postgres:
         condition: service_healthy
@@ -241,6 +291,7 @@ services:
         condition: service_healthy
 
   cm-aud-svc:
+    <<: *svc-limits
     build:
       context: ../
       dockerfile: infra/docker/Dockerfile.service
@@ -250,6 +301,7 @@ services:
       - "8086:8086"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: *svc-jvm
     depends_on:
       postgres:
         condition: service_healthy
@@ -259,6 +311,7 @@ services:
         condition: service_started
 
   cm-stf-svc:
+    <<: *svc-limits
     build:
       context: ../
       dockerfile: infra/docker/Dockerfile.service
@@ -268,6 +321,7 @@ services:
       - "8087:8087"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: *svc-jvm
       CM_KEYCLOAK_ADMIN-USERNAME: admin
       CM_KEYCLOAK_ADMIN-PASSWORD: admin
     depends_on:
@@ -275,6 +329,7 @@ services:
         condition: service_started
 
   cm-gw:
+    <<: *svc-limits
     build:
       context: ../
       dockerfile: infra/docker/Dockerfile.service
@@ -284,6 +339,7 @@ services:
       - "9000:9000"
     environment:
       SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: *svc-jvm
     depends_on:
       - keycloak
       - opa
@@ -302,6 +358,7 @@ services:
   # deployment with the same settings. Its gateway is http://localhost:9100, its inbox http://localhost:8125.
 
   sbx-pg-init:
+    <<: *small-limits
     profiles: [sandbox]
     image: postgres:16-alpine
     entrypoint: ["/bin/sh", "/sandbox/pg-init.sh"]
@@ -314,6 +371,9 @@ services:
   sbx-pulsar-init:
     profiles: [sandbox]
     image: apachepulsar/pulsar:3.3.1
+    deploy:
+      resources:
+        limits: {cpus: "1.0", memory: 512m}
     entrypoint: ["/bin/bash", "/pulsar-init/init-tenant.sh"]
     environment:
       TENANT: cm-sbx
@@ -324,12 +384,14 @@ services:
         condition: service_started
 
   sbx-mailpit:
+    <<: *small-limits
     profiles: [sandbox]
     image: axllent/mailpit:latest
     ports:
       - "8125:8025" # the sandbox's inbox: everything it "sends" lands here and nowhere else
 
   sbx-opa:
+    <<: *small-limits
     profiles: [sandbox]
     image: openpolicyagent/opa:1.20.1
     command: ["run", "--server", "--addr=0.0.0.0:8181", "/policies", "/sandbox-data"]
