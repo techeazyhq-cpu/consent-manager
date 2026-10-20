@@ -71,6 +71,14 @@ public record AuthCtx(String subject, String dfId, String dpId, Set<String> role
     }
 
     /**
+     * Whether this fiduciary caller is one of its people, signed in to the DF Console with a member role
+     * ({@code DF_*}), rather than one of its systems with an API client or API key (role {@code DF} only).
+     */
+    public boolean isDfMember() {
+        return isDf() && roles.stream().anyMatch(role -> role.startsWith("DF_"));
+    }
+
+    /**
      * Whether this fiduciary caller may raise consent requests (ADR-033): a system with an API client (no member
      * role), or a person whose role is Owner, Administrator or Consent manager; not a Developer or an Auditor.
      */
