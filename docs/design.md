@@ -17,7 +17,7 @@ the planned changes for that, are in the [compliance architecture](compliance/co
 
 | Container | Owns | Talks to |
 |---|---|---|
-| `cm-gw` | Routing, JWT validation, PEP for token verification, per-fiduciary burst limit | Keycloak (JWKS), OPA, Redis, every service |
+| `cm-gw` | Routing, JWT validation, PEP for token verification, per-second limits (the plan's for API clients, one per console member, ADR-048) | Keycloak (JWKS), OPA, Redis, every service |
 | `cm-df-reg-svc` | `df_reg`: fiduciaries; outbox | Keycloak Admin API (provisions `df-api-<dfId>`), Pulsar |
 | `cm-cns-cmd-svc` | `cns_cmd`: consent requests and artefacts, outbox, (saga state) | `cm-df-reg-svc`, `cm-bil-svc` (eligibility), Pulsar |
 | `cm-cns-qry-svc` | `cns_qry`: read model, history, projection checkpoints | Pulsar (consumes consent events) |

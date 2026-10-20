@@ -159,7 +159,7 @@ export default function Billing({ console: c }: { console: Console }) {
         </div>
         <div className="cm-stat">
           <b>{sub.reqPerSecQta.toLocaleString()}</b>
-          <span>API calls a second, at most</span>
+          <span>API calls a second from your systems, at most</span>
         </div>
       </div>
       <p className="cm-note">{usageNote(sub)}</p>

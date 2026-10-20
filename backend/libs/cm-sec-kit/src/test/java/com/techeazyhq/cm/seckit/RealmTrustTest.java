@@ -98,6 +98,14 @@ class RealmTrustTest {
     }
 
     @Test
+    void aFiduciaryMemberIsAPersonWithAMemberRoleNotItsApiClient() {
+        assertTrue(AuthCtx.from(token("cm-df", List.of("DF", "DF_AUDITOR"), "df-1")).isDfMember());
+        assertFalse(AuthCtx.from(token("cm-df", List.of("DF"), "df-1")).isDfMember(), "an API client or API key");
+        assertFalse(AuthCtx.from(token("cm-staff", List.of("DF_OWNER"), "df-1")).isDfMember(),
+                "a member role counts only from the fiduciaries' realm");
+    }
+
+    @Test
     void aSelfRegisteredPrincipalCanNeverBecomeStaff() {
         AuthCtx forged = AuthCtx.from(token("cm-dp", List.of("CM_ADMIN", "CM_OPERATOR"), null));
         assertFalse(forged.isCmAdmin());
