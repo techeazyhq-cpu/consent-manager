@@ -34,7 +34,8 @@ export type Route =
   | { page: "batch"; id: string }
   | { page: "playground" }
   | { page: "api-keys" }
-  | { page: "webhooks" };
+  | { page: "webhooks" }
+  | { page: "docs" };
 
 /** Anything unrecognised lands on the dashboard, the default page. */
 export function parseRoute(hash: string): Route {
@@ -55,6 +56,8 @@ export function parseRoute(hash: string): Route {
       return { page: "api-keys" };
     case "webhooks":
       return { page: "webhooks" };
+    case "docs":
+      return { page: "docs" };
     case "send-to-many":
       return { page: "send-to-many" };
     case "batches":

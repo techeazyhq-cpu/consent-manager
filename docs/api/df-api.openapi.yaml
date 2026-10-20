@@ -690,6 +690,28 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /api/cns-qry/insights:
+    get:
+      tags: [Account]
+      operationId: getInsights
+      summary: How your requests went over a period
+      description: |
+        Outcomes of the requests raised in the last `days` (by each one's first decision), time to decide, each
+        purpose's outcomes, every day of the period (UTC), and changes made in it to consents already given (ADR-049).
+        Counts and durations only.
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 365, default: 30 }
+      responses:
+        '200':
+          description: The figures. Durations are in seconds.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Insights' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /api/bil/me/subscription:
     get:
       tags: [Account]
@@ -1378,6 +1400,51 @@ components:
         reqPerSecQta: { type: integer }
         reqPerMonthQta: { type: integer }
 
+    InsightOutcomes:
+      type: object
+      properties:
+        raised: { type: integer }
+        given: { type: integer, description: 'Given at first decision, even if withdrawn or lapsed since.' }
+        refused: { type: integer }
+        awaiting: { type: integer }
+        notNotified: { type: integer, description: Undecided because the person couldn't be notified. }
+    Insights:
+      type: object
+      properties:
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        outcomes: { $ref: '#/components/schemas/InsightOutcomes' }
+        decisions:
+          type: object
+          properties:
+            decided: { type: integer }
+            medianSeconds: { type: [integer, 'null'] }
+            p90Seconds: { type: [integer, 'null'] }
+            withinADay: { type: integer }
+        purposes:
+          type: array
+          items:
+            type: object
+            properties:
+              prpsCode: { type: string }
+              outcomes: { $ref: '#/components/schemas/InsightOutcomes' }
+              medianSeconds: { type: [integer, 'null'] }
+        days:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string, format: date }
+              raised: { type: integer }
+              given: { type: integer }
+              refused: { type: integer }
+        changes:
+          type: object
+          properties:
+            withdrawn: { type: integer }
+            narrowed: { type: integer }
+            renewed: { type: integer }
+            lapsed: { type: integer }
     WebhookCreate:
       type: object
       required: [url]

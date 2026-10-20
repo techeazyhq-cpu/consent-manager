@@ -25,6 +25,7 @@ import { useConsole } from "./console";
 import { BatchDetail, Batches, SendToMany } from "./Batches";
 import ApiKeys from "./ApiKeys";
 import Webhooks from "./Webhooks";
+import DevDocs from "./DevDocs";
 import Audit from "./Audit";
 import Billing from "./Billing";
 import { Account, Dashboard, Organisation, Requests } from "./pages";
@@ -60,6 +61,7 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
       : []),
     { key: "requests", href: "#/requests", label: "Requests", section: "Consent", icon: Icons.list },
     { key: "batches", href: "#/batches", label: "Lists sent", section: "Consent", icon: Icons.inbox },
+    { key: "docs", href: "#/docs", label: "Developer docs", section: "Developers", icon: Icons.list },
     { key: "playground", href: "#/playground", label: "API playground", section: "Developers", icon: Icons.code },
     ...(managesApiKeys(role)
       ? [{ key: "api-keys", href: "#/api-keys", label: "API keys", section: "Developers", icon: Icons.shield }]
@@ -109,6 +111,7 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
       {route.page === "playground" ? <Playground console={c} /> : null}
       {route.page === "api-keys" ? <ApiKeys console={c} /> : null}
       {route.page === "webhooks" ? <Webhooks console={c} /> : null}
+      {route.page === "docs" ? <DevDocs console={c} /> : null}
       {route.page === "send-to-many" ? <SendToMany console={c} /> : null}
       {route.page === "batches" ? <Batches console={c} /> : null}
       {route.page === "batch" ? <BatchDetail key={route.id} console={c} id={route.id} /> : null}

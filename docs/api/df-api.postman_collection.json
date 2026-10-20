@@ -1041,6 +1041,44 @@
       "description": "The fiduciary's own subscription and audit trail.",
       "item": [
         {
+          "name": "How your requests went over a period",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-qry/insights",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-qry",
+                "insights"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Outcomes of the requests raised in the last `days` (by each one's first decision), time to decide, each\npurpose's outcomes, every day of the period (UTC), and changes made in it to consents already given (ADR-049).\nCounts and durations only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Your plan and this month's usage",
           "request": {
             "method": "GET",
