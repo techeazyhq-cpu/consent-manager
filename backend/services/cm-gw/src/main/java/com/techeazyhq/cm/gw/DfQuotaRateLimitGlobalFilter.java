@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -51,6 +52,10 @@ import reactor.core.publisher.Mono;
  * request), then checks a Redis fixed-window counter per second. This is a burst-rate check,
  * distinct from cm-cns-cmd-svc's own hard monthly/status gate (plan §7b) — both read the
  * same underlying DfSub/UsgCtr data but enforce at different points for different reasons.
+ *
+ * <p>The plan's per-second quota is for the fiduciary's systems (API clients and API keys). Its people in the DF
+ * Console each get their own bucket at {@code cm.rate-limit.member-req-per-sec} instead (ADR-048); their calls still
+ * count towards the monthly usage (ADR-039).
  */
 @Component
 public class DfQuotaRateLimitGlobalFilter implements GlobalFilter, Ordered {
@@ -62,13 +67,16 @@ public class DfQuotaRateLimitGlobalFilter implements GlobalFilter, Ordered {
     private final ReactiveCircuitBreaker bilCircuitBreaker;
     private final ReactiveStringRedisTemplate redisTemplate;
     private final ConcurrentHashMap<String, CachedQuota> quotaCache = new ConcurrentHashMap<>();
+    private final long memberReqPerSec;
 
     public DfQuotaRateLimitGlobalFilter(WebClient.Builder builder, ReactiveCircuitBreakerFactory<?, ?> cbFactory,
                                          ReactiveStringRedisTemplate redisTemplate,
-                                         @Value("${cm.service-urls.bil}") String bilBaseUrl) {
+                                         @Value("${cm.service-urls.bil}") String bilBaseUrl,
+                                         @Value("${cm.rate-limit.member-req-per-sec:20}") long memberReqPerSec) {
         this.bilWebClient = builder.baseUrl(bilBaseUrl).build();
         this.bilCircuitBreaker = cbFactory.create("bil-quota");
         this.redisTemplate = redisTemplate;
+        this.memberReqPerSec = memberReqPerSec;
     }
 
     @Override
@@ -78,18 +86,20 @@ public class DfQuotaRateLimitGlobalFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        // Mono#map's function may never return null (Reactor throws NPE) — a CM_ADMIN or DP
-        // token has no df_id claim at all, so this must be flatMap + Mono.justOrEmpty, not
-        // map + a null check downstream. Discovered and fixed during Phase 1 verification.
+        // A CM_ADMIN or DP token has no df_id (only the fiduciaries' realm says which fiduciary a caller is, ADR-035)
+        // and passes unlimited. Decided before forwarding, never with switchIfEmpty after it: the chain's Mono<Void>
+        // always completes empty, so that would forward a fiduciary's request a second time, even after a 429.
         return exchange.getPrincipal()
                 .cast(JwtAuthenticationToken.class)
-                // only the fiduciaries' realm says which fiduciary a caller is (ADR-035)
-                .flatMap(token -> Mono.justOrEmpty(AuthCtx.from((Jwt) token.getPrincipal()).dfId()))
-                .flatMap(dfId -> checkAndForward(exchange, chain, dfId))
-                .switchIfEmpty(chain.filter(exchange));
+                .map(token -> AuthCtx.from((Jwt) token.getPrincipal()))
+                .filter(AuthCtx::isDf)
+                .map(Optional::of)
+                .defaultIfEmpty(Optional.empty())
+                .flatMap(auth -> auth.isPresent() ? checkAndForward(exchange, chain, auth.get()) : chain.filter(exchange));
     }
 
-    private Mono<Void> checkAndForward(ServerWebExchange exchange, GatewayFilterChain chain, String dfId) {
+    private Mono<Void> checkAndForward(ServerWebExchange exchange, GatewayFilterChain chain, AuthCtx auth) {
+        String dfId = auth.dfId();
         // Billing usage (plan §11 step 1: "every DF-authenticated cm-gw request increments
         // usg:{dfId}:{yyyy-MM}") was never actually wired to this counter — cm-bil-svc's usage
         // view and monthly-quota gate always read 0 regardless of real traffic. Fire-and-forget,
@@ -97,14 +107,23 @@ public class DfQuotaRateLimitGlobalFilter implements GlobalFilter, Ordered {
         String usageKey = "usg:" + dfId + ":" + LocalDate.now(ZoneOffset.UTC).format(USAGE_PERIOD_FORMAT);
         redisTemplate.opsForValue().increment(usageKey).subscribe();
 
-        return quotaFor(dfId).flatMap(reqPerSecQta -> {
-            String key = "ratelimit:" + dfId + ":" + Instant.now().getEpochSecond();
-            return redisTemplate.opsForValue().increment(key)
-                    .flatMap(count -> {
-                        redisTemplate.expire(key, Duration.ofSeconds(2)).subscribe();
-                        return count > reqPerSecQta ? tooManyRequests(exchange) : chain.filter(exchange);
-                    });
-        });
+        // A person in the DF Console (ADR-048) has a bucket of their own at a fixed rate, so a page load's handful of
+        // calls neither hits the plan's per-second limit nor spends the fiduciary's systems' share of it.
+        long epochSecond = Instant.now().getEpochSecond();
+        if (auth.isDfMember()) {
+            return withinLimit(exchange, chain,
+                    "ratelimit:member:" + dfId + ":" + auth.subject() + ":" + epochSecond, memberReqPerSec);
+        }
+        return quotaFor(dfId).flatMap(reqPerSecQta ->
+                withinLimit(exchange, chain, "ratelimit:" + dfId + ":" + epochSecond, reqPerSecQta));
+    }
+
+    private Mono<Void> withinLimit(ServerWebExchange exchange, GatewayFilterChain chain, String key, long limit) {
+        return redisTemplate.opsForValue().increment(key)
+                .flatMap(count -> {
+                    redisTemplate.expire(key, Duration.ofSeconds(2)).subscribe();
+                    return count > limit ? tooManyRequests(exchange) : chain.filter(exchange);
+                });
     }
 
     private Mono<Long> quotaFor(String dfId) {

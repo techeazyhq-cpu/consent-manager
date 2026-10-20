@@ -71,6 +71,11 @@ spring:
 cm:
   pdp:
     base-url: http://localhost:8181
+  rate-limit:
+    # Requests a second for each person in the DF Console (ADR-048), whatever the plan; the plan's own per-second
+    # quota is for the fiduciary's API clients and API keys. A console page load makes about 5 calls, twice that under
+    # React StrictMode in development.
+    member-req-per-sec: 20
   service-urls:
     df-reg: http://localhost:8081 # checks API keys and signed requests (ADR-041)
     bil: http://localhost:8085
