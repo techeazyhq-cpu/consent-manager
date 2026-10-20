@@ -25,6 +25,8 @@ allowBuilds:
 overrides:
   # GHSA-68fv-2mgg-jv7q, via Expo's Metro config (postcss)
   source-map-js: ">=1.2.2"
+  # GHSA-m9gg-hp2v-232j, via React Native Firebase's Firebase JS SDK (Firestore's Node client, never loaded by the app)
+  "@grpc/grpc-js": ">=1.13.6"
 # Accepted for now, each with why and until when (docs/security/vapt-and-performance.md, V-16). No patched release
 # exists for either; both reach only Expo's build-time tooling, never the app's bundle. Recheck by 2026-12-31.
 auditConfig:
