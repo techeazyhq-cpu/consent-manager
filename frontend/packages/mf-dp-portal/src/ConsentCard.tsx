@@ -92,8 +92,6 @@ export default function ConsentCard({
           {until ? ` · ${row.lcySts === "ISSUED" ? "Valid until" : "Would be valid until"} ${until}` : ""}
         </div>
       </div>
-      {awaitsDecision(row.lcySts) ? <Decide portal={portal} row={row} /> : null}
-      {row.lcySts === "ISSUED" && row.cnsArtId ? <Manage portal={portal} row={row} /> : null}
       <div className="dp-consent-actions">
         {row.lcySts === "ISSUED" && row.cnsArtId ? (
           <Button
@@ -113,6 +111,9 @@ export default function ConsentCard({
           </Button>
         ) : null}
       </div>
+      {/* full width, below the card's first row: the actions above stay where they always are */}
+      {awaitsDecision(row.lcySts) ? <Decide portal={portal} row={row} /> : null}
+      {row.lcySts === "ISSUED" && row.cnsArtId ? <Manage portal={portal} row={row} /> : null}
     </article>
   );
 }
