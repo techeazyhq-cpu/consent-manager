@@ -215,6 +215,18 @@ All of these passed from the first run:
 - **Responses:** no stack traces, versions or SQL in errors, no CORS for unknown origins, actuator endpoints closed,
   `nosniff`, `no-store` and `DENY` framing on API responses. A 13 MB signed body gets 413.
 - **Abuse:** 300 bad-key requests in a burst get 401, and other callers are unaffected.
+- **Webhooks (ADR-047), added 2026-10-20 against the local stack:**
+  - **SSRF:** run with private addresses refused, as in production. Endpoints on loopback, `localhost`,
+    `host.docker.internal`, the cloud metadata address `169.254.169.254` (also as `::ffff:169.254.169.254`),
+    `10.0.0.1`, `100.64.0.1`, `::1`, and the stack's own `postgres` and `keycloak` are all refused with 400. So are
+    `http`, `ftp`, credentials in the URL and hosts that don't resolve. The same check runs again before every send,
+    and redirects aren't followed.
+  - **Another fiduciary's webhooks:** reading, rotating, deleting or replaying another fiduciary's endpoint or
+    delivery gets 404, and its lists are empty. A principal gets 403.
+  - **Signatures:** every message verified by an independent receiver with only the secret. After a rotation, both
+    signatures verify for 24 hours.
+  - **Secrets:** never listed, shown once, and sealed at rest (`v1:` AES-GCM); the plain secret isn't in the database.
+  - **No personal data:** no message carries the principal's id or contact.
 
 ## Performance
 

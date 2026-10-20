@@ -92,6 +92,9 @@ capabilities: {drop: [ALL]}
 - {name: CM_CNS_TKN_CREATE_KEYS, value: "false"}
 - {name: CM_CNS_RCPT_KEYS_PATH, value: /var/lib/cm/keys/receipt-jwks.json}
 - {name: CM_CNS_RCPT_CREATE_KEYS, value: "false"}
+- name: CM_CNSCMD_SECRETS_KEY
+  {{- include "cm.secretRef" (dict "root" $root "key" "CNSCMD_SECRETS_KEY") | nindent 2 }}
+- {name: CM_WEBHOOKS_ALLOW_PRIVATE, value: "false"}
 {{- end }}
 {{- if eq $name "cm-gw" }}
 - {name: CM_PDP_BASEURL, value: {{ printf "http://%s-opa:8181" $root.Release.Name | quote }}}

@@ -10,6 +10,7 @@ happened. The spec is [df-api.openapi.yaml](df-api.openapi.yaml) (OpenAPI 3.1). 
 | `df-api.postman_collection.json` | Every call, signed by a pre-request script, with tests and a replay demonstration |
 | `df-api.local.postman_environment.json`, `df-api.sandbox.postman_environment.json` | `baseUrl`, and empty `apiKey` and `signingSecret` for you to fill in |
 | `list.csv` | A sample list for the CSV upload |
+| `df-webhooks.asyncapi.yaml` | What is posted to your webhook endpoints (AsyncAPI 3) |
 | `redocly.yaml` | Lint rules: `npx @redocly/cli lint docs/api/df-api.openapi.yaml` |
 
 Regenerate the collection after changing the spec: `python scripts/make-postman.py`.
@@ -127,3 +128,32 @@ point.
 
 **Multipart uploads** are signed over the exact multipart bytes. Postman builds those after its scripts run, so its
 upload request goes unsigned. Upload from code, or with a key that doesn't require signing.
+
+## 4. Webhooks
+
+Add an endpoint in the DF Console (Developers, Webhooks), or with `POST /api/cns-cmd/webhooks/endpoints`. It is told
+of every change to your consents, within seconds. The messages are in
+[df-webhooks.asyncapi.yaml](df-webhooks.asyncapi.yaml).
+
+- **Verify each message** before acting on it. Signatures follow [Standard Webhooks](https://www.standardwebhooks.com),
+  so its libraries work: `new Webhook(secret).verify(body, headers)`. By hand, compute HMAC-SHA256 over
+  `webhook-id.webhook-timestamp.body` with the base64-decoded secret after `whsec_`. Compare its base64 with each
+  `v1,` value in `webhook-signature`, and refuse timestamps more than 5 minutes off. Verify the raw body as received,
+  before parsing it.
+- **Answer 2xx within 10 seconds**, then do the work. Anything else is retried for about two days, then marked failed
+  until you send it again.
+- **De-duplicate on `webhook-id`.** A message can arrive more than once; a replay keeps its id.
+- **Rotate** the secret from the console or `POST .../endpoints/{id}/rotate-secret`. For 24 hours both secrets sign
+  each message, so deploy the new one in your own time.
+
+```python
+import base64, hashlib, hmac, time
+
+def verify(secret: str, headers: dict, body: bytes) -> bool:
+    msg_id, ts = headers["webhook-id"], headers["webhook-timestamp"]
+    if abs(time.time() - int(ts)) > 300:
+        return False
+    key = base64.b64decode(secret.removeprefix("whsec_"))
+    expected = base64.b64encode(hmac.new(key, f"{msg_id}.{ts}.".encode() + body, hashlib.sha256).digest()).decode()
+    return any(hmac.compare_digest(expected, s.split(",", 1)[1]) for s in headers["webhook-signature"].split())
+```

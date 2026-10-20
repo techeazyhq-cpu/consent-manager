@@ -1156,6 +1156,450 @@
       ]
     },
     {
+      "name": "Webhooks",
+      "description": "Be told of every change to your consents (ADR-047). What is posted to your endpoints is in\ndf-webhooks.asyncapi.yaml. Reading is open to every member; changes need an Owner, Administrator, Developer or\nan API client.\n",
+      "item": [
+        {
+          "name": "The message types an endpoint can receive",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/webhooks/types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "webhooks",
+                "types"
+              ],
+              "query": []
+            },
+            "description": "The message types an endpoint can receive"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Your webhook endpoints",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/webhooks/endpoints",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "webhooks",
+                "endpoints"
+              ],
+              "query": []
+            },
+            "description": "Your webhook endpoints"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Add an endpoint",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/webhooks/endpoints",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "webhooks",
+                "endpoints"
+              ],
+              "query": []
+            },
+            "description": "An HTTPS URL on a public address; private, loopback and link-local hosts are refused. At most 10 endpoints.\nThe signing secret is in this answer only.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "One endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/webhooks/endpoints/{{endpointId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "webhooks",
+                "endpoints",
+                "{{endpointId}}"
+              ],
+              "query": []
+            },
+            "description": "One endpoint"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('endpointId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs endpointId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remove an endpoint and its deliveries",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/webhooks/endpoints/{{endpointId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "webhooks",
+                "endpoints",
+                "{{endpointId}}"
+              ],
+              "query": []
+            },
+            "description": "Remove an endpoint and its deliveries"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('endpointId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs endpointId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Make a new signing secret",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/webhooks/endpoints/{{endpointId}}/rotate-secret",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "webhooks",
+                "endpoints",
+                "{{endpointId}}",
+                "rotate-secret"
+              ],
+              "query": []
+            },
+            "description": "The old secret keeps signing too for 24 hours, so you can switch without missing a message."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('endpointId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs endpointId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resume an endpoint",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/webhooks/endpoints/{{endpointId}}/enable",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "webhooks",
+                "endpoints",
+                "{{endpointId}}",
+                "enable"
+              ],
+              "query": []
+            },
+            "description": "Resume an endpoint"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('endpointId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs endpointId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pause an endpoint",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/webhooks/endpoints/{{endpointId}}/disable",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "webhooks",
+                "endpoints",
+                "{{endpointId}}",
+                "disable"
+              ],
+              "query": []
+            },
+            "description": "Nothing new is queued for it; deliveries already queued fail and can be replayed after resuming."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('endpointId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs endpointId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send a webhook.test message",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/webhooks/endpoints/{{endpointId}}/test",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "webhooks",
+                "endpoints",
+                "{{endpointId}}",
+                "test"
+              ],
+              "query": []
+            },
+            "description": "Send a webhook.test message"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('endpointId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs endpointId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "What was sent, newest first",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/webhooks/deliveries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "webhooks",
+                "deliveries"
+              ],
+              "query": [
+                {
+                  "key": "endpointId",
+                  "value": "",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "sts",
+                  "value": "",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "limit",
+                  "value": "50",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "What was sent, newest first"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "One delivery, its message and every attempt",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/webhooks/deliveries/{{deliveryId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "webhooks",
+                "deliveries",
+                "{{deliveryId}}"
+              ],
+              "query": []
+            },
+            "description": "One delivery, its message and every attempt"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('deliveryId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs deliveryId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send a delivered or failed message again",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/cns-cmd/webhooks/deliveries/{{deliveryId}}/replay",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "cns-cmd",
+                "webhooks",
+                "deliveries",
+                "{{deliveryId}}",
+                "replay"
+              ],
+              "query": []
+            },
+            "description": "It goes out now with the same webhook-id, so your receiver can de-duplicate it."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.collectionVariables.get('deliveryId')) { pm.test('succeeds', () => pm.expect(pm.response.code).to.be.below(300)); }",
+                  "else { pm.test.skip('needs deliveryId from an earlier request', () => {}); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Replay protection",
       "description": "ADR-041's guarantees: a signed request is accepted once, within five minutes of its timestamp.",
       "item": [

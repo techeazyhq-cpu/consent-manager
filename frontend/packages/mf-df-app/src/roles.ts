@@ -53,6 +53,9 @@ export const readsAudit = (role: DfRole) => role === "OWNER" || role === "ADMIN"
 /** Who manages the organisation's API keys (ADR-041): Owners, Administrators and Developers. */
 export const managesApiKeys = (role: DfRole) => role === "OWNER" || role === "ADMIN" || role === "DEVELOPER";
 
+/** Who manages webhooks (ADR-047): as API keys, the people who build integrations. Everyone reads them. */
+export const managesWebhooks = managesApiKeys;
+
 export const raisesRequests = (role: DfRole) => role === "OWNER" || role === "ADMIN" || role === "CONSENT_MANAGER";
 
 /** Who defines and publishes purposes (ADR-031): the people who raise requests, since a purpose is what they ask. */

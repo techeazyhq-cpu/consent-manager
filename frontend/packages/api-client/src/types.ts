@@ -311,6 +311,55 @@ export interface IssuedApiKeyDto {
   signingSecret: string;
 }
 
+/** A fiduciary's webhook endpoint (ADR-047); its secret is never shown again after it's made or rotated. */
+export interface WebhookEndpointDto {
+  id: string;
+  url: string;
+  description: string | null;
+  /** The message types it receives; all of them when empty. */
+  types: string[];
+  active: boolean;
+  createdAt: string;
+  /** While a rotated-out secret is still honoured, when it stops being. */
+  previousSecretUntil: string | null;
+}
+
+export interface WebhookWithSecretDto {
+  endpoint: WebhookEndpointDto;
+  /** The signing secret ({@code whsec_…}): shown this once. */
+  secret: string;
+}
+
+export type WebhookDeliverySts = "PENDING" | "DELIVERED" | "FAILED";
+
+export interface WebhookDeliveryDto {
+  id: string;
+  endpointId: string;
+  msgId: string;
+  type: string;
+  sts: WebhookDeliverySts;
+  attempts: number;
+  nextAttemptAt: string | null;
+  lastStatus: number | null;
+  lastError: string | null;
+  deliveredAt: string | null;
+  createdAt: string;
+  payload: string | null;
+}
+
+export interface WebhookAttemptDto {
+  n: number;
+  at: string;
+  status: number | null;
+  error: string | null;
+  millis: number;
+}
+
+export interface WebhookDeliveryDetailDto {
+  delivery: WebhookDeliveryDto;
+  attempts: WebhookAttemptDto[];
+}
+
 /** One audit ledger entry as people read it (ADR-040). */
 export interface AudActivityRow {
   seq: number;

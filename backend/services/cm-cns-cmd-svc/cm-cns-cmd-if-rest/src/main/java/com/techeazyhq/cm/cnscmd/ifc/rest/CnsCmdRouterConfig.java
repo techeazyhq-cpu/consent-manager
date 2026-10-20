@@ -34,6 +34,7 @@ import com.techeazyhq.cm.cnscmd.app.DenyCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.GetCnsArtLiveStatusQryHandler;
 import com.techeazyhq.cm.cnscmd.app.ChangeCnsArtCmds;
 import com.techeazyhq.cm.cnscmd.app.CnsRecords;
+import com.techeazyhq.cm.cnscmd.app.Webhooks;
 import com.techeazyhq.cm.cnscmd.dom.RcptSignerPort;
 import com.techeazyhq.cm.cnscmd.app.CnsReqTerms;
 import com.techeazyhq.cm.cnscmd.app.LinkDpCmdHandler;
@@ -77,7 +78,8 @@ public class CnsCmdRouterConfig {
                                                          CnsReqTerms cnsReqTerms,
                                                          ChangeCnsArtCmds changeCnsArtCmds,
                                                          CnsRecords cnsRecords,
-                                                         RcptSignerPort rcptSigner) {
+                                                         RcptSignerPort rcptSigner,
+                                                         Webhooks webhooks) {
         CnsReqHandler cnsReqHandler = new CnsReqHandler(createHandler, approveHandler, denyHandler, cnsReqTerms);
         CnsArtHandler cnsArtHandler = new CnsArtHandler(revokeHandler, refreshTknHandler, liveStatusHandler,
                 changeCnsArtCmds);
@@ -85,6 +87,7 @@ public class CnsCmdRouterConfig {
         CnsReqBatchHttpHandler batches = new CnsReqBatchHttpHandler(submitBatchHandler, batchQueries);
         PrpsDefHttpHandler purposes = new PrpsDefHttpHandler(prpsDefCmds);
         CnsRecHttpHandler recs = new CnsRecHttpHandler(cnsRecords);
+        WebhookHttpHandler whk = new WebhookHttpHandler(webhooks);
 
         return RouterFunctions.route()
                 // purposes and their versions (ADR-031): what requests may ask for
@@ -95,6 +98,19 @@ public class CnsCmdRouterConfig {
                 .DELETE("/api/cns-cmd/prps-defs/{code}/draft", purposes::discardDraft)
                 .GET("/api/cns-cmd/prps-defs/{code}/draft/change", purposes::draftChange)
                 .POST("/api/cns-cmd/prps-defs/{code}/publish", purposes::publish)
+                // fiduciary webhooks (ADR-047)
+                .GET("/api/cns-cmd/webhooks/types", whk::types)
+                .GET("/api/cns-cmd/webhooks/endpoints", whk::list)
+                .POST("/api/cns-cmd/webhooks/endpoints", whk::create)
+                .GET("/api/cns-cmd/webhooks/endpoints/{id}", whk::get)
+                .DELETE("/api/cns-cmd/webhooks/endpoints/{id}", whk::delete)
+                .POST("/api/cns-cmd/webhooks/endpoints/{id}/rotate-secret", whk::rotate)
+                .POST("/api/cns-cmd/webhooks/endpoints/{id}/enable", whk::enable)
+                .POST("/api/cns-cmd/webhooks/endpoints/{id}/disable", whk::disable)
+                .POST("/api/cns-cmd/webhooks/endpoints/{id}/test", whk::test)
+                .GET("/api/cns-cmd/webhooks/deliveries", whk::deliveries)
+                .GET("/api/cns-cmd/webhooks/deliveries/{id}", whk::delivery)
+                .POST("/api/cns-cmd/webhooks/deliveries/{id}/replay", whk::replay)
                 // ISO/IEC TS 27560 records and signed receipts (ADR-025)
                 .GET("/api/cns-cmd/records/export", recs::export)
                 .GET("/api/cns-cmd/records/{cnsReqId}", recs::record)

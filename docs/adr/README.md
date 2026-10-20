@@ -32,7 +32,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [024](adr-024-hipaa-authorisations-and-fhir-consent.md) | HIPAA authorisations in the consent model; FHIR Consent at the boundary | Proposed |
 | [025](adr-025-iso-27560-consent-records-and-receipts.md) | Consent records and receipts to ISO/IEC TS 27560, in DPV | Accepted (046); inclusion proofs, PDF/UA and archive proposed |
 | [026](adr-026-consent-validity-requested-maximum-principal-adjustable.md) | Consent validity: requested and maximum per purpose, adjustable by the principal | Accepted (044, 045); renewal reminders proposed |
-| [027](adr-027-short-lived-tokens-status-list-and-verification-availability.md) | Short-lived consent tokens, a revocation status list, and verification availability | Proposed |
+| [027](adr-027-short-lived-tokens-status-list-and-verification-availability.md) | Short-lived consent tokens, a revocation status list, and verification availability | Proposed; webhooks (§6.3) accepted in 047 |
 | [028](adr-028-accessible-consent-without-deceptive-design.md) | An accessible consent experience, without deceptive design, with recorded evidence | Proposed |
 | [029](adr-029-fiduciary-assurance-and-consent-termination.md) | Fiduciaries are verified at onboarding; termination by a fiduciary or an authority | Proposed |
 | [030](adr-030-contracts-interoperability-and-portability.md) | Contract-first interfaces, interoperability, and moving to another consent manager | Proposed |
@@ -52,6 +52,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [044](adr-044-partial-consent-and-validity-at-grant-by-the-principal-only.md) | Partial consent and the validity chosen at grant, by the principal only | Accepted |
 | [045](adr-045-shorten-withdraw-a-category-renew-and-lapse.md) | Shortening, withdrawing a category, renewing, and lapse | Accepted |
 | [046](adr-046-consent-records-receipts-and-export.md) | Consent records written with each change; receipts signed with their own key; export | Accepted |
+| [047](adr-047-fiduciary-webhooks.md) | Fiduciary webhooks, signed and delivered at least once from the outbox | Accepted |
 | [048](adr-048-console-members-have-their-own-burst-limit.md) | People in the DF Console have a per-second limit of their own; the plan's is for API clients | Accepted |
 
 ## Writing one

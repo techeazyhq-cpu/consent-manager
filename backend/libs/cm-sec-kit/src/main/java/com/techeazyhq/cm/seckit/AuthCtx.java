@@ -98,6 +98,18 @@ public record AuthCtx(String subject, String dfId, String dpId, Set<String> role
         return mayRaiseCnsReqs();
     }
 
+    /**
+     * Whether this fiduciary caller may manage webhooks (ADR-033, ADR-047): a system with an API client, or an Owner,
+     * Administrator or Developer; not a Consent manager or an Auditor.
+     */
+    public boolean mayManageWebhooks() {
+        if (!isDf()) {
+            return false;
+        }
+        boolean person = roles.stream().anyMatch(role -> role.startsWith("DF_"));
+        return !person || roles.contains("DF_OWNER") || roles.contains("DF_ADMIN") || roles.contains("DF_DEVELOPER");
+    }
+
     public boolean isDp() {
         return dpId != null;
     }

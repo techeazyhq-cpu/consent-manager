@@ -34,6 +34,7 @@ externalSecrets:
     DFREG_SECRETS_KEY: {key: cm-production-dfreg-secrets-key}
     CNS_TKN_JWKS: {key: cm-production-cns-tkn-jwks}
     CNS_RCPT_JWKS: {key: cm-production-cns-rcpt-jwks}
+    CNSCMD_SECRETS_KEY: {key: cm-production-cnscmd-secrets-key}
     KEYCLOAK_ADMIN_PASSWORD: {key: cm-production-keycloak-admin-password}
     REDIS_PASSWORD: {key: cm-production-redis-password}
     NTF_SVC_API_KEY: {key: cm-production-ntf-svc-api-key}

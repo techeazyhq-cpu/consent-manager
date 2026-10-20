@@ -27,7 +27,7 @@ imagePullSecrets: []
 
 # Never stored in the chart. A Secret with these keys, synced from the cloud's secret store by External Secrets
 # (externalSecrets below) or created another way: DB_PASSWORD, MIGRATION_DB_PASSWORD, DFREG_SECRETS_KEY,
-# CNS_TKN_JWKS, CNS_RCPT_JWKS, KEYCLOAK_ADMIN_PASSWORD, REDIS_PASSWORD (optional), NTF_SVC_API_KEY, NTF_SVC_SIGNING_SECRET.
+# CNS_TKN_JWKS, CNS_RCPT_JWKS, CNSCMD_SECRETS_KEY, KEYCLOAK_ADMIN_PASSWORD, REDIS_PASSWORD (optional), NTF_SVC_API_KEY, NTF_SVC_SIGNING_SECRET.
 secrets:
   existingSecret: cm-secrets
 
