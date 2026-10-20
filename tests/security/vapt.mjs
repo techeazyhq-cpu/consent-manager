@@ -319,6 +319,15 @@ await check('PRP-02', 'Input', 'A request for a superseded version, after a mate
     'purpose-version-superseded');
 });
 
+// ---------------------------------------------------------------- consent records (ADR-046)
+await check('REC-01', 'Access control', "B reads A's consent record or receipts", '404 each', async () => {
+  const record = await call(K.b, 'GET', `/api/cns-cmd/records/${K.grantedA.cnsReqId}`);
+  const receipts = await call(K.b, 'GET', `/api/cns-cmd/records/${K.grantedA.cnsReqId}/receipts`);
+  const exported = await call(K.b, 'GET', '/api/cns-cmd/records/export');
+  return [record.status === 404 && receipts.status === 404 && exported.status === 403,
+    `${record.status}, ${receipts.status}, export ${exported.status}`];
+});
+
 // ---------------------------------------------------------------- only the principal decides (V-15)
 await check('PRN-01', 'Access control', "A's key approves, declines or withdraws consent on a principal's behalf",
   '403 principal-only each', async () => {

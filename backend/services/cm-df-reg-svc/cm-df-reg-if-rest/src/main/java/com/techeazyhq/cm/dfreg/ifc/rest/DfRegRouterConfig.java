@@ -67,6 +67,8 @@ public class DfRegRouterConfig {
                 .PUT("/api/df-reg/me/members/{memberId}", team::changeRole)
                 .DELETE("/api/df-reg/me/members/{memberId}", team::remove)
                 .GET("/internal/dfs/{id}/active", dfHandler::isActive)
+                // the fiduciary's name, for the consent records and receipts that name it as controller (ADR-025)
+                .GET("/internal/dfs/{id}", dfHandler::getOne)
                 .GET("/api/df-reg/me/api-keys", apiKeys::list)
                 .POST("/api/df-reg/me/api-keys", apiKeys::issue)
                 .DELETE("/api/df-reg/me/api-keys/{id}", apiKeys::revoke)

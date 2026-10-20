@@ -34,4 +34,7 @@ public interface PrpsDefRepoPort {
 
     /** A fiduciary's purposes, by code. */
     Flux<PrpsDef> listByDf(String dfId);
+
+    /** A version by its id, as a record names it (ADR-025); published versions never change. */
+    Mono<PrpsVer> findVersion(String prpsVerId);
 }

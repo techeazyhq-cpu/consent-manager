@@ -149,6 +149,15 @@ public class R2dbcPrpsDefRepoAdapter implements PrpsDefRepoPort {
                 .flatMapMany(rows -> Flux.fromIterable(assemble(rows)));
     }
 
+    @Override
+    public Mono<PrpsVer> findVersion(String prpsVerId) {
+        return db.sql(SELECT + " where v.id = :id")
+                .bind("id", prpsVerId)
+                .map((row, meta) -> new Joined(row, this))
+                .one()
+                .mapNotNull(joined -> joined.ver);
+    }
+
     private static List<PrpsDef> assemble(List<Joined> rows) {
         Map<String, Joined> defs = new LinkedHashMap<>();
         Map<String, List<PrpsVer>> versions = new LinkedHashMap<>();

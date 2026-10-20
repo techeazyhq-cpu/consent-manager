@@ -20,7 +20,7 @@
 
 locals {
   chart_secret_names = [
-    "db-password", "dfreg-secrets-key", "cns-tkn-jwks", "keycloak-admin-password", "keycloak-db-password",
+    "db-password", "dfreg-secrets-key", "cns-tkn-jwks", "cns-rcpt-jwks", "keycloak-admin-password", "keycloak-db-password",
     "ntf-svc-api-key", "ntf-svc-signing-secret", "migration-db-password", "redis-password",
   ]
 }

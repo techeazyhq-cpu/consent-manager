@@ -21,6 +21,8 @@ import type {
   CnsArtRespDto,
   CnsReqRespDto,
   CnsReqTermsDto,
+  ConsentRecordDoc,
+  ReceiptView,
   GrantChoice,
   DfListItemRespDto,
   DfMemberRespDto,
@@ -196,6 +198,20 @@ export const cnsQry = {
     request<{ result: string }>(base, `/api/cns-qry/cns-arts/${cnsArtId}/verify?purpose=${encodeURIComponent(purpose)}`, token, {
       headers: { "X-Cns-Tkn": cnsTkn },
     }),
+};
+
+/** ISO/IEC TS 27560 consent records and signed receipts (ADR-025), for the principal and the controller. */
+export const records = {
+  get: (base: string, token: string, cnsReqId: string) =>
+    request<ConsentRecordDoc>(base, `/api/cns-cmd/records/${encodeURIComponent(cnsReqId)}`, token),
+  receipts: (base: string, token: string, cnsReqId: string) =>
+    request<ReceiptView[]>(base, `/api/cns-cmd/records/${encodeURIComponent(cnsReqId)}/receipts`, token),
+  /** Every record and receipt of the signed-in person, as one JSON-LD file. */
+  exportAll: async (base: string, token: string): Promise<Blob> => {
+    const res = await fetch(`${base}/api/cns-cmd/records/export`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
+    return res.blob();
+  },
 };
 
 /** A fiduciary's purposes and their versions (ADR-031): what requests may ask for. */

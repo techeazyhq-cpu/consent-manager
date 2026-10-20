@@ -74,6 +74,12 @@ final class InMemoryPrpsDefs implements PrpsDefRepoPort {
     }
 
     @Override
+    public Mono<com.techeazyhq.cm.cnscmd.dom.PrpsVer> findVersion(String prpsVerId) {
+        return Mono.justOrEmpty(byKey.values().stream().flatMap(d -> d.versions().stream())
+                .filter(v -> v.id().equals(prpsVerId)).findFirst());
+    }
+
+    @Override
     public Flux<PrpsDef> listByDf(String dfId) {
         return Flux.fromIterable(byKey.values()).filter(d -> d.dfId().equals(dfId))
                 .sort(Comparator.comparing(PrpsDef::code));

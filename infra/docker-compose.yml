@@ -168,7 +168,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
     volumes:
-      - cns-tkn-keys:/var/lib/cm/keys # consent token signing keys, kept across restarts (ADR-006)
+      - cns-tkn-keys:/var/lib/cm/keys # consent token and receipt signing keys, each its own set, kept across restarts (ADR-006, ADR-025)
     depends_on:
       postgres:
         condition: service_healthy

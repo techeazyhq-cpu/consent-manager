@@ -22,7 +22,7 @@ import { STATUS, awaitsDecision, fmtDate, humanise } from "./labels";
 import Decide from "./Decide";
 import Manage from "./Manage";
 import { freshToken, type Portal } from "./portal";
-import { orgHref } from "./routes";
+import { historyHref, orgHref } from "./routes";
 
 export function DfLogo({ portal, dfId, size }: { portal: Portal; dfId: string; size?: number }) {
   return (
@@ -90,6 +90,8 @@ export default function ConsentCard({
         <div className="cm-note">
           {awaitsDecision(row.lcySts) ? `Asked ${fmtDate(row.createdAt)}` : `Updated ${fmtDate(row.updatedAt)}`}
           {until ? ` · ${row.lcySts === "ISSUED" ? "Valid until" : "Would be valid until"} ${until}` : ""}
+          {" · "}
+          <a href={historyHref(row.cnsReqId)}>History and receipts</a>
         </div>
       </div>
       {awaitsDecision(row.lcySts) ? <Decide portal={portal} row={row} /> : null}

@@ -211,6 +211,52 @@ export interface CnsReqTermsDto {
   ntcHash: string | null;
 }
 
+/** One event of a consent record, as its ISO/IEC TS 27560 document lists it (ADR-025). */
+export interface RecordEvent {
+  seq: number;
+  time: string;
+  type: "requested" | "given" | "refused" | "modified" | "renewed" | "withdrawn" | "lapsed";
+  /** W3C DPV consent status, such as `dpv:ConsentGiven`. */
+  status: string;
+  by: "fiduciary" | "principal" | "platform";
+  personalData?: string[];
+  validFrom?: string;
+  validUntil?: string;
+  duration?: string;
+  change?: string;
+}
+
+/** A consent record as its 27560 JSON-LD document; only the parts the portal shows are typed. */
+export interface ConsentRecordDoc {
+  "@id": string;
+  header: { recordId: string; consentRequest: string; createdAt: string };
+  notice: { language?: string; hash?: string; version?: number; title?: string; text?: string };
+  processing: {
+    purposes: { code: string; name?: string; description?: string }[];
+    personalData: { code: string; "@type": string; sensitivity: string; necessary: boolean; consequenceOfRefusal?: string | null }[];
+    controller: { name: string };
+    recipients: string[];
+    transfers: string[];
+    storageDuration?: string | null;
+    jurisdictions: string[];
+    withdrawal: { method: string; url: string };
+    rights: string[];
+  };
+  parties: { consentManager: { name: string; grievanceContact: string } };
+  events: RecordEvent[];
+  status: string | null;
+}
+
+/** A signed receipt for one record event: a compact JWS, verifiable with the published receipt keys. */
+export interface ReceiptView {
+  receiptId: string;
+  forEvent: number;
+  issuedAt: string;
+  kid: string;
+  sha256: string;
+  jws: string;
+}
+
 export interface DpDashboardRow {
   dfId: string;
   activeCnt: number;

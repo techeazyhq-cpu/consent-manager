@@ -32,10 +32,11 @@ import com.techeazyhq.cm.domkit.DomainEvt;
  * external wire shape ({@code sub_did}/{@code fiduciary_id}/{@code purpose_code}) — see
  * {@code PulsarCnsEvtProducer} in cm-cns-cmd-infra.
  */
-public record CnsRevokedEvt(UUID evtId, Instant occurredAt, String cnsArtId, DpRef dpRef, String dfId, Prps prps)
+public record CnsRevokedEvt(UUID evtId, Instant occurredAt, String cnsArtId, DpRef dpRef, String dfId, Prps prps,
+                            String cnsReqId)
         implements DomainEvt {
 
-    public static CnsRevokedEvt of(String cnsArtId, DpRef dpRef, String dfId, Prps prps) {
-        return new CnsRevokedEvt(UUID.randomUUID(), Instant.now(), cnsArtId, dpRef, dfId, prps);
+    public static CnsRevokedEvt of(String cnsArtId, DpRef dpRef, String dfId, Prps prps, String cnsReqId) {
+        return new CnsRevokedEvt(UUID.randomUUID(), Instant.now(), cnsArtId, dpRef, dfId, prps, cnsReqId);
     }
 }

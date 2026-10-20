@@ -110,7 +110,7 @@ public final class CnsArt extends Agg<String> {
     public void revoke() {
         requireSts(CnsArtSts.ISSUED, "revoke");
         this.sts = CnsArtSts.REVOKED;
-        raise(CnsRevokedEvt.of(id(), dpRef, dfId, prps));
+        raise(CnsRevokedEvt.of(id(), dpRef, dfId, prps, cnsReqId));
     }
 
     /**

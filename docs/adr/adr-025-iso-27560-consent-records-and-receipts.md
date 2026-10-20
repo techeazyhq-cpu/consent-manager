@@ -1,6 +1,6 @@
 # ADR-025: Consent records and receipts to ISO/IEC TS 27560, in DPV
 
-- **Status:** Proposed
+- **Status:** Accepted, implemented by [ADR-046](adr-046-consent-records-receipts-and-export.md); receipt inclusion proofs, PDF/UA receipts and the WORM archive proposed
 - **Date:** 2026-10-11
 - **Design:** [compliance architecture §2, §6.1](../compliance/compliance-architecture.md)
 

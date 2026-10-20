@@ -51,6 +51,7 @@ public class ObxRelay {
             Map.entry("CnsExpiredEvt", "cns-expired"),
             Map.entry("CnsNotificationFailedEvt", "cns-notification-failed"),
             Map.entry("PrpsVerPublishedEvt", "prps-ver-published"),
+            Map.entry("CnsRcptIssuedEvt", "cns-rcpt-issued"),
             // what people did, for the audit ledger (ADR-040)
             Map.entry("PlatformActionEvt", "platform-action"));
 

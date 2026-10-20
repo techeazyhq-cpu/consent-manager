@@ -33,6 +33,8 @@ import com.techeazyhq.cm.cnscmd.app.CreateCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.DenyCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.GetCnsArtLiveStatusQryHandler;
 import com.techeazyhq.cm.cnscmd.app.ChangeCnsArtCmds;
+import com.techeazyhq.cm.cnscmd.app.CnsRecords;
+import com.techeazyhq.cm.cnscmd.dom.RcptSignerPort;
 import com.techeazyhq.cm.cnscmd.app.CnsReqTerms;
 import com.techeazyhq.cm.cnscmd.app.LinkDpCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.PrpsDefCmds;
@@ -54,6 +56,9 @@ public class CnsCmdRouterConfig {
     /** Public keys that verify consent tokens (ADR-006); unauthenticated, for OPA and for fiduciaries. */
     public static final String JWKS_PATH = "/api/cns-cmd/.well-known/jwks.json";
 
+    /** Public keys that verify consent receipts (ADR-025), retired ones included; unauthenticated, for anyone. */
+    public static final String RCPT_JWKS_PATH = "/api/cns-cmd/.well-known/receipt-jwks.json";
+
     /** The PDP's live status check (ADR-027); internal, reached on the service network only, never through cm-gw. */
     public static final String INTERNAL_PATHS = "/internal/**";
 
@@ -70,13 +75,16 @@ public class CnsCmdRouterConfig {
                                                          CnsReqBatchQueries batchQueries,
                                                          PrpsDefCmds prpsDefCmds,
                                                          CnsReqTerms cnsReqTerms,
-                                                         ChangeCnsArtCmds changeCnsArtCmds) {
+                                                         ChangeCnsArtCmds changeCnsArtCmds,
+                                                         CnsRecords cnsRecords,
+                                                         RcptSignerPort rcptSigner) {
         CnsReqHandler cnsReqHandler = new CnsReqHandler(createHandler, approveHandler, denyHandler, cnsReqTerms);
         CnsArtHandler cnsArtHandler = new CnsArtHandler(revokeHandler, refreshTknHandler, liveStatusHandler,
                 changeCnsArtCmds);
         DpLinkHandler dpLinkHandler = new DpLinkHandler(linkDpHandler);
         CnsReqBatchHttpHandler batches = new CnsReqBatchHttpHandler(submitBatchHandler, batchQueries);
         PrpsDefHttpHandler purposes = new PrpsDefHttpHandler(prpsDefCmds);
+        CnsRecHttpHandler recs = new CnsRecHttpHandler(cnsRecords);
 
         return RouterFunctions.route()
                 // purposes and their versions (ADR-031): what requests may ask for
@@ -87,6 +95,14 @@ public class CnsCmdRouterConfig {
                 .DELETE("/api/cns-cmd/prps-defs/{code}/draft", purposes::discardDraft)
                 .GET("/api/cns-cmd/prps-defs/{code}/draft/change", purposes::draftChange)
                 .POST("/api/cns-cmd/prps-defs/{code}/publish", purposes::publish)
+                // ISO/IEC TS 27560 records and signed receipts (ADR-025)
+                .GET("/api/cns-cmd/records/export", recs::export)
+                .GET("/api/cns-cmd/records/{cnsReqId}", recs::record)
+                .GET("/api/cns-cmd/records/{cnsReqId}/receipts", recs::receipts)
+                .GET(RCPT_JWKS_PATH, request -> ServerResponse.ok()
+                        .contentType(MediaType.parseMediaType("application/jwk-set+json"))
+                        .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)))
+                        .bodyValue(rcptSigner.publicJwksJson()))
                 .POST("/api/cns-cmd/cns-reqs", cnsReqHandler::create)
                 // batches (ADR-036): one template, many people, sent in the background
                 .POST("/api/cns-cmd/cns-req-batches", batches::create)

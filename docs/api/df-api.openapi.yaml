@@ -371,6 +371,70 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /api/cns-cmd/records/{requestId}:
+    get:
+      tags: [Consent requests]
+      operationId: getConsentRecord
+      summary: The consent's ISO/IEC TS 27560 record
+      description: |
+        JSON-LD with W3C DPV (ADR-046). Contains Header, Notice, Processing, Parties and every event so far. Written
+        in the same transaction as each change of the consent, and readable by the fiduciary that is its controller
+        and the person it names.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: The record.
+          content:
+            application/ld+json:
+              schema: { type: object, description: 'A dpv:ConsentRecord: header, notice, processing, parties, events, status.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/cns-cmd/records/{requestId}/receipts:
+    get:
+      tags: [Consent requests]
+      operationId: getConsentReceipts
+      summary: The consent's signed receipts
+      description: |
+        One per record event. Each is a compact JWS (RS256, typ cm-receipt+json) over the record as it stood after
+        that event, signed with a receipt key. Verify it offline with the receipt keys. Its SHA-256 is in the audit
+        ledger.
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: The receipts, by event.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    receiptId: { type: string, format: uuid }
+                    forEvent: { type: integer }
+                    issuedAt: { type: string, format: date-time }
+                    kid: { type: string, example: cns-rcpt-20261020T060000Z }
+                    sha256: { type: string }
+                    jws: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/cns-cmd/.well-known/receipt-jwks.json:
+    get:
+      tags: [Consent tokens]
+      operationId: getReceiptKeys
+      summary: Public keys that verify receipts
+      description: The receipt keys, retired ones included, never the consent token keys. No credentials needed.
+      security: []
+      responses:
+        '200':
+          description: A JSON Web Key Set.
+          content:
+            application/jwk-set+json:
+              schema: { type: object }
+
   /api/cns-qry/cns-arts/{requestId}/history:
     get:
       tags: [Consent requests]
