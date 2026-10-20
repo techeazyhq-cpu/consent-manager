@@ -94,6 +94,15 @@ class R2dbcPushDvcRepoAdapterIT extends PgIntegrationTestBase {
     }
 
     @Test
+    void phonesAreStoredWithTheirPlatform() {
+        repo.upsert("dp-1", "fcm-android", PushPltf.ANDROID).block();
+        repo.upsert("dp-1", "fcm-ios", PushPltf.IOS).block();
+
+        assertEquals(List.of(PushPltf.IOS, PushPltf.ANDROID),
+                repo.findByDpId("dp-1").map(PushDvc::platform).collectList().block());
+    }
+
+    @Test
     void onlyTheMostRecentDevicesPerDpAreKept() {
         IntStream.range(0, PushDvc.MAX_PER_DP + 2).forEach(i -> repo.upsert("dp-1", "tok-" + i, PushPltf.WEB).block());
 

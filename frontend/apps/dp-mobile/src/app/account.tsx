@@ -22,10 +22,12 @@ import { Redirect, router } from "expo-router";
 import { ApiError, friendlyError } from "api-client";
 import { GW_BASE } from "../lib/config";
 import { useAuth } from "../lib/auth";
+import { forgetThisPhone } from "../lib/pushDevice";
 import { shareText } from "../lib/share";
+import { PushToggle } from "../components/PushToggle";
 import { Body, Button, Card, ErrorText, Title, styles } from "../components/ui";
 
-/** Who is signed in; every record and receipt to download (ADR-046); signing out of this phone. */
+/** Who is signed in; notifications on this phone; every record and receipt to download (ADR-046); signing out. */
 export default function AccountScreen() {
   const auth = useAuth();
   const [busy, setBusy] = useState(false);
@@ -54,6 +56,7 @@ export default function AccountScreen() {
         <Title>Signed in</Title>
         <Body>{auth.person?.username ?? auth.person?.email ?? "You"}</Body>
       </Card>
+      <PushToggle />
       <Card>
         <Title>Your records</Title>
         <Body dim>
@@ -67,11 +70,16 @@ export default function AccountScreen() {
       </Card>
       <Card>
         <Title>Sign out</Title>
-        <Body dim>Signs out of this phone. Your consents stay as they are.</Body>
+        <Body dim>Signs out of this phone and stops its notifications. Your consents stay as they are.</Body>
         <View style={styles.row}>
           <Button
             label="Sign out"
             onPress={async () => {
+              // while the session still holds, so the next person on this phone doesn't get these notifications
+              await auth
+                .token()
+                .then(forgetThisPhone)
+                .catch(() => undefined);
               await auth.signOut();
               router.replace("/");
             }}

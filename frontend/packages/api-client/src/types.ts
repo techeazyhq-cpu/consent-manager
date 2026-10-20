@@ -430,7 +430,8 @@ export interface UsageRespDto {
   currentPeriodUsage: number;
 }
 
-export type PushPltf = "WEB";
+/** A browser running the DP portal, or the DP app on a phone. Every one registers an FCM token. */
+export type PushPltf = "WEB" | "ANDROID" | "IOS";
 
 /** One of the calling DP's push devices. The token itself is never returned. */
 export interface PushDvcRespDto {

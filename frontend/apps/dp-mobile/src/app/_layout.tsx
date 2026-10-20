@@ -20,6 +20,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider } from "../lib/auth";
 import { ConsentsProvider } from "../lib/consents";
+import { PushTaps } from "../components/PushTaps";
 import { useColors } from "../components/ui";
 
 function Screens() {
@@ -47,6 +48,7 @@ export default function RootLayout() {
     <AuthProvider>
       <ConsentsProvider>
         <StatusBar style="auto" />
+        <PushTaps />
         <Screens />
       </ConsentsProvider>
     </AuthProvider>

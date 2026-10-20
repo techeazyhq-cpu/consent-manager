@@ -56,6 +56,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [048](adr-048-console-members-have-their-own-burst-limit.md) | People in the DF Console have a per-second limit of their own; the plan's is for API clients | Accepted |
 | [049](adr-049-dashboard-v1-and-developer-docs.md) | Dashboard v1 (outcomes and time to decide) and developer docs in the DF Console | Accepted |
 | [050](adr-050-dp-mobile-app.md) | The DP mobile app: Expo in the frontend workspace, shared rules, PKCE sign-in, secure storage | Accepted |
+| [051](adr-051-dp-mobile-push-notifications.md) | Push notifications in the DP mobile app: FCM tokens on both platforms, through notification-service | Accepted |
 
 ## Writing one
 

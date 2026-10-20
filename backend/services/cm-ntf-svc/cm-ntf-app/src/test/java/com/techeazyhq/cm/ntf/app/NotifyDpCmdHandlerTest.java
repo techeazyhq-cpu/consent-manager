@@ -67,7 +67,11 @@ class NotifyDpCmdHandlerTest {
     }
 
     private static PushDvc dvc(String id, String dpId, String token) {
-        return new PushDvc(id, dpId, token, PushPltf.WEB, Instant.now(), Instant.now());
+        return dvc(id, dpId, token, PushPltf.WEB);
+    }
+
+    private static PushDvc dvc(String id, String dpId, String token, PushPltf platform) {
+        return new PushDvc(id, dpId, token, platform, Instant.now(), Instant.now());
     }
 
     private static NotifyDpCmd cmd(String channelHint, String destination) {
@@ -108,6 +112,17 @@ class NotifyDpCmdHandlerTest {
         assertEquals("cm-notify-dp-req-1-d1", first.ref());
         assertEquals("cm-notify-dp-req-1-d2", pushes.get(1).ref());
         assertTrue(emails.isEmpty() && sms.isEmpty());
+    }
+
+    @Test
+    void phonesGetTheSameTitleOnlyPushAsBrowsers() {
+        handler(Map.of("dp-1", List.of(dvc("d1", "dp-1", "fcm-android", PushPltf.ANDROID),
+                dvc("d2", "dp-1", "fcm-ios", PushPltf.IOS))), null, null)
+                .handle(cmd("APP", "dp-1")).block();
+
+        assertEquals(List.of("fcm-android", "fcm-ios"), pushes.stream().map(NtfMsg::destination).toList());
+        assertTrue(pushes.stream().allMatch(msg -> msg.body().equals("Share your KYC with Acme")),
+                "the full notice text never travels through the push services");
     }
 
     @Test

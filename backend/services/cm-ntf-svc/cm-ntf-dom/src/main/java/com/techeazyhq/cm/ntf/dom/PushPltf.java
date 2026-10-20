@@ -18,7 +18,13 @@
 
 package com.techeazyhq.cm.ntf.dom;
 
-/** Where a push token came from. Only the DP portal (a browser) registers devices today; a mobile app would add its own. */
+/**
+ * Where a push token came from: the DP portal in a browser, or the DP mobile app (ADR-050). Every one of them is a
+ * Firebase Cloud Messaging registration token, since notification-service pushes through FCM only, so the platform
+ * only tells the DP which of their devices is which.
+ */
 public enum PushPltf {
-    WEB
+    WEB,
+    ANDROID,
+    IOS
 }

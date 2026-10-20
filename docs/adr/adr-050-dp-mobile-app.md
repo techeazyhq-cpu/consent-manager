@@ -54,9 +54,8 @@ TypeScript with it, and keeping secrets in the platform's secure storage. This r
 
 ## Not yet
 
-- **Push notifications.** notification-service sends push through FCM only. Android's device token works with it,
-  but iOS needs the Firebase SDK in a development build, and both need a Firebase project. They also need
-  notification-service's `PushPltf` to accept `ANDROID` and `IOS`. This comes in its own change.
+- ~~**Push notifications.**~~ Done in [ADR-051](adr-051-dp-mobile-push-notifications.md): FCM tokens on both
+  platforms through React Native Firebase, registered as `ANDROID` or `IOS` devices, opt-in on the Account screen.
 - **Passkeys and app attestation** for high-assurance actions (ADR-032 §4).
 - **Offline receipts**, stored encrypted.
 - **Notification preferences and organisation pages,** which the portal has.
