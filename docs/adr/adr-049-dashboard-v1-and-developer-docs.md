@@ -1,4 +1,4 @@
-# ADR-048: Dashboard v1 (outcomes and time to decide) and developer docs in the DF Console
+# ADR-049: Dashboard v1 (outcomes and time to decide) and developer docs in the DF Console
 
 - **Status:** Accepted
 - **Date:** 2026-10-20

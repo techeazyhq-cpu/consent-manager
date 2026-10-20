@@ -371,7 +371,7 @@ textarea.df-code {
   margin-bottom: 8px;
 }
 
-/* dashboard (ADR-048) */
+/* dashboard (ADR-049) */
 .df-stat-note {
   display: block;
   margin-top: 2px;
@@ -438,7 +438,7 @@ textarea.df-code {
   font-size: 13px;
 }
 
-/* developer docs (ADR-048) */
+/* developer docs (ADR-049) */
 .df-doc-step h4 {
   margin: 16px 0 4px;
 }

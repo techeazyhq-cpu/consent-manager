@@ -181,7 +181,7 @@ function roundTop(x: number, top: number, w: number, h: number, r: number): stri
 }
 
 /**
- * The dashboard's figures (ADR-048): what became of the requests raised in the period, how long people took to
+ * The dashboard's figures (ADR-049): what became of the requests raised in the period, how long people took to
  * decide, decisions by day, each purpose's outcomes, and the changes people made to consents they had given.
  */
 export function Insights({ console: c, onFilter }: { console: Console; onFilter: (sts?: CnsLcySts[]) => void }) {

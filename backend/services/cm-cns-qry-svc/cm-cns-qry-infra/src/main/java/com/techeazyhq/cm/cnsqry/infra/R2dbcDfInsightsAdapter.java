@@ -31,7 +31,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
- * {@link DfInsightsPort} over the read model (ADR-048). A request's decision is its first move to ISSUED or DENIED in
+ * {@link DfInsightsPort} over the read model (ADR-049). A request's decision is its first move to ISSUED or DENIED in
  * the history; later changes of a given consent are ISSUED to ISSUED and don't count as deciding again.
  */
 public class R2dbcDfInsightsAdapter implements DfInsightsPort {

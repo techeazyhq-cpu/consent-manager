@@ -388,7 +388,7 @@ export const apiKeys = {
     }),
 };
 
-/** The DF Console dashboard (ADR-048): outcomes and times to decide over the last {@code days}. */
+/** The DF Console dashboard (ADR-049): outcomes and times to decide over the last {@code days}. */
 export const insights = {
   get: (base: string, token: string, days: number) =>
     request<DfInsightsDto>(base, `/api/cns-qry/insights?days=${days}`, token),

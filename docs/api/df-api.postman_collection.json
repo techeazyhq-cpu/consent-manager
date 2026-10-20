@@ -1064,7 +1064,7 @@
                 }
               ]
             },
-            "description": "Outcomes of the requests raised in the last `days` (by each one's first decision), time to decide, each\npurpose's outcomes, every day of the period (UTC), and changes made in it to consents already given (ADR-048).\nCounts and durations only."
+            "description": "Outcomes of the requests raised in the last `days` (by each one's first decision), time to decide, each\npurpose's outcomes, every day of the period (UTC), and changes made in it to consents already given (ADR-049).\nCounts and durations only."
           },
           "event": [
             {

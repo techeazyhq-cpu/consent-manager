@@ -53,7 +53,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [045](adr-045-shorten-withdraw-a-category-renew-and-lapse.md) | Shortening, withdrawing a category, renewing, and lapse | Accepted |
 | [046](adr-046-consent-records-receipts-and-export.md) | Consent records written with each change; receipts signed with their own key; export | Accepted |
 | [047](adr-047-fiduciary-webhooks.md) | Fiduciary webhooks, signed and delivered at least once from the outbox | Accepted |
-| [048](adr-048-dashboard-v1-and-developer-docs.md) | Dashboard v1 (outcomes and time to decide) and developer docs in the DF Console | Accepted |
+| [049](adr-049-dashboard-v1-and-developer-docs.md) | Dashboard v1 (outcomes and time to decide) and developer docs in the DF Console | Accepted |
 
 ## Writing one
 

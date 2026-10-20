@@ -28,7 +28,7 @@ import com.techeazyhq.cm.cnsqry.dom.DfInsightsPort;
 import reactor.core.publisher.Mono;
 
 /**
- * Backs the DF Console dashboard (ADR-048): a fiduciary's own outcomes and times to decide over the last
+ * Backs the DF Console dashboard (ADR-049): a fiduciary's own outcomes and times to decide over the last
  * {@code days}, from 1 to {@link #MAX_DAYS}. The caller's fiduciary comes from its token, never the request.
  */
 public class DfInsightsQryHandler {

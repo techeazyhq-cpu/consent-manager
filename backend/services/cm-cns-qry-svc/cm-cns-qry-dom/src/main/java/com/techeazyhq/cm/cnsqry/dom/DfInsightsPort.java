@@ -23,7 +23,7 @@ import java.time.Instant;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-/** The aggregates behind {@link DfInsights}, for one fiduciary and the window {@code [from, to)} (ADR-048). */
+/** The aggregates behind {@link DfInsights}, for one fiduciary and the window {@code [from, to)} (ADR-049). */
 public interface DfInsightsPort {
 
     /** Outcomes and median time to decide of requests raised in the window, by purpose. */

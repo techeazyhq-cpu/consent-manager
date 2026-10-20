@@ -37,7 +37,7 @@ import com.techeazyhq.cm.cnsqry.dom.DfInsightsPort;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-/** The dashboard's figures are the caller's own, over a window of 1 to 365 days, with every day present (ADR-048). */
+/** The dashboard's figures are the caller's own, over a window of 1 to 365 days, with every day present (ADR-049). */
 class DfInsightsQryHandlerTest {
 
     private static final Instant NOW = Instant.parse("2026-10-20T10:00:00Z");

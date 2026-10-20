@@ -311,7 +311,7 @@ export interface IssuedApiKeyDto {
   signingSecret: string;
 }
 
-/** Outcomes of requests: given, refused, still awaiting, or never reached the person (ADR-048). */
+/** Outcomes of requests: given, refused, still awaiting, or never reached the person (ADR-049). */
 export interface InsightOutcomes {
   raised: number;
   given: number;
@@ -320,7 +320,7 @@ export interface InsightOutcomes {
   notNotified: number;
 }
 
-/** How a fiduciary's requests went over a window (ADR-048). Durations in seconds. */
+/** How a fiduciary's requests went over a window (ADR-049). Durations in seconds. */
 export interface DfInsightsDto {
   from: string;
   to: string;

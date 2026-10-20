@@ -697,7 +697,7 @@ paths:
       summary: How your requests went over a period
       description: |
         Outcomes of the requests raised in the last `days` (by each one's first decision), time to decide, each
-        purpose's outcomes, every day of the period (UTC), and changes made in it to consents already given (ADR-048).
+        purpose's outcomes, every day of the period (UTC), and changes made in it to consents already given (ADR-049).
         Counts and durations only.
       parameters:
         - name: days

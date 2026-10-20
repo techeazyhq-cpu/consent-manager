@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * How a fiduciary's consent requests went over a window (ADR-048): the outcome of each request raised in it, how
+ * How a fiduciary's consent requests went over a window (ADR-049): the outcome of each request raised in it, how
  * long people took to decide, a day-by-day series, and the changes people made in it to consents they had given.
  * Counts and durations only; no request or principal is identified.
  *

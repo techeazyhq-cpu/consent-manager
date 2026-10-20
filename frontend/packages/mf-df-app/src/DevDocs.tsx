@@ -78,7 +78,7 @@ function Code({ children }: { children: string }) {
 }
 
 /**
- * Developer docs (ADR-048): how this organisation's systems connect, a quick start filled in with its own details,
+ * Developer docs (ADR-049): how this organisation's systems connect, a quick start filled in with its own details,
  * checking webhooks, and the API contracts to download. Open to every member: nothing here is secret.
  */
 export default function DevDocs({ console: c }: { console: Console }) {

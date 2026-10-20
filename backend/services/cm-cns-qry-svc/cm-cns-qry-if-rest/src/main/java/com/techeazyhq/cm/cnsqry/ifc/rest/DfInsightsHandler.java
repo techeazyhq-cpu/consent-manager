@@ -30,7 +30,7 @@ import com.techeazyhq.cm.seckit.AuthCtx;
 import reactor.core.publisher.Mono;
 
 /**
- * {@code GET /api/cns-qry/insights?days=30} (ADR-048): the caller's own fiduciary's outcomes and times to decide, for
+ * {@code GET /api/cns-qry/insights?days=30} (ADR-049): the caller's own fiduciary's outcomes and times to decide, for
  * every member and its API clients. The fiduciary is the token's; anyone else gets 403.
  */
 public class DfInsightsHandler {
