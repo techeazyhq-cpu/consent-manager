@@ -68,8 +68,8 @@ public class NotifyDpCmdHandler {
 
     /**
      * A linked DP ({@code destination} is their dpId) already sees the request on their dashboard; this also pushes it
-     * to every browser they turned notifications on in. Only the notice title goes out — the push travels through
-     * third-party push services, so the full notice text stays in the portal. One device refusing (e.g. an expired
+     * to every browser and phone they turned notifications on in. Only the notice title goes out — the push travels through
+     * third-party push services, so the full notice text stays in the portal and the app, which fetch it after the tap (ADR-032 §4). One device refusing (e.g. an expired
      * token) doesn't stop the others; a transient failure fails the whole command so Pulsar redelivers it, and the
      * per-device ref (the idempotency key) keeps devices already reached from getting it twice.
      */

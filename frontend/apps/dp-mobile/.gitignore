@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Firebase (push): supplied locally or as EAS file environment variables, never committed (ADR-051)
+google-services.json
+GoogleService-Info.plist

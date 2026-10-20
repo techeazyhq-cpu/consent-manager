@@ -26,7 +26,10 @@ import com.techeazyhq.cm.webkit.DomRuleViolation;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-/** A DP registering, listing and removing the browsers they want consent notifications pushed to. */
+/**
+ * A DP registering, listing and removing the browsers and phones they want consent notifications pushed to. A
+ * registration that names no platform is a browser, as the DP portal's first version sent none.
+ */
 public class PushDvcCmdHandler {
 
     private final PushDvcRepoPort repo;
