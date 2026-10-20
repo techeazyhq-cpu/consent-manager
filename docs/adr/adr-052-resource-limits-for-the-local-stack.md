@@ -27,9 +27,9 @@ thread, Windows became slow whenever the stacks were up. Measured idle:
    | Sandbox services (`--profile sandbox`) | 0.5 | 384 MB | |
    | Keycloak | 1.5 | 1 GB | 500–630 MB |
    | Pulsar | 1.5 | 1 GB | 560 MB |
-   | notification-service's Pulsar | 1.5 | 1.5 GB | 1.2 GB |
-   | Postgres, `pulsar-init` | 1.0 | 512 MB | 80 MB |
-   | notification-service's three APIs | 1.0 | 512 MB | |
+   | notification-service's Pulsar | 1.5 | 1.5 GB | 740 MB |
+   | Postgres, `pulsar-init` | 1.0 | 512 MB | 70–145 MB |
+   | notification-service's three APIs | 1.0 | 768 MB | 360–410 MB (their heap is 75% of the limit) |
    | Redis, Mailpit, OPA, catchers, UIs | 0.25 | 128 MB | under 25 MB |
 
 2. **Each JVM sizes itself from its limit.** The services run with `-XX:MaxRAMPercentage=60 -XX:+UseSerialGC
@@ -47,8 +47,8 @@ thread, Windows became slow whenever the stacks were up. Measured idle:
 
 ## Consequences
 
-- Idle, the two stacks use about 0.4 of a CPU and 4.3 GB, against about 8 CPUs before. No container can take more
-  than its share.
+- Idle, both stacks together use about 0.3 of a CPU and 5 GB, against about 8 CPUs before. Each Pulsar settles near
+  5%. No container can take more than its share.
 - **Slower cold starts.** Keycloak takes about two minutes with 1.5 CPUs. Services starting together queue for the
   CPU instead of taking all of it.
 - A service near its limit fails loudly (exit on out-of-memory) instead of slowing the machine. Raise the limit when

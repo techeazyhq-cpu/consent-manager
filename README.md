@@ -75,7 +75,7 @@ Signing in is passwordless: enter an email address or mobile number and the 6-di
 without an account becomes a data principal account by signing in. See
 [infra/keycloak/realm-export/README.md](infra/keycloak/realm-export/README.md).
 
-**On a laptop:** every container has a CPU and memory ceiling, about 0.4 of a CPU and 4.3 GB at idle for both stacks
+**On a laptop:** every container has a CPU and memory ceiling, about 0.3 of a CPU and 5 GB at idle for both stacks
 ([ADR-052](docs/adr/adr-052-resource-limits-for-the-local-stack.md)). Cold starts are slower: Keycloak takes about
 two minutes. For performance runs, raise the limits, for example `CM_SVC_MEM=1g CM_SVC_CPUS=2`. To keep Windows
 responsive whatever Docker does, cap Docker itself in `%UserProfile%\.wslconfig`:

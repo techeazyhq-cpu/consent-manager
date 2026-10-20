@@ -23,12 +23,13 @@
 #
 #   docker compose -f ../notification-service/docker-compose.yml -f infra/notification-service/compose.cm-ports.yml \
 #     up -d --build client-api admin-api dispatcher
+# notification-service's images give 75% of the limit to the heap, and idle at about 400 MB: 768 MB leaves headroom
 x-app: &app
   deploy:
     resources:
       limits:
         cpus: "${NS_APP_CPUS:-1.0}"
-        memory: ${NS_APP_MEM:-512m}
+        memory: ${NS_APP_MEM:-768m}
 
 x-small: &small
   deploy:
