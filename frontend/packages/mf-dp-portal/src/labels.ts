@@ -16,24 +16,5 @@
  * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
  */
 
-import type { CnsLcySts } from "api-client";
-
-export { humanise } from "ui-kit/src/index";
-
-/**
- * Where a consent stands, in the person's terms. A request whose notification failed is still theirs to decide, so
- * it reads as waiting for them.
- */
-export const STATUS: Record<CnsLcySts, { label: string; badge: string }> = {
-  PENDING: { label: "Awaiting your decision", badge: "PENDING" },
-  NOTIFICATION_FAILED: { label: "Awaiting your decision", badge: "PENDING" },
-  ISSUED: { label: "Given", badge: "ACTIVE" },
-  DENIED: { label: "Declined", badge: "DENIED" },
-  REVOKED: { label: "Withdrawn", badge: "REVOKED" },
-  EXPIRED: { label: "Expired", badge: "EXPIRED" },
-};
-
-export const awaitsDecision = (sts: CnsLcySts) => sts === "PENDING" || sts === "NOTIFICATION_FAILED";
-
-export const fmtDate = (iso?: string | null) =>
-  iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : null;
+/** Where a consent stands and how dates read, shared with the mobile app (ADR-032 §3). */
+export { STATUS, awaitsDecision, fmtDate, humanise } from "dp-kit";

@@ -138,6 +138,4 @@ function Notice({ row }: { row: CnsArtRdMdl }) {
   );
 }
 
-export function statusOrder(sts: CnsLcySts): number {
-  return awaitsDecision(sts) ? 0 : sts === "ISSUED" ? 1 : 2;
-}
+export { statusOrder } from "dp-kit";

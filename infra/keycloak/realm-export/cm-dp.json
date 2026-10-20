@@ -74,6 +74,64 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "cm-dp-mobile",
+      "name": "DP mobile app (data principals)",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "cmdp://*",
+        "exp://*",
+        "http://localhost:19006/*"
+      ],
+      "webOrigins": [
+        "http://localhost:19006"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "login_theme": "cm-dp",
+        "post.logout.redirect.uris": "+"
+      },
+      "defaultClientScopes": [
+        "openid",
+        "profile",
+        "email",
+        "roles"
+      ],
+      "protocolMappers": [
+        {
+          "name": "roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "multivalued": "true",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        },
+        {
+          "name": "sub-in-access-token",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "config": {
+            "user.attribute": "id",
+            "claim.name": "sub",
+            "jsonType.label": "String",
+            "userinfo.token.claim": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true"
+          }
+        }
+      ],
+      "description": "The iOS and Android app (ADR-032). Public, PKCE only, no password grant. exp:// and localhost:19006 are for Expo Go and the web preview in development only."
     }
   ],
   "users": [

@@ -53,6 +53,22 @@ and one is open and tracked.
 | V-13 | Accepted | Spring WebFlux and the Pulsar client's bundled BouncyCastle (part of V-04) | #216, #217 |
 | V-14 | False positive | ZAP's SQL injection on `/api/aud/activity` | Closed |
 | V-15 | Critical | Anyone signed in, a fiduciary's API key included, could approve, decline or withdraw any consent by its id | Fixed (ADR-044) |
+| V-16 | Accepted | Two HIGH advisories without a patched release in the mobile app's build tooling (braces, node-forge) | Accepted until 2026-12-31 |
+
+### V-16: the mobile app's build tooling (accepted)
+
+The DP mobile app (ADR-050) brought Expo's toolchain into the frontend workspace, and with it three HIGH advisories
+in transitive dependencies. CI's `pnpm audit` and Trivy fail on HIGH.
+
+- **source-map-js** (GHSA-68fv-2mgg-jv7q), through Metro's PostCSS: fixed by a pnpm override to 1.2.2.
+- **braces** (GHSA-vfj7-8cjw-p6xm, stack exhaustion on hostile glob patterns) and **node-forge**
+  (GHSA-86w9-cpqp-85rv, RSA PKCS#1 v1.5 signature verification): neither has a patched release, and both reach only
+  Expo's build-time tooling, never the app's bundle:
+  - braces is used by Metro's file watcher, on the developer's own patterns
+  - node-forge is used by `@expo/cli` for development HTTPS and update signing, which this project doesn't use
+
+  Both are ignored in `frontend/pnpm-workspace.yaml` (`auditConfig.ignoreGhsas`). Recheck them by 2026-12-31, or
+  sooner if a fix ships.
 
 ### V-15: consent given by someone other than the principal (Critical)
 

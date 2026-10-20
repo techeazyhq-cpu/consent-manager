@@ -19,41 +19,11 @@
 import { useEffect, useState } from "react";
 import { records, type ConsentRecordDoc, type ReceiptView, type RecordEvent } from "api-client";
 import { Button, Card, ErrorBanner, PageHeader, Spinner, friendlyError } from "ui-kit/src/index";
+import { EVENT_LABELS, changeLabel, jwsPayload } from "dp-kit";
 import { fmtDate, humanise } from "./labels";
 import { freshToken, type Portal } from "./portal";
 
-/** What each record event means, in the person's terms. */
-export const EVENT_LABELS: Record<RecordEvent["type"], string> = {
-  requested: "Asked for your consent",
-  given: "You gave consent",
-  refused: "You declined",
-  modified: "You changed it",
-  renewed: "You renewed it",
-  withdrawn: "You withdrew consent",
-  lapsed: "It ended: its validity ran out",
-};
-
-/** A change's detail in words: "Ended sooner", "Stopped sharing Name". */
-export function changeLabel(change?: string): string | null {
-  if (!change) return null;
-  if (change === "SHORTENED") return "Ended sooner";
-  if (change.startsWith("CATEGORY_WITHDRAWN:")) return `Stopped sharing ${humanise(change.split(":")[1])}`;
-  if (change.startsWith("BACKFILLED")) return "Recorded when records began; the exact time is in the audit log";
-  return change;
-}
-
-/** The JSON a compact JWS signs, decoded (base64url, UTF-8); null when it isn't a JWS. */
-export function jwsPayload(jws: string): unknown {
-  const part = jws.split(".")[1];
-  if (!part) return null;
-  try {
-    const b64 = part.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(part.length / 4) * 4, "=");
-    const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-    return JSON.parse(new TextDecoder().decode(bytes));
-  } catch {
-    return null;
-  }
-}
+export { EVENT_LABELS, changeLabel, jwsPayload };
 
 export function saveBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob);

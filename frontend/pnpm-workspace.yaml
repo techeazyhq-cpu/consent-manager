@@ -20,3 +20,15 @@ packages:
 allowBuilds:
   '@firebase/util': false
   esbuild: true
+# Patched releases of vulnerable transitive dependencies (CI's pnpm audit and Trivy fail on HIGH).
+overrides:
+  # GHSA-68fv-2mgg-jv7q, via Expo's Metro config (postcss)
+  source-map-js: ">=1.2.2"
+# Accepted for now, each with why and until when (docs/security/vapt-and-performance.md, V-16). No patched release
+# exists for either; both reach only Expo's build-time tooling, never the app's bundle. Recheck by 2026-12-31.
+auditConfig:
+  ignoreGhsas:
+    # braces <=3.0.3 stack exhaustion on hostile glob patterns: Metro's file watcher, on the developer's own patterns
+    - GHSA-vfj7-8cjw-p6xm
+    # node-forge <=1.4.0 RSA PKCS#1 v1.5 signature verification: @expo/cli only (dev HTTPS, update signing, unused)
+    - GHSA-86w9-cpqp-85rv

@@ -13,6 +13,7 @@
     "@firebase/messaging": "0.13.3",
     "api-client": "workspace:*",
     "auth-kit": "workspace:*",
+    "dp-kit": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "ui-kit": "workspace:*"

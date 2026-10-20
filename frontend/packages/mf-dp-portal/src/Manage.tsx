@@ -19,26 +19,11 @@
 import { useEffect, useState } from "react";
 import { cnsCmd, type CnsArtRdMdl } from "api-client";
 import { Button, friendlyError } from "ui-kit/src/index";
-import { dateAfter, daysUntil } from "./Decide";
+import { dateAfter, daysLeft, daysUntil, shortenedUntil } from "dp-kit";
 import { fmtDate, humanise } from "./labels";
 import { RENEW_PROMPT_DAYS, freshToken, type Portal } from "./portal";
 
-const DAY_MS = 86_400_000;
-
-/** Whole days until `until`, rounded up: a consent ending later today has 1 day left. */
-export function daysLeft(until: string, now: Date = new Date()): number {
-  return Math.max(0, Math.ceil((new Date(until).getTime() - now.getTime()) / DAY_MS));
-}
-
-/**
- * The instant a consent ending at `until` ends instead on date `date` (yyyy-mm-dd): the same time of day, the
- * difference in calendar days earlier, so ending "a week sooner" ends exactly a week sooner.
- */
-export function shortenedUntil(until: string, date: string): string {
-  const current = new Date(until);
-  const days = daysUntil(date, current);
-  return new Date(current.getTime() + days * DAY_MS).toISOString();
-}
+export { daysLeft, shortenedUntil };
 
 /**
  * Changing a consent in force (ADR-026 §4): stop sharing one category, end it sooner, or renew it. Renewing is the
