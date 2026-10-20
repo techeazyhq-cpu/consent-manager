@@ -17,11 +17,10 @@
  */
 
 import { useEffect, useRef } from "react";
-import { router } from "expo-router";
 import { useAuth } from "../lib/auth";
 import { useConsents } from "../lib/consents";
 import * as fcm from "../lib/fcm";
-import { cnsReqIdOf } from "../lib/push";
+import { openPush } from "../lib/openPush";
 import { pushMode, tokenChanged } from "../lib/pushDevice";
 
 /**
@@ -41,11 +40,7 @@ export function PushTaps() {
     if (pushMode !== "fcm" || !signedIn) return;
     const reload = () => latest.current.consents.reload().catch(() => undefined);
     const open = (message: fcm.PushMessage | null) => {
-      if (!message) return;
-      reload();
-      const id = cnsReqIdOf(message.data);
-      if (id) router.navigate({ pathname: "/consent/[id]", params: { id } });
-      else router.navigate("/");
+      if (message) openPush(message.data, latest.current.consents.reload);
     };
     fcm.initialTap().then(open, () => undefined);
     const offs = [

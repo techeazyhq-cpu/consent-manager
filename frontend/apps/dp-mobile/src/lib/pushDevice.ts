@@ -108,6 +108,12 @@ export async function checkThisPhone(accessToken: string): Promise<"on" | "off" 
   return "on";
 }
 
+/** This phone's stand-in token while development-mode notifications are on for it, for the dev push relay. */
+export async function devTokenIfOn(): Promise<string | null> {
+  if (pushMode !== "dev" || !(await kv.get(DEVICE_ID_KEY))) return null;
+  return kv.get(DEV_TOKEN_KEY);
+}
+
 /** Re-registers after FCM rotates the token, if notifications are on for this phone. */
 export async function tokenChanged(accessToken: string): Promise<void> {
   if (await kv.get(DEVICE_ID_KEY)) await registerThisPhone(accessToken);
