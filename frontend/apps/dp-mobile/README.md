@@ -53,13 +53,40 @@ they turn it on under **Account → Notifications**. Signing out turns it off fo
 - Pushes go through notification-service's FCM provider, on iOS too, so the app needs an FCM token from React
   Native Firebase on both platforms.
 
-**Development mode.** Expo Go, the web preview, and builds without Firebase register a stand-in token
-(`dev-android-…`, `dev-ios-…`, `dev-web-…`) instead. Turn notifications on, send a request to that person, and the
-push appears in the push catcher:
-- notification-service's catcher at http://localhost:19000 (the stack's default `CM_NTF_PROVIDER=notification-service`)
-- or cm-ntf-svc's `/dev/push-catcher` with `CM_NTF_PROVIDER=local`
+**Development mode: no Firebase needed.** Expo Go, the web preview, and builds without Firebase register a stand-in
+token (`dev-android-…`, `dev-ios-…`, `dev-web-…`) instead. Pushes to it are caught by notification-service's
+catcher, the way Mailpit catches email. See them at http://localhost:19000.
 
-Nothing reaches the phone.
+While the app is open, the **dev push relay** polls the catcher for its own token every 3 seconds and shows each
+new push as a banner at the top. Tapping the banner does what tapping a real notification does: it refreshes the list
+and opens the request (or the list, if the push doesn't name one). To try it:
+1. Sign in and turn on **Account → Notifications**.
+2. Send that person a consent request from the DF Console or the API.
+3. The banner appears within a few seconds.
+
+| Variable | Default |
+|---|---|
+| `EXPO_PUBLIC_PUSH_CATCHER_URL` | `http://localhost:19000`. On a phone, use your computer's address, e.g. `http://192.168.1.20:19000` |
+
+The relay runs only in development builds (`__DEV__`) without Firebase. It needs a catcher that allows cross-origin
+reads and filters by `to` (notification-service PR #147); the web preview needs the CORS, and native apps don't.
+
+**A system notification on the iOS Simulator** (a Mac with Xcode) needs no Firebase or APNs. Save this as
+`push.apns`:
+
+```json
+{ "Simulator Target Bundle": "com.techeazyhq.cm.dp", "aps": { "alert": { "title": "New consent request", "body": "Share your KYC with Acme" } } }
+```
+
+Then send it to the booted simulator:
+
+```bash
+xcrun simctl push booted com.techeazyhq.cm.dp push.apns
+```
+
+It shows the system banner and lock-screen entry, so you can check how a notification looks. Only a development
+build of this app (`npx expo run:ios`) can receive it, not Expo Go. Tapping it doesn't open a request: in a build
+without Firebase there is no tap handler. Android's emulator has nothing equivalent without FCM.
 
 **Real push on a phone** needs a Firebase project and a development build. Expo Go can't do it.
 1. In the Firebase console, add an Android app (`com.techeazyhq.cm.dp`) and an iOS app (same bundle id). Download
@@ -100,5 +127,5 @@ The plain-TypeScript tests (`src/lib/*.test.ts`) run with the workspace's `pnpm 
 |---|---|
 | `src/app/` | Screens (Expo Router): home, a consent, its history, account, the sign-in return |
 | `src/components/` | Deciding, changing a consent, and the accessible building blocks |
-| `src/lib/` | Sign-in and tokens, the consents, push (`push.ts` rules, `pushDevice.ts` registration, `fcm*.ts` Firebase), sharing files, settings |
+| `src/lib/` | Sign-in and tokens, the consents, push (`push.ts` rules, `pushDevice.ts` registration, `fcm*.ts` Firebase, `openPush.ts` taps), sharing files, settings |
 | `app.config.js` | app.json plus Firebase, when its files are there |

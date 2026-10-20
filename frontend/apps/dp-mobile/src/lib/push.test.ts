@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { cnsReqIdOf, devToken, pushModeFor, pushPlatform, stillRegistered } from "./push";
+import { catcherQuery, cnsReqIdOf, devToken, freshPushes, nextSince, pushModeFor, pushPlatform, stillRegistered, type CaughtPush } from "./push";
 
 describe("the app's push rules", () => {
   const both = { android: true, ios: true };
@@ -55,5 +55,33 @@ describe("the app's push rules", () => {
     expect(cnsReqIdOf({ cnsReqId: "../account" })).toBeNull();
     expect(cnsReqIdOf({ cnsReqId: 42 })).toBeNull();
     expect(cnsReqIdOf(undefined)).toBeNull();
+  });
+
+  describe("the dev push relay", () => {
+    const push = (id: string, to: string, receivedAt: string): CaughtPush => ({ id, to, receivedAt, subject: "New consent request" });
+
+    it("asks the catcher for this phone's pushes since a time", () => {
+      const url = new URL(catcherQuery("http://10.0.2.2:19000/", "dev-android-1", "2026-10-20T10:00:00.000Z"));
+      expect(url.origin + url.pathname).toBe("http://10.0.2.2:19000/messages");
+      expect(Object.fromEntries(url.searchParams)).toEqual({ channel: "push", to: "dev-android-1", since: "2026-10-20T10:00:00.000Z" });
+    });
+
+    it("shows only this phone's pushes, once each, oldest first", () => {
+      const caught = [
+        push("b", "dev-ios-1", "2026-10-20T10:00:02.000Z"),
+        push("x", "dev-ios-2", "2026-10-20T10:00:01.000Z"),
+        push("a", "dev-ios-1", "2026-10-20T10:00:01.000Z"),
+        push("c", "dev-ios-1", "2026-10-20T10:00:02.000Z"),
+      ];
+      expect(freshPushes(caught, "dev-ios-1", new Set(["c"])).map((p) => p.id)).toEqual(["a", "b"]);
+    });
+
+    it("moves on to the newest push seen, and stays put when there is none", () => {
+      const since = "2026-10-20T10:00:00.000Z";
+      expect(nextSince([push("a", "t", "2026-10-20T10:00:05.000Z"), push("b", "t", "2026-10-20T10:00:03.000Z")], since)).toBe(
+        "2026-10-20T10:00:05.000Z",
+      );
+      expect(nextSince([], since)).toBe(since);
+    });
   });
 });

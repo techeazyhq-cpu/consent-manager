@@ -94,7 +94,10 @@ export function PushToggle() {
             : "Get a notification on this phone when an organisation asks for your consent."}
       </Body>
       {pushMode === "dev" ? (
-        <Body dim>This build has no Firebase, so notifications go to the local push catcher instead of this phone.</Body>
+        <Body dim>
+          This build has no Firebase, so notifications go to the local push catcher. While the app is open, they show
+          here as a banner.
+        </Body>
       ) : null}
       <ErrorText message={error} />
       <View style={styles.row}>

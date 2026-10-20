@@ -57,7 +57,16 @@ Two things shape the mobile version:
    - **`dev`:** Expo Go, the web preview, or a development build without Firebase. It registers a stand-in token
      `dev-<platform>-<uuid>`, so register, notify and catch still work locally. The push lands in
      notification-service's catcher, or cm-ntf-svc's push catcher with `CM_NTF_PROVIDER=local`. Nothing reaches the
-     phone.
+     phone by the platform's push service.
+     - **The dev push relay** fills that gap, so the project can be tried end to end with no Firebase account. While
+       the app is open, it polls the catcher's `GET /messages?channel=push&to=<token>&since=…` every 3 seconds.
+       Each new push appears as an in-app banner, and tapping it runs the same code as tapping a real notification.
+     - It is a banner, not a system notification: one would need expo-notifications (see 3), and polling stops in
+       the background anyway.
+     - It exists only in `__DEV__` builds, and reads the catcher at `EXPO_PUBLIC_PUSH_CATCHER_URL`.
+     - The catcher allows cross-origin reads only (notification-service PR #147), so the web preview can poll it.
+     - Firebase has no local emulator for Cloud Messaging. On the iOS Simulator, `xcrun simctl push` shows a real
+       system notification without APNs, for checking how it looks.
    - **`off`:** a release build without Firebase. The toggle isn't shown.
 7. **Firebase files are configuration, never committed.**
    - `app.config.js` reads `google-services.json` and `GoogleService-Info.plist` from the app folder (git ignores
