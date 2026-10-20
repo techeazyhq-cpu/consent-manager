@@ -30,6 +30,8 @@ import org.springframework.r2dbc.core.DatabaseClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techeazyhq.cm.cnsqry.app.AdminCnsQryHandler;
+import com.techeazyhq.cm.cnsqry.app.DfInsightsQryHandler;
+import com.techeazyhq.cm.cnsqry.infra.R2dbcDfInsightsAdapter;
 import com.techeazyhq.cm.cnsqry.app.DpDashboardQryHandler;
 import com.techeazyhq.cm.cnsqry.app.GetCnsArtQryHandler;
 import com.techeazyhq.cm.cnsqry.app.GetCnsHstQryHandler;
@@ -89,6 +91,11 @@ public class CnsQryBeanConfig {
     @Bean
     public AdminCnsQryHandler adminCnsQryHandler(CnsArtRdMdlRepoPort rdMdlRepo) {
         return new AdminCnsQryHandler(rdMdlRepo);
+    }
+
+    @Bean
+    public DfInsightsQryHandler dfInsightsQryHandler(DatabaseClient db) {
+        return new DfInsightsQryHandler(new R2dbcDfInsightsAdapter(db), java.time.Clock.systemUTC());
     }
 
     @Bean(destroyMethod = "close")

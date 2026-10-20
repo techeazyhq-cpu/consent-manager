@@ -20,8 +20,9 @@ import { useMemo, useState } from "react";
 import { dfReg, type CnsArtRdMdl, type CnsLcySts } from "api-client";
 import { Button, Card, OrgLogo, PageHeader, Spinner, humanise } from "ui-kit/src/index";
 import type { Console } from "./console";
-import { COUNTS, STATUS, countOf, dataLabel, fmtDate, grantRate } from "./labels";
+import { COUNTS, STATUS, countOf, dataLabel, fmtDate } from "./labels";
 import { ROLE_HINTS, ROLE_LABELS, raisesRequests } from "./roles";
+import { Insights } from "./Insights";
 import { purposeHref, raiseHref } from "./routes";
 import { freshToken } from "./token";
 
@@ -76,11 +77,10 @@ export function Dashboard({ console: c, onFilter }: { console: Console; onFilter
   const rows = c.rows;
   if (!rows) return <Spinner label="Loading requests…" />;
   const failed = countOf(rows, ["NOTIFICATION_FAILED"]);
-  const rate = grantRate(rows);
 
   return (
     <>
-      <PageHeader title="Dashboard" subtitle="How your consent requests are going, purpose by purpose." />
+      <PageHeader title="Dashboard" subtitle="What became of your consent requests, how long people took to decide, and what changed after." />
 
       {failed > 0 ? (
         <div className="df-callout" role="status">
@@ -92,11 +92,10 @@ export function Dashboard({ console: c, onFilter }: { console: Console; onFilter
         </div>
       ) : null}
 
-      <Counts rows={rows} onPick={onFilter} />
-      {rate !== null ? <p className="cm-note">Of the people who decided, {rate}% granted consent.</p> : null}
+      <Insights console={c} onFilter={onFilter} />
 
       <div className="cm-toolbar" style={{ marginTop: 18 }}>
-        <h3 style={{ margin: 0, marginRight: "auto" }}>Purposes</h3>
+        <h3 style={{ margin: 0, marginRight: "auto" }}>Your purposes</h3>
         <Button onClick={c.reload}>Refresh</Button>
         <RaiseButton console={c} />
       </div>

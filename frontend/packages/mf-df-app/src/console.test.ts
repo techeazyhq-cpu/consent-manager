@@ -26,6 +26,8 @@ import { requestProblem, toCode } from "./Raise";
 import { batchHref, parseRoute, purposeEditHref, purposeHref, raiseHref } from "./routes";
 import { askable, noticeIn } from "./Template";
 import { usageNote } from "./Billing";
+import { WEBHOOK_VERIFY_NODE, connectionFor, quickStart } from "./connect";
+import { PERIODS, decidedRate, fmtDuration, niceMax, share } from "./dashboard";
 import { WEBHOOK_TYPES, WEBHOOK_TYPE_LABELS, lastOutcome } from "./Webhooks";
 import { managesWebhooks } from "./roles";
 import { OPERATIONS, asCurl, fillPath, pathParams, remembered, tokenCurl, uploadForm } from "./sandbox";
@@ -300,5 +302,62 @@ describe("webhooks", () => {
     expect(managesWebhooks("DEVELOPER")).toBe(true);
     expect(managesWebhooks("CONSENT_MANAGER")).toBe(false);
     expect(managesWebhooks("AUDITOR")).toBe(false);
+  });
+});
+
+describe("dashboard", () => {
+  it("says how long people took", () => {
+    expect(fmtDuration(null)).toBe("—");
+    expect(fmtDuration(42)).toBe("42 s");
+    expect(fmtDuration(720)).toBe("12 min");
+    expect(fmtDuration(5400)).toBe("1.5 h");
+    expect(fmtDuration(86_400)).toBe("1 day");
+    expect(fmtDuration(3 * 86_400)).toBe("3 days");
+  });
+
+  it("gives the rate of those who decided, none when nobody did", () => {
+    expect(decidedRate({ given: 3, refused: 1 })).toBe(75);
+    expect(decidedRate({ given: 0, refused: 0 })).toBeNull();
+    expect(share(1, 3)).toBe(33);
+    expect(share(1, 0)).toBeNull();
+  });
+
+  it("rounds a chart's scale up to 1, 2 or 5", () => {
+    expect(niceMax(0)).toBe(1);
+    expect(niceMax(3)).toBe(5);
+    expect(niceMax(7)).toBe(10);
+    expect(niceMax(12)).toBe(20);
+    expect(niceMax(480)).toBe(500);
+  });
+
+  it("offers a week to a year", () => {
+    expect(PERIODS.map((p) => p.days)).toEqual([7, 30, 90, 365]);
+  });
+});
+
+describe("developer docs", () => {
+  const conn = connectionFor("df-1", "https://api.example", "https://id.example", "cm-df");
+
+  it("fills in the organisation's own connection", () => {
+    expect(conn).toEqual({
+      gwBase: "https://api.example",
+      tokenUrl: "https://id.example/realms/cm-df/protocol/openid-connect/token",
+      clientId: "df-api-df-1",
+    });
+    expect(parseRoute("#/docs")).toEqual({ page: "docs" });
+  });
+
+  it("walks through token, request, status and verification against the real paths", () => {
+    const steps = quickStart(conn);
+    expect(steps.map((s) => s.title)).toHaveLength(4);
+    expect(steps[0].code).toContain("client_id=df-api-df-1");
+    expect(steps[1].code).toContain("https://api.example/api/cns-cmd/cns-reqs");
+    expect(steps[3].code).toContain("/verify?purpose=");
+    expect(steps.every((s) => !s.code.includes("undefined"))).toBe(true);
+  });
+
+  it("checks webhook signatures in constant time", () => {
+    expect(WEBHOOK_VERIFY_NODE).toContain("timingSafeEqual");
+    expect(WEBHOOK_VERIFY_NODE).toContain("> 300");
   });
 });

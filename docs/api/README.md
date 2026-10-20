@@ -13,7 +13,8 @@ happened. The spec is [df-api.openapi.yaml](df-api.openapi.yaml) (OpenAPI 3.1). 
 | `df-webhooks.asyncapi.yaml` | What is posted to your webhook endpoints (AsyncAPI 3) |
 | `redocly.yaml` | Lint rules: `npx @redocly/cli lint docs/api/df-api.openapi.yaml` |
 
-Regenerate the collection after changing the spec: `python scripts/make-postman.py`.
+Regenerate the collection after changing the spec: `python scripts/make-postman.py`. The DF Console's Developer
+docs page offers these files for download with a quick start filled in with your organisation's details.
 
 ## 1. Get an API key
 
