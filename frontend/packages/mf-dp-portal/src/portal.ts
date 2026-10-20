@@ -41,6 +41,23 @@ export interface Org {
 
 export type Decision = "give" | "decline" | "withdraw";
 
+/** A change to a consent in force (ADR-026 §4): end it sooner, stop sharing one category, or renew it. */
+export type Change =
+  | { kind: "shorten"; until: string }
+  | { kind: "withdraw-dcat"; dCat: string }
+  | { kind: "renew"; days: number };
+
+/** How close to its end a consent is when the person is prompted to renew it. */
+export const RENEW_PROMPT_DAYS = 14;
+
+/** Consents in force that end within {@link RENEW_PROMPT_DAYS}, soonest first: prompts to renew before a lapse. */
+export function endingSoon(rows: CnsArtRdMdl[], now: Date = new Date()): CnsArtRdMdl[] {
+  const limit = now.getTime() + RENEW_PROMPT_DAYS * 86_400_000;
+  return rows
+    .filter((r) => r.lcySts === "ISSUED" && r.validUntil && new Date(r.validUntil).getTime() <= limit)
+    .sort((a, b) => (a.validUntil ?? "").localeCompare(b.validUntil ?? ""));
+}
+
 export interface Portal {
   auth: AuthInfo;
   gwBase: string;
@@ -55,6 +72,10 @@ export interface Portal {
   reload: () => Promise<void>;
   /** Gives (with the person's choice of data and validity), declines or withdraws. */
   decide: (row: CnsArtRdMdl, decision: Decision, choice?: GrantChoice) => Promise<boolean>;
+  /** Changes a consent in force; true once the change shows here. */
+  change: (row: CnsArtRdMdl, change: Change) => Promise<boolean>;
+  /** Consents in force that end soon: renew them, or let them lapse. */
+  endingSoon: CnsArtRdMdl[];
   orgName: (dfId: string) => string;
 }
 
@@ -143,6 +164,33 @@ export function usePortal(auth: AuthInfo, gwBase: string): Portal {
     [auth, gwBase, fetchRows],
   );
 
+  /** Like {@link decide}: recorded at once, then re-read until the read model shows the change. */
+  const change = useCallback(
+    async (row: CnsArtRdMdl, ch: Change): Promise<boolean> => {
+      if (!row.cnsArtId) return false;
+      setBusy(row.cnsArtId);
+      setError(null);
+      try {
+        const token = await freshToken(auth);
+        if (ch.kind === "shorten") await cnsCmd.shorten(gwBase, token, row.cnsArtId, ch.until);
+        else if (ch.kind === "withdraw-dcat") await cnsCmd.withdrawDCat(gwBase, token, row.cnsArtId, ch.dCat);
+        else await cnsCmd.renew(gwBase, token, row.cnsArtId, ch.days);
+        for (let attempt = 0; attempt < 8; attempt++) {
+          const data = await fetchRows();
+          if (data.find((r) => r.cnsReqId === row.cnsReqId)?.updatedAt !== row.updatedAt) break;
+          await new Promise((r) => setTimeout(r, 600));
+        }
+        return true;
+      } catch (err) {
+        setError(friendlyError(err));
+        return false;
+      } finally {
+        setBusy(null);
+      }
+    },
+    [auth, gwBase, fetchRows],
+  );
+
   const orgName = useCallback((dfId: string) => names[dfId] ?? "…", [names]);
 
   const orgs = useMemo<Org[]>(() => {
@@ -165,5 +213,22 @@ export function usePortal(auth: AuthInfo, gwBase: string): Portal {
     [rows],
   );
 
-  return { auth, gwBase, rows, names, orgs, awaiting, error, setError, busy, reload, decide, orgName };
+  const soon = useMemo(() => endingSoon(rows ?? []), [rows]);
+
+  return {
+    auth,
+    gwBase,
+    rows,
+    names,
+    orgs,
+    awaiting,
+    error,
+    setError,
+    busy,
+    reload,
+    decide,
+    change,
+    endingSoon: soon,
+    orgName,
+  };
 }

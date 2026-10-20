@@ -116,6 +116,7 @@ class DecideCnsReqTest {
             new CnsTknIssuer(signer(), Duration.ofMinutes(15), CLOCK), terms);
     private final DenyCnsReqCmdHandler deny = new DenyCnsReqCmdHandler(reqRepo);
     private final RevokeCnsArtCmdHandler revoke = new RevokeCnsArtCmdHandler(artRepo);
+    private final ChangeCnsArtCmds changes = new ChangeCnsArtCmds(artRepo, reqRepo, terms, Clock.systemUTC());
 
     /** ORDER_UPDATES version 1 asks EMAIL (needed) and NAME for 180 days, up to 365, of principal dp-1. */
     private CnsReq pending() {
@@ -182,6 +183,38 @@ class DecideCnsReqTest {
         assertEquals(CnsArtSts.ISSUED, arts.get(art.id()).sts());
 
         assertEquals(CnsArtSts.REVOKED, revoke.handle(new RevokeCnsArtCmd(art.id(), "dp-1")).block().sts());
+    }
+
+    @Test
+    void thePrincipalShortensWithdrawsACategoryAndRenewsUpToThePurposesMaximum() {
+        CnsArt art = approve.handle(new ApproveCnsReqCmd(pending().id(), "dp-1", null, 30)).block();
+        Instant sooner = art.valPrd().until().minus(Duration.ofDays(10));
+
+        assertEquals(sooner, changes.shorten(art.id(), "dp-1", sooner).block().valPrd().until());
+        assertEquals(Set.of(new DCat("EMAIL")), changes.withdrawCategory(art.id(), "dp-1", "NAME").block().scp().dCats());
+        CnsArt renewed = changes.renew(art.id(), "dp-1", 365).block();
+        assertEquals(Duration.ofDays(365), Duration.between(renewed.valPrd().from(), renewed.valPrd().until()));
+        // ORDER_UPDATES version 1 allows at most 365 days
+        assertEquals(400, refusal(() -> changes.renew(art.id(), "dp-1", 366).block()));
+    }
+
+    @Test
+    void nobodyButThePrincipalChangesAConsent() {
+        CnsArt art = approve.handle(new ApproveCnsReqCmd(pending().id(), "dp-1", null, null)).block();
+
+        assertEquals(404, refusal(() -> changes.shorten(art.id(), "dp-2", Instant.now().plusSeconds(3600)).block()));
+        assertEquals(404, refusal(() -> changes.withdrawCategory(art.id(), null, "NAME").block()));
+        assertEquals(404, refusal(() -> changes.renew(art.id(), "dp-2", 30).block()));
+        assertEquals(2, arts.get(art.id()).scp().dCats().size(), "nothing changed");
+    }
+
+    @Test
+    void aWithdrawnConsentCantBeChanged() {
+        CnsArt art = approve.handle(new ApproveCnsReqCmd(pending().id(), "dp-1", null, null)).block();
+        revoke.handle(new RevokeCnsArtCmd(art.id(), "dp-1")).block();
+
+        assertEquals(409, refusal(() -> changes.renew(art.id(), "dp-1", 300).block()));
+        assertEquals(400, refusal(() -> changes.shorten(art.id(), "dp-1", null).block()));
     }
 
     @Test

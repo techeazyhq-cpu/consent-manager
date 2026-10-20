@@ -27,6 +27,8 @@ import com.techeazyhq.cm.cnsqry.app.evt.CnsNotificationFailedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsDpLinkedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsExpiredEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsGrantedEvtPayload;
+import com.techeazyhq.cm.cnsqry.app.evt.CnsModifiedEvtPayload;
+import com.techeazyhq.cm.cnsqry.app.evt.CnsRenewedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsRevokedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.CnsReqCreatedEvtPayload;
 import com.techeazyhq.cm.cnsqry.app.evt.DpRefPayload;
@@ -99,6 +101,41 @@ public class Projector {
     public Mono<Void> onCnsRevoked(CnsRevokedEvtPayload evt) {
         return dedupe(evt.evtId(), () -> rowOf(rdMdlRepo.findByCnsArtId(evt.cnsArtId()), "consent " + evt.cnsArtId())
                 .flatMap(existing -> transition(existing, CnsLcySts.REVOKED, evt.occurredAt(), evt.evtId())));
+    }
+
+    /** A consent shortened or with a category withdrawn (ADR-026 §4): it stays in force with its new scope and end. */
+    public Mono<Void> onCnsModified(CnsModifiedEvtPayload evt) {
+        return dedupe(evt.evtId(), () -> rowOf(rdMdlRepo.findByCnsArtId(evt.cnsArtId()), "consent " + evt.cnsArtId())
+                .flatMap(existing -> {
+                    String chg = "CATEGORY_WITHDRAWN".equals(evt.change()) ? evt.change() + ":" + evt.dCat() : evt.change();
+                    // the row takes the newest state only; the history records every change, in whatever order the
+                    // topics deliver them
+                    return unlessStale(existing, evt.occurredAt(), () -> rdMdlRepo.upsert(existing.with(
+                            existing.cnsArtId(), existing.dpId(), existing.lcySts(), evt.valPrd().from(),
+                            evt.valPrd().until(), evt.occurredAt()).granted(codes(evt.scp()))).then())
+                            .then(hstRepo.append(new CnsHstRdMdl(existing.cnsReqId(), CnsLcySts.ISSUED,
+                                    CnsLcySts.ISSUED, evt.occurredAt(), evt.evtId(), chg)));
+                }));
+    }
+
+    /** A consent renewed before it lapsed: its new validity from the renewal. */
+    public Mono<Void> onCnsRenewed(CnsRenewedEvtPayload evt) {
+        return dedupe(evt.evtId(), () -> rowOf(rdMdlRepo.findByCnsArtId(evt.cnsArtId()), "consent " + evt.cnsArtId())
+                .flatMap(existing -> {
+                    // the event carries the consent as it stands: its scope too, so a renewal projected alongside a
+                    // withdrawn category (another topic) can't put the category back
+                    CnsArtRdMdl renewed = existing.with(existing.cnsArtId(), existing.dpId(), existing.lcySts(),
+                            evt.valPrd().from(), evt.valPrd().until(), evt.occurredAt());
+                    CnsArtRdMdl updated = evt.scp() == null ? renewed : renewed.granted(codes(evt.scp()));
+                    return unlessStale(existing, evt.occurredAt(), () -> rdMdlRepo.upsert(updated).then())
+                            .then(hstRepo.append(new CnsHstRdMdl(existing.cnsReqId(), CnsLcySts.ISSUED,
+                                    CnsLcySts.ISSUED, evt.occurredAt(), evt.evtId(), "RENEWED")));
+                }));
+    }
+
+    private static Set<String> codes(ScpPayload scp) {
+        return scp == null ? Set.of()
+                : scp.dCats().stream().map(ScpPayload.DCatPayload::code).collect(java.util.stream.Collectors.toSet());
     }
 
     public Mono<Void> onCnsExpired(CnsExpiredEvtPayload evt) {

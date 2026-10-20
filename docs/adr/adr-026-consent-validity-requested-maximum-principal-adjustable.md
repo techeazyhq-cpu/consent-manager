@@ -1,6 +1,6 @@
 # ADR-026: Consent validity: requested and maximum per purpose, adjustable by the principal
 
-- **Status:** Accepted for §1, §3 and §5, implemented by [ADR-044](adr-044-partial-consent-and-validity-at-grant-by-the-principal-only.md); §4 proposed
+- **Status:** Accepted, implemented by [ADR-044](adr-044-partial-consent-and-validity-at-grant-by-the-principal-only.md) and [ADR-045](adr-045-shorten-withdraw-a-category-renew-and-lapse.md); renewal reminder notifications proposed
 - **Date:** 2026-10-11
 - **Design:** [compliance architecture §6.2, Appendix B finding R9](../compliance/compliance-architecture.md)
 

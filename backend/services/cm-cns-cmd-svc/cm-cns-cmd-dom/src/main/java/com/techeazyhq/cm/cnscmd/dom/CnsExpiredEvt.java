@@ -23,10 +23,16 @@ import java.util.UUID;
 
 import com.techeazyhq.cm.domkit.DomainEvt;
 
-/** Raised by the scheduled {@code CnsExpirySweepJob} (plan §8) when a ValPrd-lapsed CnsArt is swept. */
-public record CnsExpiredEvt(UUID evtId, Instant occurredAt, String cnsArtId) implements DomainEvt {
+/**
+ * A consent lapsed (ADR-026; ISO/IEC TS 27560 "lapsed"): its validity ended without renewal. Raised by the scheduled
+ * {@code CnsExpirySweepJob}; verification already refused it from {@code lapsedAt} (ADR-027). Names the request and
+ * fiduciary so the ledger and the fiduciary can attribute it.
+ */
+public record CnsExpiredEvt(UUID evtId, Instant occurredAt, String cnsArtId, String cnsReqId, String dfId,
+                            Instant lapsedAt) implements DomainEvt {
 
-    public static CnsExpiredEvt of(String cnsArtId) {
-        return new CnsExpiredEvt(UUID.randomUUID(), Instant.now(), cnsArtId);
+    public static CnsExpiredEvt of(CnsArt art) {
+        return new CnsExpiredEvt(UUID.randomUUID(), Instant.now(), art.id(), art.cnsReqId(), art.dfId(),
+                art.valPrd().until());
     }
 }

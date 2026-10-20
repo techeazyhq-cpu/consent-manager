@@ -154,6 +154,24 @@ export const cnsCmd = {
     request<CnsReqRespDto>(base, `/api/cns-cmd/cns-reqs/${cnsReqId}/deny`, token, { method: "POST" }),
   revoke: (base: string, token: string, cnsArtId: string) =>
     request<CnsArtRespDto>(base, `/api/cns-cmd/cns-arts/${cnsArtId}/revoke`, token, { method: "POST" }),
+  /** The person ends their consent at `until`, earlier than it would (ADR-026 §4). */
+  shorten: (base: string, token: string, cnsArtId: string, until: string) =>
+    request<CnsArtRespDto>(base, `/api/cns-cmd/cns-arts/${encodeURIComponent(cnsArtId)}/shorten`, token, {
+      method: "POST",
+      body: JSON.stringify({ until }),
+    }),
+  /** The person stops sharing one category; the rest of the consent stays. */
+  withdrawDCat: (base: string, token: string, cnsArtId: string, dCatCode: string) =>
+    request<CnsArtRespDto>(base, `/api/cns-cmd/cns-arts/${encodeURIComponent(cnsArtId)}/withdraw-dcat`, token, {
+      method: "POST",
+      body: JSON.stringify({ dCatCode }),
+    }),
+  /** The person renews before it lapses: a new validity of `validityDays` from now, up to the purpose's maximum. */
+  renew: (base: string, token: string, cnsArtId: string, validityDays: number) =>
+    request<CnsArtRespDto>(base, `/api/cns-cmd/cns-arts/${encodeURIComponent(cnsArtId)}/renew`, token, {
+      method: "POST",
+      body: JSON.stringify({ validityDays }),
+    }),
   // A fresh short-lived consent token for the calling fiduciary, while the consent is valid (ADR-027).
   refreshToken: (base: string, token: string, cnsArtId: string) =>
     request<{ cnsTkn: string; exp: string }>(base, `/api/cns-cmd/cns-arts/${cnsArtId}/token`, token, { method: "POST" }),

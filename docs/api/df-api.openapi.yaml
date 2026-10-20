@@ -964,6 +964,11 @@ components:
         toSts: { $ref: '#/components/schemas/LifecycleStatus' }
         occurredAt: { type: string, format: date-time }
         evtId: { type: string, format: uuid }
+        chg:
+          type: [string, 'null']
+          description: |
+            A change that kept the consent in force (ADR-045): SHORTENED, CATEGORY_WITHDRAWN:<code> or RENEWED; null for
+            a change of status. Re-read the consent: use only its grantedDCatCodes until its validUntil.
 
     BatchRecipient:
       type: object

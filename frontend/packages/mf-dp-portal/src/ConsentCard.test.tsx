@@ -58,6 +58,7 @@ const portal = {
   busy: null,
   orgName: () => "Acme Retail",
   decide: vi.fn(),
+  change: vi.fn(),
 } as unknown as Portal;
 
 const consent = (over: Partial<CnsArtRdMdl>): CnsArtRdMdl => ({
@@ -110,6 +111,39 @@ describe("ConsentCard", () => {
     expect(consequence.className).toContain("dp-consequence-shown");
     fireEvent.click(screen.getAllByRole("checkbox")[0]);
     expect(screen.getByText(/We can't confirm your order/).className).not.toContain("dp-consequence-shown");
+  });
+
+  it("lets the person stop sharing one of the categories they gave, and end the consent sooner", () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(
+      <ConsentCard
+        portal={portal}
+        row={consent({
+          lcySts: "ISSUED",
+          cnsArtId: "a1",
+          dCatCodes: ["EMAIL", "NAME"],
+          grantedDCatCodes: ["EMAIL", "NAME"],
+          validUntil: "2027-06-01T00:00:00Z",
+        })}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Stop sharing Name" }));
+    expect(portal.change).toHaveBeenCalledWith(expect.objectContaining({ cnsArtId: "a1" }), {
+      kind: "withdraw-dcat",
+      dCat: "NAME",
+    });
+    expect((screen.getByRole("button", { name: "End on that date" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("offers no category to stop sharing when only one is shared: that is withdrawing", () => {
+    render(
+      <ConsentCard
+        portal={portal}
+        row={consent({ lcySts: "ISSUED", cnsArtId: "a1", grantedDCatCodes: ["EMAIL"], validUntil: "2027-06-01T00:00:00Z" })}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: /Stop sharing/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Withdraw consent" })).toBeTruthy();
   });
 
   it("shows the data not shared on a consent given in part", () => {

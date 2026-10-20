@@ -18,7 +18,9 @@
 
 package com.techeazyhq.cm.cnscmd.dom;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.stream.Collectors;
 
 import com.techeazyhq.cm.domkit.Agg;
 
@@ -32,8 +34,8 @@ public final class CnsArt extends Agg<String> {
     private final String cnsReqId;
     private final String dfId;
     private final Prps prps;
-    private final Scp scp;
-    private final ValPrd valPrd;
+    private Scp scp;
+    private ValPrd valPrd;
     private final Instant issuedAt;
     private DpRef dpRef;
     private CnsArtSts sts;
@@ -112,6 +114,63 @@ public final class CnsArt extends Agg<String> {
     }
 
     /**
+     * Ends the consent earlier (ADR-026 §4): a withdrawal scheduled for {@code newUntil}. Verification follows the new
+     * end at once, and tokens never outlive it.
+     */
+    public void shortenTo(Instant newUntil, Instant now) {
+        requireInForce(now, "shorten");
+        if (!newUntil.isAfter(now)) {
+            throw new IllegalArgumentException("choose an end after now; to stop it now, withdraw it");
+        }
+        if (!newUntil.isBefore(valPrd.until())) {
+            throw new IllegalArgumentException("the new end must be before the current one; to extend, renew it");
+        }
+        this.valPrd = new ValPrd(valPrd.from(), newUntil);
+        raise(CnsModifiedEvt.of(this, CnsModifiedEvt.Change.SHORTENED, null, now));
+    }
+
+    /**
+     * Withdraws one category, keeping the rest (partial withdrawal, ADR-026 §2). Withdrawing the last one is a
+     * withdrawal of the whole consent, which {@link #revoke()} records as such.
+     */
+    public void withdrawCategory(DCat dCat, Instant now) {
+        requireInForce(now, "change");
+        if (!scp.covers(dCat)) {
+            throw new IllegalArgumentException("this consent doesn't cover " + dCat.code());
+        }
+        if (scp.dCats().size() == 1) {
+            throw new IllegalArgumentException(dCat.code() + " is all this consent covers: withdraw the consent instead");
+        }
+        this.scp = new Scp(scp.dCats().stream().filter(d -> !d.equals(dCat)).collect(Collectors.toSet()));
+        raise(CnsModifiedEvt.of(this, CnsModifiedEvt.Change.CATEGORY_WITHDRAWN, dCat.code(), now));
+    }
+
+    /**
+     * Renews the consent before it lapses (ADR-026 §4): a new validity from now for {@code days}, at most
+     * {@code maxDays}, the purpose's maximum. It must end later than the consent does now; to end it sooner, shorten
+     * it. A lapsed consent isn't renewed: the fiduciary asks again.
+     */
+    public void renew(int days, int maxDays, Instant now) {
+        requireInForce(now, "renew");
+        if (days < 1 || days > maxDays) {
+            throw new IllegalArgumentException("consent can last from 1 to " + maxDays + " days for this purpose");
+        }
+        ValPrd renewed = ValPrd.of(now, Duration.ofDays(days));
+        if (!renewed.until().isAfter(valPrd.until())) {
+            throw new IllegalArgumentException("a renewal must end later than the consent does now; to end it sooner, "
+                    + "shorten it");
+        }
+        this.valPrd = renewed;
+        raise(CnsRenewedEvt.of(this, days, now));
+    }
+
+    private void requireInForce(Instant now, String action) {
+        if (liveStatus(now) != CnsArtSts.ISSUED) {
+            throw new IllegalStateException("Cannot %s a consent that is %s".formatted(action, liveStatus(now)));
+        }
+    }
+
+    /**
      * The status that governs verification now (ADR-027): an {@code ISSUED} artefact past its validity is already
      * {@code EXPIRED}, whether or not {@code CnsExpirySweepJob} has recorded it yet.
      */
@@ -126,7 +185,7 @@ public final class CnsArt extends Agg<String> {
             throw new IllegalStateException("CnsArt " + id() + " is not yet past its ValPrd");
         }
         this.sts = CnsArtSts.EXPIRED;
-        raise(CnsExpiredEvt.of(id()));
+        raise(CnsExpiredEvt.of(this));
     }
 
     private void requireSts(CnsArtSts required, String action) {

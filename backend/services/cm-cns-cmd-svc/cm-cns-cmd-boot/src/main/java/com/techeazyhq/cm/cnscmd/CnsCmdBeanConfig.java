@@ -33,6 +33,7 @@ import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.techeazyhq.cm.cnscmd.app.ChangeCnsArtCmds;
 import com.techeazyhq.cm.cnscmd.app.CnsReqTerms;
 import com.techeazyhq.cm.cnscmd.app.PrpsDefCmds;
 import com.techeazyhq.cm.cnscmd.app.PrpsResolver;
@@ -254,6 +255,12 @@ public class CnsCmdBeanConfig {
     @Bean
     public CnsReqTerms cnsReqTerms(CnsReqRepoPort cnsReqRepo, PrpsDefRepoPort prpsDefRepo) {
         return new CnsReqTerms(cnsReqRepo, prpsDefRepo);
+    }
+
+    @Bean
+    public ChangeCnsArtCmds changeCnsArtCmds(CnsArtRepoPort cnsArtRepo, CnsReqRepoPort cnsReqRepo,
+                                             CnsReqTerms cnsReqTerms) {
+        return new ChangeCnsArtCmds(cnsArtRepo, cnsReqRepo, cnsReqTerms, java.time.Clock.systemUTC());
     }
 
     @Bean

@@ -32,6 +32,7 @@ import com.techeazyhq.cm.cnscmd.app.ApproveCnsCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.CreateCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.DenyCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.GetCnsArtLiveStatusQryHandler;
+import com.techeazyhq.cm.cnscmd.app.ChangeCnsArtCmds;
 import com.techeazyhq.cm.cnscmd.app.CnsReqTerms;
 import com.techeazyhq.cm.cnscmd.app.LinkDpCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.PrpsDefCmds;
@@ -68,9 +69,11 @@ public class CnsCmdRouterConfig {
                                                          SubmitCnsReqBatchHandler submitBatchHandler,
                                                          CnsReqBatchQueries batchQueries,
                                                          PrpsDefCmds prpsDefCmds,
-                                                         CnsReqTerms cnsReqTerms) {
+                                                         CnsReqTerms cnsReqTerms,
+                                                         ChangeCnsArtCmds changeCnsArtCmds) {
         CnsReqHandler cnsReqHandler = new CnsReqHandler(createHandler, approveHandler, denyHandler, cnsReqTerms);
-        CnsArtHandler cnsArtHandler = new CnsArtHandler(revokeHandler, refreshTknHandler, liveStatusHandler);
+        CnsArtHandler cnsArtHandler = new CnsArtHandler(revokeHandler, refreshTknHandler, liveStatusHandler,
+                changeCnsArtCmds);
         DpLinkHandler dpLinkHandler = new DpLinkHandler(linkDpHandler);
         CnsReqBatchHttpHandler batches = new CnsReqBatchHttpHandler(submitBatchHandler, batchQueries);
         PrpsDefHttpHandler purposes = new PrpsDefHttpHandler(prpsDefCmds);
@@ -95,6 +98,10 @@ public class CnsCmdRouterConfig {
                 .POST("/api/cns-cmd/cns-reqs/{id}/approve", cnsReqHandler::approve)
                 .POST("/api/cns-cmd/cns-reqs/{id}/deny", cnsReqHandler::deny)
                 .POST("/api/cns-cmd/cns-arts/{id}/revoke", cnsArtHandler::revoke)
+                // the principal's changes to a consent they gave (ADR-026 §4)
+                .POST("/api/cns-cmd/cns-arts/{id}/shorten", cnsArtHandler::shorten)
+                .POST("/api/cns-cmd/cns-arts/{id}/withdraw-dcat", cnsArtHandler::withdrawCategory)
+                .POST("/api/cns-cmd/cns-arts/{id}/renew", cnsArtHandler::renew)
                 .POST("/api/cns-cmd/cns-arts/{id}/token", cnsArtHandler::refreshToken)
                 .GET("/internal/cns-arts/{id}/status", cnsArtHandler::liveStatus)
                 .POST("/api/cns-cmd/dp-links", dpLinkHandler::link)

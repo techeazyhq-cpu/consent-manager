@@ -70,7 +70,10 @@ public class R2dbcCnsArtRepoAdapter implements CnsArtRepoPort {
                             dp_ref_val = excluded.dp_ref_val,
                             dp_id = excluded.dp_id,
                             sts = excluded.sts,
-                            cns_tkn = excluded.cns_tkn
+                            cns_tkn = excluded.cns_tkn,
+                            d_cats = excluded.d_cats,
+                            val_from = excluded.val_from,
+                            val_until = excluded.val_until
                         """)
                 .bind("id", cnsArt.id())
                 .bind("cnsReqId", cnsArt.cnsReqId())

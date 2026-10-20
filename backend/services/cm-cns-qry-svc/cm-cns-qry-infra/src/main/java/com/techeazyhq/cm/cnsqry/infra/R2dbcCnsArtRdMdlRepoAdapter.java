@@ -65,6 +65,9 @@ public class R2dbcCnsArtRdMdlRepoAdapter implements CnsArtRdMdlRepoPort {
                             ntc_title = coalesce(excluded.ntc_title, cns_art_rd_mdl.ntc_title),
                             ntc_text = coalesce(excluded.ntc_text, cns_art_rd_mdl.ntc_text),
                             granted_d_cats = coalesce(excluded.granted_d_cats, cns_art_rd_mdl.granted_d_cats)
+                        -- events of one consent are projected concurrently from different topics: a change read before
+                        -- a newer one was written must not overwrite it (a lost update put back a withdrawn category)
+                        where cns_art_rd_mdl.updated_at <= excluded.updated_at
                         """)
                 .bind("cnsReqId", row.cnsReqId())
                 .bind("dfId", row.dfId())

@@ -20,6 +20,7 @@ import { dfReg, type CnsArtRdMdl, type CnsLcySts } from "api-client";
 import { Button, OrgLogo } from "ui-kit/src/index";
 import { STATUS, awaitsDecision, fmtDate, humanise } from "./labels";
 import Decide from "./Decide";
+import Manage from "./Manage";
 import { freshToken, type Portal } from "./portal";
 import { orgHref } from "./routes";
 
@@ -92,6 +93,7 @@ export default function ConsentCard({
         </div>
       </div>
       {awaitsDecision(row.lcySts) ? <Decide portal={portal} row={row} /> : null}
+      {row.lcySts === "ISSUED" && row.cnsArtId ? <Manage portal={portal} row={row} /> : null}
       <div className="dp-consent-actions">
         {row.lcySts === "ISSUED" && row.cnsArtId ? (
           <Button

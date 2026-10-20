@@ -96,8 +96,14 @@ export function describeAudit(row: AuditRow): string {
       return "Declined consent";
     case "CnsRevokedEvt":
       return "Withdrew consent";
+    case "CnsModifiedEvt":
+      return row.details.change === "CATEGORY_WITHDRAWN"
+        ? `Stopped sharing ${word(d(row, "dCat"))}`
+        : `Ended consent sooner${row.details.until ? `: now ends ${row.details.until.slice(0, 10)}` : ""}`;
+    case "CnsRenewedEvt":
+      return `Renewed consent${row.details.until ? ` until ${row.details.until.slice(0, 10)}` : ""}`;
     case "CnsExpiredEvt":
-      return "Consent expired";
+      return "Consent lapsed: its validity ended";
     case "CnsDpLinkedEvt":
       return "Linked the request to the person's account";
     case "CnsNotificationFailedEvt":

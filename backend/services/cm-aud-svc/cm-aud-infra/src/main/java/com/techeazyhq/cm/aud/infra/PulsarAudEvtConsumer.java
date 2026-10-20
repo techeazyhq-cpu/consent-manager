@@ -43,16 +43,18 @@ public class PulsarAudEvtConsumer {
     private static final Logger LOG = LoggerFactory.getLogger(PulsarAudEvtConsumer.class);
 
     /** Topic (context, event name) to the event type the ledger records it as. */
-    static final Map<String, String[]> TOPICS = Map.of(
-            "CnsReqCreatedEvt", new String[] {"cnscmd", "cns-req-created"},
-            "CnsGrantedEvt", new String[] {"cnscmd", "cns-granted"},
-            "CnsDeniedEvt", new String[] {"cnscmd", "cns-denied"},
-            "CnsRevokedEvt", new String[] {"cnscmd", "cns-revoked"},
-            "CnsDpLinkedEvt", new String[] {"cnscmd", "cns-dp-linked"},
-            "CnsExpiredEvt", new String[] {"cnscmd", "cns-expired"},
-            "CnsNotificationFailedEvt", new String[] {"cnscmd", "cns-notification-failed"},
-            "DfActivatedEvt", new String[] {"dfreg", "df-activated"},
-            "NtfDpDeliveryFailedEvt", new String[] {"ntf", "dp-delivery-failed"});
+    static final Map<String, String[]> TOPICS = Map.ofEntries(
+            Map.entry("CnsReqCreatedEvt", new String[] {"cnscmd", "cns-req-created"}),
+            Map.entry("CnsGrantedEvt", new String[] {"cnscmd", "cns-granted"}),
+            Map.entry("CnsDeniedEvt", new String[] {"cnscmd", "cns-denied"}),
+            Map.entry("CnsRevokedEvt", new String[] {"cnscmd", "cns-revoked"}),
+            Map.entry("CnsModifiedEvt", new String[] {"cnscmd", "cns-modified"}),
+            Map.entry("CnsRenewedEvt", new String[] {"cnscmd", "cns-renewed"}),
+            Map.entry("CnsDpLinkedEvt", new String[] {"cnscmd", "cns-dp-linked"}),
+            Map.entry("CnsExpiredEvt", new String[] {"cnscmd", "cns-expired"}),
+            Map.entry("CnsNotificationFailedEvt", new String[] {"cnscmd", "cns-notification-failed"}),
+            Map.entry("DfActivatedEvt", new String[] {"dfreg", "df-activated"}),
+            Map.entry("NtfDpDeliveryFailedEvt", new String[] {"ntf", "dp-delivery-failed"}));
 
     /** Contexts whose people's actions the ledger records (ADR-040), each on its {@code evt-platform-action} topic. */
     static final List<String> ACTION_CONTEXTS = List.of("dfreg", "bil", "stf", "cnscmd");
