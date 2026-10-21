@@ -65,9 +65,9 @@ const CNS_REQ_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 /**
  * The consent request a tapped notification is about, if it names one. The push carries no details (ADR-032 §4):
- * the app fetches them after the tap. Today notification-service forwards only its own `messageId` in the FCM data,
- * so a tap opens the list of requests; once it forwards a `cnsReqId`, the tap opens that request's screen
- * (cmdp://consent/<cnsReqId>). Anything that doesn't look like an id is ignored, since the data is outside input.
+ * the app fetches them after the tap. cm-ntf-svc sends the request's id as `cnsReqId`, which notification-service
+ * forwards in the FCM data next to its `messageId`, so the tap opens that request's screen (cmdp://consent/<cnsReqId>);
+ * without one it opens the list. Anything that doesn't look like an id is ignored, since the data is outside input.
  */
 export function cnsReqIdOf(data: Record<string, unknown> | null | undefined): string | null {
   const id = data?.cnsReqId;

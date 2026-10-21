@@ -55,6 +55,8 @@ import java.util.concurrent.TimeoutException;
  *       refusal is final and surfaces as {@link NtfDeliveryRejectedException};</li>
  *   <li>OTPs go as {@code category: OTP}, so they are delivered ahead of other traffic and never after
  *       {@code otpValiditySeconds};</li>
+ *   <li>a push's {@code data} (e.g. {@code cnsReqId}) goes as {@code data}, which notification-service hands to FCM
+ *       next to its own {@code messageId}, unless {@code pushData} is off;</li>
  *   <li>a send, retries included, runs behind a circuit breaker (ADR-016): once notification-service keeps failing,
  *       sends fail at once with {@code DependencyUnavailableException} instead of each waiting out its retries, and
  *       the Pulsar command is redelivered later. A refusal does not count against the breaker.</li>
@@ -82,9 +84,17 @@ public class NotificationServiceClient {
     /**
      * @param signingSecret {@code nss_...}; null or blank sends unsigned requests
      * @param fromAddress   a sender address verified in notification-service; null or blank uses its default sender
+     * @param pushData      whether a push's {@code data} is sent (notification-service accepts it from the version
+     *                      that added push data; older ones ignore it)
      */
     public record Settings(String baseUrl, String apiKey, String signingSecret, String fromAddress,
-                           int otpValiditySeconds, Duration timeout, int maxRetries, Duration retryBackoff) {
+                           int otpValiditySeconds, Duration timeout, int maxRetries, Duration retryBackoff,
+                           boolean pushData) {
+
+        public Settings(String baseUrl, String apiKey, String signingSecret, String fromAddress,
+                        int otpValiditySeconds, Duration timeout, int maxRetries, Duration retryBackoff) {
+            this(baseUrl, apiKey, signingSecret, fromAddress, otpValiditySeconds, timeout, maxRetries, retryBackoff, true);
+        }
     }
 
     public Mono<Void> send(NtfChnl channel, NtfMsg msg) {
@@ -140,6 +150,9 @@ public class NotificationServiceClient {
         }
         if (channel == NtfChnl.EMAIL && settings.fromAddress() != null && !settings.fromAddress().isBlank()) {
             request.put("from", settings.fromAddress());
+        }
+        if (channel == NtfChnl.PUSH && settings.pushData() && !msg.data().isEmpty()) {
+            request.put("data", msg.data());
         }
         try {
             return objectMapper.writeValueAsBytes(request);

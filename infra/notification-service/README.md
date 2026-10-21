@@ -14,6 +14,8 @@ With `notification-service`, each message carries its `ref` as `Idempotency-Key`
 searchable in notification-service's client console. OTPs go as `category: OTP` (priority, never sent after
 `otp-validity-seconds`). 429/5xx/timeouts are retried with the same key; any other refusal is final: the Pulsar
 consumer acknowledges it with a warning, and `POST /internal/otp/send` answers `422 {"code": ...}`.
+A DP push also carries `data: {"cnsReqId": ...}`, which notification-service forwards in the FCM data so a tap opens
+that request in the DP app (ADR-051); both catchers show it.
 
 ## Settings (`cm-ntf-boot/src/main/resources/application.yml`)
 
@@ -24,6 +26,7 @@ consumer acknowledges it with a warning, and `POST /internal/otp/send` answers `
 | `NTF_SVC_API_KEY` | `cm.ntf.notification-service.api-key` | required with `notification-service` |
 | `NTF_SVC_SIGNING_SECRET` | `cm.ntf.notification-service.signing-secret` | empty = unsigned requests |
 | `NTF_SVC_FROM_ADDRESS` | `cm.ntf.notification-service.from-address` | empty = notification-service's default sender |
+| `NTF_SVC_PUSH_DATA` | `cm.ntf.notification-service.push-data` | `true`; `false` leaves out the push's `data` |
 
 ## Running both stacks locally
 

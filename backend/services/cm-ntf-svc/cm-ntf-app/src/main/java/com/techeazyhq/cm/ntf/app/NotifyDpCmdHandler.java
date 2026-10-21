@@ -30,11 +30,15 @@ import org.slf4j.LoggerFactory;
 
 import reactor.core.publisher.Mono;
 
+import java.util.Map;
+
 public class NotifyDpCmdHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(NotifyDpCmdHandler.class);
 
     static final String PUSH_TITLE = "New consent request";
+    /** The push data key the DP app reads to open the request (frontend/apps/dp-mobile/src/lib/push.ts). */
+    static final String CNS_REQ_ID = "cnsReqId";
 
     private final NtfDispatchService dispatchService;
     private final PushDvcRepoPort pushDvcRepo;
@@ -84,8 +88,10 @@ public class NotifyDpCmdHandler {
     }
 
     private NtfMsg pushMsg(NotifyDpCmd cmd, PushDvc dvc) {
+        // cnsReqId is an opaque id: the app opens cmdp://consent/<cnsReqId> with it and fetches the request after
+        // sign-in, so the push still carries a title only (ADR-032 §4, ADR-051).
         return new NtfMsg(dvc.token(), PUSH_TITLE, cmd.ntcTitle(), NtfCtg.TRANSACTIONAL,
-                "cm-notify-dp-" + cmd.cnsReqId() + "-" + dvc.id());
+                "cm-notify-dp-" + cmd.cnsReqId() + "-" + dvc.id(), Map.of(CNS_REQ_ID, cmd.cnsReqId()));
     }
 
     private NtfChnl toChannel(String channelHint) {
