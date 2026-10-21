@@ -14,12 +14,20 @@
 #
 # @author Vasantha Kumar <vasantha.kumar@hotmail.com>
 
-# A sandbox release (ADR-037), merged over values-<cloud>.yaml, in its own namespace with its own datastores.
+# A sandbox release (ADR-037), merged over values.yaml or values-<cloud>.yaml, in the namespace
+# consent-manager-sandbox. It shares the servers in the common namespace (ADR-054), apart by its own database
+# (cm_sandbox), Redis database index (1), Pulsar tenant (cm-sbx) and realms (sbx-). The common chart must admit its
+# namespace (networkPolicy.clientNamespaces) and, on a cloud, run Mailpit (mailpit.enabled). Where the managed Redis
+# offers only database 0 (Azure Managed Redis with clustering), give the sandbox its own Redis: --set
+# config.redis.host=...,config.redis.database=0.
 sandbox:
   enabled: true
 config:
   database:
     name: cm_sandbox
+  redis:
+    # usage and rate-limit counters apart from production's 0, on the same server (the sandbox profile's setting)
+    database: 1
   notificationService:
     # the sandbox never delivers: cm-ntf-svc refuses any other provider when sandbox.enabled
     provider: local

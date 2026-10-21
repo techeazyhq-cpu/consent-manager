@@ -1,0 +1,149 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+{{- $pg := and .Values.postgres.enabled .Values.init.postgres.enabled }}
+{{- $pulsar := .Values.init.pulsar.enabled }}
+{{- if or $pg $pulsar }}
+{{- $ctx := dict "root" . "name" "init" }}
+{{/* What the apps expect to find, created if missing after every install and upgrade: PostgreSQL's roles and
+     databases, consent-manager's Pulsar tenants and namespaces (infra/pulsar/init-tenant.sh, ADR-004) and
+     notification-service's retention. With everything there it changes nothing. */}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: common-init
+  labels: {{- include "common.labels" $ctx | nindent 4 }}
+data:
+  {{- if $pg }}
+  postgres.sh: |
+    set -eu
+    until pg_isready -q; do echo "  waiting for PostgreSQL at $PGHOST"; sleep 3; done
+    # Passwords go in as psql variables, never into the script or the command line.
+    psql -v ON_ERROR_STOP=1 -X {{ range .Values.postgres.roles }}-v "pw_{{ .name }}=$PW_{{ .name | upper }}" {{ end }}<<'SQL'
+    {{- range .Values.postgres.roles }}
+    SELECT format('CREATE ROLE %I LOGIN', '{{ .name }}') WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ .name }}') \gexec
+    ALTER ROLE "{{ .name }}" LOGIN PASSWORD :'pw_{{ .name }}';
+    {{- end }}
+    {{- range .Values.postgres.databases }}
+    SELECT format('CREATE DATABASE %I OWNER %I', '{{ .name }}', '{{ .owner }}') WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{{ .name }}') \gexec
+    -- only its own roles may connect: each app sees its own databases and nothing else
+    REVOKE ALL ON DATABASE "{{ .name }}" FROM PUBLIC;
+    GRANT CONNECT ON DATABASE "{{ .name }}" TO "{{ .owner }}"{{ with .appRole }}, "{{ . }}"{{ end }};
+    {{- if .appRole }}
+    \connect "{{ .name }}"
+    ALTER SCHEMA public OWNER TO "{{ .owner }}";
+    GRANT USAGE ON SCHEMA public TO "{{ .appRole }}";
+    -- tables the owner's migrations made already, and every one they make later: DML only for the app role
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "{{ .appRole }}";
+    GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO "{{ .appRole }}";
+    ALTER DEFAULT PRIVILEGES FOR ROLE "{{ .owner }}" IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "{{ .appRole }}";
+    ALTER DEFAULT PRIVILEGES FOR ROLE "{{ .owner }}" IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO "{{ .appRole }}";
+    \connect postgres
+    {{- end }}
+    {{- end }}
+    SQL
+    echo "  PostgreSQL: roles and databases ok"
+  {{- end }}
+  {{- if $pulsar }}
+  {{- $p := .Values.init.pulsar }}
+  pulsar.sh: |
+    set -eu
+    ADMIN="$PULSAR_ADMIN_URL/admin/v2"
+    call() { # METHOD PATH [BODY], treating 409 (already there) as done
+      code=$(curl -s -o /tmp/out -w '%{http_code}' -X "$1" -H 'Content-Type: application/json' "$ADMIN/$2" -d "${3:-}")
+      case "$code" in 2??|409) echo "  $2: ok ($code)" ;; *) echo "  $2: failed ($code) $(cat /tmp/out)"; exit 1 ;; esac
+    }
+    # The broker answers its admin API a while after it starts: wait for it, up to ten minutes.
+    i=0
+    until curl -sf -o /dev/null "$ADMIN/clusters"; do
+      i=$((i + 1)); [ "$i" -ge 120 ] && { echo "  Pulsar's admin API never answered at $ADMIN"; exit 1; }
+      sleep 5
+    done
+    {{- range $p.tenants }}
+    call PUT "tenants/{{ . }}" '{"allowedClusters":["{{ $p.clusterName }}"]}'
+    {{- $tenant := . }}
+    {{- range $p.namespaces }}
+    call PUT "namespaces/{{ $tenant }}/{{ . }}"
+    {{- end }}
+    {{- end }}
+    {{- range $p.retention }}
+    call POST "namespaces/{{ .namespace }}/retention" '{"retentionTimeInMinutes":{{ .minutes }},"retentionSizeInMB":{{ .sizeMB }}}'
+    {{- end }}
+  {{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: common-init
+  labels: {{- include "common.labels" $ctx | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 4
+  # Pulsar's first start takes minutes on a small machine; install with --timeout 15m
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels: {{- include "common.selectorLabels" $ctx | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        {{- if $pg }}
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          command: [/bin/sh, /init/postgres.sh]
+          env:
+            - {name: PGHOST, value: postgres}
+            - {name: PGUSER, value: postgres}
+            - {name: PGDATABASE, value: postgres}
+            - name: PGPASSWORD
+              {{- include "common.secretRef" (dict "root" . "key" "POSTGRES_PASSWORD") | nindent 14 }}
+            {{- range .Values.postgres.roles }}
+            - name: PW_{{ .name | upper }}
+              {{- include "common.secretRef" (dict "root" $ "key" .passwordKey) | nindent 14 }}
+            {{- end }}
+          resources: {{- toYaml .Values.init.resources | nindent 12 }}
+          securityContext:
+            runAsUser: 70
+            {{- include "common.containerSecurityContext" (dict "readOnly" true) | nindent 12 }}
+          volumeMounts:
+            - {name: init, mountPath: /init, readOnly: true}
+        {{- end }}
+        {{- if $pulsar }}
+        - name: pulsar
+          image: {{ .Values.pulsar.image }}
+          command: [/bin/bash, /init/pulsar.sh]
+          env:
+            - {name: PULSAR_ADMIN_URL, value: {{ .Values.init.pulsar.adminUrl | quote }}}
+          resources: {{- toYaml .Values.init.resources | nindent 12 }}
+          securityContext:
+            runAsUser: 10000
+            {{- include "common.containerSecurityContext" (dict "readOnly" true) | nindent 12 }}
+          volumeMounts:
+            - {name: init, mountPath: /init, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+        {{- end }}
+      volumes:
+        - name: init
+          configMap: {name: common-init}
+        - name: tmp
+          emptyDir: {sizeLimit: 16Mi}
+{{- end }}

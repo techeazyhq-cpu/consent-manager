@@ -40,13 +40,7 @@ output "helm_values" {
           to    = [{ ipBlock = { cidr = local.private_services_cidr } }]
           ports = [{ protocol = "TCP", port = 5432 }, { protocol = "TCP", port = module.datastores.redis_port }]
         },
-        {
-          to = [{
-            namespaceSelector = { matchLabels = { "kubernetes.io/metadata.name" = "pulsar" } }
-            podSelector       = { matchLabels = { component = "broker" } }
-          }]
-          ports = [{ protocol = "TCP", port = 6651 }]
-        },
+        # Pulsar and Keycloak live in the common namespace, which the chart's egress policy opens (ADR-054).
       ]
     }
   }

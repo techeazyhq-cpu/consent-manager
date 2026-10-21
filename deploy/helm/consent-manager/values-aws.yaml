@@ -22,6 +22,7 @@ config:
     # terraform output postgres_endpoint; the RDS CA bundle is mounted with extraEnv/volumes in a hardened setup
     host: REPLACE_WITH_RDS_ENDPOINT
     jdbcParams: "sslmode=require"
+    r2dbcParams: "sslMode=require"
   redis:
     host: REPLACE_WITH_ELASTICACHE_ENDPOINT
     ssl: true
@@ -40,3 +41,8 @@ externalSecrets:
 databaseInit:
   # RDS creates only consent_manager
   enabled: true
+networkPolicy:
+  # The managed PostgreSQL and Redis are private addresses in the network Terraform builds: merge Terraform's
+  # helm_values output, whose networkPolicy.datastoreEgress opens exactly those (deploy/README.md). Pulsar and
+  # Keycloak are in the common namespace (ADR-054).
+  datastoreEgress: []

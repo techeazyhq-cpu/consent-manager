@@ -1,0 +1,57 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# The common namespace on GCP (ADR-054): PostgreSQL and Redis are the managed services Terraform builds, outside the
+# cluster, so only Keycloak runs from this chart. Pulsar comes from the Apache Pulsar chart (release "pulsar" in this
+# namespace, three bookies and brokers), aliased as "pulsar" so the services' settings are the same everywhere. Set
+# mailpit.enabled for a sandbox release: its cm-ntf-svc never delivers, it sends to Mailpit (ADR-037).
+
+postgres:
+  enabled: false
+redis:
+  enabled: false
+pulsar:
+  enabled: false
+mailpit:
+  enabled: false
+
+serviceAliases:
+  pulsar: pulsar-broker
+
+keycloak:
+  hostname: https://id.example.com
+  database:
+    # Terraform creates the keycloak database
+    host: REPLACE_WITH_CLOUD_SQL_PRIVATE_IP
+    # the role Keycloak signs in as, with KEYCLOAK_DB_PASSWORD; owner of the keycloak database
+    user: keycloak
+    params: sslmode=require
+  ingress:
+    enabled: true
+    host: id.example.com
+
+init:
+  postgres:
+    enabled: false
+  pulsar:
+    clusterName: pulsar
+
+externalSecrets:
+  enabled: true
+  storeRef: {kind: ClusterSecretStore, name: gcp-secret-manager}
+  data:
+    KEYCLOAK_DB_PASSWORD: {key: cm-production-keycloak-db-password}
+    KEYCLOAK_ADMIN_PASSWORD: {key: cm-production-keycloak-admin-password}

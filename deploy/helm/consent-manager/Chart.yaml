@@ -17,8 +17,9 @@
 apiVersion: v2
 name: consent-manager
 description: >-
-  Consent Manager: the gateway, eight services, OPA and the three web apps. PostgreSQL, Redis, Pulsar and Keycloak
-  are external: managed services, or their own charts and operators (ADR-042).
+  Consent Manager: the gateway, eight services, OPA and the three web apps, in the namespace "consent-manager".
+  PostgreSQL, Redis, Pulsar and Keycloak are shared with notification-service in the namespace "common"
+  (deploy/helm/common, ADR-054); on a cloud, PostgreSQL and Redis are managed services (ADR-042).
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
