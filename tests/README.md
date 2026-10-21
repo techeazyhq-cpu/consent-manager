@@ -1,7 +1,7 @@
 # Security and performance tests
 
 Run these against the **local stack** only (`infra/docker-compose.yml`, gateway on `localhost:9000`). They sign people
-in with emailed codes read from notification-service's Mailpit (`localhost:18025`), register a test fiduciary, issue
+in with emailed codes read from the common Mailpit (`localhost:8025`, ADR-053), register a test fiduciary, issue
 API keys and raise consent requests. Results and findings: [docs/security/vapt-and-performance.md](../docs/security/vapt-and-performance.md).
 
 | Path | What |

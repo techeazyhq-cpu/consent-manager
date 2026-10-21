@@ -27,32 +27,42 @@ consumer acknowledges it with a warning, and `POST /internal/otp/send` answers `
 
 ## Running both stacks locally
 
-notification-service runs as its own compose project from a sibling checkout (`../notification-service`).
-[compose.cm-ports.yml](compose.cm-ports.yml) moves all its ports up by 10000 so it doesn't clash with this stack:
-client API `18080`, admin API `18081`, Mailpit `18025`, SMS/WhatsApp/push catcher `19000`, admin UI `15173`,
-client UI `15174`.
+Both run on the servers in the `common` project (ADR-053): one Postgres, Redis, Pulsar, Keycloak and Mailpit. Each
+app has its own database, Redis index and Pulsar tenant. notification-service runs in its shared mode
+(`docker-compose.shared.yml` in its repository) from a sibling checkout (`../notification-service`), as its own project
+named `notification`. Its ports are the client API `18080`, the admin API `18081`, the SMS/WhatsApp/push catcher
+`19000`, and the admin and client UIs `15173` and `15174`. Email from both apps lands in one inbox:
+http://localhost:8025.
 
 ```bash
-# 1. notification-service (from this repo's root)
-docker compose -f ../notification-service/docker-compose.yml -f infra/notification-service/compose.cm-ports.yml up -d --build client-api admin-api dispatcher mailpit catcher
+# 1. the shared servers (from this repo's root), and wait until they're healthy
+docker compose -f infra/common/compose.yml up -d --wait
 
-# 2. its providers and templates
+# 2. notification-service, in its shared mode
+(cd ../notification-service && docker compose -f docker-compose.yml -f docker-compose.shared.yml --profile app up -d --build)
+
+# 3. its providers and templates (once)
 (cd ../notification-service && ADMIN_URL=http://localhost:18081 node scripts/seed.mjs)
 
-# 3. register consent-manager as a client; writes cm-client.env (git-ignored) with the API key
+# 4. register consent-manager as a client (once); writes cm-client.env (git-ignored) with the API key
 node infra/notification-service/register-cm-client.mjs
 
-# 4. this stack: cm-ntf-svc loads cm-client.env and switches to notification-service
+# 5. this stack: cm-ntf-svc loads cm-client.env and switches to notification-service
 ./gradlew bootJar
 docker compose -f infra/docker-compose.yml up -d --build
 
-# 5. end-to-end check, reading email from notification-service's Mailpit
-MAILPIT_URL=http://localhost:18025 scripts/verify-phase1.sh
+# 6. end-to-end check
+scripts/verify-phase1.sh
 ```
 
-SMS, WhatsApp and push then land in notification-service's catcher (http://localhost:19000), and every message is
-visible in its client UI (http://localhost:15174 with the key from `cm-client.env`, if you also start `client-ui`).
-Delete `cm-client.env` and recreate `cm-ntf-svc` to go back to the local catchers.
+SMS, WhatsApp and push land in notification-service's catcher (http://localhost:19000). Every message is visible in
+its client UI (http://localhost:15174, with the key from `cm-client.env`). Delete `cm-client.env` and recreate
+`cm-ntf-svc` to go back to the local catchers.
+
+**Stopping and starting.** Stop the apps before `common`, and start `common` first. `docker compose down` on `common`
+removes the `common` network, and containers created before that still point at the old one; they fail with
+`UnknownHostException: postgres`. If that happens, recreate them with `up -d --force-recreate`. `down` without `-v`
+keeps every volume. Pulsar gets 60 seconds to stop: a kill after compose's default 10 seconds corrupted its ledger.
 
 ## Web push from the DP portal
 

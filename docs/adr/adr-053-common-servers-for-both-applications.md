@@ -50,6 +50,11 @@ in. In Kubernetes, each chart expected the servers in its own namespace.
   (http://localhost:8025).
 - Each app's data stays separate (databases, roles, Pulsar tenants, Redis indexes), but a server outage affects both.
   This is acceptable for development; production runs the shared servers highly available or managed.
-- Moving existing local data needs a one-off dump and restore; Pulsar and Keycloak start fresh.
+- Moving existing local data needs a one-off dump and restore; Pulsar and Keycloak start fresh. Fiduciaries' API
+  clients and members made before that lived only in Keycloak's old in-container database, and are gone.
+- **Order matters.** `common` starts first and stops last: its `down` removes the `common` network, and app containers
+  made before it must be recreated (`up -d --force-recreate`).
+- Pulsar has 60 seconds to stop (`stop_grace_period`). With compose's default 10 seconds, it was killed mid-write and
+  its ledger corrupted, three times before this; each time, the broker never passed its health check again.
 - The common servers have no single owner app: changes to them (versions, limits) are made here, in
   `infra/common` and `deploy/helm/common`.

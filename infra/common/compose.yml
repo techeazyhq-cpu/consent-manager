@@ -80,6 +80,8 @@ services:
       - "8181:8080" # the admin API, remapped clear of Keycloak's 8080
     volumes:
       - pulsar-data:/pulsar/data
+    # time to close its journal: compose's default 10 s ends in a kill, which corrupted the ledger more than once
+    stop_grace_period: 60s
     deploy:
       resources:
         limits: {cpus: "1.5", memory: 1536m}

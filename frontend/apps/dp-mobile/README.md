@@ -22,7 +22,7 @@ pnpm --dir apps/dp-mobile exec expo start --web --port 19006
 ```
 
 That's the web preview at http://localhost:19006. Sign in as `dp-demo@cm.local`; the code arrives in Mailpit at
-http://localhost:18025.
+http://localhost:8025.
 
 **On a phone with Expo Go:** run `pnpm --dir apps/dp-mobile start` and scan the QR code. The phone can't reach
 `localhost`, so point the app at your computer's address first:
