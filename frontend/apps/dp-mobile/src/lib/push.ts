@@ -73,3 +73,37 @@ export function cnsReqIdOf(data: Record<string, unknown> | null | undefined): st
   const id = data?.cnsReqId;
   return typeof id === "string" && CNS_REQ_ID.test(id) ? id : null;
 }
+
+/** A push as notification-service's catcher keeps it: what the dispatcher sent, plus when it was caught. */
+export interface CaughtPush {
+  id: string;
+  receivedAt: string;
+  to?: string;
+  subject?: string;
+  body?: string;
+  data?: Record<string, unknown>;
+}
+
+/**
+ * Development mode's stand-in for a delivered push (the dev push relay): the catcher's pushes for this phone's
+ * stand-in token, caught at or after `since`. `since` is inclusive, so pushes caught in the same millisecond are
+ * never skipped; the relay drops ids it has already shown.
+ */
+export function catcherQuery(catcher: string, token: string, since: string): string {
+  return `${catcher.replace(/\/+$/, "")}/messages?${new URLSearchParams({ channel: "push", to: token, since })}`;
+}
+
+/**
+ * The pushes in a catcher reply to show now: this phone's, not shown before, oldest first. The `to` check repeats
+ * the query's filter, so an older catcher that ignores `to` still shows nobody else's pushes.
+ */
+export function freshPushes(caught: CaughtPush[], token: string, shown: ReadonlySet<string>): CaughtPush[] {
+  return caught
+    .filter((p) => p.to === token && !shown.has(p.id))
+    .sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
+}
+
+/** Where the next poll starts: the newest push seen so far, or where it started if there were none. */
+export function nextSince(caught: CaughtPush[], since: string): string {
+  return caught.reduce((latest, p) => (p.receivedAt > latest ? p.receivedAt : latest), since);
+}

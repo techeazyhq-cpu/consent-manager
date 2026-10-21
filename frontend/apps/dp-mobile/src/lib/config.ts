@@ -28,5 +28,8 @@ export const GW_BASE = process.env.EXPO_PUBLIC_GW_BASE_URL ?? "http://localhost:
 
 export const ISSUER = `${KC_BASE}/realms/${KC_REALM}`;
 
+/** notification-service's catcher, which the dev push relay polls in development mode only (ADR-051). */
+export const PUSH_CATCHER = process.env.EXPO_PUBLIC_PUSH_CATCHER_URL ?? "http://localhost:19000";
+
 /** The deep-link scheme in app.json: Keycloak returns here after sign-in and sign-out. */
 export const SCHEME = "cmdp";
