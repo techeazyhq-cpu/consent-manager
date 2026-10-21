@@ -83,8 +83,9 @@ Nothing reaches the phone.
 builds always use dynamic frameworks, which React Native Firebase needs. `APS_ENVIRONMENT` (default `production`)
 sets the iOS push entitlement.
 
-**Tapping a notification** opens the app on the list of requests. Once notification-service forwards a `cnsReqId`
-in the push data, it opens that request's screen instead (`cmdp://consent/<cnsReqId>`); the app already handles it.
+**Tapping a notification** opens that request's screen (`cmdp://consent/<cnsReqId>`): cm-ntf-svc sends the request
+id as `data.cnsReqId` and notification-service forwards it in the FCM data. A push without one (from an older
+notification-service) opens the list of requests.
 
 ## Checks
 
