@@ -63,111 +63,19 @@ x-sbx-service: &sbx-service
   depends_on:
     sbx-pg-init:
       condition: service_completed_successfully
-    sbx-pulsar-init:
-      condition: service_completed_successfully
-    keycloak:
-      condition: service_started
-    redis:
-      condition: service_healthy
     sbx-mailpit:
       condition: service_started
     sbx-opa:
       condition: service_started
 
+# Postgres, Redis, Pulsar, Keycloak and Mailpit are shared with notification-service in the `common` project
+# (infra/common/compose.yml, ADR-053), started first. The services here find them on its network by name.
+networks:
+  default:
+    name: common
+    external: true
+
 services:
-  postgres:
-    image: postgres:16-alpine
-    deploy:
-      resources:
-        limits: {cpus: "1.0", memory: 512m}
-    environment:
-      POSTGRES_USER: cm
-      POSTGRES_PASSWORD: cm
-      POSTGRES_DB: consent_manager
-    ports:
-      - "5432:5432"
-    volumes:
-      - pg-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cm -d consent_manager"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  pulsar:
-    image: apachepulsar/pulsar:3.3.1
-    command: bin/pulsar standalone
-    deploy:
-      resources:
-        limits: {cpus: "1.5", memory: 1g}
-    environment:
-      # Standalone runs ZooKeeper, a bookie and a broker in one JVM; its defaults take ~1.7 GB. Capped for laptops,
-      # which also run the sandbox (ADR-037): plenty for development traffic.
-      PULSAR_MEM: -Xms256m -Xmx512m -XX:MaxDirectMemorySize=256m
-    ports:
-      - "6650:6650"
-      - "8181:8080" # Pulsar's own admin/web port, remapped so it doesn't clash with Keycloak's 8080
-    volumes:
-      - pulsar-data:/pulsar/data
-    healthcheck:
-      # the broker's own check over HTTP: `pulsar-admin brokers healthcheck` started a JVM every 10 s, several cores each
-      test: ["CMD", "curl", "-fsS", "http://localhost:8080/admin/v2/brokers/health"]
-      interval: 10s
-      timeout: 10s
-      retries: 30
-
-  # The cm tenant and its namespaces, created on every start if missing (ADR-004), so a fresh or reset broker needs
-  # nothing by hand. Services that use Pulsar wait for it.
-  pulsar-init:
-    image: apachepulsar/pulsar:3.3.1
-    deploy:
-      resources:
-        limits: {cpus: "1.0", memory: 512m}
-    entrypoint: ["/bin/bash", "/pulsar-init/init-tenant.sh"]
-    environment:
-      TENANT: cm
-    volumes:
-      - ./pulsar:/pulsar-init:ro
-    depends_on:
-      pulsar:
-        condition: service_started
-
-  redis:
-    <<: *small-limits
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  mailpit:
-    <<: *small-limits
-    image: axllent/mailpit:latest
-    ports:
-      - "1025:1025" # SMTP
-      - "8025:8025" # web UI
-
-  keycloak:
-    image: quay.io/keycloak/keycloak:25.0
-    deploy:
-      resources:
-        limits: {cpus: "1.5", memory: 1g}
-    command: start-dev --import-realm
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./keycloak/realm-export:/opt/keycloak/data/import
-      # Provider JARs built by ./gradlew build before `docker compose up`; start-dev picks them up on every start.
-      # cm-idn-otp-spi (plan §9a): every realm's browser flow (cm-dp, cm-df, cm-staff; ADR-035), sending codes through cm-ntf-svc
-      # (http://cm-ntf-svc:8084, authenticator config "cm-otp"). cm-idn-theme: the login themes, one per audience.
-      - ../backend/keycloak-ext/build/providers:/opt/keycloak/providers
-
   opa:
     <<: *small-limits
     image: openpolicyagent/opa:1.20.1
@@ -191,13 +99,6 @@ services:
       JAVA_TOOL_OPTIONS: *svc-jvm
       CM_KEYCLOAK_ADMIN-USERNAME: admin
       CM_KEYCLOAK_ADMIN-PASSWORD: admin
-    depends_on:
-      postgres:
-        condition: service_healthy
-      pulsar-init:
-        condition: service_completed_successfully
-      keycloak:
-        condition: service_started
 
   cm-cns-cmd-svc:
     <<: *svc-limits
@@ -214,10 +115,6 @@ services:
     volumes:
       - cns-tkn-keys:/var/lib/cm/keys # consent token and receipt signing keys, each its own set, kept across restarts (ADR-006, ADR-025)
     depends_on:
-      postgres:
-        condition: service_healthy
-      pulsar-init:
-        condition: service_completed_successfully
       cm-df-reg-svc:
         condition: service_started
       cm-bil-svc:
@@ -235,11 +132,6 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
-    depends_on:
-      postgres:
-        condition: service_healthy
-      pulsar-init:
-        condition: service_completed_successfully
 
   cm-ntf-svc:
     <<: *svc-limits
@@ -260,15 +152,6 @@ services:
         required: false
     extra_hosts:
       - "host.docker.internal:host-gateway" # notification-service runs as its own compose project
-    depends_on:
-      postgres:
-        condition: service_healthy
-      pulsar-init:
-        condition: service_completed_successfully
-      keycloak:
-        condition: service_started
-      mailpit:
-        condition: service_started
 
   cm-bil-svc:
     <<: *svc-limits
@@ -282,13 +165,6 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
-    depends_on:
-      postgres:
-        condition: service_healthy
-      pulsar-init:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
 
   cm-aud-svc:
     <<: *svc-limits
@@ -302,13 +178,6 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
-    depends_on:
-      postgres:
-        condition: service_healthy
-      pulsar-init:
-        condition: service_completed_successfully
-      keycloak:
-        condition: service_started
 
   cm-stf-svc:
     <<: *svc-limits
@@ -324,9 +193,6 @@ services:
       JAVA_TOOL_OPTIONS: *svc-jvm
       CM_KEYCLOAK_ADMIN-USERNAME: admin
       CM_KEYCLOAK_ADMIN-PASSWORD: admin
-    depends_on:
-      keycloak:
-        condition: service_started
 
   cm-gw:
     <<: *svc-limits
@@ -341,9 +207,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
     depends_on:
-      - keycloak
       - opa
-      - redis
       - cm-df-reg-svc
       - cm-cns-cmd-svc
       - cm-cns-qry-svc
@@ -364,24 +228,6 @@ services:
     entrypoint: ["/bin/sh", "/sandbox/pg-init.sh"]
     volumes:
       - ./sandbox:/sandbox:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  sbx-pulsar-init:
-    profiles: [sandbox]
-    image: apachepulsar/pulsar:3.3.1
-    deploy:
-      resources:
-        limits: {cpus: "1.0", memory: 512m}
-    entrypoint: ["/bin/bash", "/pulsar-init/init-tenant.sh"]
-    environment:
-      TENANT: cm-sbx
-    volumes:
-      - ./pulsar:/pulsar-init:ro
-    depends_on:
-      pulsar:
-        condition: service_started
 
   sbx-mailpit:
     <<: *small-limits
@@ -458,5 +304,3 @@ services:
 volumes:
   cns-tkn-keys:
   sbx-cns-tkn-keys:
-  pg-data:
-  pulsar-data:

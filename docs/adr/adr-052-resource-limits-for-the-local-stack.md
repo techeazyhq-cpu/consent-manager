@@ -19,7 +19,8 @@ thread, Windows became slow whenever the stacks were up. Measured idle:
 ## Decision
 
 1. **Every container has a CPU and memory ceiling**, in `infra/docker-compose.yml` and in the notification-service
-   overlay (`infra/notification-service/compose.cm-ports.yml`):
+   overlay (`infra/notification-service/compose.cm-ports.yml`, since replaced by `infra/common` and notification-service's
+   shared mode, ADR-053):
 
    | Containers | CPUs | Memory | Measured, idle |
    |---|---|---|---|

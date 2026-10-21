@@ -58,6 +58,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [050](adr-050-dp-mobile-app.md) | The DP mobile app: Expo in the frontend workspace, shared rules, PKCE sign-in, secure storage | Accepted |
 | [051](adr-051-dp-mobile-push-notifications.md) | Push notifications in the DP mobile app: FCM tokens on both platforms, through notification-service | Accepted |
 | [052](adr-052-resource-limits-for-the-local-stack.md) | CPU and memory limits for the local stack | Accepted |
+| [053](adr-053-common-servers-for-both-applications.md) | One common set of servers for consent-manager and notification-service | Accepted |
 | [054](adr-054-common-namespace-on-kubernetes.md) | The common namespace on Kubernetes: one chart for the shared servers, the apps in their own namespaces | Accepted |
 
 ## Writing one

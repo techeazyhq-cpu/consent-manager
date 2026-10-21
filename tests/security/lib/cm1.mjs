@@ -24,8 +24,8 @@ import { readFileSync } from 'node:fs';
 
 export const GW = process.env.GW_BASE || 'http://localhost:9000';
 export const KC = process.env.KC_BASE || 'http://localhost:8080';
-// sign-in codes go out through notification-service, whose Mailpit is on 18025 locally
-export const MAILPIT = process.env.MAILPIT_URL || 'http://localhost:18025';
+// sign-in codes go out through notification-service to the one Mailpit in the common project (ADR-053)
+export const MAILPIT = process.env.MAILPIT_URL || 'http://localhost:8025';
 
 export const sha256Hex = (bytes) => createHash('sha256').update(bytes ?? '').digest('hex');
 
