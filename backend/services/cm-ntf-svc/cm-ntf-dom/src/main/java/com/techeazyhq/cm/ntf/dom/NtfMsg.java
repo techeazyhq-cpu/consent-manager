@@ -18,17 +18,27 @@
 
 package com.techeazyhq.cm.ntf.dom;
 
+import java.util.Map;
+
 /**
  * A single outbound notification (plan §9a) — one per channel a `NotifyDpCmd`/`NotifyDfCmd` fans out to, or an OTP code.
  * {@code ref} is a stable id of what triggered the message (e.g. {@code cm-notify-dp-<cnsReqId>}): adapters that call
  * an external delivery service use it as the idempotency key, so a redelivered command is never sent twice.
+ * {@code data} is a push's key-value pairs for the app that receives it (e.g. {@code cnsReqId}, the request to open
+ * when the notification is tapped); never null, empty for every other message.
  */
-public record NtfMsg(String destination, String subject, String body, NtfCtg category, String ref) {
+public record NtfMsg(String destination, String subject, String body, NtfCtg category, String ref,
+                     Map<String, String> data) {
 
     public NtfMsg {
         if (category == null) {
             category = NtfCtg.TRANSACTIONAL;
         }
+        data = data == null ? Map.of() : Map.copyOf(data);
+    }
+
+    public NtfMsg(String destination, String subject, String body, NtfCtg category, String ref) {
+        this(destination, subject, body, category, ref, Map.of());
     }
 
     public NtfMsg(String destination, String subject, String body) {

@@ -20,6 +20,7 @@ package com.techeazyhq.cm.ntf.infra;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 import com.techeazyhq.cm.ntf.dom.NtfMsg;
@@ -39,7 +40,7 @@ public class CatcherStore {
     private final ConcurrentLinkedDeque<Captured> captured = new ConcurrentLinkedDeque<>();
 
     public void capture(NtfMsg msg) {
-        captured.addFirst(new Captured(Instant.now(), msg.destination(), msg.subject(), msg.body()));
+        captured.addFirst(new Captured(Instant.now(), msg.destination(), msg.subject(), msg.body(), msg.data()));
         while (captured.size() > MAX_CAPTURED) {
             captured.removeLast();
         }
@@ -49,6 +50,7 @@ public class CatcherStore {
         return List.copyOf(captured);
     }
 
-    public record Captured(Instant capturedAt, String destination, String subject, String body) {
+    /** {@code data} is a push's key-value pairs; empty for every other channel. */
+    public record Captured(Instant capturedAt, String destination, String subject, String body, Map<String, String> data) {
     }
 }

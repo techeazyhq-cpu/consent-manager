@@ -45,6 +45,7 @@ import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -101,9 +102,14 @@ class NotificationServiceClientTest {
     }
 
     private NotificationServiceClient client(String signingSecret, String fromAddress) {
+        return client(signingSecret, fromAddress, true);
+    }
+
+    private NotificationServiceClient client(String signingSecret, String fromAddress, boolean pushData) {
         String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort() + "/";
         return new NotificationServiceClient(WebClient.builder(), JSON, breakers(), new NotificationServiceClient.Settings(
-                baseUrl, "ntf_test", signingSecret, fromAddress, 120, Duration.ofSeconds(5), 2, Duration.ofMillis(10)));
+                baseUrl, "ntf_test", signingSecret, fromAddress, 120, Duration.ofSeconds(5), 2, Duration.ofMillis(10),
+                pushData));
     }
 
     /** As configured in cm-ntf-svc (ADR-016), but opening after two sends so a test can trip it. */
@@ -150,6 +156,28 @@ class NotificationServiceClientTest {
         assertEquals("OTP", body.get("category").asText());
         assertEquals(120, body.get("validitySeconds").asInt());
         assertFalse(body.has("from"));
+    }
+
+    @Test
+    void sendsAPushesDataSoATapCanOpenTheRequest() throws IOException {
+        client(null, null).send(NtfChnl.PUSH, new NtfMsg("fcm-token", "New consent request", "Acme asks for consent",
+                NtfCtg.TRANSACTIONAL, "cm-notify-dp-req-1-d1", Map.of("cnsReqId", "req-1"))).block();
+
+        JsonNode body = requests.get(0).json();
+        assertEquals("PUSH", body.get("channel").asText());
+        assertEquals("req-1", body.at("/data/cnsReqId").asText());
+        assertEquals(1, body.get("data").size());
+    }
+
+    @Test
+    void leavesOutDataWhenThereIsNoneOrPushDataIsOff() throws IOException {
+        client(null, "consent@acme.example").send(NtfChnl.EMAIL,
+                new NtfMsg("ann@example.com", "Subject", "Body", NtfCtg.TRANSACTIONAL, "ref-1")).block();
+        client(null, null, false).send(NtfChnl.PUSH, new NtfMsg("fcm-token", "New consent request", "Acme",
+                NtfCtg.TRANSACTIONAL, "ref-2", Map.of("cnsReqId", "req-1"))).block();
+
+        assertFalse(requests.get(0).json().has("data"));
+        assertFalse(requests.get(1).json().has("data"));
     }
 
     @Test

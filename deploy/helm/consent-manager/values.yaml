@@ -14,9 +14,12 @@
 #
 # @author Vasantha Kumar <vasantha.kumar@hotmail.com>
 
-# Install as release "cm". Services keep the names they have in docker-compose (cm-gw, cm-df-reg-svc, ...), so the
-# services' own "docker" Spring profile finds each other unchanged; only datastores and Keycloak are set here.
-# A sandbox (ADR-037) is the same chart in its own namespace with sandbox.enabled: true and its own datastores.
+# Install as release "cm" in the namespace "consent-manager". Services keep the names they have in docker-compose
+# (cm-gw, cm-df-reg-svc, ...), so the services' own "docker" Spring profile finds each other unchanged; only the shared
+# servers are set here. By default they are deploy/helm/common's, in the "common" namespace (ADR-054); on a cloud,
+# PostgreSQL and Redis are managed services (values-<cloud>.yaml).
+# A sandbox (ADR-037) is the same chart in its own namespace with sandbox.enabled: true, its own database, Redis
+# database index and Pulsar tenant (values-sandbox.yaml).
 
 image:
   # <registry>/<component>:<tag>, e.g. ghcr.io/techeazyhq-cpu/cm-gw:0.1.0. Pin by digest in production.
@@ -41,29 +44,36 @@ externalSecrets:
 
 config:
   database:
-    host: postgres
+    host: postgres.common.svc.cluster.local
     port: 5432
     name: consent_manager
     user: cm
-    # appended to every JDBC and R2DBC URL; verify-full with the cloud's CA in production
-    jdbcParams: "sslmode=require"
-    r2dbcParams: "sslMode=require"
+    # appended to every JDBC and R2DBC URL; the common chart's server has no TLS, a cloud's requires it
+    # (values-<cloud>.yaml), verify-full with the cloud's CA in production
+    jdbcParams: "sslmode=prefer"
+    r2dbcParams: "sslMode=prefer"
   redis:
-    host: redis
+    host: redis.common.svc.cluster.local
     port: 6379
+    # 0 for consent-manager, 1 for its sandbox; notification-service has 2 on the shared server (ADR-054)
+    database: 0
     ssl: false
     passwordFromSecret: false
   pulsar:
-    url: pulsar://pulsar-broker:6650
+    url: pulsar://pulsar.common.svc.cluster.local:6650
   keycloak:
     # what browsers and tokens use (the issuer); services fetch keys from internalUrl
     publicUrl: https://id.example.com
-    internalUrl: http://keycloak:8080
+    internalUrl: http://keycloak.common.svc.cluster.local:8080
     adminUser: admin
   notificationService:
     # cm-ntf-svc delivers through TechEazyHQ's notification-service; "local" (Mailpit) is for development only
     provider: notification-service
     baseUrl: https://notifications.example.com
+  # SMTP for the "local" provider (development and the sandbox): Mailpit, which delivers nothing
+  mail:
+    host: mailpit.common.svc.cluster.local
+    port: 1025
   # browser origins allowed to call the gateway
   corsOrigins: https://dp.example.com,https://df.example.com,https://admin.example.com
   logFormat: ecs
@@ -154,8 +164,9 @@ ingress:
     clusterIssuer: letsencrypt
 
 # Creates the Keycloak database next to consent_manager where the cloud creates only one (AWS RDS). A pre-install hook.
+# Off by default: the common chart's init Job creates every database on a dev cluster.
 databaseInit:
-  enabled: true
+  enabled: false
   image: postgres:16-alpine
   extraDatabases: [keycloak]
 
@@ -163,6 +174,21 @@ networkPolicy:
   enabled: true
   # the ingress controller's namespace label, for traffic into the gateway and the web apps
   ingressNamespaceLabels: {kubernetes.io/metadata.name: ingress-nginx}
+  # the shared servers' namespace (ADR-054); its Keycloak posts sign-in codes to cm-ntf-svc
+  commonNamespace: common
+  keycloakPodLabels: {app.kubernetes.io/name: keycloak}
+  egress:
+    enabled: true
+    # Besides DNS, the release itself and the common namespace: the namespaces the services call into
+    # (notification-service, when cm-ntf-svc delivers through it in the same cluster).
+    namespaces: [notification]
+    # Addresses outside the cluster: fiduciaries' webhooks (ADR-047) and notification-service's public URL. Private
+    # ranges stay closed; the services refuse private webhook targets themselves too.
+    external:
+      - ipBlock: {cidr: 0.0.0.0/0, except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16]}
+  # Further egress rules (NetworkPolicyEgressRule): a cloud's managed PostgreSQL and Redis, from Terraform's
+  # helm_values output (deploy/README.md)
+  datastoreEgress: []
 
 podDisruptionBudget:
   minAvailable: 1

@@ -121,6 +121,7 @@ public class NtfBeanConfig {
                 @Value("${cm.ntf.notification-service.timeout:5s}") Duration timeout,
                 @Value("${cm.ntf.notification-service.max-retries:3}") int maxRetries,
                 @Value("${cm.ntf.notification-service.retry-backoff:500ms}") Duration retryBackoff,
+                @Value("${cm.ntf.notification-service.push-data:true}") boolean pushData,
                 @Value("${cm.sandbox.enabled:false}") boolean sandbox) {
             // The sandbox never delivers (ADR-034, ADR-037): its messages stay in its own inbox, Mailpit and the catchers.
             if (sandbox) {
@@ -131,7 +132,8 @@ public class NtfBeanConfig {
                 throw new IllegalStateException("cm.ntf.notification-service.api-key must be set when cm.ntf.provider=notification-service");
             }
             return new NotificationServiceClient(webClientBuilder, objectMapper, cbFactory, new NotificationServiceClient.Settings(
-                    baseUrl, apiKey, signingSecret, fromAddress, otpValiditySeconds, timeout, maxRetries, retryBackoff));
+                    baseUrl, apiKey, signingSecret, fromAddress, otpValiditySeconds, timeout, maxRetries, retryBackoff,
+                    pushData));
         }
 
         @Bean

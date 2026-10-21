@@ -62,6 +62,7 @@ capabilities: {drop: [ALL]}
 {{- if $s.redis }}
 - {name: SPRING_DATA_REDIS_HOST, value: {{ $c.redis.host | quote }}}
 - {name: SPRING_DATA_REDIS_PORT, value: {{ $c.redis.port | quote }}}
+- {name: SPRING_DATA_REDIS_DATABASE, value: {{ $c.redis.database | default 0 | quote }}}
 - {name: SPRING_DATA_REDIS_SSL_ENABLED, value: {{ $c.redis.ssl | quote }}}
 {{- if $c.redis.passwordFromSecret }}
 - name: SPRING_DATA_REDIS_PASSWORD
@@ -82,6 +83,8 @@ capabilities: {drop: [ALL]}
 {{- if eq $name "cm-ntf-svc" }}
 - {name: CM_NTF_PROVIDER, value: {{ $c.notificationService.provider | quote }}}
 - {name: NTF_SVC_BASE_URL, value: {{ $c.notificationService.baseUrl | quote }}}
+- {name: SPRING_MAIL_HOST, value: {{ $c.mail.host | quote }}}
+- {name: SPRING_MAIL_PORT, value: {{ $c.mail.port | quote }}}
 - name: NTF_SVC_API_KEY
   {{- include "cm.secretRef" (dict "root" $root "key" "NTF_SVC_API_KEY" "optional" true) | nindent 2 }}
 - name: NTF_SVC_SIGNING_SECRET

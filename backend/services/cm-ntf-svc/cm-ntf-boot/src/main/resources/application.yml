@@ -65,6 +65,9 @@ cm:
       timeout: 5s
       max-retries: 3
       retry-backoff: 500ms
+      # Send a push's data (cnsReqId, so a tap opens that request in the DP app). notification-service accepts it
+      # from its push-data release; an older one ignores the field, and false leaves it out.
+      push-data: ${NTF_SVC_PUSH_DATA:true}
 
 # Circuit breakers on calls to other services (ADR-016). One breaker per dependency: it opens when at least half of
 # the last 20 calls failed because the dependency is unhealthy (cm-res-kit's RemoteFailures: unreachable, timed out,

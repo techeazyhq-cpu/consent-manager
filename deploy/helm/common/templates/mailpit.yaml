@@ -1,0 +1,67 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+{{- if .Values.mailpit.enabled }}
+{{- $ctx := dict "root" . "name" "mailpit" }}
+{{/* One inbox for everything either app sends while developing, and the sandbox's (ADR-037): nothing leaves it.
+     Messages are kept in memory only; a restart empties the inbox. */}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mailpit
+  labels: {{- include "common.labels" $ctx | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {{- include "common.selectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "common.labels" $ctx | nindent 8 }}
+    spec:
+      automountServiceAccountToken: false
+      securityContext: {{- include "common.podSecurityContext" (dict "uid" 1000) | nindent 8 }}
+      containers:
+        - name: mailpit
+          image: {{ .Values.mailpit.image }}
+          ports:
+            - {name: smtp, containerPort: 1025}
+            - {name: web, containerPort: 8025}
+          readinessProbe:
+            tcpSocket: {port: smtp}
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: {port: web}
+            periodSeconds: 20
+          resources: {{- toYaml .Values.mailpit.resources | nindent 12 }}
+          securityContext: {{- include "common.containerSecurityContext" (dict "readOnly" true) | nindent 12 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: tmp
+          emptyDir: {sizeLimit: 256Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mailpit
+  labels: {{- include "common.labels" $ctx | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector: {{- include "common.selectorLabels" $ctx | nindent 4 }}
+  ports:
+    - {name: smtp, port: 1025, targetPort: smtp}
+    - {name: web, port: 8025, targetPort: web}
+{{- end }}

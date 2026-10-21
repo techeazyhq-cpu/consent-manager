@@ -49,8 +49,8 @@ Two things shape the mobile version:
    - The notice text and the data asked for are fetched by the app after the tap.
    - Tapping opens the request named by `data.cnsReqId` (`cmdp://consent/<cnsReqId>`), or the list of requests when
      the push names none. Either way, the list is fetched again first.
-   - notification-service forwards only its own `messageId` in the FCM data today, so a tap opens the list for now
-     (see Consequences).
+   - cm-ntf-svc sends `data: {cnsReqId}` with each push, and notification-service puts it in the FCM data next to
+     its own `messageId` (see Consequences). The request id is opaque, so the push still carries a title only.
    - A push that arrives while the app is open refreshes the list. The system shows no notification then.
 6. **Three modes, as the portal has:**
    - **`fcm`:** a phone build made with that platform's Firebase file.
@@ -93,9 +93,11 @@ Two things shape the mobile version:
 - Push works only in a development or store build that has the Firebase files. Expo Go and the web preview stay in
   development mode.
 - iOS builds use dynamic frameworks, which slightly lengthens app start-up.
-- Tapping a notification can't open the request's own screen until notification-service forwards a per-message
-  `data` map (e.g. `cnsReqId`) for push. The app already reads it, so only that service and cm-ntf-svc's request
-  need to change.
+- *Updated 2026-10-20:* tapping a notification opens the request's own screen. notification-service accepts a
+  small `data` map on a push (ADR-038 there) and merges it into the FCM data next to `messageId`, which it can't
+  override; cm-ntf-svc sends `{cnsReqId}` (`cm.ntf.notification-service.push-data`, on by default; an older
+  notification-service ignores the field, so taps there open the list as before). The local push catcher shows the
+  data too, so `GET /dev/push-catcher` on cm-ntf-svc proves what a tap would open.
 - Native delivery and taps can only be checked on a real device with the Firebase project set up. Locally,
   registration and delivery to the catcher are checked end to end with stand-in tokens.
 

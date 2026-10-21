@@ -1,0 +1,64 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+{{- if .Values.networkPolicy.enabled }}
+{{- $ctx := dict "root" . "name" "network" }}
+{{/* Default deny into every pod of the namespace, this chart's or another's (the Apache Pulsar chart, the Keycloak
+     Operator); then the namespace itself, the apps' namespaces, and the ingress controller for Keycloak (ADR-054). */}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: common-default-deny-ingress
+  labels: {{- include "common.labels" $ctx | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+# The servers' own traffic (the init Job, Keycloak to PostgreSQL, a Pulsar chart's components), and the apps.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: common-from-apps
+  labels: {{- include "common.labels" $ctx | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values: {{- toYaml .Values.networkPolicy.clientNamespaces | nindent 18 }}
+---
+# Browsers sign in through the ingress controller: Keycloak's HTTP port only.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: common-keycloak-from-ingress
+  labels: {{- include "common.labels" $ctx | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {{- toYaml .Values.networkPolicy.keycloakPodLabels | nindent 6 }}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {{- toYaml .Values.networkPolicy.ingressNamespaceLabels | nindent 14 }}
+      ports:
+        - {protocol: TCP, port: 8080}
+{{- end }}

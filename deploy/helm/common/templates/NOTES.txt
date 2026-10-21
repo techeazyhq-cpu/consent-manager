@@ -1,0 +1,21 @@
+The shared servers are installing as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}"{{ if ne .Release.Namespace "common" }} (the apps expect "common": reinstall with -n common){{ end }}.
+
+{{- $ns := .Release.Namespace }}{{ $d := .Values.clusterDomain }}
+{{- if .Values.postgres.enabled }}
+postgres.{{ $ns }}.svc.{{ $d }}:5432   databases: {{ range $i, $db := .Values.postgres.databases }}{{ if $i }}, {{ end }}{{ $db.name }}{{ end }}
+{{- end }}
+{{- if .Values.redis.enabled }}
+redis.{{ $ns }}.svc.{{ $d }}:6379      database 0 consent-manager, 1 its sandbox, 2 notification-service
+{{- end }}
+{{- if .Values.pulsar.enabled }}
+pulsar.{{ $ns }}.svc.{{ $d }}:6650     admin :8080, tenants {{ join ", " .Values.init.pulsar.tenants }}
+{{- end }}
+{{- if .Values.keycloak.enabled }}
+keycloak.{{ $ns }}.svc.{{ $d }}:8080   admin console: kubectl -n {{ $ns }} port-forward svc/keycloak 8080
+{{- end }}
+{{- if .Values.mailpit.enabled }}
+mailpit.{{ $ns }}.svc.{{ $d }}:1025    inbox: kubectl -n {{ $ns }} port-forward svc/mailpit 8025
+{{- end }}
+
+Secrets come from the Secret "{{ .Values.secrets.existingSecret }}". The init Job ("common-init") runs after every
+install and upgrade; Pulsar's first start can take minutes, so install with --timeout 15m.

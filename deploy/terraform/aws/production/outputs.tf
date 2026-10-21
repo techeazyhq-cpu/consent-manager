@@ -36,13 +36,7 @@ output "helm_values" {
           to    = [for cidr in module.vpc.elasticache_subnets_cidr_blocks : { ipBlock = { cidr = cidr } }]
           ports = [{ protocol = "TCP", port = 6379 }]
         },
-        {
-          to = [{
-            namespaceSelector = { matchLabels = { "kubernetes.io/metadata.name" = "pulsar" } }
-            podSelector       = { matchLabels = { component = "broker" } }
-          }]
-          ports = [{ protocol = "TCP", port = 6651 }]
-        },
+        # Pulsar and Keycloak live in the common namespace, which the chart's egress policy opens (ADR-054).
       ]
     }
   }

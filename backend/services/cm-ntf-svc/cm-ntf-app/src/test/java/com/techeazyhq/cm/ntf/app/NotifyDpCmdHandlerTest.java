@@ -84,6 +84,7 @@ class NotifyDpCmdHandlerTest {
 
         assertEquals(1, emails.size());
         NtfMsg msg = emails.get(0);
+        assertTrue(msg.data().isEmpty());
         assertEquals("ann@example.com", msg.destination());
         assertEquals("Full notice text", msg.body());
         assertEquals("cm-notify-dp-req-1", msg.ref());
@@ -112,6 +113,15 @@ class NotifyDpCmdHandlerTest {
         assertEquals("cm-notify-dp-req-1-d1", first.ref());
         assertEquals("cm-notify-dp-req-1-d2", pushes.get(1).ref());
         assertTrue(emails.isEmpty() && sms.isEmpty());
+    }
+
+    @Test
+    void aPushCarriesOnlyTheRequestIdSoATapOpensThatRequest() {
+        handler(Map.of("dp-1", List.of(dvc("d1", "dp-1", "tok-1"), dvc("d2", "dp-1", "tok-2"))), null, null)
+                .handle(cmd("APP", "dp-1")).block();
+
+        assertTrue(pushes.stream().allMatch(msg -> msg.data().equals(Map.of("cnsReqId", "req-1"))),
+                "the push data is the opaque request id the DP app opens, nothing else");
     }
 
     @Test
