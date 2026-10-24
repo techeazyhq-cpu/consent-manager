@@ -22,7 +22,7 @@ plugins {
 
 dependencies {
     api(project(":cm-dom-kit"))
-    api("com.fasterxml.jackson.core:jackson-databind:2.22.3")
+    api("com.fasterxml.jackson.core:jackson-databind:2.22.4")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
