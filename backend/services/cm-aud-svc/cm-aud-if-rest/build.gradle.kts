@@ -24,7 +24,7 @@ dependencies {
     api(project(":cm-aud-app"))
     implementation(project(":cm-sec-kit"))
     implementation(project(":cm-aud-kit"))
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.3")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.4")
     implementation("org.springframework.boot:spring-boot-starter-webflux:3.5.16")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server:3.5.16")
 
