@@ -24,7 +24,7 @@ plugins {
 // did, and the port that records it. No Spring here; services wire it.
 dependencies {
     api(project(":cm-dom-kit"))
-    api("io.projectreactor:reactor-core:3.6.10")
+    api("io.projectreactor:reactor-core:3.8.7")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
