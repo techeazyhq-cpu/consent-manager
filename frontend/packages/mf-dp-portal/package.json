@@ -9,7 +9,7 @@
     "preview": "vite preview --port 5174 --strictPort"
   },
   "dependencies": {
-    "@firebase/app": "0.16.3",
+    "@firebase/app": "0.16.4",
     "@firebase/messaging": "0.13.3",
     "api-client": "workspace:*",
     "auth-kit": "workspace:*",
