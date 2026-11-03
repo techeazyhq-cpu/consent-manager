@@ -45,6 +45,9 @@ subprojects {
     // BOM's own overrides.
     extra["netty.version"] = "4.1.137.Final"
     extra["jackson-bom.version"] = "2.21.7"
+    // 4.0.14 bundles BouncyCastle 1.86 inside its bouncy-castle-bc package jar, out of reach of the rule below;
+    // Spring Boot 3.5's 4.0.11 bundled 1.84 (CVE-2026-8763, CVE-2026-13506, #217).
+    extra["pulsar.version"] = "4.0.14"
     configurations.configureEach {
         resolutionStrategy.eachDependency {
             val v = requested.version ?: return@eachDependency

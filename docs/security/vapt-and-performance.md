@@ -50,7 +50,7 @@ and one is open and tracked.
 | V-10 | Low | No `Cross-Origin-Resource-Policy` on API responses | Fixed (`same-site`); `same-origin` not adopted |
 | V-11 | Low | df-reg's `/internal/**` relies on network isolation; any pod of the release can reach it | Open, #99 |
 | V-12 | Accepted | A signing key needs signatures on writes only, so a leaked key alone can read | Accepted, as notification-service |
-| V-13 | Accepted | Spring WebFlux and the Pulsar client's bundled BouncyCastle (part of V-04) | #216, #217 |
+| V-13 | Accepted | Spring WebFlux (part of V-04); the Pulsar client's bundled BouncyCastle is fixed (Pulsar 4.0.14) | #216; #217 fixed |
 | V-14 | False positive | ZAP's SQL injection on `/api/aud/activity` | Closed |
 | V-15 | Critical | Anyone signed in, a fiduciary's API key included, could approve, decline or withdraw any consent by its id | Fixed (ADR-044) |
 | V-16 | Accepted | Two HIGH advisories without a patched release in the mobile app's build tooling (braces, node-forge) | Accepted until 2026-12-31 |
@@ -149,7 +149,8 @@ this upgrade.
 
 **Still in the images (V-13):**
 - **Spring WebFlux 6.2.19** (2 CRITICAL): fixed only in Spring Framework 7, so a Spring Boot 4 migration (#216).
-- **BouncyCastle 1.84** nested inside the Pulsar client's own jar, out of Gradle's reach (#217).
+- **BouncyCastle 1.84** nested inside the Pulsar client's own jar, out of Gradle's reach (#217). Fixed 2026-11-04:
+  `pulsar.version` 4.0.14 bundles 1.86, and the `.trivyignore` entries are gone.
 
 ### V-05: input that reached the database (Medium)
 
