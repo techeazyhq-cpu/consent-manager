@@ -40,5 +40,6 @@ dependencies {
     implementation("org.apache.pulsar:pulsar-client:3.3.9")
 
     testImplementation(project(":cm-test-kit"))
+    testImplementation(project(":cm-evt-kit"))
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
