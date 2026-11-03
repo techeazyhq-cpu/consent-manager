@@ -27,6 +27,8 @@ overrides:
   source-map-js: ">=1.2.2"
   # GHSA-m9gg-hp2v-232j, via React Native Firebase's Firebase JS SDK (Firestore's Node client, never loaded by the app)
   "@grpc/grpc-js": ">=1.13.6"
+  # GHSA-7wch-p9px-956x, -jc66-7q78-782g, -8hrf-8g6f-7xwp, -hqq3-7jhf-c5jx, -5x38-2vff-x55p, via @expo/cli
+  node-forge: ">=1.4.1"
 # Accepted for now, each with why and until when (docs/security/vapt-and-performance.md, V-16). No patched release
 # exists for either; both reach only Expo's build-time tooling, never the app's bundle. Recheck by 2026-12-31.
 auditConfig:
