@@ -18,6 +18,8 @@
 
 package com.techeazyhq.cm.cnsqry;
 
+import java.time.Duration;
+
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.reactive.client.adapter.AdaptedReactivePulsarClientFactory;
 import org.apache.pulsar.reactive.client.api.ReactivePulsarClient;
@@ -25,6 +27,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.context.event.EventListener;
 import org.springframework.r2dbc.core.DatabaseClient;
 
@@ -44,13 +48,30 @@ import com.techeazyhq.cm.cnsqry.infra.PulsarCnsEvtConsumer;
 import com.techeazyhq.cm.cnsqry.infra.R2dbcCnsArtRdMdlRepoAdapter;
 import com.techeazyhq.cm.cnsqry.infra.R2dbcCnsHstRdMdlRepoAdapter;
 import com.techeazyhq.cm.cnsqry.infra.R2dbcPrjCkptAdapter;
+import com.techeazyhq.cm.cnsqry.infra.RedisCachedCnsArtRdMdlRepo;
 
 @Configuration
 public class CnsQryBeanConfig {
 
+    /** The read model in PostgreSQL, uncached: for the status endpoint, which must never answer from a cache. */
     @Bean
-    public CnsArtRdMdlRepoPort cnsArtRdMdlRepoPort(DatabaseClient db, ObjectMapper objectMapper) {
+    public R2dbcCnsArtRdMdlRepoAdapter uncachedCnsArtRdMdlRepo(DatabaseClient db, ObjectMapper objectMapper) {
         return new R2dbcCnsArtRdMdlRepoAdapter(db, objectMapper);
+    }
+
+    /**
+     * What the projector and the queries use: the read model behind the Redis cache (#31), which the projector's
+     * writes evict, or the database alone with {@code cm.cnsqry.cache.enabled=false}.
+     */
+    @Bean
+    @Primary
+    public CnsArtRdMdlRepoPort cnsArtRdMdlRepoPort(R2dbcCnsArtRdMdlRepoAdapter uncachedCnsArtRdMdlRepo,
+                                                   ReactiveStringRedisTemplate redis, ObjectMapper objectMapper,
+                                                   @Value("${cm.cnsqry.cache.enabled:true}") boolean enabled,
+                                                   @Value("${cm.cnsqry.cache.ttl:PT1M}") Duration ttl,
+                                                   @Value("${cm.cnsqry.cache.timeout:PT0.2S}") Duration timeout) {
+        return enabled ? new RedisCachedCnsArtRdMdlRepo(uncachedCnsArtRdMdlRepo, redis, objectMapper, ttl, timeout)
+                : uncachedCnsArtRdMdlRepo;
     }
 
     @Bean
@@ -84,8 +105,8 @@ public class CnsQryBeanConfig {
     }
 
     @Bean
-    public InternalStatusQryHandler internalStatusQryHandler(CnsArtRdMdlRepoPort rdMdlRepo) {
-        return new InternalStatusQryHandler(rdMdlRepo);
+    public InternalStatusQryHandler internalStatusQryHandler(R2dbcCnsArtRdMdlRepoAdapter uncachedCnsArtRdMdlRepo) {
+        return new InternalStatusQryHandler(uncachedCnsArtRdMdlRepo);
     }
 
     @Bean

@@ -19,6 +19,9 @@ spring:
     url: r2dbc:postgresql://postgres:5432/consent_manager?schema=cns_qry
   flyway:
     url: jdbc:postgresql://postgres:5432/consent_manager
+  data:
+    redis:
+      host: redis
 
 cm:
   # Tokens come from three realms (ADR-035): their issuer is the browser-facing address (cm.security.issuer-base,
