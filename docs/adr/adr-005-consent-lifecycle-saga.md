@@ -1,6 +1,6 @@
 # ADR-005: The consent lifecycle as an orchestrated saga
 
-- **Status:** Accepted, with a known gap (saga state is not persisted yet)
+- **Status:** Accepted; saga state persisted and stale legs re-driven since 2026-11-03
 - **Date:** 2026-08-30 (Phase 1), recorded 2026-10-10
 
 ## Context
@@ -41,9 +41,11 @@ stop a principal from deciding.
 ## Consequences
 
 - The decision is never held hostage by a downstream outage; the platform converges through redelivery.
-- **Known gap:** `cns_cmd.sga_state` is in the schema but nothing writes it. Progress lives only in Pulsar's
-  acknowledgements: a crash re-drives a leg through redelivery, but there is no queryable record of where each saga is,
-  no timeout for a leg that never completes, and no operator view of stuck sagas. Persisting each step's state and a
-  sweep for stale sagas is the next step for this ADR.
+- **Saga state (closed gap, 2026-11-03):** each leg records itself in `cns_cmd.sga_state`: STARTED, then DONE, or
+  FAILED with the error; a leg's id is derived from the leg and its subject, so a redelivered event updates the same
+  row and counts an attempt. A failed leg still fails its message, so Pulsar redelivers it as before. `SgaRedriveJob`
+  runs again any leg left STARTED or FAILED for `cm.cnscmd.saga-redrive.stale-after` (5 minutes), and after
+  `max-attempts` (10) marks it GAVE_UP, where it stays for an operator to query. Legs are at-least-once: a notification
+  may be sent twice.
 - A future leg that *can* invalidate a decision (for example a fiduciary refusing an artefact) needs a compensating
   command, designed with that leg.

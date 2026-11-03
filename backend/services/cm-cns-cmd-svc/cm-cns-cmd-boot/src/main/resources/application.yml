@@ -55,6 +55,11 @@ cm:
   cnscmd:
     expiry-sweep:
       fixed-delay-ms: 60000
+    # Saga legs left STARTED or FAILED this long are run again, up to max-attempts (ADR-005)
+    saga-redrive:
+      fixed-delay-ms: 60000
+      stale-after: PT5M
+      max-attempts: 10
     # Seals secrets this service keeps, such as webhook signing secrets (ADR-047): base64 of 32 bytes. A development
     # key here; production sets CM_CNSCMD_SECRETS_KEY from the cloud's key management.
     secrets-key: ${CM_CNSCMD_SECRETS_KEY:Y25zLWNtZC1sb2NhbC1kZXYtb25seS1zZWNyZXRzLWs=}

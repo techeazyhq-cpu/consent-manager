@@ -33,5 +33,6 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind")
 
     testImplementation("io.projectreactor:reactor-test")
+    testImplementation(project(":cm-test-kit"))
     testImplementation("org.springframework.security:spring-security-test")
 }

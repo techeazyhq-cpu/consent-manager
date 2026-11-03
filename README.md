@@ -68,7 +68,7 @@ cd frontend && pnpm install && pnpm dev:dp-portal     # or dev:df-app, dev:cm-ad
 |---|---|---|
 | DP portal | http://localhost:5174 | `dp-demo@cm.local`: the code arrives in Mailpit |
 | CM Admin | http://localhost:5176 | `admin@cm.local` (administrator) or `operator@cm.local` (operator): the code arrives in Mailpit |
-| DF app | http://localhost:5175 | the fiduciary's API client secret, issued at activation |
+| DF app | http://localhost:5175 | the fiduciary's Owner, invited at activation: the code arrives in Mailpit |
 | Mailpit (captured email) | http://localhost:8025 | none |
 | Keycloak admin console | http://localhost:8080 | `admin` / `admin` |
 
@@ -112,6 +112,8 @@ Its gateway is http://localhost:9100 and its inbox http://localhost:8125. See [i
 scripts/verify-phase1.sh                 # the consent lifecycle end to end, through the gateway
 node scripts/verify-otp-login.mjs        # passwordless sign-in: wrong code, existing account, new DP account
 ```
+
+By hand, in a browser: [docs/walkthrough.md](docs/walkthrough.md).
 
 ## Layout
 

@@ -68,6 +68,7 @@ import com.techeazyhq.cm.cnscmd.app.CnsTknIssuer;
 import com.techeazyhq.cm.cnscmd.app.GetCnsArtLiveStatusQryHandler;
 import com.techeazyhq.cm.cnscmd.app.RefreshCnsTknCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.CnsLifecycleSagaOrchestrator;
+import com.techeazyhq.cm.cnscmd.app.SgaRedriveJob;
 import com.techeazyhq.cm.cnscmd.app.CreateCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.DenyCnsReqCmdHandler;
 import com.techeazyhq.cm.cnscmd.app.LinkDpCmdHandler;
@@ -76,6 +77,7 @@ import com.techeazyhq.cm.cnscmd.dom.DfUsagePort;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqBatchRepoPort;
 import com.techeazyhq.cm.cnscmd.dom.CnsArtRepoPort;
 import com.techeazyhq.cm.cnscmd.dom.CnsReqRepoPort;
+import com.techeazyhq.cm.cnscmd.dom.SgaStatePort;
 import com.techeazyhq.cm.cnscmd.dom.ContactPolicy;
 import com.techeazyhq.cm.cnscmd.dom.DfActivePort;
 import com.techeazyhq.cm.cnscmd.dom.DfSubEligiblePolicy;
@@ -90,6 +92,7 @@ import com.techeazyhq.cm.cnscmd.infra.PulsarNtfCmdAdapter;
 import com.techeazyhq.cm.cnscmd.infra.R2dbcCnsArtRepoAdapter;
 import com.techeazyhq.cm.cnscmd.infra.R2dbcCnsReqRepoAdapter;
 import com.techeazyhq.cm.cnscmd.infra.R2dbcObxAdapter;
+import com.techeazyhq.cm.cnscmd.infra.R2dbcSgaStateAdapter;
 import com.techeazyhq.cm.cnscmd.infra.WebClientDfActiveAdapter;
 import com.techeazyhq.cm.cnscmd.infra.WebClientDfSubEligibleAdapter;
 import com.techeazyhq.cm.seckit.CnsTknKeys;
@@ -375,8 +378,22 @@ public class CnsCmdBeanConfig {
     }
 
     @Bean
-    public CnsLifecycleSagaOrchestrator cnsLifecycleSagaOrchestrator(CnsReqRepoPort cnsReqRepo, NtfCmdPort ntfCmdPort) {
-        return new CnsLifecycleSagaOrchestrator(cnsReqRepo, ntfCmdPort);
+    public SgaStatePort sgaStatePort(DatabaseClient db) {
+        return new R2dbcSgaStateAdapter(db);
+    }
+
+    @Bean
+    public CnsLifecycleSagaOrchestrator cnsLifecycleSagaOrchestrator(CnsReqRepoPort cnsReqRepo, NtfCmdPort ntfCmdPort,
+                                                                     SgaStatePort sgaStatePort) {
+        return new CnsLifecycleSagaOrchestrator(cnsReqRepo, ntfCmdPort, sgaStatePort, java.time.Clock.systemUTC());
+    }
+
+    /** Runs again the saga legs left unfinished (ADR-005). */
+    @Bean
+    public SgaRedriveJob sgaRedriveJob(SgaStatePort sgaStatePort, CnsLifecycleSagaOrchestrator orchestrator,
+                                       @Value("${cm.cnscmd.saga-redrive.stale-after:PT5M}") java.time.Duration staleAfter,
+                                       @Value("${cm.cnscmd.saga-redrive.max-attempts:10}") int maxAttempts) {
+        return new SgaRedriveJob(sgaStatePort, orchestrator, staleAfter, maxAttempts, java.time.Clock.systemUTC());
     }
 
     @Bean
