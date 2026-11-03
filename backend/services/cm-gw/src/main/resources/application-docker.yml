@@ -27,35 +27,37 @@ spring:
       host: redis
   cloud:
     gateway:
-      routes:
-        - id: df-reg
-          uri: http://cm-df-reg-svc:8081
-          predicates:
-            - Path=/api/df-reg/**
-        - id: cns-cmd
-          uri: http://cm-cns-cmd-svc:8082
-          predicates:
-            - Path=/api/cns-cmd/**
-        - id: cns-qry
-          uri: http://cm-cns-qry-svc:8083
-          predicates:
-            - Path=/api/cns-qry/**
-        - id: ntf
-          uri: http://cm-ntf-svc:8084
-          predicates:
-            - Path=/api/ntf/**
-        - id: bil
-          uri: http://cm-bil-svc:8085
-          predicates:
-            - Path=/api/bil/**
-        - id: aud
-          uri: http://cm-aud-svc:8086
-          predicates:
-            - Path=/api/aud/**
-        - id: stf
-          uri: http://cm-stf-svc:8087
-          predicates:
-            - Path=/api/stf/**
+      server:
+        webflux:
+          routes:
+            - id: df-reg
+              uri: http://cm-df-reg-svc:8081
+              predicates:
+                - Path=/api/df-reg/**
+            - id: cns-cmd
+              uri: http://cm-cns-cmd-svc:8082
+              predicates:
+                - Path=/api/cns-cmd/**
+            - id: cns-qry
+              uri: http://cm-cns-qry-svc:8083
+              predicates:
+                - Path=/api/cns-qry/**
+            - id: ntf
+              uri: http://cm-ntf-svc:8084
+              predicates:
+                - Path=/api/ntf/**
+            - id: bil
+              uri: http://cm-bil-svc:8085
+              predicates:
+                - Path=/api/bil/**
+            - id: aud
+              uri: http://cm-aud-svc:8086
+              predicates:
+                - Path=/api/aud/**
+            - id: stf
+              uri: http://cm-stf-svc:8087
+              predicates:
+                - Path=/api/stf/**
 
 cm:
   # Tokens come from three realms (ADR-035): their issuer is the browser-facing address (cm.security.issuer-base,

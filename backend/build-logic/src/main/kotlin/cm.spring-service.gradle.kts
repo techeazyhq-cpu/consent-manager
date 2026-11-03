@@ -31,6 +31,12 @@ java {
 }
 
 dependencies {
+    // Spring Boot 4 defaults to Jackson 3; the services' code and their JSON stay on Jackson 2 until that move of its
+    // own (#216). This auto-configures the Jackson 2 ObjectMapper; spring.http.codecs.preferred-json-mapper=jackson2
+    // in each application.yml puts the HTTP codecs on it too.
+    "implementation"("org.springframework.boot:spring-boot-jackson2")
+    // Spring Boot 4 auto-configures WebClient.Builder in a module of its own, no longer part of the WebFlux starter.
+    "implementation"("org.springframework.boot:spring-boot-starter-webclient")
     "testImplementation"("org.springframework.boot:spring-boot-starter-test")
 }
 

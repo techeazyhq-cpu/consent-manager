@@ -23,13 +23,15 @@ plugins {
 // What every service needs to call another one through a circuit breaker (ADR-016): which failures count against
 // the breaker, and how an unavailable dependency surfaces to the caller (503 problem+json).
 dependencies {
-    compileOnly("org.springframework.boot:spring-boot-starter-webflux:3.5.16")
-    compileOnly("org.springframework.boot:spring-boot-autoconfigure:3.5.16")
+    compileOnly("org.springframework.boot:spring-boot-starter-webflux:4.0.9")
+    compileOnly("org.springframework.boot:spring-boot-autoconfigure:4.0.9")
+    compileOnly("org.springframework.boot:spring-boot-jackson2:4.0.9") // our code stays on Jackson 2 for now (#216)
     compileOnly("io.github.resilience4j:resilience4j-circuitbreaker:2.4.0")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
-    testImplementation("org.springframework.boot:spring-boot-starter-webflux:3.5.16")
+    testImplementation("org.springframework.boot:spring-boot-starter-webflux:4.0.9")
+    testImplementation("org.springframework.boot:spring-boot-jackson2:4.0.9")
     testImplementation("io.github.resilience4j:resilience4j-circuitbreaker:2.4.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

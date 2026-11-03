@@ -31,8 +31,8 @@ dependencies {
     // @Transactional at the use-case boundary is a common, pragmatic pattern even in
     // otherwise-framework-light application layers; spring-tx alone (not all of Spring)
     // keeps this a narrow addition.
-    compileOnly("org.springframework:spring-tx:6.2.19")
-    compileOnly("org.springframework:spring-context:6.2.19") // @Scheduled on CnsExpirySweepJob
+    compileOnly("org.springframework:spring-tx:7.0.10")
+    compileOnly("org.springframework:spring-context:7.0.10") // @Scheduled on CnsExpirySweepJob
     implementation("org.slf4j:slf4j-api:2.0.20")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))

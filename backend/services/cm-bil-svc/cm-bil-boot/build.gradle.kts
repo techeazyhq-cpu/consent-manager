@@ -37,8 +37,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.postgresql:r2dbc-postgresql:1.1.3.RELEASE")
     implementation("org.postgresql:postgresql:42.7.14")
-    implementation("org.flywaydb:flyway-core:10.22.0")
-    implementation("org.flywaydb:flyway-database-postgresql:10.22.0")
+    implementation("org.springframework.boot:spring-boot-starter-flyway")
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.apache.pulsar:pulsar-client-reactive-adapter:0.5.2")
     implementation("org.apache.pulsar:pulsar-client:3.3.9")
 

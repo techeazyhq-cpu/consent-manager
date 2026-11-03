@@ -23,9 +23,9 @@ plugins {
 dependencies {
     api(project(":cm-cns-cmd-app"))
     implementation(project(":cm-sec-kit"))
-    implementation("org.springframework.boot:spring-boot-starter-webflux:3.5.16")
-    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server:3.5.16")
-    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.6.0")
+    implementation("org.springframework.boot:spring-boot-starter-webflux:4.0.9")
+    implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server:4.0.9")
+    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:3.0.3")
     // reads .xlsx recipient lists for batches (ADR-036); small, streaming, no Apache POI
     implementation("org.dhatim:fastexcel-reader:0.19.0")
 

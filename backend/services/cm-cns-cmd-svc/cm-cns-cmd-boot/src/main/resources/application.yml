@@ -20,6 +20,10 @@ server:
     enabled: true
 
 spring:
+  http:
+    codecs:
+      # Jackson 2, as the services' own code, until the move to Jackson 3 (#216)
+      preferred-json-mapper: jackson2
   application:
     name: cm-cns-cmd-svc
   # Batches (ADR-036): a JSON list of 10,000 recipients is well over the 256 KB default; uploads are at most 5 MB.

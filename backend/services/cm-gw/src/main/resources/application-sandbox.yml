@@ -24,28 +24,30 @@ spring:
       database: 1 # usage counters apart from production's (database 0)
   cloud:
     gateway:
-      # The whole list, as a list can't be merged across profiles: only what the sandbox runs.
-      routes:
-        - id: df-reg
-          uri: http://cm-sbx-df-reg-svc:8081
-          predicates:
-            - Path=/api/df-reg/**
-        - id: cns-cmd
-          uri: http://cm-sbx-cns-cmd-svc:8082
-          predicates:
-            - Path=/api/cns-cmd/**
-        - id: cns-qry
-          uri: http://cm-sbx-cns-qry-svc:8083
-          predicates:
-            - Path=/api/cns-qry/**
-        - id: ntf
-          uri: http://cm-sbx-ntf-svc:8084
-          predicates:
-            - Path=/api/ntf/**
-        - id: bil
-          uri: http://cm-sbx-bil-svc:8085
-          predicates:
-            - Path=/api/bil/**
+      server:
+        webflux:
+          # The whole list, as a list can't be merged across profiles: only what the sandbox runs.
+          routes:
+            - id: df-reg
+              uri: http://cm-sbx-df-reg-svc:8081
+              predicates:
+                - Path=/api/df-reg/**
+            - id: cns-cmd
+              uri: http://cm-sbx-cns-cmd-svc:8082
+              predicates:
+                - Path=/api/cns-cmd/**
+            - id: cns-qry
+              uri: http://cm-sbx-cns-qry-svc:8083
+              predicates:
+                - Path=/api/cns-qry/**
+            - id: ntf
+              uri: http://cm-sbx-ntf-svc:8084
+              predicates:
+                - Path=/api/ntf/**
+            - id: bil
+              uri: http://cm-sbx-bil-svc:8085
+              predicates:
+                - Path=/api/bil/**
 
 cm:
   sandbox:

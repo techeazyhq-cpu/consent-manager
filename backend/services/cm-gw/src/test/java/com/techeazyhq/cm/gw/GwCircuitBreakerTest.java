@@ -29,7 +29,7 @@ import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -60,12 +60,12 @@ class GwCircuitBreakerTest {
     @DynamicPropertySource
     static void routesToServicesThatAreDown(DynamicPropertyRegistry registry) {
         // the whole route list, since one indexed entry from a higher source replaces the YAML list
-        registry.add("spring.cloud.gateway.routes[0].id", () -> "df-reg");
-        registry.add("spring.cloud.gateway.routes[0].uri", () -> "http://127.0.0.1:" + DOWN);
-        registry.add("spring.cloud.gateway.routes[0].predicates[0]", () -> "Path=/api/df-reg/**");
-        registry.add("spring.cloud.gateway.routes[1].id", () -> "cns-qry");
-        registry.add("spring.cloud.gateway.routes[1].uri", () -> "http://127.0.0.1:" + DOWN);
-        registry.add("spring.cloud.gateway.routes[1].predicates[0]", () -> "Path=/api/cns-qry/**");
+        registry.add("spring.cloud.gateway.server.webflux.routes[0].id", () -> "df-reg");
+        registry.add("spring.cloud.gateway.server.webflux.routes[0].uri", () -> "http://127.0.0.1:" + DOWN);
+        registry.add("spring.cloud.gateway.server.webflux.routes[0].predicates[0]", () -> "Path=/api/df-reg/**");
+        registry.add("spring.cloud.gateway.server.webflux.routes[1].id", () -> "cns-qry");
+        registry.add("spring.cloud.gateway.server.webflux.routes[1].uri", () -> "http://127.0.0.1:" + DOWN);
+        registry.add("spring.cloud.gateway.server.webflux.routes[1].predicates[0]", () -> "Path=/api/cns-qry/**");
         registry.add("cm.pdp.base-url", () -> "http://127.0.0.1:" + ALLOWING_PDP.getAddress().getPort());
     }
 

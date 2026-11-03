@@ -95,7 +95,7 @@ public class ApiKeyAuthWebFilter implements WebFilter, Ordered {
         if (apiKey == null || !request.getURI().getRawPath().startsWith("/api/")) {
             return chain.filter(exchange);
         }
-        if (request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)) {
+        if (request.getHeaders().containsHeader(HttpHeaders.AUTHORIZATION)) {
             return problem(exchange, HttpStatus.BAD_REQUEST, "ambiguous-credentials",
                     "Send either X-API-Key or Authorization, not both");
         }
