@@ -411,10 +411,57 @@ affected: the chart gives OPA two replicas and no CPU limit.
 With OPA at 1 CPU, raises, reads and tokens didn't fail at all; only verify was refused past the knee, as the PDP
 breaker should. Latency rose from about 50/s (p95 0.6–4 s) before any failure, as Postgres queued.
 
+### Postgres unconstrained, and connection pools (7 November 2026)
+
+The ramp with Postgres at 4 CPUs (a scratch override; the compose file keeps 1), after a two-minute warm-up, OPA at
+1 CPU. Each pool's connections were sampled from `pg_stat_activity` every 2 s, by the client container's address:
+"in use" is a connection `active` or `idle in transaction`.
+
+| Ramp | Clean up to | Failed past the knee | Postgres | At their 2-CPU limit |
+|---|---|---|---|---|
+| Pools as they were (10 each) | 139/s | verify only, all 503 | ≤ 1.7 CPUs | the gateway 1.9, df-reg 1.9 |
+| cns-cmd's pool 20, df-reg's 15 | 141/s | verify only, all 503 | ≤ 1.3 CPUs | the gateway 1.9, cns-cmd 1.8, df-reg 1.7 |
+
+**The next limit is CPU in the gateway, df-reg and cm-cns-cmd-svc, not Postgres or the pools.** Postgres never used
+two of its four CPUs. Past the knee, cns-cmd's pool was full, 10 of 10, and verify, which waits on it through OPA's
+live-status call, failed once a connection took longer than OPA's 2 s. Doubling the pool didn't move the knee: the
+20 connections filled the same way, and df-reg's 15. A full pool here is requests queuing behind a busy service, and a
+bigger one only lengthens the queue. On one laptop, past about 140 a second, the next step is replicas, as the chart
+has.
+
+Each of the gateway and df-reg spends about 13 ms of CPU per request at the knee (1.9 CPUs for about 140 a second, every
+one an API-key request). That is a lot for df-reg's two lookups, a nonce insert and an HMAC; it is worth profiling
+before adding replicas, and the gateway's short cache of verified keys (above) would take most of it away.
+
+Today's ramps found the knee anywhere from 139 to 204 a second with the same settings. Compare runs made back to back,
+after a warm-up of two minutes; the first minutes after a restart fail far more (17% at 50 a second).
+
+**Pools, from what was measured.** Past the knee, the most connections in use at once were:
+
+| Service | In use, max | p95 | Pool |
+|---|---|---|---|
+| cm-cns-cmd-svc | 10 (20 when it had 20) | 10 | 10, unchanged: more doesn't help |
+| cm-df-reg-svc | 10 (15) | 6 | 10, unchanged |
+| cm-cns-qry-svc | 3 | 2 | 10, unchanged: its projector takes 4 at a time |
+| cm-ntf-svc | 0 | 0 | 10, unchanged: its consumer takes 4 at a time |
+| cm-aud-svc | 2 | 1 | **5**: its consumer takes one message at a time |
+| cm-bil-svc | 1 | 0 | **5**: one relay pass at a time |
+
+Postgres allows 100 connections for every service, notification-service and Keycloak together, and they held 91 at
+once. The two smaller pools free 10, so a second replica of a service fits on the local stack.
+
+**With the smaller pools, back on the compose file's limits** (Postgres at 1 CPU, everything restarted): the mix at
+100 a second three times in a row failed 31%, then 16%, then 0.04% (6 of 12,028). aud and bil never had more than 2
+connections in use, so the pools played no part; the first minutes after a full restart do, Postgres's cache
+included. Warm, Postgres's single CPU was at its limit (median 102%) and token p95 was 684 ms, against 61 ms on the
+morning of 7 November: on one CPU, 100 a second is now at the edge.
+
 ### To finish
 
-- **The knee with Postgres unconstrained:** rerun the ramp with Postgres at 2 CPUs or more, to find the next limit
-  (the gateway, df-reg's key checks, or the pools), then set each service's pool size from the measured concurrency.
+- **The local Postgres at 100 a second:** at 1 CPU it was saturated by the mix at 100/s; work out what changed since
+  the morning of 7 November (the data from the day's runs, or the services' queries) before raising its limit.
+- **df-reg's CPU per key check:** about 13 ms at the knee; profile it, and consider the gateway's cache of verified
+  keys.
 
 ## Rerunning
 

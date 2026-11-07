@@ -32,6 +32,11 @@ spring:
       # Wait at most 3 s for a connection, then fail, rather than queue until the gateway gives up at 10 s: under
       # overload a saturated pool held requests that long (docs/security/vapt-and-performance.md).
       max-acquire-time: 3s
+      # 5, not r2dbc-pool's 10: past the knee of the ramp this service never had more than 2 connections in use, and
+      # its background work takes one at a time (one outbox relay pass at a time). Postgres allows 100 for every service, notification-service
+      # and Keycloak together, and they held 91 at once (vapt-and-performance.md, "Connection pools").
+      initial-size: 1
+      max-size: 5
     username: cm
     password: cm
   flyway:
