@@ -21,6 +21,7 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":cm-web-kit")) // Problems and the error dictionary (ADR-062)
     api(project(":cm-aud-app"))
     implementation(project(":cm-sec-kit"))
     implementation(project(":cm-aud-kit"))

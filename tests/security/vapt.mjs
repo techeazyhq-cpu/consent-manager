@@ -45,8 +45,8 @@ async function check(id, area, name, expected, fn) {
   results.push({ id, area, name, expected, actual, pass });
   console.log(`${pass ? 'PASS' : 'FAIL'}  ${id}  ${name}  ->  ${actual}`);
 }
-const is = (r, status, title) => [r.status === status && (!title || r.json?.title === title),
-  `${r.status}${r.json?.title ? ` ${r.json.title}` : ''}`];
+const is = (r, status, code) => [r.status === status && (!code || r.json?.code === code),
+  `${r.status}${r.json?.code ? ` ${r.json.code}` : ''}`];
 const refused = (r) => [r.status >= 400 && r.status < 500 && !STACK.test(r.text), `${r.status}${STACK.test(r.text) ? ' (stack trace)' : ''}`];
 
 const LIST = '/api/cns-qry/cns-arts';
@@ -144,8 +144,8 @@ await check('RPL-01', 'Replay', 'The same signed write sent twice', 'first 201, 
   const h = sign(K.a.signingSecret, 'POST', RAISE, '', body);
   const first = await call(K.a, 'POST', RAISE, { body, signHeaders: h });
   const second = await call(K.a, 'POST', RAISE, { body, signHeaders: h });
-  return [first.status === 201 && second.status === 409 && second.json?.title === 'request-replayed',
-    `${first.status}, ${second.status} ${second.json?.title ?? ''}`];
+  return [first.status === 201 && second.status === 409 && second.json?.code === 'request-replayed',
+    `${first.status}, ${second.status} ${second.json?.code ?? ''}`];
 });
 await check('RPL-02', 'Replay', 'The same signed write sent 25 times at once', 'exactly one 201, the rest 409', async () => {
   const body = JSON.stringify(request('a'));
@@ -344,7 +344,7 @@ await check('PRN-01', 'Access control', "A's key approves, declines or withdraws
     const approve = await call(K.a, 'POST', `/api/cns-cmd/cns-reqs/${reqA}/approve`, { body: {} });
     const decline = await call(K.a, 'POST', `/api/cns-cmd/cns-reqs/${reqA}/deny`);
     const withdraw = await call(K.a, 'POST', `/api/cns-cmd/cns-arts/${K.grantedA.cnsArtId}/revoke`);
-    return [[approve, decline, withdraw].every((r) => r.status === 403 && r.json?.title === 'principal-only'),
+    return [[approve, decline, withdraw].every((r) => r.status === 403 && r.json?.code === 'principal-only'),
       `${approve.status}, ${decline.status}, ${withdraw.status}`];
   });
 await check('PRN-02', 'Access control', "A's key shortens, narrows or renews a principal's consent", '403 principal-only each',
@@ -355,7 +355,7 @@ await check('PRN-02', 'Access control', "A's key shortens, narrows or renews a p
       call(K.a, 'POST', `${art}/withdraw-dcat`, { body: { dCatCode: 'EMAIL' } }),
       call(K.a, 'POST', `${art}/renew`, { body: { validityDays: 30 } }),
     ]);
-    return [rs.every((r) => r.status === 403 && r.json?.title === 'principal-only'), rs.map((r) => r.status).join(', ')];
+    return [rs.every((r) => r.status === 403 && r.json?.code === 'principal-only'), rs.map((r) => r.status).join(', ')];
   });
 
 // ---------------------------------------------------------------- what responses give away

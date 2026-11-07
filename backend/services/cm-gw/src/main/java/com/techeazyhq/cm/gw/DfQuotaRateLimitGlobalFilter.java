@@ -43,6 +43,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 
 import com.techeazyhq.cm.seckit.AuthCtx;
+import com.techeazyhq.cm.webkit.Problems;
 
 import reactor.core.publisher.Mono;
 
@@ -149,7 +150,8 @@ public class DfQuotaRateLimitGlobalFilter implements GlobalFilter, Ordered {
         exchange.getResponse().setStatusCode(HttpStatus.TOO_MANY_REQUESTS);
         exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_PROBLEM_JSON);
         exchange.getResponse().getHeaders().add("Retry-After", "1");
-        byte[] body = "{\"type\":\"urn:cm:problem:rate-limit-exceeded\",\"title\":\"Too Many Requests\"}".getBytes();
+        byte[] body = Problems.json("rate-limit-exceeded", 429,
+                "The fiduciary's plan allows fewer requests a second than were sent.", Problems.correlationId(exchange));
         DataBuffer buffer = exchange.getResponse().bufferFactory().wrap(body);
         return exchange.getResponse().writeWith(Mono.just(buffer));
     }

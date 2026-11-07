@@ -47,7 +47,8 @@ A useful **bug report** says:
 - the version or commit, and how you run it (Docker Compose, from the IDE);
 - relevant logs, with tokens, passwords, consent tokens and personal data (email addresses, phone numbers, names)
   removed;
-- the problem type (`urn:cm:problem:...`) and correlation id from the error response, if you have them.
+- the error `code` (such as `quota-exceeded`, listed in the [error dictionary](docs/errors/error-dictionary.md)) and the
+  `correlationId` from the error response, if you have them.
 
 A useful **feature request** describes the problem you are trying to solve before the solution you have in mind.
 
@@ -133,6 +134,20 @@ The [README](README.md) lists the services, ports and demo sign-ins.
 - **License header.** Every new source file starts with the Apache 2.0 header and an author line. Copy it from any
   existing file of the same type.
 
+**Errors, warnings and events**
+
+- **Every error is in the [error dictionary](docs/errors/error-dictionary.md)** (`cm-error-dictionary.json` in
+  `cm-web-kit`, [ADR-062](docs/adr/adr-062-error-dictionary.md)). To add one, add its entry (code, status, title, what it
+  means, what the caller should do), raise it, and run `node scripts/error-dictionary.mjs --write`.
+  - Throw `new DomRuleViolation(status, "code", detail)`, or answer with `Problems`. Never write `urn:cm:problem:` by hand.
+  - A code has one status, and never changes once released. A different situation is a different code.
+  - The `title` comes from the dictionary and the `detail` says what was wrong this time. Callers and the UI branch on
+    `code`, never on `title` or `detail`.
+- **A WARN or ERROR that an operator should act on gets a code**, written first in the message: `[CM-OUTBOX-RELAY-FAILED] ...`.
+  Add it to the dictionary with what it means and what to do.
+- CI refuses a code raised but not listed, listed but not raised, raised with another status, a problem built by hand,
+  and a stale catalogue.
+
 **Data and secrets**
 
 - **Database changes** go in a new Flyway migration (`V<n>__description.sql`) in the owning service's `-boot` module.
@@ -187,7 +202,7 @@ branch protection described in [docs/branch-protection.md](docs/branch-protectio
 
 | Check | What it verifies |
 |---|---|
-| Backend build and tests | License headers, the OPA policies (`opa check`, `opa test`), `./gradlew build` (unit and PostgreSQL integration tests, ArchUnit layering), and line coverage at or above the ratchet in `build.gradle.kts` |
+| Backend build and tests | License headers, the error dictionary (`scripts/error-dictionary.mjs`), the OPA policies (`opa check`, `opa test`), `./gradlew build` (unit and PostgreSQL integration tests, ArchUnit layering), and line coverage at or above the ratchet in `build.gradle.kts` |
 | Frontend build and audit | The three micro-frontends build from the locked dependencies, with no HIGH or CRITICAL advisory in runtime dependencies |
 | Service images build | Every service image builds (its vulnerability scan is reported, and becomes blocking after the dependency upgrade) |
 | Dependency and secret scan | No HIGH or CRITICAL vulnerable dependency, committed secret or misconfiguration (Trivy) |

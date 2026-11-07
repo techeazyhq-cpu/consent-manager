@@ -79,7 +79,7 @@ expect(req.status === 201, 'the principal makes a request to the fiduciary', req
 
 // ---- closing the account
 const wrong = await api(dp, 'POST', '/api/dsr/me/account/close', { confirmation: 'yes please' });
-expect(wrong.status === 400, 'closing needs the typed confirmation', `${wrong.status} ${wrong.json?.title ?? ''}`);
+expect(wrong.status === 400, 'closing needs the typed confirmation', `${wrong.status} ${wrong.json?.code ?? ''}`);
 const closing = await api(dp, 'POST', '/api/dsr/me/account/close', { confirmation: 'CLOSE MY ACCOUNT' });
 expect(closing.status === 202 && closing.json.sts === 'RUNNING', 'the principal closes their account', closing.json?.step);
 const twice = await api(dp, 'POST', '/api/dsr/me/account/close', { confirmation: 'CLOSE MY ACCOUNT' });

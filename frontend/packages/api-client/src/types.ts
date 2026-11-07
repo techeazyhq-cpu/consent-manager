@@ -26,12 +26,24 @@ export type CnsLcySts = "PENDING" | "DENIED" | "ISSUED" | "REVOKED" | "NOTIFICAT
 export type DfSts = "PENDING" | "ACTIVE";
 export type DfSubSts = "ACTIVE" | "SUSPENDED";
 
+/**
+ * An error response (RFC 9457), from the platform's error dictionary (docs/errors/error-dictionary.md).
+ * Write logic against `code`, never against `title` or `detail`: the title is words for people and the detail changes.
+ */
 export interface ProblemDetail {
+  /** `urn:cm:problem:` and the code. */
   type: string;
+  /** The stable name of the error, such as `quota-exceeded`. */
+  code?: string;
+  /** The same short sentence every time for a code. */
   title: string;
   status?: number;
-  /** The human-readable explanation, when the service gives one. */
+  /** What was wrong this time: which field, which id. The human-readable explanation, when the service gives one. */
   detail?: string;
+  /** Whether trying the same request again later can work. */
+  retryable?: boolean;
+  /** Also the X-Correlation-Id header: what to quote when reporting it. */
+  correlationId?: string;
 }
 
 export interface DfRespDto {

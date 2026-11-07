@@ -39,6 +39,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 
 import com.techeazyhq.cm.seckit.AuthCtx;
+import com.techeazyhq.cm.webkit.Problems;
 
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import reactor.core.publisher.Mono;
@@ -57,12 +58,6 @@ public class PepVerifyGatewayFilter implements GlobalFilter, Ordered {
 
     private static final Pattern VERIFY_PATH = Pattern.compile("^/api/cns-qry/cns-arts/([^/]+)/verify$");
     private static final String CNS_TKN_HEADER = "X-Cns-Tkn";
-    private static final byte[] DENY_BODY = "{\"type\":\"urn:cm:problem:consent-not-verified\",\"title\":\"DENY\"}"
-            .getBytes(StandardCharsets.UTF_8);
-    private static final byte[] UNAVAILABLE_BODY = ("{\"type\":\"urn:cm:problem:consent-check-unavailable\","
-            + "\"title\":\"consent-check-unavailable\",\"status\":503,"
-            + "\"detail\":\"The consent could not be checked right now. This is not a decision: try again.\"}")
-            .getBytes(StandardCharsets.UTF_8);
     /** After a timeout, or a PDP that couldn't check: try again in a moment. */
     private static final Duration RETRY_SOON = Duration.ofSeconds(1);
 
@@ -163,12 +158,16 @@ public class PepVerifyGatewayFilter implements GlobalFilter, Ordered {
 
     /** A 403 problem: the PDP decided, and the answer is no. */
     private static Mono<Void> deny(ServerWebExchange exchange) {
-        return problem(exchange, HttpStatus.FORBIDDEN, DENY_BODY, null);
+        return problem(exchange, HttpStatus.FORBIDDEN, Problems.json("consent-not-verified", 403,
+                "The consent for this call could not be confirmed: do not process the personal data.",
+                Problems.correlationId(exchange)), null);
     }
 
     /** A 503 problem with Retry-After: the consent couldn't be checked, which says nothing about whether it stands. */
     private static Mono<Void> unavailable(ServerWebExchange exchange, Duration retryAfter) {
-        return problem(exchange, HttpStatus.SERVICE_UNAVAILABLE, UNAVAILABLE_BODY, retryAfter);
+        return problem(exchange, HttpStatus.SERVICE_UNAVAILABLE, Problems.json("consent-check-unavailable", 503,
+                "The consent could not be checked right now. This is not a decision: try again.",
+                Problems.correlationId(exchange)), retryAfter);
     }
 
     /**

@@ -25,6 +25,9 @@ dependencies {
     compileOnly("org.springframework.boot:spring-boot-autoconfigure:4.0.9")
     compileOnly("org.springframework.boot:spring-boot-jackson2:4.0.9") // our code stays on Jackson 2 for now (#216)
 
+    testImplementation("org.springframework.boot:spring-boot-starter-webflux:4.0.9")
+    testImplementation("org.springframework.boot:spring-boot-jackson2:4.0.9")
+    testImplementation("org.springframework:spring-test:7.0.10")
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

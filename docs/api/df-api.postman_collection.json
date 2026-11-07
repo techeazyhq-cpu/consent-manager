@@ -706,7 +706,7 @@
                 "exec": [
                   "// with a key that requires signing, an unsigned upload is refused, as it should be",
                   "pm.test('checked, or refused for want of a signature', () => {",
-                  "  if (pm.response.code === 401) pm.expect(pm.response.json().title).to.eql('signature-required');",
+                  "  if (pm.response.code === 401) pm.expect(pm.response.json().code).to.eql('signature-required');",
                   "  else pm.expect(pm.response.code).to.eql(200);",
                   "});"
                 ]
@@ -1758,7 +1758,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('refused as a replay', () => pm.response.to.have.status(409));",
-                  "pm.test('says why', () => pm.expect(pm.response.json().title).to.eql('request-replayed'));",
+                  "pm.test('says why', () => pm.expect(pm.response.json().code).to.eql('request-replayed'));",
                   "pm.collectionVariables.set('fixedNonce', '');",
                   "pm.collectionVariables.set('timestampOffset', '-600');"
                 ]
@@ -1806,7 +1806,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('refused as expired', () => pm.response.to.have.status(401));",
-                  "pm.test('says why', () => pm.expect(pm.response.json().title).to.eql('signature-expired'));",
+                  "pm.test('says why', () => pm.expect(pm.response.json().code).to.eql('signature-expired'));",
                   "pm.collectionVariables.set('timestampOffset', '0');"
                 ]
               }

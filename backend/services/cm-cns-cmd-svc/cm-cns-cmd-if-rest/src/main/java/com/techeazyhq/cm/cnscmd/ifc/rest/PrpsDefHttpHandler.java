@@ -97,7 +97,7 @@ public class PrpsDefHttpHandler {
     public Mono<ServerResponse> draftChange(ServerRequest request) {
         return asDf(request, false, ctx -> cmds.get(ctx.dfId(), code(request))
                 .flatMap(def -> def.draft().isEmpty()
-                        ? Mono.error(new DomRuleViolation(404, "no-draft", def.code() + " has no draft"))
+                        ? Mono.error(new DomRuleViolation(404, "draft-not-found", def.code() + " has no draft"))
                         : ServerResponse.ok().bodyValue(ChangeDto.of(def.draftChange()))));
     }
 

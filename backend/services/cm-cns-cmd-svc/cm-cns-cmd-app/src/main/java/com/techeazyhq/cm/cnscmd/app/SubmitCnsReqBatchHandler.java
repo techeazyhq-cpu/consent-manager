@@ -98,7 +98,7 @@ public class SubmitCnsReqBatchHandler {
 
         return dfActive.isActive(cmd.dfId())
                 .flatMap(active -> active ? Mono.<Void>empty()
-                        : Mono.error(new DomRuleViolation(404, "df-not-active", "DF " + cmd.dfId() + " is not active")))
+                        : Mono.error(new DomRuleViolation(403, "df-not-active", "DF " + cmd.dfId() + " is not active")))
                 .then(Mono.defer(() -> {
                     if (cmd.dryRun()) {
                         return usage.available(cmd.dfId()).map(left -> new Result(batch, problems, left, false));

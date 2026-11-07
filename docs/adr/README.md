@@ -65,6 +65,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [059](adr-059-closing-an-account-erasure-saga.md) | Closing an account: the erasure saga across five services, with the consent records kept | Accepted |
 | [060](adr-060-usage-threshold-alerts.md) | Usage-threshold alerts: a sweep, one alert per month and threshold, emailed by df-reg through ntf | Accepted |
 | [061](adr-061-sign-in-code-abuse-limits.md) | Limits on sign-in codes across sign-ins: codes per address, per network, and wrong guesses per address | Accepted |
+| [062](adr-062-error-dictionary.md) | One error dictionary used by every service: a code, a title, what to do, and a check in CI | Accepted |
 
 ## Writing one
 

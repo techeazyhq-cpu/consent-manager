@@ -48,6 +48,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import reactor.core.publisher.Flux;
+import com.techeazyhq.cm.webkit.Problems;
+
 import reactor.core.publisher.Mono;
 
 /**
@@ -158,21 +160,11 @@ public class ApiKeyAuthWebFilter implements WebFilter, Ordered {
         };
     }
 
-    private static Mono<Void> problem(ServerWebExchange exchange, HttpStatus status, String type, String detail) {
+    private static Mono<Void> problem(ServerWebExchange exchange, HttpStatus status, String code, String detail) {
         var response = exchange.getResponse();
         response.setStatusCode(status);
         response.getHeaders().setContentType(MediaType.APPLICATION_PROBLEM_JSON);
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("type", "urn:cm:problem:" + type);
-        body.put("title", type);
-        body.put("status", status.value());
-        body.put("detail", detail);
-        byte[] bytes;
-        try {
-            bytes = JSON.writeValueAsBytes(body);
-        } catch (Exception e) {
-            bytes = ("{\"type\":\"urn:cm:problem:" + type + "\"}").getBytes(StandardCharsets.UTF_8);
-        }
+        byte[] bytes = Problems.json(code, status.value(), detail, Problems.correlationId(exchange));
         return response.writeWith(Mono.just(response.bufferFactory().wrap(bytes)));
     }
 
@@ -202,7 +194,8 @@ public class ApiKeyAuthWebFilter implements WebFilter, Ordered {
             HttpStatus status = HttpStatus.resolve(e.getStatusCode().value());
             try {
                 JsonNode p = JSON.readTree(e.getResponseBodyAsByteArray());
-                String type = p.path("title").asText(p.path("type").asText("api-key-invalid").replace("urn:cm:problem:", ""));
+                // the code is the stable name; the title is words for people and can change (ADR-062)
+                String type = p.path("code").asText(Problems.codeOf(p.path("type").asText("api-key-invalid")));
                 return new Refused(status == null ? HttpStatus.UNAUTHORIZED : status, type, p.path("detail").asText(type));
             } catch (Exception parse) {
                 return new Refused(status == null ? HttpStatus.UNAUTHORIZED : status, "api-key-invalid",

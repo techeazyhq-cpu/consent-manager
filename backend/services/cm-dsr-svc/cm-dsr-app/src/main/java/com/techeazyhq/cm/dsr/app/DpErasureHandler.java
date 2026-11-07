@@ -150,7 +150,7 @@ public class DpErasureHandler {
             return Mono.just(erasure);
         }
         if (erasure.giveUpIfExhausted(erasure.lastError())) {
-            LOG.error("Erasure {} is STUCK at {} after {} attempts: {}. See docs/runbooks/erasure.md", erasure.id(),
+            LOG.error("[CM-ERASURE-STUCK] Erasure {} is STUCK at {} after {} attempts: {}. See docs/runbooks/erasure.md", erasure.id(),
                     erasure.step(), erasure.attempts(), erasure.lastError());
             return erasures.save(erasure)
                     .flatMap(saved -> audit.record("dp-erasure.stuck", null, saved.id(),
@@ -194,7 +194,7 @@ public class DpErasureHandler {
 
     /** The attempt failed; it is tried again by {@link #redrive} until it gives up. */
     private Mono<DpErasure> failed(DpErasure erasure, Throwable e) {
-        LOG.warn("Erasure {} step {} attempt {} failed", erasure.id(), erasure.step(), erasure.attempts(), e);
+        LOG.warn("[CM-ERASURE-STEP-FAILED] Erasure {} step {} attempt {} failed", erasure.id(), erasure.step(), erasure.attempts(), e);
         return erasures.findById(erasure.id())
                 .flatMap(fresh -> {
                     fresh.failed(e.getClass().getSimpleName() + ": " + e.getMessage());

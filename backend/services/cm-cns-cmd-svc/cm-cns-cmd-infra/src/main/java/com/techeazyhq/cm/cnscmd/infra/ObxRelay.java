@@ -83,7 +83,7 @@ public class ObxRelay {
                 .then()
                 .doFinally(signal -> passRunning.set(false))
                 .subscribe(v -> {
-                }, err -> org.slf4j.LoggerFactory.getLogger(ObxRelay.class).warn("Outbox relay iteration failed", err));
+                }, err -> org.slf4j.LoggerFactory.getLogger(ObxRelay.class).warn("[CM-OUTBOX-RELAY-FAILED] Outbox relay iteration failed", err));
     }
 
     private Flux<OutboxRow> fetchUnpublished() {

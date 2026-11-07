@@ -128,6 +128,7 @@ By hand, in a browser: [docs/walkthrough.md](docs/walkthrough.md).
 | `frontend/packages` | The three micro-frontends and their shared packages |
 | `infra` | Docker Compose stack, Keycloak realm, OPA policies, Pulsar setup |
 | `docs/adr` | Architecture decision records |
+| `docs/errors` | The [error dictionary](docs/errors/error-dictionary.md): every error, warning and event, and what to do about it |
 | `scripts` | Verification and project-management scripts |
 
 ## Contributing

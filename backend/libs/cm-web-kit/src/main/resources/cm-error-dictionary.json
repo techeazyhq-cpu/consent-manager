@@ -1,0 +1,1643 @@
+{
+  "version": 1,
+  "description": "The one list of errors, warnings and events this platform raises (ADR-062). Edit this file, then run: node scripts/error-dictionary.mjs --write",
+  "entries": [
+    {
+      "code": "account-exists",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "An account with that email already exists",
+      "description": "The email address already belongs to an account, so a second cannot be created.",
+      "action": "Use a different address, or sign in with the existing account.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc",
+        "cm-stf-svc"
+      ]
+    },
+    {
+      "code": "admin-only",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "Administrators only",
+      "description": "Only a platform administrator can manage staff.",
+      "action": "Ask a platform administrator.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-stf-svc"
+      ]
+    },
+    {
+      "code": "ambiguous-credentials",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Two kinds of credentials sent",
+      "description": "The request carried both an API key and a bearer token, so it is unclear which identity is calling.",
+      "action": "Send one credential: either the API key headers or a bearer token.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-gw"
+      ]
+    },
+    {
+      "code": "api-key-check-unavailable",
+      "kind": "problem",
+      "status": 503,
+      "category": "dependency",
+      "title": "API key could not be checked",
+      "description": "The service that checks API keys is not answering. This says nothing about whether the key is valid.",
+      "action": "Retry after the Retry-After interval. If it keeps failing, report the correlation id.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-gw"
+      ]
+    },
+    {
+      "code": "api-key-invalid",
+      "kind": "problem",
+      "status": 401,
+      "category": "authentication",
+      "title": "API key not accepted",
+      "description": "The API key is missing, unknown, malformed or revoked, or its signature could not be checked. The reasons are not told apart on purpose.",
+      "action": "Check the key, and that it was copied whole. Issue a new key in the DF Console if it was revoked.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc",
+        "cm-gw"
+      ]
+    },
+    {
+      "code": "api-key-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "API key not found",
+      "description": "No API key with that id belongs to this fiduciary.",
+      "action": "List the fiduciary's keys and use an id from that list.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "api-key-revoked",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "API key already revoked",
+      "description": "The key was revoked earlier, and a revoked key cannot be changed or used.",
+      "action": "Issue a new key if one is needed.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "aud-forbidden",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "Not allowed to read the audit",
+      "description": "Only Owners, Administrators and Auditors of the fiduciary, and platform staff, read the audit.",
+      "action": "Ask someone with that role.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-aud-svc"
+      ]
+    },
+    {
+      "code": "aud-not-checkpointed",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Entry not anchored yet",
+      "description": "The entry is not part of a timestamped checkpoint yet, so it has no proof.",
+      "action": "Try again after the next checkpoint.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-aud-svc"
+      ]
+    },
+    {
+      "code": "batch-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Batch not found",
+      "description": "No batch with that id belongs to this fiduciary.",
+      "action": "List the batches and use an id from it.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "cannot-change-admin",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "Administrators are managed elsewhere",
+      "description": "Platform administrators are managed in Keycloak, not through this service.",
+      "action": "Change them in Keycloak.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-stf-svc"
+      ]
+    },
+    {
+      "code": "cannot-change-self",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "You cannot change your own role",
+      "description": "People cannot change or remove their own account here.",
+      "action": "Ask another Owner or Administrator.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc",
+        "cm-stf-svc"
+      ]
+    },
+    {
+      "code": "cns-art-expired",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Consent has lapsed",
+      "description": "The consent's validity ended.",
+      "action": "Ask for consent again.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "cns-art-not-active",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Consent is not active",
+      "description": "The consent has been withdrawn or has lapsed, so its token cannot be refreshed.",
+      "action": "Ask for consent again.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "cns-art-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Consent not found",
+      "description": "No consent with that id is visible to the caller.",
+      "action": "Check the id.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "cns-art-not-in-force",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Consent is not in force",
+      "description": "The consent is not in force, so it cannot be changed.",
+      "action": "Read the consent's state first.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "cns-art-not-issued",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Consent is not in force",
+      "description": "The consent was never given, or has been withdrawn, so this cannot be done.",
+      "action": "Read the consent's state first.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "cns-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Consent not found",
+      "description": "The person has no consent with that id.",
+      "action": "Choose one of your consents.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "cns-req-dp-not-linked",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Request not yet linked to a person",
+      "description": "The request was sent to an address the person has not signed in with yet, so it cannot be decided.",
+      "action": "The person must sign in with the address it was sent to.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "cns-req-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Consent request not found",
+      "description": "No consent request with that id is visible to the caller.",
+      "action": "Check the id.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "cns-req-not-pending",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Consent request already decided",
+      "description": "The request was already given, refused or withdrawn.",
+      "action": "Read its current state; raise a new request if needed.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "confirmation-required",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Confirmation needed",
+      "description": "Closing an account needs the confirmation words typed exactly.",
+      "action": "Type the words the page asks for.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "consent-check-unavailable",
+      "kind": "problem",
+      "status": 503,
+      "category": "dependency",
+      "title": "Consent could not be checked",
+      "description": "The policy decision point could not answer in time or is unavailable. This is not a decision.",
+      "action": "Retry after the Retry-After interval; do not treat it as a refusal or as permission.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-gw"
+      ]
+    },
+    {
+      "code": "consent-not-verified",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "Consent not verified",
+      "description": "The consent behind this call could not be confirmed: it is missing, withdrawn, lapsed, for another purpose or fiduciary, or the token was altered.",
+      "action": "Do not process the personal data. Ask the person for consent again if it is still needed.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-gw"
+      ]
+    },
+    {
+      "code": "contact-not-verified",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "Contact not verified",
+      "description": "The sign-in did not verify an email address or number to claim requests with.",
+      "action": "Sign in again with a code sent to your own address.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "contact-not-yours",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "That is not your address",
+      "description": "Requests can only be claimed for the address you signed in with.",
+      "action": "Claim requests with your own address.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "delivery-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Webhook delivery not found",
+      "description": "No delivery with that id belongs to this fiduciary.",
+      "action": "List the deliveries and use an id from it.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "delivery-pending",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Delivery still being tried",
+      "description": "The delivery has not finished, so it cannot be replayed yet.",
+      "action": "Wait until it is delivered or failed.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "dependency-unavailable",
+      "kind": "problem",
+      "status": 503,
+      "category": "dependency",
+      "title": "A service is unavailable",
+      "description": "A service this call depends on is not answering and its circuit breaker is open. The request was not attempted.",
+      "action": "Retry after the Retry-After interval.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-aud-svc",
+        "cm-cns-cmd-svc",
+        "cm-df-reg-svc",
+        "cm-dsr-svc",
+        "cm-gw",
+        "cm-ntf-svc",
+        "cm-stf-svc"
+      ]
+    },
+    {
+      "code": "df-activation-required",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Activate the fiduciary first",
+      "description": "Its team can only be managed once the fiduciary has been activated.",
+      "action": "Activate the fiduciary, then try again.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "df-api-client-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "API client not found",
+      "description": "The fiduciary has no API client; it is created when the fiduciary is activated.",
+      "action": "Activate the fiduciary first.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "df-not-active",
+      "kind": "problem",
+      "status": 403,
+      "category": "state",
+      "title": "Fiduciary not active",
+      "description": "The fiduciary is registered but not active, or has been suspended, so it cannot act yet.",
+      "action": "Activate the fiduciary, or contact the platform if it was suspended.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc",
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "df-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Fiduciary not found",
+      "description": "No fiduciary with that id exists.",
+      "action": "Check the id.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "df-sub-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Subscription not found",
+      "description": "The fiduciary has no subscription yet; it starts when the fiduciary is activated.",
+      "action": "Activate the fiduciary first.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "dp-only",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "For data principals only",
+      "description": "Only a person has push devices.",
+      "action": "Sign in as the person.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-ntf-svc"
+      ]
+    },
+    {
+      "code": "dp-request-closed",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Request already closed",
+      "description": "The request was already answered, refused or withdrawn.",
+      "action": "Read its current state.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "dp-request-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Request not found",
+      "description": "No request with that id is visible to the caller.",
+      "action": "Check the id.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "dp-request-open",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "Already asked",
+      "description": "The person already has this request open for this consent.",
+      "action": "Wait for the answer, or withdraw the open one.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "draft-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Draft not found",
+      "description": "The purpose has no draft.",
+      "action": "Draft a change first.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "erasure-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Erasure not found",
+      "description": "No erasure with that id exists.",
+      "action": "List the erasures and use an id from it.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "erasure-not-stuck",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Erasure is not stuck",
+      "description": "Only a stuck erasure can be retried.",
+      "action": "Read its state first.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "erasure-running",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "Account is already being closed",
+      "description": "An erasure for this account is already under way.",
+      "action": "Wait for it to finish.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "internal-error",
+      "kind": "problem",
+      "status": 500,
+      "category": "internal",
+      "title": "Something went wrong on our side",
+      "description": "An unexpected error stopped the request. Nothing about it is shown here, to avoid giving details away; the service logged it with the correlation id.",
+      "action": "Retry once. If it happens again, report the correlation id to the platform.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-aud-svc",
+        "cm-bil-svc",
+        "cm-cns-cmd-svc",
+        "cm-cns-qry-svc",
+        "cm-df-reg-svc",
+        "cm-dsr-svc",
+        "cm-gw",
+        "cm-ntf-svc",
+        "cm-stf-svc"
+      ]
+    },
+    {
+      "code": "invalid-answer",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Answer not valid",
+      "description": "An answer needs a reply, and a refusal also needs its legal ground. The detail says which.",
+      "action": "Add what is missing.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "invalid-api-key",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "API key request not valid",
+      "description": "The request to issue an API key was refused. The detail says why.",
+      "action": "Correct the request as the detail says.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "invalid-batch",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Batch not valid",
+      "description": "The batch request was refused. The detail says why.",
+      "action": "Correct the batch as the detail says.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "invalid-change",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Change not valid",
+      "description": "The change to the consent or purpose was refused. The detail says why.",
+      "action": "Correct the change as the detail says.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "invalid-count",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Count out of range",
+      "description": "The number of requests to reserve or release must be from 1 to 100,000.",
+      "action": "Send a count in range.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "invalid-decision",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Decision not valid",
+      "description": "A decline needs a reason, or the note was too long.",
+      "action": "Say why the request is declined, in the note.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "invalid-df-id",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Fiduciary id not valid",
+      "description": "A fiduciary id must be a UUID.",
+      "action": "Use the id as given by the platform.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "invalid-df-profile",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Fiduciary profile not valid",
+      "description": "A field of the fiduciary's profile was refused. The detail names it.",
+      "action": "Correct the profile field named in the detail.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "invalid-dp-request",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Request not valid",
+      "description": "The request is missing its consent or details, or they are too long. The detail says which.",
+      "action": "Correct the request as the detail says.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "invalid-grant",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Choice not valid",
+      "description": "The data or validity the person chose is not allowed for this request. The detail says why.",
+      "action": "Choose within what the request offers.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "invalid-kind",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Kind of request not recognised",
+      "description": "The kind of request must be RELAY or GRIEVANCE.",
+      "action": "Use one of them.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "invalid-list",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Recipient list not valid",
+      "description": "The recipient list could not be read. The detail says why.",
+      "action": "Correct the list as the detail says.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "invalid-logo",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Logo not valid",
+      "description": "The logo is not a supported image.",
+      "action": "Upload a PNG, JPEG or SVG logo.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "invalid-member",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Team member not valid",
+      "description": "A required field of the new member is missing or not valid. The detail names it.",
+      "action": "Correct the field named in the detail.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "invalid-operator",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Operator not valid",
+      "description": "A required field of the new operator is missing or not valid.",
+      "action": "Correct the field named in the detail.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-stf-svc"
+      ]
+    },
+    {
+      "code": "invalid-parameter",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Parameter not valid",
+      "description": "A query parameter has the wrong form. The detail names it.",
+      "action": "Correct the parameter.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "invalid-period",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Month not valid",
+      "description": "A month is written like 2026-11.",
+      "action": "Use that form.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "invalid-plan-change-request",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Plan change request not valid",
+      "description": "The request names no plan, the plan the fiduciary already has, or a note that is too long.",
+      "action": "Choose a different plan and keep the note short.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "invalid-purpose",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Purpose not valid",
+      "description": "The purpose or its content was refused. The detail names what is wrong.",
+      "action": "Correct what the detail names.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "invalid-request",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Request not valid",
+      "description": "The request is missing something it needs, or a value is not valid. The detail says which.",
+      "action": "Correct the request as the detail says.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc",
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "invalid-right",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Right not recognised",
+      "description": "The right asked for is not one of access, correction, erasure, grievance or nomination.",
+      "action": "Use one of the listed rights.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "invalid-sts",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Status not recognised",
+      "description": "The status filter is not one of the values this list has.",
+      "action": "Use one of the listed values.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc",
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "invalid-webhook",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Webhook endpoint not valid",
+      "description": "The endpoint's address, its message types or the request body was refused. The detail says why.",
+      "action": "Correct the endpoint as the detail says.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "last-owner",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "A fiduciary must keep an Owner",
+      "description": "The change would leave the fiduciary without an Owner, which is not allowed.",
+      "action": "Make someone else an Owner first.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "list-too-large",
+      "kind": "problem",
+      "status": 413,
+      "category": "validation",
+      "title": "Recipient list too large",
+      "description": "The file is larger than 5 MB or has more recipients than a batch allows.",
+      "action": "Split the list.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "logo-too-large",
+      "kind": "problem",
+      "status": 413,
+      "category": "validation",
+      "title": "Logo too large",
+      "description": "The logo is larger than allowed.",
+      "action": "Upload a smaller image.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "malformed-request",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Request could not be read",
+      "description": "The body, a parameter or a header could not be understood: for example JSON that does not parse, or a value of the wrong type.",
+      "action": "Check the request against the API description.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-aud-svc",
+        "cm-bil-svc",
+        "cm-cns-cmd-svc",
+        "cm-cns-qry-svc",
+        "cm-df-reg-svc",
+        "cm-dsr-svc",
+        "cm-gw",
+        "cm-ntf-svc",
+        "cm-stf-svc"
+      ]
+    },
+    {
+      "code": "may-not-answer",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "Not allowed to answer requests",
+      "description": "Only an Owner, an Administrator or a Consent manager answers requests, and platform staff answer grievances.",
+      "action": "Ask someone with that role.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "may-not-request-plan",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "Not allowed to ask for a plan change",
+      "description": "Only an Owner or an Administrator of the fiduciary can ask for another plan, or withdraw the request.",
+      "action": "Ask an Owner or Administrator.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "member-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Team member not found",
+      "description": "No member with that id belongs to this fiduciary.",
+      "action": "List the team and use an id from it.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "no-draft",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "No draft to publish",
+      "description": "The purpose has no draft, so there is nothing to publish.",
+      "action": "Draft a change first.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "no-valid-recipients",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "No valid recipients",
+      "description": "None of the rows in the list was a usable email address or number.",
+      "action": "Check the list, and that its contact column is named.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "not-a-data-principal",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "For data principals only",
+      "description": "Only a person signed in to the DP portal or app can do this.",
+      "action": "Sign in as the person concerned.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc",
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "not-a-fiduciary",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "For fiduciaries only",
+      "description": "The caller is not signed in as a fiduciary.",
+      "action": "Use a fiduciary's account or API client.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc",
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "not-a-fiduciary-member",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "For people at a fiduciary only",
+      "description": "This is for a person signed in to the DF Console, not for a system or API key.",
+      "action": "Sign in to the DF Console.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "not-a-test-contact",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Not a test contact",
+      "description": "In the sandbox, requests can only go to contacts reserved for testing.",
+      "action": "Use a test contact from the developer docs.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "not-permitted",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "Not permitted for this caller",
+      "description": "This action needs a person with the right role at the fiduciary, not a system or API key, or a different role.",
+      "action": "Ask someone with the required role.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc",
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "not-platform-admin",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "Platform administrators only",
+      "description": "Only a platform administrator can approve or decline plan changes.",
+      "action": "Ask a platform administrator.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "not-platform-staff",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "Platform staff only",
+      "description": "Only platform administrators and operators can do this.",
+      "action": "Ask platform staff.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc",
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "owner-exists",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "The fiduciary already has an Owner",
+      "description": "A fiduciary has one Owner, who manages its team.",
+      "action": "Ask the Owner to add people.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "payload-too-large",
+      "kind": "problem",
+      "status": 413,
+      "category": "validation",
+      "title": "Request body too large",
+      "description": "The request body is larger than the gateway accepts.",
+      "action": "Send a smaller body, or split it.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-gw"
+      ]
+    },
+    {
+      "code": "plan-change-request-decided",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Plan change already decided",
+      "description": "The request was already approved, declined or withdrawn.",
+      "action": "Read its current state; nothing more to do.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "plan-change-request-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Plan change request not found",
+      "description": "No plan change request with that id is visible to the caller.",
+      "action": "List the requests and use an id from the list.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "plan-change-request-pending",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "A plan change is already waiting",
+      "description": "The fiduciary already has a plan change request waiting for a decision.",
+      "action": "Withdraw the waiting request to ask for another plan.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "principal-only",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "For the person only",
+      "description": "Only the person the consent is about can do this, not the fiduciary or its systems.",
+      "action": "Ask the person to do it themselves.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "purpose-exists",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "Purpose already exists",
+      "description": "A purpose with that code exists already.",
+      "action": "Draft a new version of it instead of creating it again.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "purpose-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Purpose not found",
+      "description": "The fiduciary has no purpose with that code.",
+      "action": "List the purposes and use a code from the list.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "purpose-not-published",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Purpose not published yet",
+      "description": "The purpose has no published version to ask consent for.",
+      "action": "Publish the purpose first.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "purpose-version-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Purpose version not found",
+      "description": "The purpose has no version with that number.",
+      "action": "Use a version from the purpose's published versions.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "purpose-version-superseded",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "Purpose version replaced",
+      "description": "A newer version of the purpose has been published since, so a request cannot name this one.",
+      "action": "Ask for the current version.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "push-dvc-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Device not found",
+      "description": "The person has no such device.",
+      "action": "List the devices and use an id from it.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-ntf-svc"
+      ]
+    },
+    {
+      "code": "push-token-invalid",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Push token not valid",
+      "description": "The device token is missing or not valid.",
+      "action": "Register the device again.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-ntf-svc"
+      ]
+    },
+    {
+      "code": "quota-exceeded",
+      "kind": "problem",
+      "status": 429,
+      "category": "quota",
+      "title": "Monthly allowance used up",
+      "description": "The fiduciary has used its plan's whole monthly allowance, so new consent requests are refused until the month turns.",
+      "action": "Wait for the allowance to reset, or ask for a larger plan in the DF Console under Billing.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "rate-limit-exceeded",
+      "kind": "problem",
+      "status": 429,
+      "category": "rate-limit",
+      "title": "Too many requests a second",
+      "description": "The fiduciary's plan allows only so many requests a second, and this call went over it.",
+      "action": "Wait for the Retry-After interval and slow down, or ask for a plan with a higher rate.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-gw"
+      ]
+    },
+    {
+      "code": "record-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Consent record not found",
+      "description": "There is no record for that consent request.",
+      "action": "Check the id.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "request-replayed",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "Request already used",
+      "description": "The nonce of this signed request was used before, so it was refused as a replay.",
+      "action": "Sign every request, retries included, with a new nonce.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "role-cannot-use-sandbox",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "Role cannot take sandbox keys",
+      "description": "Only an Owner, an Administrator or a Developer can take sandbox keys.",
+      "action": "Ask one of them.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "signature-expired",
+      "kind": "problem",
+      "status": 401,
+      "category": "authentication",
+      "title": "Request signature out of date",
+      "description": "The signed timestamp is more than five minutes from the server's clock.",
+      "action": "Sign each request when it is sent, and keep the caller's clock correct.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "signature-invalid",
+      "kind": "problem",
+      "status": 401,
+      "category": "authentication",
+      "title": "Request signature does not match",
+      "description": "The signature did not match the request as received: its method, path, query, body or secret differ from what was signed.",
+      "action": "Sign exactly the bytes sent, with the key's signing secret, and check the header formats.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "signature-required",
+      "kind": "problem",
+      "status": 401,
+      "category": "authentication",
+      "title": "Request signature required",
+      "description": "This API key requires signed requests, and the signature headers were missing or incomplete.",
+      "action": "Send X-Signature-Timestamp, X-Signature-Nonce and X-Signature, signed as in the developer docs.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "staff-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Staff account not found",
+      "description": "No platform staff account with that id exists.",
+      "action": "List the staff and use an id from it.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-stf-svc"
+      ]
+    },
+    {
+      "code": "sub-inactive",
+      "kind": "problem",
+      "status": 402,
+      "category": "subscription",
+      "title": "Subscription not active",
+      "description": "The fiduciary's subscription is suspended, so its monthly allowance cannot be used.",
+      "action": "Contact the platform to reactivate the subscription.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "sub-pln-missing",
+      "kind": "problem",
+      "status": 500,
+      "category": "internal",
+      "title": "Plan missing for a subscription",
+      "description": "A subscription refers to a plan that no longer exists. This is a data fault, not something the caller did.",
+      "action": "Report it to the platform with the correlation id.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "sub-pln-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Plan not found",
+      "description": "There is no subscription plan with that id.",
+      "action": "List the plans and use one of them.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "subscription-inactive",
+      "kind": "problem",
+      "status": 402,
+      "category": "subscription",
+      "title": "Subscription not active",
+      "description": "The fiduciary's subscription is suspended or ended, so new consent requests are refused.",
+      "action": "Contact the platform to reactivate the subscription.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "token-unavailable",
+      "kind": "problem",
+      "status": 503,
+      "category": "dependency",
+      "title": "Access token unavailable",
+      "description": "An access token for this fiduciary could not be obtained from the identity provider right now.",
+      "action": "Retry in a moment.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "too-many-open-requests",
+      "kind": "problem",
+      "status": 429,
+      "category": "quota",
+      "title": "Too many open requests",
+      "description": "A person can have at most 20 requests open at once.",
+      "action": "Wait for answers, or withdraw one.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "too-many-webhooks",
+      "kind": "problem",
+      "status": 409,
+      "category": "quota",
+      "title": "Too many webhook endpoints",
+      "description": "A fiduciary can have at most ten endpoints.",
+      "action": "Remove one you no longer use.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "unknown-sub-pln",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Unknown plan",
+      "description": "There is no plan with that name.",
+      "action": "List the plans and use one of their names.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc",
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "unsupported-list",
+      "kind": "problem",
+      "status": 415,
+      "category": "validation",
+      "title": "List type not supported",
+      "description": "The file is not JSON, CSV or Excel.",
+      "action": "Send the list as JSON, CSV or .xlsx.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "webhook-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Webhook endpoint not found",
+      "description": "No webhook endpoint with that id belongs to this fiduciary.",
+      "action": "List the endpoints and use an id from it.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "webhook-paused",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Webhook endpoint paused",
+      "description": "The endpoint is paused, so it cannot be sent a test.",
+      "action": "Resume the endpoint first.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "CM-ERASURE-STUCK",
+      "kind": "log",
+      "level": "ERROR",
+      "category": "operations",
+      "title": "Account erasure stuck",
+      "description": "An account erasure gave up on a step after eight attempts and stopped. Part of the person's data is erased and part is not.",
+      "action": "Find the cause for the step named in the message and retry it in CM Admin; see docs/runbooks/erasure.md.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "CM-ERASURE-STEP-FAILED",
+      "kind": "log",
+      "level": "WARN",
+      "category": "operations",
+      "title": "Account erasure step failed",
+      "description": "One attempt at an erasure step failed. It is tried again every two minutes until it gives up.",
+      "action": "No action unless CM-ERASURE-STUCK follows; check the named step's service if it repeats.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "CM-OUTBOX-RELAY-FAILED",
+      "kind": "log",
+      "level": "WARN",
+      "category": "operations",
+      "title": "Outbox relay pass failed",
+      "description": "The service could not publish waiting events to Pulsar in one pass. They stay in the outbox and are sent on the next pass.",
+      "action": "If it repeats, check that Pulsar is reachable and the service's database is healthy; events are not lost.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc",
+        "cm-dsr-svc",
+        "cm-df-reg-svc",
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "CM-USAGE-ALERT-FAILED",
+      "kind": "log",
+      "level": "WARN",
+      "category": "operations",
+      "title": "Usage alert check failed",
+      "description": "The usage alert sweep could not check one fiduciary, or the whole pass failed. It is tried again every minute.",
+      "action": "If it repeats, check Redis and the billing database.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "cm_otp_rate_limited",
+      "kind": "event",
+      "category": "authentication",
+      "title": "Sign-in code refused by a limit",
+      "description": "A Keycloak event raised when a sign-in code was refused because of a limit across sign-ins. The detail cm_otp_limit says which: TOO_MANY_CODES, NETWORK_BUSY or TOO_MANY_WRONG_GUESSES (ADR-061).",
+      "action": "Alert on bursts. A burst for one address is someone being targeted; a burst of NETWORK_BUSY from one address is one host spraying.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-idn-otp-spi"
+      ]
+    },
+    {
+      "code": "CM-INTERNAL-ERROR",
+      "kind": "log",
+      "level": "ERROR",
+      "category": "operations",
+      "title": "Unexpected error ended a request",
+      "description": "An exception nobody planned for ended a request. The caller was answered with internal-error and the correlation id; the exception and its stack trace are in this log message.",
+      "action": "Find the log line by the correlation id the caller quotes, and fix the cause. A burst of them is an incident.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-aud-svc",
+        "cm-bil-svc",
+        "cm-cns-cmd-svc",
+        "cm-cns-qry-svc",
+        "cm-df-reg-svc",
+        "cm-dsr-svc",
+        "cm-gw",
+        "cm-ntf-svc",
+        "cm-stf-svc"
+      ]
+    },
+    {
+      "code": "CM-ERRDICT-UNLISTED",
+      "kind": "log",
+      "level": "ERROR",
+      "category": "operations",
+      "title": "Problem missing from the error dictionary",
+      "description": "A service answered a problem whose code is not in the error dictionary, so it got a title made from its name. CI should have refused it.",
+      "action": "Add the code to cm-error-dictionary.json and run node scripts/error-dictionary.mjs --write.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-aud-svc",
+        "cm-bil-svc",
+        "cm-cns-cmd-svc",
+        "cm-cns-qry-svc",
+        "cm-df-reg-svc",
+        "cm-dsr-svc",
+        "cm-gw",
+        "cm-ntf-svc",
+        "cm-stf-svc"
+      ]
+    }
+  ]
+}

@@ -70,7 +70,7 @@ public class UsgAlertSweep {
                         .filter(sub -> sub.sts() == DfSubSts.ACTIVE && byId.containsKey(sub.subPlnId()))
                         .flatMap(sub -> check(sub, byId.get(sub.subPlnId()), month, resetsAt)
                                 .onErrorResume(e -> {
-                                    LOG.warn("Usage alert check failed for {}", sub.id(), e);
+                                    LOG.warn("[CM-USAGE-ALERT-FAILED] Usage alert check failed for {}", sub.id(), e);
                                     return Mono.just(false);
                                 }), CONCURRENCY)
                         .filter(Boolean::booleanValue)
