@@ -55,6 +55,44 @@ Thirteen are fixed, the CI gate is in place, two are accepted, and one is open (
 | V-15 | Critical | Anyone signed in, a fiduciary's API key included, could approve, decline or withdraw any consent by its id | Fixed (ADR-044) |
 | V-16 | Accepted | Two HIGH advisories without a patched release in the mobile app's build tooling (braces, node-forge) | Accepted until 2026-12-31 |
 | V-17 | Medium | Overloaded, the PEP answers a valid consent with DENY (403 `consent-not-verified`), not 503 | Fixed (ADR-057); confirmed by the ramp, 0 of 16,209 refusals a 403 |
+| V-18 | Medium | The receipt job read every consent event and receipt every 2 s, a cost that grew with each consent ever recorded | Fixed (V7, a queue of events awaiting receipts) |
+
+### V-18: a receipt job that grew with history (Medium)
+
+Found on 7 November 2026, when the mix at 100 a second that had passed that morning failed 11% in the afternoon on
+the same settings, with Postgres's one CPU at its limit. Nothing was stuck or backed up, and no table was large
+(43,000 consent events). `pg_stat_statements` showed where the time went:
+
+| Statement | Share of Postgres's time | Mean |
+|---|---|---|
+| `aud.chain_head … for update` (the audit chain's head, one writer at a time) | 23% | 7 ms |
+| notification-service's three `notification_message` updates (it shares this Postgres, ADR-053) | 24% | 4–10 ms |
+| **cm-cns-cmd-svc's receipt job: events without a receipt** | **11%** | **158 ms** |
+| df-reg's nonce insert | 7% | 0.4 ms |
+
+`CnsRcptJob` asks every 2 s for the events still waiting for a receipt (ADR-025). It found them by joining every
+record event to every receipt: two full table reads and a hash join per pass, so its cost grew with each consent ever
+recorded. It was 30 ms a pass on an idle stack and 158 ms under load at 43,000 events; the day's load tests had
+multiplied the tables since the morning. In production, at millions of consents, it would take Postgres down on its
+own.
+
+**Fix:** a queue, `cns_cmd.cns_rcpt_pending` (migration V7). An event joins it in the statement that appends it, and
+leaves it in the statement that saves its receipt, so a pass reads only what is waiting. The migration queues the
+events recorded before it without a receipt. `CnsRcptQueueIT` covers the backfill, the queue, a redelivered event
+(queued once), and leaving with the receipt.
+
+**Measured, the same mix at 100 a second, Postgres at 1 CPU, after a three-minute warm-up:**
+
+| | Before | After (two runs) |
+|---|---|---|
+| Failed | 10.7% (1,232 of 11,496) | 0.01% and 0% (1 of 12,063; 0 of 12,031) |
+| p95 token / verify | 8.0 s / 2.6 s | 126 / 137 ms and 379 / 219 ms |
+| Postgres CPU, median | about 100% | about 58% |
+| Postgres's statement time in the 2 minutes | 61.5 s | 31.7 s |
+
+The receipt query left the list; saving a receipt, now with the queue's delete, takes 1.2 ms. The audit chain's
+lock wait fell from 7 to 1.9 ms with Postgres no longer saturated. It still serialises every audit entry, by design
+(the hash chain), and is now the largest single cost.
 
 ### V-17: overload reported as DENY (Medium)
 
@@ -454,12 +492,10 @@ once. The two smaller pools free 10, so a second replica of a service fits on th
 100 a second three times in a row failed 31%, then 16%, then 0.04% (6 of 12,028). aud and bil never had more than 2
 connections in use, so the pools played no part; the first minutes after a full restart do, Postgres's cache
 included. Warm, Postgres's single CPU was at its limit (median 102%) and token p95 was 684 ms, against 61 ms on the
-morning of 7 November: on one CPU, 100 a second is now at the edge.
+morning of 7 November. That was V-18, fixed since.
 
 ### To finish
 
-- **The local Postgres at 100 a second:** at 1 CPU it was saturated by the mix at 100/s; work out what changed since
-  the morning of 7 November (the data from the day's runs, or the services' queries) before raising its limit.
 - **df-reg's CPU per key check:** about 13 ms at the knee; profile it, and consider the gateway's cache of verified
   keys.
 
