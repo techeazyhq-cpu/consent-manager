@@ -89,16 +89,6 @@ id; its old records are not reattached. The registration numbers are kept, so st
 4. The retention purge job and legal holds.
 5. DF Console and CM Admin screens; runbook; CI check that every retention period is configuration.
 
-## Built so far
-
-1. **States and suspension** (this change): `SUSPENDED` in cm-df-reg-svc. Staff suspend with a reason (an operator or an
-   administrator) and an administrator resumes: `POST /api/df-reg/dfs/{id}/suspend` and `/resume`. A suspended
-   fiduciary fails the "is it active" checks that already existed (API keys are refused with `df-suspended`; no request
-   can be raised), so nothing else had to change. Its team can still sign in and read. Keys, team and consents are
-   untouched, so resuming restores it exactly. Both are audited.
-   *Known limit:* an OAuth token a fiduciary's system already holds works until it expires (minutes).
-2. Leaving and the wind-down, 3. the closing saga, 4. the purge job, 5. screens and runbook: not yet.
-
 ## What the owner needs to decide
 
 | # | Default | Alternatives |
