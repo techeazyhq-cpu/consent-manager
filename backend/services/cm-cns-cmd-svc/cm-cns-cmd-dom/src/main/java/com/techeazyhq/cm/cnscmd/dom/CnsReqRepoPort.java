@@ -32,6 +32,11 @@ public interface CnsReqRepoPort {
     Flux<CnsReq> findUnlinkedByExtRef(ExtDpRefTyp typ, String val);
 
     /** Every request linked to the principal {@code dpId}, for closing their account (ADR-059). */
+    /** Up to {@code limit} of a fiduciary's requests still waiting for an answer (a fiduciary closing, ADR-064). */
+    default Flux<CnsReq> findPendingByDfId(String dfId, int limit) {
+        return Flux.error(new UnsupportedOperationException("findPendingByDfId"));
+    }
+
     default Flux<CnsReq> findByDpId(String dpId) {
         return Flux.error(new UnsupportedOperationException("findByDpId"));
     }

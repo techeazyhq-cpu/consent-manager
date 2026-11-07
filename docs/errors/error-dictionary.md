@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-132 entries: 124 API problems, 7 operational log codes and 1 event.
+133 entries: 124 API problems, 8 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -226,6 +226,7 @@ Written as `[CODE]` at the start of a WARN or ERROR message, for alerts and runb
 
 | Code | Level | Title | What it means | What to do | Raised by |
 |---|---|---|---|---|---|
+| `CM-DF-CLOSING-FAILED` | WARN | Closing a fiduciary failed | A fiduciary whose wind-down has ended could not be closed: a step failed, such as ending its consents or removing its team. It stays LEAVING and is tried again on the next pass; every step can be repeated. | Read the log line for the failing step, fix the cause (often cm-cns-cmd-svc or Keycloak unreachable) and it closes on the next pass. | df-reg |
 | `CM-ERASURE-STEP-FAILED` | WARN | Account erasure step failed | One attempt at an erasure step failed. It is tried again every two minutes until it gives up. | No action unless CM-ERASURE-STUCK follows; check the named step's service if it repeats. | dsr |
 | `CM-ERASURE-STUCK` | ERROR | Account erasure stuck | An account erasure gave up on a step after eight attempts and stopped. Part of the person's data is erased and part is not. | Find the cause for the step named in the message and retry it in CM Admin; see docs/runbooks/erasure.md. | dsr |
 | `CM-ERRDICT-UNLISTED` | ERROR | Problem missing from the error dictionary | A service answered a problem whose code is not in the error dictionary, so it got a title made from its name. CI should have refused it. | Add the code to cm-error-dictionary.json and run node scripts/error-dictionary.mjs --write. | aud, bil, cns-cmd, cns-qry, df-reg, dsr, gw, ntf, stf |

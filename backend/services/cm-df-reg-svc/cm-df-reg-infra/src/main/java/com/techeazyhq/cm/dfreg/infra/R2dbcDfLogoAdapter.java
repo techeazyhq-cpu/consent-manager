@@ -38,6 +38,11 @@ public class R2dbcDfLogoAdapter implements DfLogoRepoPort {
     }
 
     @Override
+    public Mono<Void> deleteByDfId(String dfId) {
+        return db.sql("delete from df_reg.df_logo where df_id = :dfId").bind("dfId", dfId).then();
+    }
+
+    @Override
     public Mono<DfLogo> save(DfLogo logo) {
         return db.sql("""
                         insert into df_reg.df_logo (df_id, content_type, bytes, updated_at)

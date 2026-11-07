@@ -47,6 +47,7 @@ cm:
     service-url: pulsar://localhost:6650
   service-urls:
     bil: http://localhost:8085
+    cns-cmd: http://localhost:8082
   keycloak:
     base-url: http://localhost:8080
     realm: cm-df

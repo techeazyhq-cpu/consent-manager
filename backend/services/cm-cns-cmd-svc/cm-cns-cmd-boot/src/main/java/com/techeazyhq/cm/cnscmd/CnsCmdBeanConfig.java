@@ -424,6 +424,14 @@ public class CnsCmdBeanConfig {
                 new com.techeazyhq.cm.cnscmd.infra.R2dbcDpContactErasureAdapter(db));
     }
 
+    /** A fiduciary closing (ADR-064): this context's step. */
+    @Bean
+    public com.techeazyhq.cm.cnscmd.app.CloseDfConsentsHandler closeDfConsentsHandler(CnsReqRepoPort reqs,
+            CnsArtRepoPort arts, DatabaseClient db) {
+        return new com.techeazyhq.cm.cnscmd.app.CloseDfConsentsHandler(reqs, arts,
+                new com.techeazyhq.cm.cnscmd.infra.R2dbcDpContactErasureAdapter(db));
+    }
+
     @EventListener(ApplicationReadyEvent.class)
     public void startSagaConsumer(ApplicationReadyEvent event) {
         event.getApplicationContext().getBean(PulsarCnsSagaEvtConsumer.class).start();

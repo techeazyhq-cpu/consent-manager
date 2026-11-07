@@ -31,4 +31,9 @@ public interface DpContactErasurePort {
 
     /** How many rows it changed. Running it again changes nothing. */
     Mono<Long> eraseContacts(List<String> cnsReqIds, List<String> cnsArtIds);
+
+    /** The same for everything a fiduciary that has closed ever sent (ADR-064). Running it again changes nothing. */
+    default Mono<Long> eraseContactsOfDf(String dfId) {
+        return Mono.error(new UnsupportedOperationException("eraseContactsOfDf"));
+    }
 }

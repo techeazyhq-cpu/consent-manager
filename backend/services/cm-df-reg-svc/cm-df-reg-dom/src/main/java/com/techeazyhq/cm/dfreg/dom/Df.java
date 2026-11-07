@@ -26,8 +26,8 @@ import com.techeazyhq.cm.domkit.Agg;
 public final class Df extends Agg<String> {
 
     private final String name;
-    private final String contactEmail;
-    private final DfPrfl prfl;
+    private String contactEmail;
+    private DfPrfl prfl;
     private final String subPlnName;
     private final Instant registeredAt;
     private DfSts sts;
@@ -40,6 +40,7 @@ public final class Df extends Agg<String> {
     private Instant leavesAt;
     private String leavingBy;
     private int leaveCancellations;
+    private Instant closedAt;
 
     Df(String id, String name, String contactEmail, DfPrfl prfl, String subPlnName, DfSts sts, Instant registeredAt,
        String cmDfApiClientSecret, Instant activatedAt) {
@@ -85,6 +86,31 @@ public final class Df extends Agg<String> {
 
     public Instant activatedAt() {
         return activatedAt;
+    }
+
+    /** When the fiduciary was closed, or null. */
+    public Instant closedAt() {
+        return closedAt;
+    }
+
+    /**
+     * Ends the wind-down (ADR-064): CLOSED is final. Its API client secret is dropped, so no token can be issued, and its
+     * profile is erased except what is kept as the record of who it was: the display and legal names and the registration
+     * numbers.
+     */
+    public void close(Instant at) {
+        if (sts != DfSts.LEAVING) {
+            throw new IllegalStateException("Only a DF that is leaving can be closed, not one in status " + sts);
+        }
+        this.sts = DfSts.CLOSED;
+        this.closedAt = at;
+        this.cmDfApiClientSecret = null;
+        this.contactEmail = "[erased]";
+        this.prfl = new DfPrfl(prfl.legalName(), null, null, null, null, prfl.cin(), prfl.gstin(), null, null);
+    }
+
+    void restoreClosed(Instant at) {
+        this.closedAt = at;
     }
 
     /** When the wind-down began, or null when the fiduciary is not leaving. */

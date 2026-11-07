@@ -105,7 +105,24 @@ id; its old records are not reattached. The registration numbers are kept, so st
    *Not in this piece:* the **export** (records already come from the consent and audit APIs, but one "everything of
    mine" export is a cross-service job), **staff ending a contract** (needs the two-person approval of D7), and
    **anything happening when the wind-down ends**: the date is recorded, and piece 3 acts on it.
-3. The closing saga, 4. the purge job, 5. screens and runbook: not yet.
+3. **Closing** (done, in part): a job in cm-df-reg-svc (every minute, `cm.dfreg.closing.fixed-delay-ms`) finds each
+   `LEAVING` fiduciary whose wind-down has ended and closes it in two parts. *Clean-up* (each step can be repeated):
+   cm-cns-cmd-svc ends every consent in force and declines every waiting request through the domain, in batches
+   (`POST /internal/dfs/{id}/close-consents`, so principals get their receipts and the fiduciary's webhooks fire), then
+   erases the contacts the fiduciary sent requests to; every API key is revoked; the team's Keycloak accounts are
+   removed; the logo is deleted. *Finish* (one transaction): `CLOSED`, which is final; the API client secret is dropped,
+   the contact address and profile are erased except the display and legal names and the registration numbers, and
+   `tenant.closed` is audited with the counts. A failure at any step is logged as `[CM-DF-CLOSING-FAILED]`, leaves it
+   `LEAVING`, and the next pass starts again.
+   *Kept, as decided:* consent records under their pseudonymous ids, purposes, the audit ledger, invoices, the acceptances
+   of the terms.
+   *Differs from the text above:* ended consents are recorded as **revoked** (the only ending the Consent context has),
+   not as the distinct ISO/IEC TS 27560 "terminated by controller" state with the reason "fiduciary left the platform";
+   the reason is in the audit entry. Principals receive the revocation receipt, not a custom notice naming who has gone.
+   *Not yet:* the Keycloak API client, webhooks endpoints and the ledger's payloads about the team are not removed;
+   the sandbox copy is not touched.
+4. The purge job (consent records and ledger payloads after their retention), the export, staff-initiated ending with
+   two-person approval, and 5. screens and runbook: not yet.
 
 ## What the owner needs to decide
 

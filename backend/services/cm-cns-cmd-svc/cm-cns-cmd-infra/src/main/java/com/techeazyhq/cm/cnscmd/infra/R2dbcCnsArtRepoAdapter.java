@@ -108,6 +108,14 @@ public class R2dbcCnsArtRepoAdapter implements CnsArtRepoPort {
     }
 
     @Override
+    public Flux<CnsArt> findIssuedByDfId(String dfId, int limit) {
+        return db.sql("select * from cns_cmd.cns_art where df_id = :dfId and sts = 'ISSUED' order by id limit :limit")
+                .bind("dfId", dfId).bind("limit", limit)
+                .map(this::toDomain)
+                .all();
+    }
+
+    @Override
     public Flux<CnsArt> findByDpId(String dpId) {
         return db.sql("select * from cns_cmd.cns_art where dp_id = :dpId")
                 .bind("dpId", dpId)

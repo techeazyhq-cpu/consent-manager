@@ -26,4 +26,7 @@ public interface DfLogoRepoPort {
     Mono<DfLogo> save(DfLogo logo);
 
     Mono<DfLogo> findByDfId(String dfId);
+
+    /** Removes the fiduciary's logo, if it has one (a fiduciary closing, ADR-064). */
+    Mono<Void> deleteByDfId(String dfId);
 }
