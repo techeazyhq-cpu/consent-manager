@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-123 entries: 115 API problems, 7 operational log codes and 1 event.
+125 entries: 117 API problems, 7 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -77,6 +77,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `not-a-test-contact` | 400 | Not a test contact | In the sandbox, requests can only go to contacts reserved for testing. | Use a test contact from the developer docs. | no | cns-cmd |
 | `payload-too-large` | 413 | Request body too large | The request body is larger than the gateway accepts. | Send a smaller body, or split it. | no | gw |
 | `push-token-invalid` | 400 | Push token not valid | The device token is missing or not valid. | Register the device again. | no | ntf |
+| `terms-document-unknown` | 400 | Unknown document | The document named to accept is not one of the consent manager documents: terms or dpa. | Name terms or dpa. | no | df-reg |
 | `unknown-sub-pln` | 400 | Unknown plan | There is no plan with that name. | List the plans and use one of their names. | no | bil, df-reg |
 | `unsupported-list` | 415 | List type not supported | The file is not JSON, CSV or Excel. | Send the list as JSON, CSV or .xlsx. | no | cns-cmd |
 
@@ -159,6 +160,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `purpose-exists` | 409 | Purpose already exists | A purpose with that code exists already. | Draft a new version of it instead of creating it again. | no | cns-cmd |
 | `purpose-version-superseded` | 409 | Purpose version replaced | A newer version of the purpose has been published since, so a request cannot name this one. | Ask for the current version. | no | cns-cmd |
 | `request-replayed` | 409 | Request already used | The nonce of this signed request was used before, so it was refused as a replay. | Sign every request, retries included, with a new nonce. | no | df-reg |
+| `terms-version-outdated` | 409 | Document version not current | The version offered for acceptance is not the version in force, so the acceptance was refused. The detail names the current version. | Read the current version (GET /api/df-reg/me/terms), show it to the Owner and accept that one. | no | df-reg |
 
 ### State
 

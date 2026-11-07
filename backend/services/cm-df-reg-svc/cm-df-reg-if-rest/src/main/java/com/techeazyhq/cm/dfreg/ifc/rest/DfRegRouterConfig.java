@@ -27,6 +27,7 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import com.techeazyhq.cm.dfreg.app.ActivateDfCmdHandler;
 import com.techeazyhq.cm.dfreg.app.DfApiKeyHandler;
 import com.techeazyhq.cm.dfreg.app.DfTeamHandler;
+import com.techeazyhq.cm.dfreg.app.DfTermsHandler;
 import com.techeazyhq.cm.dfreg.app.VerifyApiRequestHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfActiveQryHandler;
 import com.techeazyhq.cm.dfreg.app.GetDfLogoQryHandler;
@@ -48,11 +49,13 @@ public class DfRegRouterConfig {
                                                         GetDfLogoQryHandler getLogoHandler,
                                                         DfTeamHandler teamHandler,
                                                         DfApiKeyHandler apiKeyHandler,
+                                                        DfTermsHandler termsHandler,
                                                         VerifyApiRequestHandler verifyApiRequestHandler) {
         DfHandler dfHandler = new DfHandler(registerHandler, activateHandler, getActiveHandler, listHandler, getDfHandler,
                 uploadLogoHandler, getLogoHandler);
         DfTeamHttpHandler team = new DfTeamHttpHandler(teamHandler);
         DfApiKeyHttpHandler apiKeys = new DfApiKeyHttpHandler(apiKeyHandler, verifyApiRequestHandler);
+        DfTermsHttpHandler termsHttp = new DfTermsHttpHandler(termsHandler);
         return RouterFunctions.route()
                 .GET("/api/df-reg/dfs", dfHandler::list)
                 .POST("/api/df-reg/dfs", dfHandler::register)
@@ -74,6 +77,9 @@ public class DfRegRouterConfig {
                 .DELETE("/api/df-reg/me/api-keys/{id}", apiKeys::revoke)
                 .PUT("/api/df-reg/me/api-keys/{id}/signing-required", apiKeys::signingRequired)
                 .POST("/internal/api-keys/verify", apiKeys::verify)
+                .GET("/api/df-reg/me/terms", termsHttp::status)
+                .POST("/api/df-reg/me/terms", termsHttp::accept)
+                .GET("/api/df-reg/dfs/{id}/terms", termsHttp::evidence)
                 .build();
     }
 }

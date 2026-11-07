@@ -124,7 +124,7 @@ services:
       # The test kit signs in as these fixed accounts many times an hour; the limit on codes sent to one address (ADR-061)
       # would stop it. Lifts that one limit for exactly these addresses (the wrong-code budget and the network limit still
       # apply). Local only: the Helm chart does not set it, and Keycloak logs [CM-OTP-LIMITS-EXEMPT] when it is set.
-      KC_SPI_AUTHENTICATOR_CM_OTP_AUTHENTICATOR_EXEMPT_ADDRESSES: "batch-owner@example.test,owner-b@example.test,admin@cm.local,operator@cm.local"
+      KC_SPI_AUTHENTICATOR_CM_OTP_AUTHENTICATOR_EXEMPT_ADDRESSES: "batch-owner@example.test,owner-b@example.test,contact@security-b.example.test,admin@cm.local,operator@cm.local"
     ports:
       - "8080:8080"
     volumes:
