@@ -19,7 +19,9 @@
 
 // Local stack only. Gives the security and performance kits two fiduciaries' API keys, so tests can try one
 // fiduciary's key against the other's data:
-//   A  Batch Test Co (batch-owner@example.test): a signing key, and a key that doesn't require signing
+//   A  Batch Test Co (batch-owner@example.test): a signing key, and a key that doesn't require signing. It is seeded on
+//      FREE (5 requests a second), which the suite would throttle itself on, so it is moved to PREMIUM for the run;
+//      teardown-keys.mjs puts it back on FREE
 //   B  Security Test B Ltd, registered and activated by the seeded staff admin on PREMIUM (so load tests aren't held to
 //      FREE's 5 requests a second); its contact (contact@security-b.example.test) is its owner. A signing key
 // and, for each, a consent a test data principal (perf-dp@example.test) has given, so the verify path can be tested.
@@ -53,6 +55,15 @@ if (!dfB) {
   dfB = await json(await fetch(`${GW}/api/df-reg/dfs`, { method: 'POST', headers: bearer(staff),
     body: JSON.stringify({ name: 'Security Test B Ltd', contactEmail: 'contact@security-b.example.test', subPlnName: 'PREMIUM' }) }));
   await json(await fetch(`${GW}/api/df-reg/dfs/${dfB.id}/activate`, { method: 'POST', headers: bearer(staff) }));
+}
+
+// A is seeded on FREE; the suite makes bursts of calls and would be answered 429 by its own plan. Move it to PREMIUM
+// (teardown-keys.mjs restores FREE), then wait out the gateway's 10 second cache of a fiduciary's quota.
+if (dfA.subPlnName !== 'PREMIUM') {
+  const plan = await json(await fetch(`${GW}/api/bil/dfs/${dfA.id}/sub-pln`, { method: 'PUT', headers: bearer(staff),
+    body: JSON.stringify({ subPlnName: 'PREMIUM' }) }));
+  console.log(`Batch Test Co moved to ${plan.subPlnName} (${plan.reqPerSecQta} requests a second) for the run`);
+  await new Promise((resolve) => setTimeout(resolve, 12_000));
 }
 
 // registering makes the contact the owner

@@ -18,11 +18,23 @@
  */
 
 // Local stack only. Revokes every API key the kit issued ("Security test …"), at both test fiduciaries, including
-// keys from earlier runs whose keys file is gone. Signs the owners in afresh; prints only ids.
+// keys from earlier runs whose keys file is gone. Puts Batch Test Co back on the FREE plan it is seeded on (setup-keys.mjs
+// moves it to PREMIUM for the run). Signs the owners in afresh; prints only ids.
 //
 //   node tests/security/teardown-keys.mjs
 
-import { GW, dfSignIn } from './lib/cm1.mjs';
+import { GW, KC, dfSignIn } from './lib/cm1.mjs';
+
+// the seeded local staff admin (infra/keycloak/realm-export/cm-staff.json)
+const staffRes = await fetch(`${KC}/realms/cm-staff/protocol/openid-connect/token`, { method: 'POST',
+  body: new URLSearchParams({ grant_type: 'password', client_id: 'cm-cm-admin', username: 'admin@cm.local', password: 'admin' }) });
+const staff = { Authorization: `Bearer ${(await staffRes.json()).access_token}`, 'Content-Type': 'application/json' };
+const dfs = await (await fetch(`${GW}/api/df-reg/dfs`, { headers: staff })).json();
+const dfA = dfs.find((d) => d.name === 'Batch Test Co');
+if (dfA) {
+  const r = await fetch(`${GW}/api/bil/dfs/${dfA.id}/sub-pln`, { method: 'PUT', headers: staff, body: JSON.stringify({ subPlnName: 'FREE' }) });
+  console.log(`Batch Test Co back on FREE: ${r.ok ? 'done' : `not changed (${r.status})`}`);
+}
 
 const owners = ['batch-owner@example.test', 'contact@security-b.example.test'];
 for (const owner of owners) {
