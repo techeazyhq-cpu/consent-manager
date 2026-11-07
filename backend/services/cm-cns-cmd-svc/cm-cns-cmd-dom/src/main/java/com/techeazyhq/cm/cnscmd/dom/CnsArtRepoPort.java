@@ -33,6 +33,11 @@ public interface CnsArtRepoPort {
     /** Every unlinked CnsArt matching a given external contact — used by LinkDpCmdHandler (plan §7a). */
     Flux<CnsArt> findUnlinkedByExtRef(ExtDpRefTyp typ, String val);
 
+    /** Every consent linked to the principal {@code dpId}, for closing their account (ADR-059). */
+    default Flux<CnsArt> findByDpId(String dpId) {
+        return Flux.error(new UnsupportedOperationException("findByDpId"));
+    }
+
     /** Used by CnsExpirySweepJob (plan §8): every ISSUED artefact whose ValPrd.until has passed. */
     Flux<CnsArt> findIssuedExpiredAsOf(Instant now);
 }

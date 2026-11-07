@@ -26,18 +26,23 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import com.techeazyhq.cm.dsr.app.DpErasureHandler;
 import com.techeazyhq.cm.dsr.app.DpReqHandler;
 
 @Configuration
 public class DsrRouterConfig {
 
     @Bean
-    public RouterFunction<ServerResponse> dsrRoutes(DpReqHandler requests, Clock clock) {
-        DsrHttpHandler handler = new DsrHttpHandler(requests, clock);
+    public RouterFunction<ServerResponse> dsrRoutes(DpReqHandler requests, DpErasureHandler erasures, Clock clock) {
+        DsrHttpHandler handler = new DsrHttpHandler(requests, erasures, clock);
         return RouterFunctions.route()
                 .GET("/api/dsr/me/requests", handler::mine)
                 .POST("/api/dsr/me/requests", handler::raise)
                 .POST("/api/dsr/me/requests/{id}/withdraw", handler::withdraw)
+                .GET("/api/dsr/me/account/close", handler::myErasure)
+                .POST("/api/dsr/me/account/close", handler::closeAccount)
+                .GET("/api/dsr/erasures", handler::erasures)
+                .POST("/api/dsr/erasures/{id}/retry", handler::retryErasure)
                 .GET("/api/dsr/df/requests", handler::forFiduciary)
                 .GET("/api/dsr/df/requests/{id}", handler::oneForFiduciary)
                 .POST("/api/dsr/df/requests/{id}/acknowledge", handler::acknowledge)

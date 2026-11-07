@@ -25,6 +25,7 @@ dependencies {
     implementation(project(":cm-aud-dom"))
     implementation(project(":cm-aud-app"))
     implementation(project(":cm-aud-infra"))
+    implementation(project(":cm-evt-kit")) // the erasure saga's step (ADR-059)
     implementation(project(":cm-aud-if-rest"))
     implementation(project(":cm-sec-kit"))
     implementation(project(":cm-web-kit"))

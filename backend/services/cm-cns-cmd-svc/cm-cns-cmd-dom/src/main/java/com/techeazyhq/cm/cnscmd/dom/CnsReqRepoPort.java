@@ -30,4 +30,9 @@ public interface CnsReqRepoPort {
 
     /** Every unlinked CnsReq matching a given external contact — used by LinkDpCmdHandler (plan §7a). */
     Flux<CnsReq> findUnlinkedByExtRef(ExtDpRefTyp typ, String val);
+
+    /** Every request linked to the principal {@code dpId}, for closing their account (ADR-059). */
+    default Flux<CnsReq> findByDpId(String dpId) {
+        return Flux.error(new UnsupportedOperationException("findByDpId"));
+    }
 }

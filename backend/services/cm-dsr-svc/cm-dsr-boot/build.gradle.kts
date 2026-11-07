@@ -29,6 +29,7 @@ dependencies {
     implementation(project(":cm-web-kit"))
     implementation(project(":cm-sec-kit"))
     implementation(project(":cm-aud-kit"))
+    implementation(project(":cm-kc-kit")) // deletes the principal's account at the end of an erasure (ADR-059)
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")

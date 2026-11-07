@@ -128,6 +128,25 @@ public class DpReqHandler {
         return requireDp(caller).thenMany(reqs.findByDpId(caller.dpId(), LIST_LIMIT));
     }
 
+    /**
+     * The principal is closing their account (ADR-059): their open requests are withdrawn, and each fiduciary told as
+     * when they withdraw one themself; then the words of every request and answer are erased. Safe to run again.
+     */
+    @Transactional
+    public Mono<Long> closeAccount(String dpId) {
+        return reqs.findOpenByDpId(dpId)
+                .concatMap(req -> {
+                    req.withdraw(dpId, now());
+                    return reqs.save(req)
+                            .flatMap(saved -> saved.knd() == DpReq.Knd.RELAY
+                                    ? events.publish(message(saved, DpReqEvtPort.WITHDRAWN, m -> { })).thenReturn(saved)
+                                    : Mono.just(saved))
+                            .flatMap(saved -> recorded(saved.knd() == DpReq.Knd.RELAY ? "dp-request.withdrawn"
+                                    : "dp-grievance.withdrawn", saved));
+                })
+                .then(reqs.eraseTextOf(dpId));
+    }
+
     // ---- the fiduciary ----
 
     /** Requests relayed to the caller's fiduciary: every member and system reads them. */

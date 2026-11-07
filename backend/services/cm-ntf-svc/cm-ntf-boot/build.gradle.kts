@@ -24,6 +24,7 @@ plugins {
 dependencies {
     implementation(project(":cm-ntf-dom"))
     implementation(project(":cm-ntf-app"))
+    implementation(project(":cm-evt-kit")) // the erasure saga's step (ADR-059)
     implementation(project(":cm-ntf-infra"))
     implementation(project(":cm-ntf-if-rest"))
     implementation(project(":cm-sec-kit"))

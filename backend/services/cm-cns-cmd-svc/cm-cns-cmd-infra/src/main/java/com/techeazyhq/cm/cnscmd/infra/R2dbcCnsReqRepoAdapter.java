@@ -102,6 +102,14 @@ public class R2dbcCnsReqRepoAdapter implements CnsReqRepoPort {
     }
 
     @Override
+    public Flux<CnsReq> findByDpId(String dpId) {
+        return db.sql("select * from cns_cmd.cns_req where dp_id = :dpId")
+                .bind("dpId", dpId)
+                .map(this::toDomain)
+                .all();
+    }
+
+    @Override
     public Flux<CnsReq> findUnlinkedByExtRef(ExtDpRefTyp typ, String val) {
         return db.sql("select * from cns_cmd.cns_req where dp_id is null and dp_ref_typ = :typ and dp_ref_val = :val")
                 .bind("typ", typ.name())

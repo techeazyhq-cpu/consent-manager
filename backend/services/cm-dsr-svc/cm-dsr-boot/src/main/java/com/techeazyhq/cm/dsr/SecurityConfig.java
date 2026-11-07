@@ -47,6 +47,9 @@ public class SecurityConfig {
                 .authorizeExchange(ex -> ex
                         .pathMatchers("/actuator/health", "/actuator/info").permitAll()
                         .pathMatchers("/api/dsr/grievances/**", "/api/dsr/grievances").hasAnyRole("CM_ADMIN", "CM_OPERATOR")
+                        // erasures (ADR-059): staff see them; only administrators restart a stuck one
+                        .pathMatchers(org.springframework.http.HttpMethod.POST, "/api/dsr/erasures/**").hasRole("CM_ADMIN")
+                        .pathMatchers("/api/dsr/erasures", "/api/dsr/erasures/**").hasAnyRole("CM_ADMIN", "CM_OPERATOR")
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.authenticationManagerResolver(
                         RealmTokens.resolver(issuerBase, jwksBase, realmPrefix)))

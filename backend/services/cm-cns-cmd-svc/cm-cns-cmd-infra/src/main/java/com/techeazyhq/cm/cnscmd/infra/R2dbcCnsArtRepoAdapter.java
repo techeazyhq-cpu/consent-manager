@@ -108,6 +108,14 @@ public class R2dbcCnsArtRepoAdapter implements CnsArtRepoPort {
     }
 
     @Override
+    public Flux<CnsArt> findByDpId(String dpId) {
+        return db.sql("select * from cns_cmd.cns_art where dp_id = :dpId")
+                .bind("dpId", dpId)
+                .map(this::toDomain)
+                .all();
+    }
+
+    @Override
     public Flux<CnsArt> findUnlinkedByExtRef(ExtDpRefTyp typ, String val) {
         return db.sql("select * from cns_cmd.cns_art where dp_id is null and dp_ref_typ = :typ and dp_ref_val = :val")
                 .bind("typ", typ.name())

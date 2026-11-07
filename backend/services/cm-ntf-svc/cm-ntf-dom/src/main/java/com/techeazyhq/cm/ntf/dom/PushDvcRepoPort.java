@@ -34,4 +34,9 @@ public interface PushDvcRepoPort {
 
     /** @return whether a device {@code id} belonging to {@code dpId} existed */
     Mono<Boolean> delete(String dpId, String id);
+
+    /** Forgets every device of {@code dpId}, when they close their account (ADR-059); how many there were. */
+    default Mono<Long> deleteAllOf(String dpId) {
+        return findByDpId(dpId).concatMap(d -> delete(dpId, d.id())).filter(Boolean::booleanValue).count();
+    }
 }
