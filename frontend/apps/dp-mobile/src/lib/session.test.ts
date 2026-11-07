@@ -16,6 +16,8 @@
  * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
  */
 
+/// <reference types="node" />
+// The test builds tokens with Node's Buffer; the app itself has no Node globals.
 import { describe, expect, it } from "vitest";
 import { claimsOf, isPrincipal, needsRefresh, personOf, tokensFrom } from "./session";
 
