@@ -17,7 +17,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { bil, myBilling, type DfSubStatusResult, type PlnChgReqDto, type SubPln } from "api-client";
+import { bil, myBilling, type DfSubStatusResult, type PlnChgReqDto, type SubPln, type UsgAlertDto } from "api-client";
 import { Badge, Button, Card, ErrorBanner, PageHeader, Spinner, UsageMeter, friendlyError, shareUsed } from "ui-kit/src/index";
 import type { Console } from "./console";
 import { fmtDate } from "./labels";
@@ -33,6 +33,28 @@ export function usageNote(s: Pick<DfSubStatusResult, "curPeriodUsg" | "reqPerMon
     return `${left.toLocaleString()} left this month, so you're close to your allowance. It resets on ${resets}.`;
   }
   return `${left.toLocaleString()} left this month. It resets on ${resets}.`;
+}
+
+/** What was sent when usage reached 80% and 100% of the allowance (ADR-060), to the organisation's contact address. */
+export function alertLine(a: Pick<UsgAlertDto, "threshold" | "used" | "quota" | "raisedAt">): string {
+  const what = a.threshold >= 100 ? "Allowance used up" : `${a.threshold}% of the allowance used`;
+  return `${what}: ${a.used.toLocaleString()} of ${a.quota.toLocaleString()}, on ${fmtDate(a.raisedAt)}`;
+}
+
+function UsageAlerts({ alerts }: { alerts: UsgAlertDto[] }) {
+  if (alerts.length === 0) return null;
+  return (
+    <div className="cm-note" role="status">
+      <strong>We emailed your organisation's contact address when:</strong>
+      <ul style={{ margin: "4px 0 0", paddingLeft: 20 }}>
+        {alerts.map((a) => (
+          <li key={`${a.period}-${a.threshold}`}>
+            {a.period}: {alertLine(a)}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 function AskForPlan({ console: c, plan, onAsked }: { console: Console; plan: SubPln; onAsked: () => void }) {
@@ -88,6 +110,7 @@ export default function Billing({ console: c }: { console: Console }) {
   const [sub, setSub] = useState<DfSubStatusResult | null>(null);
   const [plans, setPlans] = useState<SubPln[]>([]);
   const [reqs, setReqs] = useState<PlnChgReqDto[]>([]);
+  const [alerts, setAlerts] = useState<UsgAlertDto[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const mayAsk = managesTeam(c.role);
@@ -96,11 +119,13 @@ export default function Billing({ console: c }: { console: Console }) {
     setError(null);
     try {
       const token = await freshToken(c.auth);
-      const [s, p, r] = await Promise.all([
+      const [s, p, r, a] = await Promise.all([
         myBilling.subscription(c.gwBase, token),
         bil.listSubPlns(c.gwBase, token),
         myBilling.requests(c.gwBase, token),
+        myBilling.alerts(c.gwBase, token),
       ]);
+      setAlerts(a);
       setSub(s);
       setPlans([...p].sort((a, b) => a.reqPerMonthQta - b.reqPerMonthQta));
       setReqs(r);
@@ -163,6 +188,7 @@ export default function Billing({ console: c }: { console: Console }) {
         </div>
       </div>
       <p className="cm-note">{usageNote(sub)}</p>
+      <UsageAlerts alerts={alerts} />
 
       {waiting ? (
         <Card>

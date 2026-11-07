@@ -1,6 +1,6 @@
 # ADR-039: Billing fiduciaries can see, plan changes they ask for, and a platform billing overview
 
-- **Status:** Accepted
+- **Status:** Accepted; alerts at 80% and 100% of the allowance added by [ADR-060](adr-060-usage-threshold-alerts.md)
 - **Date:** 2026-10-19
 
 ## Context

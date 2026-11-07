@@ -63,6 +63,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [057](adr-057-an-undecided-consent-check-is-503-not-deny.md) | A consent check that can't be made is a 503, not a deny | Accepted |
 | [058](adr-058-principal-requests-relayed-and-grievances.md) | Principal requests relayed to fiduciaries, and grievances about the platform | Accepted |
 | [059](adr-059-closing-an-account-erasure-saga.md) | Closing an account: the erasure saga across five services, with the consent records kept | Accepted |
+| [060](adr-060-usage-threshold-alerts.md) | Usage-threshold alerts: a sweep, one alert per month and threshold, emailed by df-reg through ntf | Accepted |
 
 ## Writing one
 

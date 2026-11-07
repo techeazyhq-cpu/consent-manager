@@ -743,6 +743,24 @@ paths:
               schema: { $ref: '#/components/schemas/Subscription' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /api/bil/me/usage-alerts:
+    get:
+      tags: [Account]
+      operationId: listUsageAlerts
+      summary: When your usage reached 80% and 100% of this month's allowance
+      description: |
+        Newest first, up to 24. Each one was also emailed to your organisation's contact address (ADR-060): one per
+        month and threshold, however often usage is read afterwards.
+      responses:
+        '200':
+          description: The alerts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/UsageAlert' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /api/bil/sub-plns:
     get:
       tags: [Account]
@@ -1526,6 +1544,17 @@ components:
         reqPerSecQta: { type: integer }
         usagePeriod: { type: string, example: '2026-10' }
         resetsAt: { type: string, format: date-time }
+
+    UsageAlert:
+      type: object
+      properties:
+        dfId: { type: string }
+        period: { type: string, example: '2026-11', description: The month usage is counted in (UTC). }
+        threshold: { type: integer, enum: [80, 100], description: Percent of the allowance. }
+        used: { type: integer, format: int64, description: Usage when it was raised. }
+        quota: { type: integer, format: int64, description: The allowance then. }
+        planName: { type: string, example: FREE }
+        raisedAt: { type: string, format: date-time }
 
     Plan:
       type: object

@@ -638,3 +638,16 @@ export interface DpErasureDto {
   lastError: string | null;
   consentsWithdrawn: number;
 }
+
+/** A fiduciary's usage reaching a share of its monthly allowance (ADR-060): once per month and threshold. */
+export interface UsgAlertDto {
+  dfId: string;
+  /** The month usage is counted in, yyyy-MM (UTC). */
+  period: string;
+  /** Percent of the allowance: 80 or 100. */
+  threshold: number;
+  used: number;
+  quota: number;
+  planName: string;
+  raisedAt: string;
+}
