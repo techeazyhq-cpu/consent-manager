@@ -1,6 +1,6 @@
 # ADR-008: Keycloak for identity, passwordless sign-in by one-time code
 
-- **Status:** Accepted
+- **Status:** Accepted; limits on codes across sign-ins added by [ADR-061](adr-061-sign-in-code-abuse-limits.md)
 - **Date:** 2026-08-30 (Phase 1); passwordless sign-in 2026-10-10 (#151); a client and login theme per frontend
   2026-10-11
 

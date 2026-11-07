@@ -1,7 +1,7 @@
 # ADR-059: Closing an account: the erasure saga
 
 - **Status:** Accepted
-- **Date:** 2026-11-08
+- **Date:** 2026-11-07
 - **Implements:** [ADR-021](adr-021-principal-requests-own-data-and-relay.md) §3 (own-data erasure as an orchestrated
   saga) and §4 (legal holds keep pseudonymised records). Crypto-shredding ([ADR-019](adr-019-identity-vault-and-crypto-shredding.md))
   stays proposed.

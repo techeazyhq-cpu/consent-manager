@@ -89,7 +89,19 @@ public class OtpAuthenticatorFactory implements AuthenticatorFactory {
                         "After this many wrong guesses the person must start again", "5"),
                 property(OtpAuthenticator.CFG_AUTO_REGISTER_ROLE, "Role for new accounts",
                         "Realm role given to an account created when an unknown address proves itself; empty allows existing accounts only",
-                        "DP"));
+                        "DP"),
+                property(OtpAuthenticator.CFG_SENDS_PER_ADDRESS_HOUR, "Codes per address per hour",
+                        "Codes that can be sent to one email address or number in an hour, across sign-ins; 0 means no limit", "5"),
+                property(OtpAuthenticator.CFG_SENDS_PER_ADDRESS_DAY, "Codes per address per day",
+                        "As above, over a day", "10"),
+                property(OtpAuthenticator.CFG_SENDS_PER_NETWORK_HOUR, "Codes per network address per hour",
+                        "Codes that can be requested from one IP address in an hour, for all addresses together; 0 means no limit",
+                        "300"),
+                property(OtpAuthenticator.CFG_WRONG_GUESSES_HOUR, "Wrong codes per address per hour",
+                        "Wrong codes that can be entered for one address in an hour, across sign-ins, whether or not it has an "
+                                + "account; then no code is sent or accepted for it until the hour is past; 0 means no limit", "10"),
+                property(OtpAuthenticator.CFG_WRONG_GUESSES_DAY, "Wrong codes per address per day",
+                        "As above, over a day", "20"));
     }
 
     private static ProviderConfigProperty property(String name, String label, String help, String defaultValue) {
