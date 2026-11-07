@@ -13,7 +13,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [005](adr-005-consent-lifecycle-saga.md) | The consent lifecycle as an orchestrated saga | Accepted, saga state not persisted yet |
 | [006](adr-006-consent-token-and-pep-pdp.md) | Signed consent tokens, enforced at the gateway with OPA | Accepted, token handling superseded by 013, token lifetime by 027 (proposed) |
 | [007](adr-007-reactive-stack-and-schema-per-service.md) | Reactive services on R2DBC, one PostgreSQL schema per service | Accepted |
-| [008](adr-008-identity-keycloak-and-passwordless-sign-in.md) | Keycloak for identity, passwordless sign-in by one-time code | Accepted |
+| [008](adr-008-identity-keycloak-and-passwordless-sign-in.md) | Keycloak for identity, passwordless sign-in by one-time code | Accepted; limits across sign-ins added by 061 |
 | [009](adr-009-independent-micro-frontends.md) | Three independent micro-frontends, no shared shell | Accepted; channels extended by 032, DF sign-in superseded by 033 (proposed) |
 | [010](adr-010-notification-delivery-through-notification-service.md) | Deliver notifications through notification-service | Accepted |
 | [011](adr-011-container-images-from-built-jars.md) | Service images wrap the built JAR, and run unprivileged | Accepted |
@@ -64,6 +64,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [058](adr-058-principal-requests-relayed-and-grievances.md) | Principal requests relayed to fiduciaries, and grievances about the platform | Accepted |
 | [059](adr-059-closing-an-account-erasure-saga.md) | Closing an account: the erasure saga across five services, with the consent records kept | Accepted |
 | [060](adr-060-usage-threshold-alerts.md) | Usage-threshold alerts: a sweep, one alert per month and threshold, emailed by df-reg through ntf | Accepted |
+| [061](adr-061-sign-in-code-abuse-limits.md) | Limits on sign-in codes across sign-ins: codes per address, per network, and wrong guesses per address | Accepted |
 
 ## Writing one
 

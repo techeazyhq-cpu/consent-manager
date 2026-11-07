@@ -1,7 +1,7 @@
 # ADR-060: Usage-threshold alerts
 
 - **Status:** Accepted
-- **Date:** 2026-11-08
+- **Date:** 2026-11-07
 - **Implements:** epic #112; [ADR-039](adr-039-billing-visible-to-fiduciaries-plan-change-requests.md) made usage
   visible, and nothing told anyone before the allowance ran out.
 

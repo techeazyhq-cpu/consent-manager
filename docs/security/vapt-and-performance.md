@@ -17,8 +17,8 @@
 | Load at 50, 75 and 100 requests a second (expected mix) | **0 failures** at each; at 100, verify p95 51 ms. The pool deadlock (V-03) is fixed |
 | Ramp to the knee | Clean to about 125 requests a second; beyond, Postgres (1 CPU here) saturates. Verify answered DENY there (V-17, since fixed: now 503) |
 
-Nineteen findings: 1 critical, 4 high, 7 medium, 3 low, 2 accepted, 1 fixed by an upgrade (V-13), 1 false positive.
-Fifteen are fixed, the CI gate is in place, two are accepted, and one is open (V-11).
+Twenty findings: 1 critical, 4 high, 8 medium, 3 low, 2 accepted, 1 fixed by an upgrade (V-13), 1 false positive.
+Sixteen are fixed, the CI gate is in place, two are accepted, and one is open (V-11).
 
 ## How it was tested
 
@@ -56,7 +56,32 @@ Fifteen are fixed, the CI gate is in place, two are accepted, and one is open (V
 | V-16 | Accepted | Two HIGH advisories without a patched release in the mobile app's build tooling (braces, node-forge) | Accepted until 2026-12-31 |
 | V-17 | Medium | Overloaded, the PEP answers a valid consent with DENY (403 `consent-not-verified`), not 503 | Fixed (ADR-057); confirmed by the ramp, 0 of 16,209 refusals a 403 |
 | V-18 | Medium | The receipt job read every consent event and receipt every 2 s, a cost that grew with each consent ever recorded | Fixed (V7, a queue of events awaiting receipts) |
+| V-20 | Medium | Sign-in codes could be requested without limit for any address, and guessing restarted with every sign-in | Fixed (ADR-061); `e2e-otp-abuse.mjs` checks it |
 | V-19 | High | A signed-in principal could claim another person's pending consent requests by naming their email to `/api/cns-cmd/dp-links` | Fixed; IDOR-13 checks it |
+
+### V-20: sign-in codes without limits across sign-ins (Medium)
+
+Found 2026-11-07 reviewing the sign-in for epic #105. Everyone signs in with a six-digit code sent to an address, and the
+limits on it (5 wrong guesses, a 30-second gap, 3 sends) were kept in the sign-in session, so each new sign-in page
+started them again.
+
+**The problems:**
+- Anyone could make the platform send codes to any email address or number as often as they liked: harassment of its
+  owner, and SMS cost. A `+tag` made a new "address" of the same mailbox.
+- A fresh sign-in gave a fresh code and five more guesses, for as many codes as the first problem allowed. Keycloak's
+  brute-force protection covers existing accounts only, and a data principal's address has none until they sign in.
+
+Not found: the code is a `SecureRandom` value, stored only as a salted hash and compared in constant time, and the
+sign-in page looks the same for an address with an account and one without.
+
+**The fix (ADR-061):** limits across sign-ins, in Keycloak's shared cache: 5 codes an hour and 10 a day to one address
+(a `+tag` counts as the same mailbox), 300 an hour from one network address, and 10 wrong codes an hour and 20 a day for
+one address, with or without an account. When the wrong-code budget is spent, not even the right code is accepted.
+Refusals are identical for known and unknown addresses, and raise a `cm_otp_rate_limited` event.
+
+`OtpAbuseGuardTest` covers the rules. `tests/security/e2e-otp-abuse.mjs` drives the real sign-in pages: the sixth code
+from a fresh sign-in is refused and only five emails arrive, an address with an account is refused in the same words as
+one without, `+tag` aliases share a limit, and after ten wrong codes across two sign-ins the right code is refused.
 
 ### V-19: claiming someone else's consent requests (High)
 

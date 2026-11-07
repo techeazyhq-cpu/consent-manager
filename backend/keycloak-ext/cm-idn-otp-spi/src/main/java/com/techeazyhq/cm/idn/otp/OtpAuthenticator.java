@@ -48,6 +48,9 @@ import java.util.Map;
  *       requested after {@value #RESEND_INTERVAL_SECONDS} seconds, at most {@value #MAX_SENDS} times per sign-in.</li>
  *   <li>Wrong guesses for an existing account are reported to Keycloak's brute-force protection, so a locked account
  *       stays locked whichever sign-in the guesses came from.</li>
+ *   <li>Across sign-ins (ADR-061, {@link OtpAbuseGuard}): codes sent to one address, codes requested from one network
+ *       address, and wrong guesses for one address are limited per hour and per day, for an address with an account
+ *       and one without alike.</li>
  *   <li>The page after "Send code" looks the same whether or not the address has an account, so it can't be used to
  *       find out who is registered. Proving an unknown address creates an account with {@code autoRegisterRole}
  *       (DP by default): a Data Principal signs up just by signing in. Leave the role empty to allow existing
@@ -62,6 +65,11 @@ public class OtpAuthenticator implements Authenticator {
     static final String CFG_CODE_TTL_SECONDS = "codeTtlSeconds";
     static final String CFG_MAX_ATTEMPTS = "maxAttempts";
     static final String CFG_AUTO_REGISTER_ROLE = "autoRegisterRole";
+    static final String CFG_SENDS_PER_ADDRESS_HOUR = "sendsPerAddressPerHour";
+    static final String CFG_SENDS_PER_ADDRESS_DAY = "sendsPerAddressPerDay";
+    static final String CFG_SENDS_PER_NETWORK_HOUR = "sendsPerNetworkPerHour";
+    static final String CFG_WRONG_GUESSES_HOUR = "wrongGuessesPerAddressPerHour";
+    static final String CFG_WRONG_GUESSES_DAY = "wrongGuessesPerAddressPerDay";
     static final String DEFAULT_NTF_BASE_URL = "http://cm-ntf-svc:8084";
     static final int RESEND_INTERVAL_SECONDS = 30;
     static final int MAX_SENDS = 3;
@@ -128,18 +136,59 @@ public class OtpAuthenticator implements Authenticator {
     }
 
     private void sendNewCode(AuthenticationFlowContext context, OtpIdentifier to, int previousSends, String info) {
+        OtpAbuseGuard guard = guard(context);
+        OtpAbuseGuard.Admission admission = guard.admitSend(to, context.getConnection().getRemoteAddr());
+        if (!admission.admitted()) {
+            refuse(context, to, admission.denial());
+            return;
+        }
         OtpChallenge.Issued issued = OtpChallenge.issue(Instant.now(), Duration.ofSeconds(intConfig(context, CFG_CODE_TTL_SECONDS, 300)), previousSends);
         switch (sender.send(config(context).getOrDefault(CFG_NTF_BASE_URL, DEFAULT_NTF_BASE_URL), to, issued.code())) {
             case SENT -> {
                 issued.challenge().writeTo(context.getAuthenticationSession()::setAuthNote);
                 context.challenge(codeForm(context, to, null, info));
             }
-            case REJECTED -> context.challenge(identifyForm(context, "cmOtpInvalidIdentifier"));
+            case REJECTED -> {
+                guard.release(admission.permit());
+                context.challenge(identifyForm(context, "cmOtpInvalidIdentifier"));
+            }
             case FAILED -> {
+                // nothing was sent, so it doesn't count against the person's allowance
+                guard.release(admission.permit());
                 LOG.warnf("cm-ntf-svc could not send a sign-in code over %s", to.channel());
                 context.challenge(identifyForm(context, "cmOtpSendFailed"));
             }
         }
+    }
+
+    /**
+     * A limit across sign-ins was reached (ADR-061). The same words whether or not the address has an account. The
+     * address is never logged, only its kind; the event carries which limit it was, for alerting.
+     */
+    private void refuse(AuthenticationFlowContext context, OtpIdentifier to, OtpAbuseGuard.Denial denial) {
+        LOG.warnf("Sign-in code refused (%s) for a %s address", denial, to.kind());
+        context.getEvent().detail("cm_otp_limit", denial.name()).error("cm_otp_rate_limited");
+        clear(context.getAuthenticationSession());
+        context.challenge(identifyForm(context, switch (denial) {
+            case TOO_MANY_WRONG_GUESSES -> "cmOtpTooManyGuessesForAddress";
+            case TOO_MANY_CODES -> "cmOtpTooManyCodes";
+            case NETWORK_BUSY -> "cmOtpNetworkBusy";
+        }));
+    }
+
+    private static OtpAbuseGuard guard(AuthenticationFlowContext context) {
+        return new OtpAbuseGuard(new SingleUseSlots(context.getSession().singleUseObjects()), limits(context));
+    }
+
+    private static OtpAbuseGuard.Limits limits(AuthenticationFlowContext context) {
+        Duration hour = Duration.ofHours(1);
+        Duration day = Duration.ofDays(1);
+        return new OtpAbuseGuard.Limits(
+                java.util.List.of(new OtpAbuseGuard.Limit(intConfig(context, CFG_SENDS_PER_ADDRESS_HOUR, 5), hour),
+                        new OtpAbuseGuard.Limit(intConfig(context, CFG_SENDS_PER_ADDRESS_DAY, 10), day)),
+                java.util.List.of(new OtpAbuseGuard.Limit(intConfig(context, CFG_SENDS_PER_NETWORK_HOUR, 300), hour)),
+                java.util.List.of(new OtpAbuseGuard.Limit(intConfig(context, CFG_WRONG_GUESSES_HOUR, 10), hour),
+                        new OtpAbuseGuard.Limit(intConfig(context, CFG_WRONG_GUESSES_DAY, 20), day)));
     }
 
     private void verify(AuthenticationFlowContext context, String guess) {
@@ -157,9 +206,16 @@ public class OtpAuthenticator implements Authenticator {
                     codeForm(context, to, "cmOtpLockedOut", null));
             return;
         }
+        OtpAbuseGuard guard = guard(context);
+        if (guard.wrongGuessesExhausted(to)) {
+            // not even a right code is looked at: otherwise the limit would only slow guessing down, not stop it
+            refuse(context, to, OtpAbuseGuard.Denial.TOO_MANY_WRONG_GUESSES);
+            return;
+        }
         switch (challenge.verify(guess, Instant.now(), intConfig(context, CFG_MAX_ATTEMPTS, 5))) {
             case ACCEPTED -> succeed(context, to, user);
             case WRONG -> {
+                guard.recordWrongGuess(to);
                 challenge.withFailedAttempt().writeTo(session::setAuthNote);
                 if (user != null) {
                     context.getEvent().user(user);
