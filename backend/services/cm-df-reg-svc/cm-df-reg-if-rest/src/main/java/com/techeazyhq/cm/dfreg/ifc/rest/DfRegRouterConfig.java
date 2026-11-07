@@ -26,6 +26,7 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 
 import com.techeazyhq.cm.dfreg.app.ActivateDfCmdHandler;
 import com.techeazyhq.cm.dfreg.app.DfApiKeyHandler;
+import com.techeazyhq.cm.dfreg.app.DfSuspensionHandler;
 import com.techeazyhq.cm.dfreg.app.DfTeamHandler;
 import com.techeazyhq.cm.dfreg.app.DfTermsHandler;
 import com.techeazyhq.cm.dfreg.app.VerifyApiRequestHandler;
@@ -50,12 +51,14 @@ public class DfRegRouterConfig {
                                                         DfTeamHandler teamHandler,
                                                         DfApiKeyHandler apiKeyHandler,
                                                         DfTermsHandler termsHandler,
+                                                        DfSuspensionHandler suspensionHandler,
                                                         VerifyApiRequestHandler verifyApiRequestHandler) {
         DfHandler dfHandler = new DfHandler(registerHandler, activateHandler, getActiveHandler, listHandler, getDfHandler,
                 uploadLogoHandler, getLogoHandler);
         DfTeamHttpHandler team = new DfTeamHttpHandler(teamHandler);
         DfApiKeyHttpHandler apiKeys = new DfApiKeyHttpHandler(apiKeyHandler, verifyApiRequestHandler);
         DfTermsHttpHandler termsHttp = new DfTermsHttpHandler(termsHandler);
+        DfSuspensionHttpHandler suspensions = new DfSuspensionHttpHandler(suspensionHandler);
         return RouterFunctions.route()
                 .GET("/api/df-reg/dfs", dfHandler::list)
                 .POST("/api/df-reg/dfs", dfHandler::register)
@@ -77,6 +80,8 @@ public class DfRegRouterConfig {
                 .DELETE("/api/df-reg/me/api-keys/{id}", apiKeys::revoke)
                 .PUT("/api/df-reg/me/api-keys/{id}/signing-required", apiKeys::signingRequired)
                 .POST("/internal/api-keys/verify", apiKeys::verify)
+                .POST("/api/df-reg/dfs/{id}/suspend", suspensions::suspend)
+                .POST("/api/df-reg/dfs/{id}/resume", suspensions::resume)
                 .GET("/api/df-reg/me/terms", termsHttp::status)
                 .POST("/api/df-reg/me/terms", termsHttp::accept)
                 .GET("/api/df-reg/dfs/{id}/terms", termsHttp::evidence)

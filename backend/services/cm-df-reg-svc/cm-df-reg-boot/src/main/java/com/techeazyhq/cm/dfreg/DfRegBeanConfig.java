@@ -55,6 +55,7 @@ import com.techeazyhq.cm.dfreg.infra.KeycloakDfApiClientProvisionAdapter;
 import com.techeazyhq.cm.dfreg.infra.KeycloakDfMemberDirectoryAdapter;
 import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.dfreg.app.DfApiKeyHandler;
+import com.techeazyhq.cm.dfreg.app.DfSuspensionHandler;
 import com.techeazyhq.cm.dfreg.app.DfTermsHandler;
 import com.techeazyhq.cm.dfreg.dom.TermsDoc;
 import com.techeazyhq.cm.dfreg.infra.R2dbcDfTermsAdapter;
@@ -266,6 +267,11 @@ public class DfRegBeanConfig {
     public VerifyApiRequestHandler verifyApiRequestHandler(R2dbcDfApiKeyAdapter keys, DfRepoPort dfRepo,
                                                            SecretSealerPort sealer, DfAccessTokenPort tokens) {
         return new VerifyApiRequestHandler(keys, dfRepo, keys, sealer, tokens, java.time.Clock.systemUTC());
+    }
+
+    @Bean
+    public DfSuspensionHandler dfSuspensionHandler(DfRepoPort dfRepo, AuditTrail audit) {
+        return new DfSuspensionHandler(dfRepo, audit, java.time.Clock.systemUTC());
     }
 
     @Bean

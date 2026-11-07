@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.Set;
 
+import com.techeazyhq.cm.dfreg.dom.Df;
 import com.techeazyhq.cm.dfreg.dom.DfAccessTokenPort;
 import com.techeazyhq.cm.dfreg.dom.DfApiKey;
 import com.techeazyhq.cm.dfreg.dom.DfApiKeyRepoPort;
@@ -94,6 +95,10 @@ public class VerifyApiRequestHandler {
                 .filter(key -> !key.isRevoked())
                 .switchIfEmpty(Mono.error(invalidKey()))
                 .flatMap(key -> dfs.findById(key.dfId())
+                        .flatMap(df -> df.sts() == DfSts.SUSPENDED
+                                ? Mono.<Df>error(new DomRuleViolation(403, "df-suspended",
+                                        "The fiduciary this key belongs to is suspended"))
+                                : Mono.just(df))
                         .filter(df -> df.sts() == DfSts.ACTIVE)
                         .switchIfEmpty(Mono.error(new DomRuleViolation(403, "df-not-active",
                                 "The fiduciary this key belongs to isn't active")))

@@ -66,6 +66,14 @@ public final class DfFactory {
     public static final String SANDBOX_PLAN = "STANDARD";
 
     public static Df rehydrate(String id, String name, String contactEmail, DfPrfl prfl, String subPlnName,
+                                DfSts sts, Instant registeredAt, String cmDfApiClientSecret, Instant activatedAt,
+                                Instant suspendedAt, String suspensionReason) {
+        Df df = rehydrate(id, name, contactEmail, prfl, subPlnName, sts, registeredAt, cmDfApiClientSecret, activatedAt);
+        df.restoreSuspension(suspendedAt, suspensionReason);
+        return df;
+    }
+
+    public static Df rehydrate(String id, String name, String contactEmail, DfPrfl prfl, String subPlnName,
                                 DfSts sts, Instant registeredAt, String cmDfApiClientSecret, Instant activatedAt) {
         return new Df(id, name, contactEmail, prfl, subPlnName, sts, registeredAt, cmDfApiClientSecret, activatedAt);
     }

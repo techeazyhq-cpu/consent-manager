@@ -20,5 +20,7 @@ package com.techeazyhq.cm.dfreg.dom;
 
 public enum DfSts {
     PENDING,
-    ACTIVE
+    ACTIVE,
+    /** Stopped by platform staff (ADR-064): nothing new is accepted, records stay. Resumed to ACTIVE. */
+    SUSPENDED
 }

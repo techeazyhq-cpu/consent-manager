@@ -1,6 +1,6 @@
 # ADR-064: A fiduciary leaves: offboarding and retention
 
-- **Status:** Proposed. The defaults below are for the owner to accept or change before any code is written.
+- **Status:** Accepted on 2026-11-08 with the defaults below (D1-D7 as proposed). Built in pieces; see "Built so far".
 - **Date:** 2026-11-07
 - **Issue:** #113
 - **Builds on:** [ADR-029](adr-029-fiduciary-assurance-and-consent-termination.md) §3-4 (suspension, termination by
