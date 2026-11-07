@@ -21,9 +21,9 @@ package com.techeazyhq.cm.cnscmd.app;
 import com.techeazyhq.cm.cnscmd.dom.ExtDpRefTyp;
 
 /**
- * {@code newDpId} always comes from the caller's own JWT {@code sub} at the REST layer (plan
- * §7a) — never client-supplied — so a DP can only ever link records matching their own
- * verified contact info.
+ * Links what was raised against {@code extDpRefVal} to {@code newDpId}. At the REST layer both come from the caller's
+ * own token, the contact only once the identity provider verified it ({@code DpLinkHandler}); the erasure saga passes
+ * the email address the principal signed in with (ADR-059).
  */
 public record LinkDpCmd(String newDpId, ExtDpRefTyp extDpRefTyp, String extDpRefVal) {
 }
