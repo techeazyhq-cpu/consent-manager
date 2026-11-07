@@ -42,6 +42,8 @@ export const WEBHOOK_TYPE_LABELS: Record<string, string> = {
   "consent.withdrawn": "Consent withdrawn",
   "consent.lapsed": "Consent lapsed",
   "receipt.issued": "Receipt issued",
+  "principal_request.received": "Principal request received",
+  "principal_request.withdrawn": "Principal request withdrawn",
   "webhook.test": "Test",
 };
 

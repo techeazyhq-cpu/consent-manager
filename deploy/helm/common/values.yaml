@@ -123,7 +123,7 @@ init:
     clusterName: standalone
     # consent-manager's tenants (ADR-004) and the sandbox's (ADR-037)
     tenants: [cm, cm-sbx]
-    namespaces: [dfreg, cnscmd, cnsqry, ntf, bil, stf]
+    namespaces: [dfreg, cnscmd, cnsqry, ntf, bil, stf, dsr]
     # notification-service's namespace and its retention
     retention:
       - {namespace: public/default, minutes: 60, sizeMB: 1024}

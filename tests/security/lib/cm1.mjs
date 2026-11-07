@@ -62,12 +62,16 @@ export const loadKeys = (file) => JSON.parse(readFileSync(file, 'utf8'));
 
 const DF_APP = { realm: 'cm-df', clientId: 'cm-df-app', redirectUri: 'http://localhost:5175/' };
 const DP_PORTAL = { realm: 'cm-dp', clientId: 'cm-dp-portal', redirectUri: 'http://localhost:5174/' };
+const CM_ADMIN = { realm: 'cm-staff', clientId: 'cm-cm-admin', redirectUri: 'http://localhost:5176/' };
 
 /** A fiduciary's console user, signed in with the emailed one-time code; returns the access token. */
 export const dfSignIn = (address) => signIn(address, DF_APP);
 
 /** A data principal, signed in to the portal (an unknown address becomes an account); returns the access token. */
 export const dpSignIn = (address) => signIn(address, DP_PORTAL);
+
+/** Platform staff, signed in to CM Admin. */
+export const staffSignIn = (address) => signIn(address, CM_ADMIN);
 
 /**
  * A fiduciary's systems' own token: a client-credentials grant for its `df-api-<dfId>` client, the token the gateway

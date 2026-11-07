@@ -22,6 +22,7 @@ import { Button, Card, ErrorBanner, PageHeader, Spinner, friendlyError } from "u
 import { EVENT_LABELS, changeLabel, jwsPayload } from "dp-kit";
 import { fmtDate, humanise } from "./labels";
 import { freshToken, type Portal } from "./portal";
+import { rightsHref } from "./routes";
 
 export { EVENT_LABELS, changeLabel, jwsPayload };
 
@@ -152,7 +153,10 @@ export function History({ portal, cnsReqId }: { portal: Portal; cnsReqId: string
           }
         >
           Download the full record
-        </Button>
+        </Button>{" "}
+        <a className="cm-btn" href={rightsHref(cnsReqId)}>
+          Ask {p.controller.name} about your data
+        </a>
       </div>
     </>
   );

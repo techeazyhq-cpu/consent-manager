@@ -50,6 +50,8 @@ channels:
       consentWithdrawn: { $ref: '#/components/messages/consentWithdrawn' }
       consentLapsed: { $ref: '#/components/messages/consentLapsed' }
       receiptIssued: { $ref: '#/components/messages/receiptIssued' }
+      principalRequestReceived: { $ref: '#/components/messages/principalRequestReceived' }
+      principalRequestWithdrawn: { $ref: '#/components/messages/principalRequestWithdrawn' }
       webhookTest: { $ref: '#/components/messages/webhookTest' }
 
 operations:
@@ -70,6 +72,8 @@ operations:
       - $ref: '#/channels/consentEvents/messages/consentWithdrawn'
       - $ref: '#/channels/consentEvents/messages/consentLapsed'
       - $ref: '#/channels/consentEvents/messages/receiptIssued'
+      - $ref: '#/channels/consentEvents/messages/principalRequestReceived'
+      - $ref: '#/channels/consentEvents/messages/principalRequestWithdrawn'
       - $ref: '#/channels/consentEvents/messages/webhookTest'
 
 components:
@@ -254,6 +258,43 @@ components:
                   receiptId: { type: string, format: uuid }
                   forEvent: { type: integer, description: The record event it is for. }
                   sha256: { type: string, description: The receipt's hash, as in the audit ledger. }
+    principalRequestReceived:
+      name: principal_request.received
+      title: A data principal sent you a request about one of their consents (ADR-058)
+      description: |
+        To see, correct or erase their data, a complaint, or a nomination. Read the request, with the person's own
+        words, at GET /api/dsr/df/requests/{requestId}, and answer it there by dueBy. The consent request id tells you
+        who is asking, as your own records know them; no contact details are sent.
+      traits: [{ $ref: '#/components/messageTraits/signed' }]
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - properties:
+              type: { const: principal_request.received }
+              data:
+                type: object
+                required: [requestId, cnsReqId, right, dueBy]
+                properties:
+                  requestId: { type: string, format: uuid }
+                  cnsReqId: { type: string, format: uuid, description: The consent the request is about. }
+                  prpsCode: { type: string }
+                  right: { type: string, enum: [ACCESS, CORRECTION, ERASURE, GRIEVANCE, NOMINATION] }
+                  dueBy: { type: string, format: date-time, description: Fixed when the request was received. }
+    principalRequestWithdrawn:
+      name: principal_request.withdrawn
+      title: The person withdrew a request before it was answered
+      traits: [{ $ref: '#/components/messageTraits/signed' }]
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - properties:
+              type: { const: principal_request.withdrawn }
+              data:
+                type: object
+                properties:
+                  requestId: { type: string, format: uuid }
+                  cnsReqId: { type: string, format: uuid }
+                  prpsCode: { type: string }
     webhookTest:
       name: webhook.test
       title: A test, sent on request

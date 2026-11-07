@@ -109,6 +109,14 @@ project(":cm-aud-infra").projectDir = file("backend/services/cm-aud-svc/cm-aud-i
 project(":cm-aud-if-rest").projectDir = file("backend/services/cm-aud-svc/cm-aud-if-rest")
 project(":cm-aud-boot").projectDir = file("backend/services/cm-aud-svc/cm-aud-boot")
 
+// ---- cm-dsr-svc: principal requests and grievances (ADR-021, ADR-058) ----
+include(":cm-dsr-dom", ":cm-dsr-app", ":cm-dsr-infra", ":cm-dsr-if-rest", ":cm-dsr-boot")
+project(":cm-dsr-dom").projectDir = file("backend/services/cm-dsr-svc/cm-dsr-dom")
+project(":cm-dsr-app").projectDir = file("backend/services/cm-dsr-svc/cm-dsr-app")
+project(":cm-dsr-infra").projectDir = file("backend/services/cm-dsr-svc/cm-dsr-infra")
+project(":cm-dsr-if-rest").projectDir = file("backend/services/cm-dsr-svc/cm-dsr-if-rest")
+project(":cm-dsr-boot").projectDir = file("backend/services/cm-dsr-svc/cm-dsr-boot")
+
 // ---- keycloak extensions (plain Java provider JARs, not Spring Boot services) ----
 include(":cm-idn-otp-spi")
 project(":cm-idn-otp-spi").projectDir = file("backend/keycloak-ext/cm-idn-otp-spi")

@@ -26,6 +26,7 @@ import { usePortal } from "./portal";
 import { Account, Consents, Dashboard, Notifications, OrgDetail, Requests } from "./pages";
 import { parseRoute } from "./routes";
 import { History } from "./History";
+import { Rights } from "./Rights";
 
 interface Props {
   auth: AuthInfo;
@@ -66,6 +67,7 @@ export default function DpPortalApp({ auth, gwBase }: Props) {
       badge: portal.awaiting.length || undefined,
     },
     { key: "consents", href: "#/consents", label: "My consents", section: "Consents", icon: Icons.list },
+    { key: "rights", href: "#/rights", label: "Your rights", section: "Consents", icon: Icons.shield },
     { key: "notifications", href: "#/notifications", label: "Notifications", section: "You", icon: Icons.bell },
     { key: "account", href: "#/account", label: "Account", section: "You", icon: Icons.user },
   ];
@@ -97,6 +99,7 @@ export default function DpPortalApp({ auth, gwBase }: Props) {
       {route.page === "consents" ? <Consents portal={portal} /> : null}
       {route.page === "history" ? <History key={route.cnsReqId} portal={portal} cnsReqId={route.cnsReqId} /> : null}
       {route.page === "org" ? <OrgDetail portal={portal} dfId={route.dfId} /> : null}
+      {route.page === "rights" ? <Rights key={route.cnsReqId ?? "any"} portal={portal} cnsReqId={route.cnsReqId} /> : null}
       {route.page === "notifications" ? <Notifications portal={portal} /> : null}
       {route.page === "account" ? <Account portal={portal} onSignOut={signOut} /> : null}
     </AppShell>

@@ -153,4 +153,17 @@ class WebhookTest {
 
     private record DomainEvtHolder(com.techeazyhq.cm.domkit.DomainEvt evt) {
     }
+
+    @Test
+    void onlyPrincipalRequestTypesAreRelayedForCmDsrSvc() {
+        Instant at = Instant.parse("2026-11-07T10:00:00Z");
+        WhkMessage m = WhkMessage.relayed("6f1c2a9e-1b2c-4d5e-8f90-123456789abc", "principal_request.received", "df-1",
+                at, Map.of("requestId", "r-1", "right", "ERASURE")).orElseThrow();
+
+        assertEquals("df-1", m.dfId());
+        assertEquals("principal_request.received", m.body().get("type"));
+        assertTrue(WhkMessage.TYPES.containsAll(WhkMessage.RELAYED_TYPES));
+        assertTrue(WhkMessage.relayed("x", "consent.withdrawn", "df-1", at, Map.of()).isEmpty());
+        assertTrue(WhkMessage.relayed("x", "principal_request.received", null, at, Map.of()).isEmpty());
+    }
 }

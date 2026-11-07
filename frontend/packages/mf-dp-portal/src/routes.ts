@@ -24,7 +24,8 @@ export type Route =
   | { page: "notifications" }
   | { page: "account" }
   | { page: "org"; dfId: string }
-  | { page: "history"; cnsReqId: string };
+  | { page: "history"; cnsReqId: string }
+  | { page: "rights"; cnsReqId?: string };
 
 /** Anything unrecognised lands on the dashboard, the default page. */
 export function parseRoute(hash: string): Route {
@@ -33,6 +34,9 @@ export function parseRoute(hash: string): Route {
     case "consents":
       // one consent's history and receipts (ADR-025)
       return parts[1] ? { page: "history", cnsReqId: parts[1] } : { page: "consents" };
+    case "rights":
+      // a consent picked from its history, for a request about it (ADR-058)
+      return parts[1] ? { page: "rights", cnsReqId: parts[1] } : { page: "rights" };
     case "requests":
     case "notifications":
     case "account":
@@ -48,3 +52,6 @@ export const orgHref = (dfId: string) => `#/organisations/${encodeURIComponent(d
 
 /** One consent's history, its record and its receipts. */
 export const historyHref = (cnsReqId: string) => `#/consents/${encodeURIComponent(cnsReqId)}`;
+
+/** Your rights, with a request about this consent ready to send (ADR-058). */
+export const rightsHref = (cnsReqId?: string) => (cnsReqId ? `#/rights/${encodeURIComponent(cnsReqId)}` : "#/rights");

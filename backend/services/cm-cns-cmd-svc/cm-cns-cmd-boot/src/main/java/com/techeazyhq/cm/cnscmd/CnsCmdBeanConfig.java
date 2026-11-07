@@ -88,6 +88,7 @@ import com.techeazyhq.cm.cnscmd.infra.R2dbcCnsReqBatchRepoAdapter;
 import com.techeazyhq.cm.cnscmd.infra.ObxRelay;
 import com.techeazyhq.cm.cnscmd.infra.PulsarCnsEvtProducer;
 import com.techeazyhq.cm.cnscmd.infra.PulsarCnsSagaEvtConsumer;
+import com.techeazyhq.cm.cnscmd.infra.PulsarDfMessageConsumer;
 import com.techeazyhq.cm.cnscmd.infra.PulsarNtfCmdAdapter;
 import com.techeazyhq.cm.cnscmd.infra.R2dbcCnsArtRepoAdapter;
 import com.techeazyhq.cm.cnscmd.infra.R2dbcCnsReqRepoAdapter;
@@ -408,9 +409,17 @@ public class CnsCmdBeanConfig {
         return new PulsarCnsSagaEvtConsumer(reactivePulsarClient, objectMapper, orchestrator);
     }
 
+    /** Principal requests relayed by cm-dsr-svc, to the fiduciary's webhooks (ADR-058). */
+    @Bean
+    public PulsarDfMessageConsumer pulsarDfMessageConsumer(ReactivePulsarClient reactivePulsarClient,
+                                                           ObjectMapper objectMapper, WhkRepoPort webhooks) {
+        return new PulsarDfMessageConsumer(reactivePulsarClient, objectMapper, webhooks);
+    }
+
     @EventListener(ApplicationReadyEvent.class)
     public void startSagaConsumer(ApplicationReadyEvent event) {
         event.getApplicationContext().getBean(PulsarCnsSagaEvtConsumer.class).start();
+        event.getApplicationContext().getBean(PulsarDfMessageConsumer.class).start();
     }
 
     @ConfigurationProperties(prefix = "cm.service-urls")

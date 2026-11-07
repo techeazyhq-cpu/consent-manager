@@ -61,6 +61,9 @@ import type {
   SubPln,
   UsageRespDto,
   DfInsightsDto,
+  DpReqDto,
+  DpReqSts,
+  DpRight,
   WebhookDeliveryDetailDto,
   WebhookDeliveryDto,
   WebhookDeliverySts,
@@ -454,3 +457,65 @@ export const myBilling = {
       method: "POST",
     }),
 };
+
+/** What each right asks, in the principal's words (DPDPA ss.11-14). */
+export const DP_RIGHT_LABELS: Record<DpRight, string> = {
+  ACCESS: "See what they hold about me",
+  CORRECTION: "Correct or update my data",
+  ERASURE: "Erase my data",
+  GRIEVANCE: "Complain to the organisation",
+  NOMINATION: "Nominate someone to act for me",
+};
+
+export const DP_REQ_STS_LABELS: Record<DpReqSts, string> = {
+  OPEN: "Received",
+  ACKNOWLEDGED: "Being worked on",
+  RESOLVED: "Answered",
+  REFUSED: "Refused",
+  WITHDRAWN: "Withdrawn",
+};
+
+const dsrPath = (prefix: string, id: string, action: string) => `${prefix}/${encodeURIComponent(id)}/${action}`;
+
+/**
+ * Principal requests (cm-dsr-svc, ADR-058). {@code me}: a principal's own requests and grievances; {@code df}: the
+ * requests relayed to a fiduciary; {@code grievances}: complaints about the platform, for its staff.
+ */
+export const dsr = {
+  me: {
+    list: (base: string, token: string) => request<DpReqDto[]>(base, "/api/dsr/me/requests", token),
+    relay: (base: string, token: string, cnsReqId: string, right: DpRight, details?: string) =>
+      request<DpReqDto>(base, "/api/dsr/me/requests", token, {
+        method: "POST",
+        body: JSON.stringify({ kind: "RELAY", cnsReqId, right, details }),
+      }),
+    grievance: (base: string, token: string, details: string) =>
+      request<DpReqDto>(base, "/api/dsr/me/requests", token, {
+        method: "POST",
+        body: JSON.stringify({ kind: "GRIEVANCE", details }),
+      }),
+    withdraw: (base: string, token: string, id: string) =>
+      request<DpReqDto>(base, dsrPath("/api/dsr/me/requests", id, "withdraw"), token, { method: "POST" }),
+  },
+  df: answerer("/api/dsr/df/requests"),
+  grievances: answerer("/api/dsr/grievances"),
+};
+
+function answerer(prefix: string) {
+  return {
+    list: (base: string, token: string, sts?: DpReqSts) =>
+      request<DpReqDto[]>(base, `${prefix}${sts ? `?sts=${sts}` : ""}`, token),
+    acknowledge: (base: string, token: string, id: string) =>
+      request<DpReqDto>(base, dsrPath(prefix, id, "acknowledge"), token, { method: "POST" }),
+    resolve: (base: string, token: string, id: string, response: string) =>
+      request<DpReqDto>(base, dsrPath(prefix, id, "resolve"), token, {
+        method: "POST",
+        body: JSON.stringify({ response }),
+      }),
+    refuse: (base: string, token: string, id: string, response: string, ground: string) =>
+      request<DpReqDto>(base, dsrPath(prefix, id, "refuse"), token, {
+        method: "POST",
+        body: JSON.stringify({ response, ground }),
+      }),
+  };
+}
