@@ -92,6 +92,13 @@ resilience4j:
         timeout-duration: 10s
 
 management:
+  observations:
+    enable:
+      # Spring Security observes every filter, authentication and authorization of every request, and nothing reads
+      # them: no service exports metrics or traces. They were part of the 8% of df-reg's CPU spent on observations
+      # (docs/security/vapt-and-performance.md). HTTP request metrics are kept.
+      spring:
+        security: false
   endpoints:
     web:
       exposure:

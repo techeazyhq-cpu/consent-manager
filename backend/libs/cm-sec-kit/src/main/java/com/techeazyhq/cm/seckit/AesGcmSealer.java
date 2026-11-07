@@ -21,10 +21,13 @@ package com.techeazyhq.cm.seckit;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.security.NoSuchAlgorithmException;
+import java.security.Provider;
 import java.security.SecureRandom;
 import java.util.Base64;
 
 import javax.crypto.Cipher;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -36,7 +39,15 @@ import javax.crypto.spec.SecretKeySpec;
 public final class AesGcmSealer {
 
     private static final String VERSION = "v1:";
+    private static final String TRANSFORMATION = "AES/GCM/NoPadding";
     private static final SecureRandom RANDOM = new SecureRandom();
+    /**
+     * The provider that implements AES-GCM, found once. {@code Cipher.getInstance} without one searches every installed
+     * provider on each call; a key check opens a secret or two per request, and that search was 2.5% of df-reg's CPU
+     * (docs/security/vapt-and-performance.md). A {@code Cipher} itself isn't thread-safe, so each call still makes its
+     * own.
+     */
+    private static final Provider PROVIDER = provider();
 
     private final SecretKeySpec key;
 
@@ -49,11 +60,19 @@ public final class AesGcmSealer {
         this.key = new SecretKeySpec(bytes, "AES");
     }
 
+    private static Provider provider() {
+        try {
+            return Cipher.getInstance(TRANSFORMATION).getProvider();
+        } catch (NoSuchAlgorithmException | NoSuchPaddingException e) {
+            throw new IllegalStateException(TRANSFORMATION + " is not available", e);
+        }
+    }
+
     public String seal(String secret) {
         try {
             byte[] iv = new byte[12];
             RANDOM.nextBytes(iv);
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            Cipher cipher = Cipher.getInstance(TRANSFORMATION, PROVIDER);
             cipher.init(Cipher.ENCRYPT_MODE, key, new GCMParameterSpec(128, iv));
             byte[] sealed = cipher.doFinal(secret.getBytes(StandardCharsets.UTF_8));
             return VERSION + Base64.getEncoder().encodeToString(ByteBuffer.allocate(iv.length + sealed.length)
@@ -69,7 +88,7 @@ public final class AesGcmSealer {
         }
         try {
             byte[] all = Base64.getDecoder().decode(sealed.substring(VERSION.length()));
-            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            Cipher cipher = Cipher.getInstance(TRANSFORMATION, PROVIDER);
             cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(128, all, 0, 12));
             return new String(cipher.doFinal(all, 12, all.length - 12), StandardCharsets.UTF_8);
         } catch (GeneralSecurityException e) {

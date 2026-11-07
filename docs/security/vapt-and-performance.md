@@ -467,9 +467,9 @@ live-status call, failed once a connection took longer than OPA's 2 s. Doubling 
 bigger one only lengthens the queue. On one laptop, past about 140 a second, the next step is replicas, as the chart
 has.
 
-Each of the gateway and df-reg spends about 13 ms of CPU per request at the knee (1.9 CPUs for about 140 a second, every
-one an API-key request). That is a lot for df-reg's two lookups, a nonce insert and an HMAC; it is worth profiling
-before adding replicas, and the gateway's short cache of verified keys (above) would take most of it away.
+At the knee the gateway and df-reg each used about 13 ms of CPU per request (1.9 CPUs for about 140 a second). That
+was inflated by the overload and by V-18: at 100 a second, with V-18 fixed, df-reg uses about 5.5 ms (see "Profiling
+df-reg" below).
 
 Today's ramps found the knee anywhere from 139 to 204 a second with the same settings. Compare runs made back to back,
 after a warm-up of two minutes; the first minutes after a restart fail far more (17% at 50 a second).
@@ -494,10 +494,62 @@ connections in use, so the pools played no part; the first minutes after a full 
 included. Warm, Postgres's single CPU was at its limit (median 102%) and token p95 was 684 ms, against 61 ms on the
 morning of 7 November. That was V-18, fixed since.
 
+### Profiling df-reg (7 November 2026)
+
+JDK Flight Recorder in df-reg (the `profile` settings, 110 s) while the mix ran at 100 a second, every request with an
+API key. The recording dump fails in this container ("Unable to complete I/O operation"), but the recording's own
+chunk in JFR's repository under `/tmp` holds the same data.
+
+**Its cost is about 5.5 ms of CPU per key check** (0.55 CPU at 100 a second), not the 13 ms read off the overloaded
+ramp. GC is negligible: 0.24 s of pauses in 110 s.
+
+**There is no hot spot in our code.** Of the CPU samples, by the library at the top of the stack:
+
+| Library | Share |
+|---|---|
+| Reactor | 30% |
+| R2DBC and the Postgres driver | 17% |
+| Netty | 15% |
+| Micrometer observations | 8% |
+| Spring, web and other | 13% |
+| Crypto (AES-GCM, the HMAC) | 5% |
+| Spring Security | 4% |
+| Jackson | 3% |
+| df-reg's own code | 1% |
+| JDK and the rest | 6% |
+
+A key check is one HTTP request and four statements through a reactive stack, and that stack is the cost. Two pieces
+were waste, and are gone:
+
+- **Observations nobody reads.** No service exports metrics or traces, yet Spring Security observed every filter,
+  authentication and authorization of every request. `management.observations.enable.spring.security: false` in all
+  eight services; HTTP request metrics are kept.
+- **A provider search per decryption.** `AesGcmSealer` called `Cipher.getInstance("AES/GCM/NoPadding")` each time,
+  searching every installed provider (2.5% of the samples); df-reg decrypts the key's signing secret and the
+  fiduciary's client secret on every check. The provider is now found once. `AesGcmSealerTest` is new.
+
+| | Before | After |
+|---|---|---|
+| Observations, share of df-reg's samples | 8.3% | 3.8% |
+| Crypto, share of df-reg's samples | 4.7% | 2.7% |
+| The mix at 100/s, warm | 0 failed | 0 of 12,039 and 0 of 12,064 failed |
+| df-reg CPU, median | 54% | 61% and 55% |
+
+About 6% of df-reg's sampled CPU went, but that is less than the difference between two runs of the same settings, so
+the container's CPU doesn't show it. Neither change made anything slower.
+
+**What would move the knee is structural, not a query or a function:**
+- Replicas of the gateway and df-reg, as the chart has.
+- Fewer hops per request. Every API-key request is a call from the gateway to df-reg. A cache of verified keys at the
+  gateway, suggested above, can't skip df-reg for a signed request on its own: each needs the key's signing secret for
+  the HMAC and a fresh nonce claim against replays. Doing both in the gateway, with the nonces in Redis, would remove
+  the hop, at the price of the gateway holding signing secrets (ADR-041). That is a design decision, not a fix.
+- The audit chain's lock, now the largest single cost in Postgres (see V-18).
+
 ### To finish
 
-- **df-reg's CPU per key check:** about 13 ms at the knee; profile it, and consider the gateway's cache of verified
-  keys.
+- **Fewer hops for API-key requests:** decide whether the gateway should verify keys itself (see "Profiling df-reg").
+- **The audit chain's lock:** measure whether it limits throughput before changing how entries are appended.
 
 ## Rerunning
 
