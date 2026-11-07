@@ -11,7 +11,7 @@ API keys and raise consent requests. Results and findings: [docs/security/vapt-a
 | `security/zap-scan.sh` | OWASP ZAP's API scan from `docs/api/df-api.openapi.yaml`, through `signing-proxy.mjs`, on a private Docker network |
 | `security/signing-proxy.mjs` | Signs each request a scanner sends (CM1, ADR-041), so the scan reaches what is behind authentication |
 | `perf/df-api.js` | k6 load tests: `smoke`, `mix` (expected traffic), `auth` (API key against OAuth), `ramp` (to the knee) |
-| `perf/run-benchmarks.sh` | The benchmark set in the report: the mix at 50, 75 and 100 requests a second, `auth`, `ramp` |
+| `perf/run-benchmarks.sh` | The benchmark set in the report: a one-minute warm-up, then the mix at 50, 75 and 100 requests a second, `auth`, `ramp`. Each run's summary and its requests (`<name>.csv.gz`, a time series) go to `build/reports/k6/` |
 | `security/teardown-keys.mjs` | Revokes every key the kit issued, at both fiduciaries, including earlier runs' |
 
 ```bash
