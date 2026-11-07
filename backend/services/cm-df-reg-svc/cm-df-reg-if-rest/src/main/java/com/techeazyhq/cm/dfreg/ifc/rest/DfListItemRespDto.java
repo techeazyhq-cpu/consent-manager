@@ -28,10 +28,11 @@ import com.techeazyhq.cm.dfreg.dom.DfSts;
  * shown only once at activation. The logo is fetched separately, from {@code /api/df-reg/dfs/{id}/logo}.
  */
 public record DfListItemRespDto(String id, String name, String contactEmail, DfSts sts, Instant registeredAt,
-                                String legalName, String industry, String subPlnName) {
+                                String legalName, String industry, String subPlnName,
+                                Instant suspendedAt, String suspensionReason) {
 
     public static DfListItemRespDto of(Df df) {
         return new DfListItemRespDto(df.id(), df.name(), df.contactEmail(), df.sts(), df.registeredAt(),
-                df.prfl().legalName(), df.prfl().industry(), df.subPlnName());
+                df.prfl().legalName(), df.prfl().industry(), df.subPlnName(), df.suspendedAt(), df.suspensionReason());
     }
 }

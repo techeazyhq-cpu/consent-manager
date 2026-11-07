@@ -33,6 +33,8 @@ public final class Df extends Agg<String> {
     private DfSts sts;
     private String cmDfApiClientSecret;
     private Instant activatedAt;
+    private Instant suspendedAt;
+    private String suspensionReason;
 
     Df(String id, String name, String contactEmail, DfPrfl prfl, String subPlnName, DfSts sts, Instant registeredAt,
        String cmDfApiClientSecret, Instant activatedAt) {
@@ -78,6 +80,47 @@ public final class Df extends Agg<String> {
 
     public Instant activatedAt() {
         return activatedAt;
+    }
+
+    /** When the fiduciary was suspended, or null when it is not. */
+    public Instant suspendedAt() {
+        return suspendedAt;
+    }
+
+    /** Why platform staff suspended it, or null when it is not suspended. */
+    public String suspensionReason() {
+        return suspensionReason;
+    }
+
+    /** Stops an active fiduciary (ADR-064). A reason is needed, since it is shown to the team and kept in the audit trail. */
+    public void suspend(String reason, Instant at) {
+        if (sts != DfSts.ACTIVE) {
+            throw new IllegalStateException("Only an active DF can be suspended, not one in status " + sts);
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("A reason for the suspension is needed");
+        }
+        if (reason.trim().length() > 500) {
+            throw new IllegalArgumentException("The reason must be at most 500 characters");
+        }
+        this.sts = DfSts.SUSPENDED;
+        this.suspendedAt = at;
+        this.suspensionReason = reason.trim();
+    }
+
+    /** Returns a suspended fiduciary to ACTIVE. Its keys, team and consents were never touched. */
+    public void resume() {
+        if (sts != DfSts.SUSPENDED) {
+            throw new IllegalStateException("Only a suspended DF can be resumed, not one in status " + sts);
+        }
+        this.sts = DfSts.ACTIVE;
+        this.suspendedAt = null;
+        this.suspensionReason = null;
+    }
+
+    void restoreSuspension(Instant at, String reason) {
+        this.suspendedAt = at;
+        this.suspensionReason = reason;
     }
 
     /** A new API client secret replaces the old one, which stops working at once. Only an active fiduciary has one. */

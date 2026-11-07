@@ -1677,6 +1677,45 @@
       "raisedBy": [
         "cm-df-reg-svc"
       ]
+    },
+    {
+      "code": "df-suspended",
+      "kind": "problem",
+      "status": 403,
+      "category": "state",
+      "title": "Fiduciary suspended",
+      "description": "The fiduciary this API key belongs to has been suspended by the consent manager. Nothing new is accepted until it is resumed; its records are untouched.",
+      "action": "Contact the consent manager's support. The suspension reason was given to your Owner.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "df-cannot-suspend",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Fiduciary cannot be suspended",
+      "description": "Only an active fiduciary can be suspended; this one is pending or already suspended.",
+      "action": "Check the fiduciary's status.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "df-not-suspended",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Fiduciary is not suspended",
+      "description": "Only a suspended fiduciary can be resumed.",
+      "action": "Check the fiduciary's status.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
     }
   ]
 }
