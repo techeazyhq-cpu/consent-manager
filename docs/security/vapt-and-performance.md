@@ -54,7 +54,7 @@ Thirteen are fixed, the CI gate is in place, two are accepted, and one is open (
 | V-14 | False positive | ZAP's SQL injection on `/api/aud/activity` | Closed |
 | V-15 | Critical | Anyone signed in, a fiduciary's API key included, could approve, decline or withdraw any consent by its id | Fixed (ADR-044) |
 | V-16 | Accepted | Two HIGH advisories without a patched release in the mobile app's build tooling (braces, node-forge) | Accepted until 2026-12-31 |
-| V-17 | Medium | Overloaded, the PEP answers a valid consent with DENY (403 `consent-not-verified`), not 503 | Fixed (ADR-057); ramp rerun to confirm |
+| V-17 | Medium | Overloaded, the PEP answers a valid consent with DENY (403 `consent-not-verified`), not 503 | Fixed (ADR-057); confirmed by the ramp, 0 of 16,209 refusals a 403 |
 
 ### V-17: overload reported as DENY (Medium)
 
@@ -84,7 +84,10 @@ is the nagging ADR-028 rules out.
   deny, undetermined, unreachable, too slow, breaker open), `GwPdpDownTest`, and `GwPepPdpIT` against a real OPA with
   the status endpoint answering 503.
 
-Not yet confirmed under load: the ramp needs rerunning (see "To finish").
+**Confirmed under load** (the ramp rerun below): past the knee, 16,209 consent checks were refused, every one 503
+`consent-check-unavailable`, and none 403. A first run had 3 × 403; they were the test's own: a VU whose token refresh
+had just failed sent its next verify with no token, which is rightly denied. `df-api.js` now keeps an in-date token
+when a refresh fails, and skips the verify when it has none, so every verify carries a consent in force.
 
 ### V-16: the mobile app's build tooling (accepted)
 
@@ -328,7 +331,7 @@ a fair OAuth comparison needs the API client's own client-credentials token (see
 **Where the limit is:** PostgreSQL, at its 1-CPU limit from about 125 a second. The gateway (≈ 100%) and df-reg
 (≈ 95%) were each about half their 2 CPUs, and OPA, Redis and Pulsar were light. Past the knee, Postgres's latency
 reaches the PDP's live-status lookup; its breaker opens, and from then on every consent check was answered DENY without
-asking (V-17). Raises, reads and token refreshes fail as 503, which is correct; since the V-17 fix, verify should too.
+asking (V-17). Raises, reads and token refreshes fail as 503, which is correct; since the V-17 fix, verify does too (below).
 
 df-reg works almost as hard as the gateway: every API-key request asks it to check the key and the signature. A short
 cache of verified keys at the gateway would take that load off, if the knee is raised past Postgres.
@@ -365,11 +368,32 @@ connections being held by background work. With V-03 fixed, the next limits to m
 Postgres's 100 connections, and notification-service, which was the busiest part of the stack as it worked through the
 emails the load tests asked for.
 
+### The ramp again, with the V-17 fix, 7 November 2026
+
+The same stack and limits as the rerun above, with the gateway and OPA policy of ADR-057. The ramp after a one-minute
+warm-up, twice: as the compose file has it, then with OPA's CPU raised from 0.25 to 1 (a scratch override).
+
+| | Clean up to | Verify refused | of which 403 | Raise, read, token failed | Limit |
+|---|---|---|---|---|---|
+| OPA at 0.25 CPU | 89/s | 16,209, all 503 | 0 | 4,604 (503, a few 500 and 429) | OPA, at its 0.25-CPU cap |
+| OPA at 1 CPU | 145/s (4% at 175/s) | 11,863, all 503 | 0 | 0 | PostgreSQL at 1 CPU, the gateway near 2 |
+
+**V-17 holds.** Overloaded, verify says "try again", never "no consent".
+
+**OPA at 0.25 CPU is the first limit now.** At about 80 a second its decisions went from a 10 ms median to 0.5–2.4 s,
+past the PEP's 2 s; the PDP breaker opened and every check was 503 for its 30 s. With 1 CPU the knee moved back to
+where 7 November's was, at Postgres. On 7 November OPA looked light at about 25%, but 25% *is* its cap, so it may
+already have been close; these runs don't settle whether ADR-057's policy costs more per decision. Production isn't
+affected: the chart gives OPA two replicas and no CPU limit. Only `infra/docker-compose.yml`'s `small-limits` caps
+it.
+
+With OPA at 1 CPU, raises, reads and tokens didn't fail at all; only verify was refused past the knee, as the PDP
+breaker should. Latency rose from about 50/s (p95 0.6–4 s) before any failure, as Postgres queued.
+
 ### To finish
 
-- **V-17:** fixed (ADR-057); rerun the ramp (`KEYS_FILE=… tests/perf/run-benchmarks.sh`, its `ramp` step) to
-  confirm that past the knee verify fails as 503 `consent-check-unavailable` like everything else, with no 403 for a
-  consent in force.
+- **OPA's limit on a laptop:** `small-limits` (0.25 CPU) makes OPA the knee at about 90 a second; give it its own,
+  larger limit in `infra/docker-compose.yml` (ADR-052), or measure ADR-057's policy cost per decision first.
 - **OAuth comparison:** take the API client's client-credentials token for the bearer side of `auth`, not a console
   member's (ADR-048).
 - **The knee with Postgres unconstrained:** rerun the ramp with Postgres at 2 CPUs or more, to find the next limit

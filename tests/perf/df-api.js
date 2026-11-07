@@ -100,21 +100,28 @@ function send(op, method, path, query = '', body = '', extra = {}) {
   return res;
 }
 
-// a consent token lives minutes: each VU refreshes its own when it is near expiry
+// a consent token lives minutes: each VU refreshes its own when it is near expiry. A refresh that fails (counted as a
+// failed token request) keeps the token it had, if still in date: verify must only ever carry a consent in force.
 let cnsTkn;
 let cnsTknExp = 0;
 function consentToken() {
   if (!cnsTkn || Date.now() > cnsTknExp - 30_000) {
     const r = send('token', 'POST', `/api/cns-cmd/cns-arts/${granted.cnsArtId}/token`);
-    cnsTkn = r.json('cnsTkn');
-    cnsTknExp = Date.parse(r.json('exp'));
+    if (r.status === 200 || r.status === 201) {
+      cnsTkn = r.json('cnsTkn');
+      cnsTknExp = Date.parse(r.json('exp'));
+    }
   }
-  return cnsTkn;
+  return cnsTkn && Date.now() < cnsTknExp ? cnsTkn : null;
 }
 
+// With no token in date, there is no verify to make: a 403 for a missing token is a correct deny, not the PEP's
+// answer for a consent in force, which is what the run is about (V-17: past the knee that must be 503, never 403).
 export function verify() {
+  const tkn = consentToken();
+  if (!tkn) return;
   send('verify', 'GET', `/api/cns-qry/cns-arts/${granted.cnsArtId}/verify`, `purpose=${granted.purpose}`, '',
-    { 'X-Cns-Tkn': consentToken() });
+    { 'X-Cns-Tkn': tkn });
 }
 
 export function token() {
