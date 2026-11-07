@@ -21,7 +21,7 @@ does. Two things pull against each other:
 - **The platform should not hold a departed customer's data longer than it needs to**, and the fiduciary's own people
   (team, contacts) are personal data too.
 
-## Decision (proposed)
+## Decision
 
 ### 1. Four states, one direction
 
@@ -88,6 +88,24 @@ id; its old records are not reattached. The registration numbers are kept, so st
 3. The saga: terminate consents (cm-cns-cmd-svc), delete the team (Keycloak), keys and webhooks, contacts.
 4. The retention purge job and legal holds.
 5. DF Console and CM Admin screens; runbook; CI check that every retention period is configuration.
+
+## Built so far
+
+1. **States and suspension** (done): `SUSPENDED` in cm-df-reg-svc. Staff suspend with a reason (an operator or an
+   administrator) and an administrator resumes: `POST /api/df-reg/dfs/{id}/suspend` and `/resume`. A suspended
+   fiduciary fails the "is it active" checks that already existed (API keys are refused with `df-suspended`; no request
+   can be raised), so nothing else had to change. Its team can still sign in and read. Keys, team and consents are
+   untouched, so resuming restores it exactly. Both are audited.
+   *Known limit:* an OAuth token a fiduciary's system already holds works until it expires (minutes).
+2. **Leaving and the wind-down** (done): `LEAVING`. The Owner asks with `POST /api/df-reg/me/leave` (typing the
+   organisation's name), sees it with `GET`, and calls it off once with `POST /api/df-reg/me/leave/cancel` (back to
+   ACTIVE, or to SUSPENDED if that is where it left from). The wind-down is `cm.dfreg.offboarding.wind-down-days` (30).
+   The whole team is emailed at each step; a mail failure doesn't stop the change. While leaving, API keys are refused
+   with `df-leaving` and no new key can be issued (also true when suspended).
+   *Not in this piece:* the **export** (records already come from the consent and audit APIs, but one "everything of
+   mine" export is a cross-service job), **staff ending a contract** (needs the two-person approval of D7), and
+   **anything happening when the wind-down ends**: the date is recorded, and piece 3 acts on it.
+3. The closing saga, 4. the purge job, 5. screens and runbook: not yet.
 
 ## What the owner needs to decide
 

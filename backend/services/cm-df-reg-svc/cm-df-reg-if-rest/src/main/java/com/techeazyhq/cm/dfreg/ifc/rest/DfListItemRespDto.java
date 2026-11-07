@@ -29,10 +29,10 @@ import com.techeazyhq.cm.dfreg.dom.DfSts;
  */
 public record DfListItemRespDto(String id, String name, String contactEmail, DfSts sts, Instant registeredAt,
                                 String legalName, String industry, String subPlnName,
-                                Instant suspendedAt, String suspensionReason) {
+                                Instant suspendedAt, String suspensionReason, Instant leavesAt) {
 
     public static DfListItemRespDto of(Df df) {
         return new DfListItemRespDto(df.id(), df.name(), df.contactEmail(), df.sts(), df.registeredAt(),
-                df.prfl().legalName(), df.prfl().industry(), df.subPlnName(), df.suspendedAt(), df.suspensionReason());
+                df.prfl().legalName(), df.prfl().industry(), df.subPlnName(), df.suspendedAt(), df.suspensionReason(), df.leavesAt());
     }
 }

@@ -23,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.dfreg.dom.DfApiKey;
 import com.techeazyhq.cm.dfreg.dom.DfApiKeyRepoPort;
+import com.techeazyhq.cm.dfreg.dom.DfRepoPort;
+import com.techeazyhq.cm.dfreg.dom.DfSts;
 import com.techeazyhq.cm.dfreg.dom.SecretSealerPort;
 import com.techeazyhq.cm.webkit.DomRuleViolation;
 
@@ -38,8 +40,10 @@ public class DfApiKeyHandler {
     private final DfApiKeyRepoPort keys;
     private final SecretSealerPort sealer;
     private final AuditTrail audit;
+    private final DfRepoPort dfs;
 
-    public DfApiKeyHandler(DfApiKeyRepoPort keys, SecretSealerPort sealer, AuditTrail audit) {
+    public DfApiKeyHandler(DfApiKeyRepoPort keys, SecretSealerPort sealer, AuditTrail audit, DfRepoPort dfs) {
+        this.dfs = dfs;
         this.keys = keys;
         this.sealer = sealer;
         this.audit = audit;
@@ -52,6 +56,10 @@ public class DfApiKeyHandler {
     @Transactional
     public Mono<DfApiKey.Issued> issue(DfTeamCaller caller, String label, boolean signingRequired) {
         return require(caller)
+                .then(Mono.defer(() -> dfs.findById(caller.dfId())))
+                .filter(df -> df.sts() == DfSts.ACTIVE || df.sts() == DfSts.PENDING)
+                .switchIfEmpty(Mono.error(new DomRuleViolation(403, "df-not-active",
+                        "The organisation is suspended or leaving, so it can't be given new API keys")))
                 .then(Mono.fromCallable(() -> DfApiKey.issue(caller.dfId(), label, signingRequired, caller.id(), sealer)))
                 .onErrorMap(IllegalArgumentException.class, e -> new DomRuleViolation(400, "invalid-api-key", e.getMessage()))
                 .flatMap(issued -> keys.save(issued.key())

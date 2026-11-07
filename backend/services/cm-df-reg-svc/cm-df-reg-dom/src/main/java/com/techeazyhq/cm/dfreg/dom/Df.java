@@ -35,6 +35,11 @@ public final class Df extends Agg<String> {
     private Instant activatedAt;
     private Instant suspendedAt;
     private String suspensionReason;
+    private DfSts leavingFrom;
+    private Instant leavingAt;
+    private Instant leavesAt;
+    private String leavingBy;
+    private int leaveCancellations;
 
     Df(String id, String name, String contactEmail, DfPrfl prfl, String subPlnName, DfSts sts, Instant registeredAt,
        String cmDfApiClientSecret, Instant activatedAt) {
@@ -80,6 +85,81 @@ public final class Df extends Agg<String> {
 
     public Instant activatedAt() {
         return activatedAt;
+    }
+
+    /** When the wind-down began, or null when the fiduciary is not leaving. */
+    public Instant leavingAt() {
+        return leavingAt;
+    }
+
+    /** When the wind-down ends and the fiduciary is closed, or null when it is not leaving. */
+    public Instant leavesAt() {
+        return leavesAt;
+    }
+
+    /** Who asked to leave, or null. */
+    public String leavingBy() {
+        return leavingBy;
+    }
+
+    /** A departure can be cancelled once (ADR-064 D5). */
+    public boolean canCancelLeaving() {
+        return sts == DfSts.LEAVING && leaveCancellations == 0;
+    }
+
+    /** Starts the wind-down of an active or suspended fiduciary; it ends {@code windDownDays} days later. */
+    public void startLeaving(String by, Instant at, int windDownDays) {
+        if (sts != DfSts.ACTIVE && sts != DfSts.SUSPENDED) {
+            throw new IllegalStateException("Only an active or suspended DF can leave, not one in status " + sts);
+        }
+        if (windDownDays < 1) {
+            throw new IllegalArgumentException("The wind-down is at least a day");
+        }
+        this.leavingFrom = sts;
+        this.sts = DfSts.LEAVING;
+        this.leavingAt = at;
+        this.leavesAt = at.plus(java.time.Duration.ofDays(windDownDays));
+        this.leavingBy = by;
+    }
+
+    /** Calls the departure off, once: back to the state it left from. */
+    public void cancelLeaving() {
+        if (sts != DfSts.LEAVING) {
+            throw new IllegalStateException("Only a DF that is leaving can cancel, not one in status " + sts);
+        }
+        if (leaveCancellations > 0) {
+            throw new CancelUsedException();
+        }
+        this.sts = leavingFrom == null ? DfSts.ACTIVE : leavingFrom;
+        this.leavingFrom = null;
+        this.leavingAt = null;
+        this.leavesAt = null;
+        this.leavingBy = null;
+        this.leaveCancellations++;
+    }
+
+    /** The one cancellation has been used. */
+    public static final class CancelUsedException extends IllegalStateException {
+        CancelUsedException() {
+            super("A departure can be cancelled once, and this one already was");
+        }
+    }
+
+    /** The state it leaves from, to return to on cancelling. */
+    public DfSts leavingFrom() {
+        return leavingFrom;
+    }
+
+    public int leaveCancellations() {
+        return leaveCancellations;
+    }
+
+    void restoreLeaving(DfSts from, Instant at, Instant ends, String by, int cancellations) {
+        this.leavingFrom = from;
+        this.leavingAt = at;
+        this.leavesAt = ends;
+        this.leavingBy = by;
+        this.leaveCancellations = cancellations;
     }
 
     /** When the fiduciary was suspended, or null when it is not. */

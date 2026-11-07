@@ -22,5 +22,7 @@ public enum DfSts {
     PENDING,
     ACTIVE,
     /** Stopped by platform staff (ADR-064): nothing new is accepted, records stay. Resumed to ACTIVE. */
-    SUSPENDED
+    SUSPENDED,
+    /** The fiduciary is leaving (ADR-064): a wind-down runs, nothing new is accepted, and closing follows. */
+    LEAVING
 }

@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-128 entries: 120 API problems, 7 operational log codes and 1 event.
+132 entries: 124 API problems, 7 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -175,12 +175,16 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `cns-req-not-pending` | 409 | Consent request already decided | The request was already given, refused or withdrawn. | Read its current state; raise a new request if needed. | no | cns-cmd |
 | `delivery-pending` | 409 | Delivery still being tried | The delivery has not finished, so it cannot be replayed yet. | Wait until it is delivered or failed. | no | cns-cmd |
 | `df-activation-required` | 409 | Activate the fiduciary first | Its team can only be managed once the fiduciary has been activated. | Activate the fiduciary, then try again. | no | df-reg |
+| `df-cannot-leave` | 409 | Fiduciary cannot leave now | Only an active or suspended fiduciary can ask to leave; this one is pending, already leaving or closed. | Check the fiduciary's status. | no | df-reg |
 | `df-cannot-suspend` | 409 | Fiduciary cannot be suspended | Only an active fiduciary can be suspended; this one is pending or already suspended. | Check the fiduciary's status. | no | df-reg |
+| `df-leaving` | 403 | Fiduciary is leaving | The fiduciary this API key belongs to has asked to leave the platform. Nothing new is accepted during the wind-down; its records stay readable until it closes. | An Owner can cancel the departure once before the wind-down ends, in the DF Console. | no | df-reg |
 | `df-not-active` | 403 | Fiduciary not active | The fiduciary is registered but not active, or has been suspended, so it cannot act yet. | Activate the fiduciary, or contact the platform if it was suspended. | no | cns-cmd, df-reg |
+| `df-not-leaving` | 409 | Fiduciary is not leaving | There is no departure to cancel. | Check the fiduciary's status. | no | df-reg |
 | `df-not-suspended` | 409 | Fiduciary is not suspended | Only a suspended fiduciary can be resumed. | Check the fiduciary's status. | no | df-reg |
 | `df-suspended` | 403 | Fiduciary suspended | The fiduciary this API key belongs to has been suspended by the consent manager. Nothing new is accepted until it is resumed; its records are untouched. | Contact the consent manager's support. The suspension reason was given to your Owner. | no | df-reg |
 | `dp-request-closed` | 409 | Request already closed | The request was already answered, refused or withdrawn. | Read its current state. | no | dsr |
 | `erasure-not-stuck` | 409 | Erasure is not stuck | Only a stuck erasure can be retried. | Read its state first. | no | dsr |
+| `leave-cancel-used` | 409 | Departure already cancelled once | A departure can be called off once, and this fiduciary has already used that. | The wind-down continues. Contact the consent manager's support if this is a mistake. | no | df-reg |
 | `no-draft` | 409 | No draft to publish | The purpose has no draft, so there is nothing to publish. | Draft a change first. | no | cns-cmd |
 | `plan-change-request-decided` | 409 | Plan change already decided | The request was already approved, declined or withdrawn. | Read its current state; nothing more to do. | no | bil |
 | `purpose-not-published` | 409 | Purpose not published yet | The purpose has no published version to ask consent for. | Publish the purpose first. | no | cns-cmd |
