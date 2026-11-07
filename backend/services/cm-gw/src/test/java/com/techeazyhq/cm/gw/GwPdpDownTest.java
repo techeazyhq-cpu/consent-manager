@@ -26,7 +26,10 @@ import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTest
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
-/** The PEP fails closed (ADR-006, ADR-016): with the PDP unreachable, a consent token is never honoured. */
+/**
+ * The PEP fails closed (ADR-006, ADR-016): with the PDP unreachable, a consent token is never honoured. Nor is it
+ * denied: the check couldn't be made, so the answer is 503 with Retry-After (ADR-057, V-17).
+ */
 @SpringBootTest(properties = "cm.pdp.base-url=http://127.0.0.1:1")
 @AutoConfigureWebTestClient
 class GwPdpDownTest {
@@ -35,12 +38,13 @@ class GwPdpDownTest {
     private WebTestClient client;
 
     @Test
-    void aVerificationIsDeniedWhenThePdpCannotBeReached() {
+    void aVerificationIsUnavailableNotDeniedWhenThePdpCannotBeReached() {
         client.mutateWith(mockJwt()).get()
                 .uri("/api/cns-qry/cns-arts/art-1/verify")
                 .header("X-Cns-Tkn", "token")
                 .exchange()
-                .expectStatus().isForbidden()
-                .expectBody().jsonPath("$.type").isEqualTo("urn:cm:problem:consent-not-verified");
+                .expectStatus().isEqualTo(503)
+                .expectHeader().exists("Retry-After")
+                .expectBody().jsonPath("$.type").isEqualTo("urn:cm:problem:consent-check-unavailable");
     }
 }

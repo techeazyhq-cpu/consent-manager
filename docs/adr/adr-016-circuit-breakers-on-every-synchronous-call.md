@@ -1,6 +1,6 @@
 # ADR-016: A circuit breaker on every synchronous call to another service
 
-- **Status:** Accepted
+- **Status:** Accepted; the `pdp` row amended by [ADR-057](adr-057-an-undecided-consent-check-is-503-not-deny.md)
 - **Date:** 2026-10-11
 
 ## Context
@@ -27,7 +27,7 @@ after an allow.
 
    | Caller | Breaker | When it is open or the call fails |
    |---|---|---|
-   | cm-gw | `pdp` | Deny (fails closed, ADR-006) |
+   | cm-gw | `pdp` | 503 `consent-check-unavailable` with `Retry-After`; never an allow (fails closed, ADR-057) |
    | cm-gw | `bil-quota` | Allow, at the last quota known for the fiduciary (fails open: a burst limit, not an authorisation) |
    | cm-gw | each route (`df-reg`, `cns-cmd`, ...) | 503 from `RouteFallbackController` |
    | cm-cns-cmd-svc | `cm-df-reg-svc`, `cm-bil-svc` | 503: the consent request is refused, and the fiduciary is told to retry |
