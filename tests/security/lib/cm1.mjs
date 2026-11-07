@@ -69,6 +69,30 @@ export const dfSignIn = (address) => signIn(address, DF_APP);
 /** A data principal, signed in to the portal (an unknown address becomes an account); returns the access token. */
 export const dpSignIn = (address) => signIn(address, DP_PORTAL);
 
+/**
+ * A fiduciary's systems' own token: a client-credentials grant for its `df-api-<dfId>` client, the token the gateway
+ * gets for an API key (ADR-041) and the one an OAuth integration would send. Production never hands the client's
+ * secret out, so this reads it with the local Keycloak's admin account; it never rotates it, which would leave
+ * df-reg's copy stale. Local stack only.
+ */
+export async function dfApiClientToken(dfId) {
+  const adm = await (await fetch(`${KC}/realms/master/protocol/openid-connect/token`, { method: 'POST',
+    body: new URLSearchParams({ grant_type: 'password', client_id: 'admin-cli',
+      username: process.env.KC_ADMIN_USER || 'admin', password: process.env.KC_ADMIN_PASSWORD || 'admin' }) })).json();
+  const admin = { Authorization: `Bearer ${adm.access_token}` };
+  const clientId = `df-api-${dfId}`;
+  const [client] = await (await fetch(`${KC}/admin/realms/cm-df/clients?clientId=${clientId}`, { headers: admin }))
+    .json();
+  if (!client) throw new Error(`${clientId}: no such client in cm-df`);
+  const { value } = await (await fetch(`${KC}/admin/realms/cm-df/clients/${client.id}/client-secret`,
+    { headers: admin })).json();
+  const tokens = await (await fetch(`${KC}/realms/cm-df/protocol/openid-connect/token`, { method: 'POST',
+    body: new URLSearchParams({ grant_type: 'client_credentials', client_id: clientId, client_secret: value }) }))
+    .json();
+  if (!tokens.access_token) throw new Error(`${clientId}: no client-credentials token`);
+  return tokens.access_token;
+}
+
 /** Signs in through `client`'s login pages as a browser would, reading the code from Mailpit. */
 async function signIn(address, { realm: realmName, clientId, redirectUri }) {
   const cookies = new Map();

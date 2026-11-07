@@ -134,7 +134,7 @@ export function read() {
 
 export function readBearer() {
   const res = http.get(`${BASE}/api/cns-qry/cns-arts/${granted.cnsReqId}`,
-    { headers: { Authorization: `Bearer ${K.tokenB}` }, tags: { op: 'read-bearer' } });
+    { headers: { Authorization: `Bearer ${K.clientTokenB}` }, tags: { op: 'read-bearer' } });
   check(res, { 'read-bearer ok': (r) => r.status === 200 });
 }
 
