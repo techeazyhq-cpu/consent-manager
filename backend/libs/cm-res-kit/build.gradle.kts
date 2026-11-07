@@ -23,6 +23,7 @@ plugins {
 // What every service needs to call another one through a circuit breaker (ADR-016): which failures count against
 // the breaker, and how an unavailable dependency surfaces to the caller (503 problem+json).
 dependencies {
+    implementation(project(":cm-web-kit")) // Problems and the error dictionary (ADR-062)
     compileOnly("org.springframework.boot:spring-boot-starter-webflux:4.0.9")
     compileOnly("org.springframework.boot:spring-boot-autoconfigure:4.0.9")
     compileOnly("org.springframework.boot:spring-boot-jackson2:4.0.9") // our code stays on Jackson 2 for now (#216)

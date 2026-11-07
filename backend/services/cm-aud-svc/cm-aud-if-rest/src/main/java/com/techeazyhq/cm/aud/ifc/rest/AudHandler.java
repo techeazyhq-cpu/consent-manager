@@ -30,6 +30,10 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import org.springframework.http.MediaType;
+
+import com.techeazyhq.cm.webkit.Problems;
+
 import reactor.core.publisher.Mono;
 
 import java.util.Base64;
@@ -65,7 +69,7 @@ public class AudHandler {
             } else if (ctx.isDp()) {
                 query = new AudQuery(cnsReqId, cnsArtId, null, ctx.dpId(), limit);
             } else {
-                return forbidden();
+                return forbidden(request);
             }
             return ledger.find(query).collectList().flatMap(entries -> ServerResponse.ok().bodyValue(entries));
         });
@@ -83,7 +87,7 @@ public class AudHandler {
         return authCtx(request).flatMap(ctx -> ctx.isCmAdmin()
                 ? ledger.verify().zipWith(anchoring.verify())
                         .flatMap(v -> ServerResponse.ok().bodyValue(Map.of("chain", v.getT1(), "checkpoints", v.getT2())))
-                : forbidden());
+                : forbidden(request));
     }
 
     /**
@@ -101,10 +105,11 @@ public class AudHandler {
         return authCtx(request).flatMap(ctx -> anchoring.proof(seq)
                 .flatMap(proof -> mayRead(ctx, proof.entry(), seq).flatMap(allowed -> allowed
                         ? ServerResponse.ok().bodyValue(proofView(proof))
-                        : forbidden()))
-                .switchIfEmpty(ServerResponse.status(404).bodyValue(Map.of("type", "urn:cm:problem:aud-not-checkpointed",
-                        "title", "aud-not-checkpointed",
-                        "detail", "Entry " + seq + " does not exist or is not in a checkpoint yet"))));
+                        : forbidden(request)))
+                .switchIfEmpty(Mono.defer(() -> ServerResponse.status(404).contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                        .bodyValue(Problems.body("aud-not-checkpointed", 404,
+                                "Entry " + seq + " does not exist or is not in a checkpoint yet",
+                                Problems.correlationId(request.exchange()))))));
     }
 
     /** The checkpoints and their anchors: hashes and timestamps only, nothing personal. */
@@ -162,7 +167,8 @@ public class AudHandler {
         return request.principal().cast(JwtAuthenticationToken.class).map(token -> AuthCtx.from((Jwt) token.getPrincipal()));
     }
 
-    private static Mono<ServerResponse> forbidden() {
-        return ServerResponse.status(403).bodyValue(Map.of("type", "urn:cm:problem:aud-forbidden", "title", "aud-forbidden"));
+    private static Mono<ServerResponse> forbidden(ServerRequest request) {
+        return ServerResponse.status(403).contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                .bodyValue(Problems.body("aud-forbidden", 403, null, Problems.correlationId(request.exchange())));
     }
 }

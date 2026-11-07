@@ -81,7 +81,7 @@ public class CreateCnsReqCmdHandler implements CmdHandler<CreateCnsReqCmd, CnsRe
         return dfActivePort.isActive(cmd.dfId())
                 .flatMap(active -> active
                         ? Mono.empty()
-                        : Mono.error(new DomRuleViolation(404, "df-not-active", "DF " + cmd.dfId() + " is not active")))
+                        : Mono.error(new DomRuleViolation(403, "df-not-active", "DF " + cmd.dfId() + " is not active")))
                 .then(dfSubEligiblePolicy.evaluate(cmd.dfId()))
                 .flatMap(result -> requireEligible(cmd.dfId(), result))
                 // purpose limitation (ADR-031): only the current version of a defined purpose, only its categories

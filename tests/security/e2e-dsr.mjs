@@ -61,11 +61,11 @@ expect(!!prps, 'fiduciary A has a published purpose', prps?.code);
 // a webhook endpoint for the new types (the local stack allows http)
 const endpoint = await api(dfA, 'POST', '/api/cns-cmd/webhooks/endpoints', { url: 'http://cm-gw:9000/actuator/health',
   description: 'e2e-dsr', types: ['principal_request.received', 'principal_request.withdrawn'] });
-expect(endpoint.status === 201, 'A subscribes a webhook to principal_request.*', `${endpoint.status} ${endpoint.json?.title ?? ''}`);
+expect(endpoint.status === 201, 'A subscribes a webhook to principal_request.*', `${endpoint.status} ${endpoint.json?.code ?? ''}`);
 
 const raised = await api(dfA, 'POST', '/api/cns-cmd/cns-reqs', { extDpRefTyp: 'EMAIL', extDpRefVal: principal,
   prpsCode: prps.code, prpsVer: prps.currentVer });
-expect(raised.status === 201, 'A asks a new principal for consent', `${raised.status} ${raised.json?.title ?? ''}`);
+expect(raised.status === 201, 'A asks a new principal for consent', `${raised.status} ${raised.json?.code ?? ''}`);
 const cnsReqId = raised.json.id;
 
 const dp = await dpSignIn(principal);
@@ -80,7 +80,7 @@ const req = await api(dp, 'POST', '/api/dsr/me/requests', { kind: 'RELAY', cnsRe
 expect(req.status === 201 && req.json.dfId === mine.dfId && req.json.sts === 'OPEN', 'the principal makes a request',
   `${req.status} ${req.json?.dueBy ?? req.text}`);
 const again = await api(dp, 'POST', '/api/dsr/me/requests', { kind: 'RELAY', cnsReqId, right: 'ERASURE' });
-expect(again.status === 409, 'the same request twice is 409', `${again.status} ${again.json?.title ?? ''}`);
+expect(again.status === 409, 'the same request twice is 409', `${again.status} ${again.json?.code ?? ''}`);
 const notMine = await api(dp, 'POST', '/api/dsr/me/requests', { kind: 'RELAY', cnsReqId: '00000000-0000-0000-0000-000000000000',
   right: 'ACCESS' });
 expect(notMine.status === 404, "someone else's or no consent is 404", `${notMine.status}`);

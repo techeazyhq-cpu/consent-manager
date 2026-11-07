@@ -54,6 +54,6 @@ public class UsgAlertRunner {
                     if (raised > 0) {
                         LOG.info("Raised {} usage alert(s)", raised);
                     }
-                }, e -> LOG.warn("Usage alert sweep failed", e));
+                }, e -> LOG.warn("[CM-USAGE-ALERT-FAILED] Usage alert sweep failed", e));
     }
 }

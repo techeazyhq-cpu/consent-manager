@@ -81,14 +81,29 @@ export class ApiError extends Error {
   constructor(public status: number, public problem: ProblemDetail | null) {
     super(problem?.title ?? `Request failed with status ${status}`);
   }
+
+  /** The error's stable name from the error dictionary, when the response had one: branch on this, never on the title. */
+  get code(): string | undefined {
+    return problemCode(this.problem);
+  }
 }
 
-/** What went wrong, for a person to read: the API's own explanation when it gave one. */
+/** The stable code of a problem: its `code`, else the end of its `type`. */
+export function problemCode(problem: Pick<ProblemDetail, "code" | "type"> | null | undefined): string | undefined {
+  if (!problem) return undefined;
+  if (problem.code) return problem.code;
+  return problem.type?.startsWith("urn:cm:problem:") ? problem.type.slice("urn:cm:problem:".length) : undefined;
+}
+
+/**
+ * What went wrong, for a person to read: the API's own explanation when it gave one, else the error's title. A failure on
+ * the platform's side also carries its correlation id, so the person has a reference to give when they report it.
+ */
 export function friendlyError(err: unknown): string {
   if (err && typeof err === "object" && "problem" in err) {
-    const p = (err as { problem?: { title?: string; detail?: string } }).problem;
-    if (p?.detail) return p.detail;
-    if (p?.title) return p.title;
+    const p = (err as { problem?: Partial<ProblemDetail> }).problem;
+    const text = p?.detail || p?.title;
+    if (text) return p?.correlationId && (p.status ?? 0) >= 500 ? `${text} (reference ${p.correlationId})` : text;
   }
   if (err instanceof Error) return err.message;
   return "Something went wrong";

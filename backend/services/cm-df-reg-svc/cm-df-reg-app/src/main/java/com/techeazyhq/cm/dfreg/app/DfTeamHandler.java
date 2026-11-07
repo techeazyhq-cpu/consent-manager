@@ -128,7 +128,7 @@ public class DfTeamHandler {
             return dfRepo.findById(dfId)
                     .switchIfEmpty(Mono.error(new DomRuleViolation(404, "df-not-found", "No DF " + dfId)))
                     .flatMap(df -> df.sts() != DfSts.ACTIVE
-                            ? Mono.error(new DomRuleViolation(409, "df-not-active", "Activate the fiduciary first"))
+                            ? Mono.error(new DomRuleViolation(409, "df-activation-required", "Activate the fiduciary first"))
                             : directory.list(dfId).filter(m -> m.role() == DfRole.OWNER).hasElements()
                                     .flatMap(hasOwner -> hasOwner
                                             ? Mono.<Void>error(new DomRuleViolation(409, "owner-exists",

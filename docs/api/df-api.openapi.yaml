@@ -1232,7 +1232,7 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
-          example: { type: 'urn:cm:problem:signature-expired', title: signature-expired, status: 401, detail: X-Signature-Timestamp is more than 5 minutes from the server's clock }
+          example: { type: 'urn:cm:problem:signature-expired', code: signature-expired, title: Request signature out of date, status: 401, detail: X-Signature-Timestamp is more than 5 minutes from the server's clock, retryable: false }
     SubscriptionInactive:
       description: The subscription is suspended (`subscription-inactive`).
       content:
@@ -1248,7 +1248,7 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
-          example: { type: 'urn:cm:problem:request-replayed', title: request-replayed, status: 409, detail: 'This nonce was already used: sign every request, retries too, with a new one' }
+          example: { type: 'urn:cm:problem:request-replayed', code: request-replayed, title: Request already used, status: 409, detail: 'This nonce was already used: sign every request, retries too, with a new one', retryable: false }
     Conflict:
       description: The state doesn't allow it, such as a withdrawn consent.
       content:
@@ -1273,12 +1273,19 @@ components:
   schemas:
     Problem:
       type: object
-      description: RFC 9457 problem details.
+      description: |
+        RFC 9457 problem details, from the platform's error dictionary (ADR-062). Every code, what it means and what to do
+        about it is in docs/errors/error-dictionary.md. Write logic against `code`: the `title` is the same words every
+        time for a code but is words for people, and the `detail` changes.
+      required: [type, code, title, status]
       properties:
-        type: { type: string, example: 'urn:cm:problem:quota-exceeded' }
-        title: { type: string, example: quota-exceeded }
+        type: { type: string, example: 'urn:cm:problem:quota-exceeded', description: '`urn:cm:problem:` and the code.' }
+        code: { type: string, example: quota-exceeded, description: The stable name of the error; it never changes once released. }
+        title: { type: string, example: Monthly allowance used up, description: The same short sentence every time for a code. }
         status: { type: integer, example: 429 }
-        detail: { type: string }
+        detail: { type: string, description: 'What was wrong this time, such as which field or id. Not for parsing.' }
+        retryable: { type: boolean, example: true, description: Whether trying the same request again later can work. Honour Retry-After when it is sent. }
+        correlationId: { type: string, description: The X-Correlation-Id of the response. Quote it when you report a problem. }
 
     ContactType:
       type: string

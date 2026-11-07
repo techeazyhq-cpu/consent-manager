@@ -255,7 +255,7 @@ class DfTeamHandlerTest {
         dfs.put("df-p", DfFactory.rehydrate("df-p", "Acme", "ops@acme.example", DfPrfl.EMPTY, null, DfSts.PENDING,
                 Instant.now(), null, null));
 
-        refused(409, "df-not-active",
+        refused(409, "df-activation-required",
                 () -> team.invite(DfTeamCaller.staff("stf-1"), "df-p", "bo@acme.example", "Bo", DfRole.OWNER).block());
         assertTrue(directory.isEmpty());
     }

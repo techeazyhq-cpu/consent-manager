@@ -129,7 +129,7 @@ export function useConsole(auth: AuthInfo, gwBase: string, dfId: string, role: D
           return "Your subscription isn't active, so new requests are paused. Contact the platform to reactivate it.";
         }
         if (err instanceof ApiError && err.status === 429) return "This month's request allowance is used up.";
-        if (err instanceof ApiError && err.problem?.title === "purpose-version-superseded") {
+        if (err instanceof ApiError && err.code === "purpose-version-superseded") {
           reloadDefs();
           return "That purpose has a newer version now. Check what you're asking and send again.";
         }

@@ -122,7 +122,7 @@ public class R2dbcDsrOutbox implements DpReqEvtPort {
                 .then()
                 .doFinally(signal -> passRunning.set(false))
                 .subscribe(v -> {
-                }, err -> LOG.warn("Outbox relay iteration failed", err));
+                }, err -> LOG.warn("[CM-OUTBOX-RELAY-FAILED] Outbox relay iteration failed", err));
     }
 
     private Mono<Void> publishAndMark(Row row) {

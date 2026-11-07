@@ -44,4 +44,10 @@ public class CmWebKitAutoConfiguration {
     public DomProblemDetailWebExceptionHandler domProblemDetailWebExceptionHandler(ObjectMapper objectMapper) {
         return new DomProblemDetailWebExceptionHandler(objectMapper);
     }
+
+    /** What nothing else answers, as a problem from the error dictionary (ADR-062). */
+    @Bean
+    public FallbackProblemWebExceptionHandler fallbackProblemWebExceptionHandler(ObjectMapper objectMapper) {
+        return new FallbackProblemWebExceptionHandler(objectMapper);
+    }
 }

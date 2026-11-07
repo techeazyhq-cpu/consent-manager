@@ -25,6 +25,7 @@ import java.util.Set;
 
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
@@ -36,6 +37,8 @@ import com.techeazyhq.cm.aud.dom.AudQuery;
 import com.techeazyhq.cm.aud.dom.AudRecord;
 import com.techeazyhq.cm.audkit.PlatformActionEvt;
 import com.techeazyhq.cm.seckit.AuthCtx;
+
+import com.techeazyhq.cm.webkit.Problems;
 
 import reactor.core.publisher.Mono;
 
@@ -68,9 +71,10 @@ public class AudActivityHttpHandler {
                     } else if (mayReadOwn(ctx)) {
                         dfId = ctx.dfId();
                     } else {
-                        return ServerResponse.status(403).bodyValue(Map.of("type", "urn:cm:problem:aud-forbidden",
-                                "title", "aud-forbidden",
-                                "detail", "Owners, Administrators and Auditors at a fiduciary, and platform staff, read the audit"));
+                        return ServerResponse.status(403).contentType(MediaType.APPLICATION_PROBLEM_JSON)
+                                .bodyValue(Problems.body("aud-forbidden", 403,
+                                        "Owners, Administrators and Auditors at a fiduciary, and platform staff, read the audit",
+                                        Problems.correlationId(request.exchange())));
                     }
                     AudQuery query = new AudQuery(null, null, dfId, null,
                             request.queryParam("limit").map(AudActivityHttpHandler::number).map(Long::intValue).orElse(50),
