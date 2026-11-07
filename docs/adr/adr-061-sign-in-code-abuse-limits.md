@@ -59,6 +59,18 @@ Limits that hold across sign-ins, realms and Keycloak nodes (`OtpAbuseGuard`), i
    `sendsPerNetworkPerHour`, `wrongGuessesPerAddressPerHour`, `wrongGuessesPerAddressPerDay`. Each is a whole number;
    0 switches that limit off.
 
+9. **The local stack exempts its fixed test accounts from one limit.** The test kit signs in as the same few accounts
+   (the seeded fiduciary owner and the platform staff) many times an hour, and the limit on codes sent to one address
+   stopped it. `infra/common/compose.yml` sets the Keycloak server setting
+   `spi-authenticator-cm-otp-authenticator-exempt-addresses` (environment
+   `KC_SPI_AUTHENTICATOR_CM_OTP_AUTHENTICATOR_EXEMPT_ADDRESSES`) to those addresses. It is deliberately narrow:
+   - it lifts **only** the limit on codes sent to one address, for **exactly** the addresses named: a `+tag` variant is not
+     exempt, and nor is an entry that isn't a valid address, so a typo exempts nothing;
+   - the **wrong-code budget and the network limit still apply** to them, so an exempt address still can't be guessed;
+   - it is **server configuration, never realm data**, because the realm exports are what real deployments import;
+   - the provider logs `[CM-OTP-LIMITS-EXEMPT]` at startup whenever it is set, so it is visible anywhere it shouldn't be;
+   - **CI fails** if anything under `deploy/` (the Helm charts, Terraform) or the realm exports mentions it.
+
 ## Not yet
 
 - **Telling the account's owner** that codes were requested or guesses refused for their address.

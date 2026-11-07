@@ -80,9 +80,15 @@ public class OtpAuthenticator implements Authenticator {
     private static final String NOTE_VALUE = "cm.otp.value";
 
     private final NtfOtpSender sender;
+    private final java.util.Set<String> exemptFromSendLimits;
 
     public OtpAuthenticator(NtfOtpSender sender) {
+        this(sender, java.util.Set.of());
+    }
+
+    public OtpAuthenticator(NtfOtpSender sender, java.util.Set<String> exemptFromSendLimits) {
         this.sender = sender;
+        this.exemptFromSendLimits = exemptFromSendLimits;
     }
 
     @Override
@@ -176,8 +182,9 @@ public class OtpAuthenticator implements Authenticator {
         }));
     }
 
-    private static OtpAbuseGuard guard(AuthenticationFlowContext context) {
-        return new OtpAbuseGuard(new SingleUseSlots(context.getSession().singleUseObjects()), limits(context));
+    private OtpAbuseGuard guard(AuthenticationFlowContext context) {
+        return new OtpAbuseGuard(new SingleUseSlots(context.getSession().singleUseObjects()), limits(context),
+                exemptFromSendLimits);
     }
 
     private static OtpAbuseGuard.Limits limits(AuthenticationFlowContext context) {

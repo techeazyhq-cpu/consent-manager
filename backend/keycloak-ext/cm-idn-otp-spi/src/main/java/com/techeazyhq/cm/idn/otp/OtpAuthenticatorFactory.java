@@ -41,6 +41,7 @@ public class OtpAuthenticatorFactory implements AuthenticatorFactory {
             AuthenticationExecutionModel.Requirement.DISABLED
     };
 
+    private java.util.Set<String> exemptFromSendLimits = java.util.Set.of();
     private NtfOtpSender sender;
 
     @Override
@@ -112,8 +113,16 @@ public class OtpAuthenticatorFactory implements AuthenticatorFactory {
 
     @Override
     public Authenticator create(KeycloakSession session) {
-        return new OtpAuthenticator(sender);
+        return new OtpAuthenticator(sender, exemptFromSendLimits);
     }
+
+    /**
+     * Server setting {@code spi-authenticator-cm-otp-authenticator-exempt-addresses} (environment
+     * {@code KC_SPI_AUTHENTICATOR_CM_OTP_AUTHENTICATOR_EXEMPT_ADDRESSES}): addresses the limit on codes sent to one address
+     * doesn't apply to (ADR-061). For the local stack only, where a test kit signs in as the same few accounts many times an
+     * hour; the Helm chart doesn't set it. It is server configuration, never realm data, which the same exports deploy.
+     */
+    static final String EXEMPT_ADDRESSES = "exempt-addresses";
 
     @Override
     public void init(Config.Scope config) {
@@ -121,6 +130,12 @@ public class OtpAuthenticatorFactory implements AuthenticatorFactory {
                 .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(3))
                 .build(), Duration.ofSeconds(10));
+        exemptFromSendLimits = OtpAbuseGuard.parseExempt(config == null ? null : config.get(EXEMPT_ADDRESSES));
+        if (!exemptFromSendLimits.isEmpty()) {
+            org.jboss.logging.Logger.getLogger(OtpAuthenticatorFactory.class).warnf(
+                    "[CM-OTP-LIMITS-EXEMPT] %d address(es) are exempt from the limit on sign-in codes sent to one address. "
+                            + "This is for local development only: production must not set it.", exemptFromSendLimits.size());
+        }
     }
 
     @Override

@@ -1638,6 +1638,19 @@
         "cm-ntf-svc",
         "cm-stf-svc"
       ]
+    },
+    {
+      "code": "CM-OTP-LIMITS-EXEMPT",
+      "kind": "log",
+      "level": "WARN",
+      "category": "operations",
+      "title": "Sign-in code limit lifted for some addresses",
+      "description": "Keycloak started with addresses exempt from the limit on sign-in codes sent to one address (ADR-061). That is for the local stack, where a test kit signs in as the same accounts many times an hour.",
+      "action": "In production this is a misconfiguration: remove spi-authenticator-cm-otp-authenticator-exempt-addresses from Keycloak's settings and restart it.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-idn-otp-spi"
+      ]
     }
   ]
 }
