@@ -55,6 +55,7 @@ import com.techeazyhq.cm.dfreg.infra.KeycloakDfApiClientProvisionAdapter;
 import com.techeazyhq.cm.dfreg.infra.KeycloakDfMemberDirectoryAdapter;
 import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.dfreg.app.DfApiKeyHandler;
+import com.techeazyhq.cm.dfreg.app.DfClosureHandler;
 import com.techeazyhq.cm.dfreg.app.DfLeavingHandler;
 import com.techeazyhq.cm.dfreg.app.DfSuspensionHandler;
 import com.techeazyhq.cm.dfreg.app.DfTermsHandler;
@@ -269,6 +270,24 @@ public class DfRegBeanConfig {
     public VerifyApiRequestHandler verifyApiRequestHandler(R2dbcDfApiKeyAdapter keys, DfRepoPort dfRepo,
                                                            SecretSealerPort sealer, DfAccessTokenPort tokens) {
         return new VerifyApiRequestHandler(keys, dfRepo, keys, sealer, tokens, java.time.Clock.systemUTC());
+    }
+
+    @Bean
+    public com.techeazyhq.cm.dfreg.dom.ConsentsClosurePort consentsClosurePort(WebClient.Builder builder,
+            @Value("${cm.service-urls.cns-cmd}") String cnsCmdBaseUrl) {
+        return new com.techeazyhq.cm.dfreg.infra.WebClientConsentsClosureAdapter(builder, cnsCmdBaseUrl);
+    }
+
+    @Bean
+    public DfClosureHandler dfClosureHandler(DfRepoPort dfRepo, com.techeazyhq.cm.dfreg.dom.ConsentsClosurePort consents,
+                                             R2dbcDfApiKeyAdapter keys, DfMemberDirectoryPort members,
+                                             com.techeazyhq.cm.dfreg.dom.DfLogoRepoPort logos, AuditTrail audit) {
+        return new DfClosureHandler(dfRepo, consents, keys, members, logos, audit, java.time.Clock.systemUTC());
+    }
+
+    @Bean
+    public DfClosingJob dfClosingJob(DfClosureHandler closure) {
+        return new DfClosingJob(closure);
     }
 
     @Bean

@@ -79,11 +79,13 @@ public class CnsCmdRouterConfig {
                                                          ChangeCnsArtCmds changeCnsArtCmds,
                                                          CnsRecords cnsRecords,
                                                          RcptSignerPort rcptSigner,
-                                                         Webhooks webhooks) {
+                                                         Webhooks webhooks,
+                                                         com.techeazyhq.cm.cnscmd.app.CloseDfConsentsHandler closeDfConsents) {
         CnsReqHandler cnsReqHandler = new CnsReqHandler(createHandler, approveHandler, denyHandler, cnsReqTerms);
         CnsArtHandler cnsArtHandler = new CnsArtHandler(revokeHandler, refreshTknHandler, liveStatusHandler,
                 changeCnsArtCmds);
         DpLinkHandler dpLinkHandler = new DpLinkHandler(linkDpHandler);
+        DfClosureHttpHandler dfClosure = new DfClosureHttpHandler(closeDfConsents);
         CnsReqBatchHttpHandler batches = new CnsReqBatchHttpHandler(submitBatchHandler, batchQueries);
         PrpsDefHttpHandler purposes = new PrpsDefHttpHandler(prpsDefCmds);
         CnsRecHttpHandler recs = new CnsRecHttpHandler(cnsRecords);
@@ -136,6 +138,7 @@ public class CnsCmdRouterConfig {
                 .POST("/api/cns-cmd/cns-arts/{id}/renew", cnsArtHandler::renew)
                 .POST("/api/cns-cmd/cns-arts/{id}/token", cnsArtHandler::refreshToken)
                 .GET("/internal/cns-arts/{id}/status", cnsArtHandler::liveStatus)
+                .POST("/internal/dfs/{id}/close-consents", dfClosure::closeConsents)
                 .POST("/api/cns-cmd/dp-links", dpLinkHandler::link)
                 .GET(JWKS_PATH, request -> ServerResponse.ok()
                         .contentType(MediaType.parseMediaType("application/jwk-set+json"))

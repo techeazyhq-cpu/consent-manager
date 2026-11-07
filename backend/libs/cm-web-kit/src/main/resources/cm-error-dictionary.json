@@ -1768,6 +1768,19 @@
       "raisedBy": [
         "cm-df-reg-svc"
       ]
+    },
+    {
+      "code": "CM-DF-CLOSING-FAILED",
+      "kind": "log",
+      "level": "WARN",
+      "category": "operations",
+      "title": "Closing a fiduciary failed",
+      "description": "A fiduciary whose wind-down has ended could not be closed: a step failed, such as ending its consents or removing its team. It stays LEAVING and is tried again on the next pass; every step can be repeated.",
+      "action": "Read the log line for the failing step, fix the cause (often cm-cns-cmd-svc or Keycloak unreachable) and it closes on the next pass.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
     }
   ]
 }

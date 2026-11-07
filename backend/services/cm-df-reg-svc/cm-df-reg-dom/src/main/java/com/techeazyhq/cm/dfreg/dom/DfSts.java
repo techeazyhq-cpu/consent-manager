@@ -24,5 +24,7 @@ public enum DfSts {
     /** Stopped by platform staff (ADR-064): nothing new is accepted, records stay. Resumed to ACTIVE. */
     SUSPENDED,
     /** The fiduciary is leaving (ADR-064): a wind-down runs, nothing new is accepted, and closing follows. */
-    LEAVING
+    LEAVING,
+    /** The wind-down ended (ADR-064): its access is gone and its profile erased; the consent records stay. Final. */
+    CLOSED
 }

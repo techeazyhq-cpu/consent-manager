@@ -31,5 +31,6 @@ cm:
     realm-prefix: sbx-
   service-urls:
     bil: http://cm-sbx-bil-svc:8085
+    cns-cmd: http://cm-sbx-cns-cmd-svc:8082
   keycloak:
     realm: sbx-cm-df

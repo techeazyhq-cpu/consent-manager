@@ -67,4 +67,26 @@ public class R2dbcDpContactErasureAdapter implements DpContactErasurePort {
                 .fetch().rowsUpdated();
         return rows.flatMap(r -> events.map(e -> r + e));
     }
+
+    @Override
+    public Mono<Long> eraseContactsOfDf(String dfId) {
+        Mono<Long> rows = db.sql("""
+                        update cns_cmd.cns_req_batch_row set contact = :erased, val = null
+                        where cns_req_id in (select id from cns_cmd.cns_req where df_id = :dfId) and contact <> :erased
+                        """)
+                .bind("erased", ERASED).bind("dfId", dfId)
+                .fetch().rowsUpdated();
+        Mono<Long> events = db.sql("""
+                        update cns_cmd.outbox_evt
+                        set payload_json = jsonb_set(payload_json::jsonb, '{dpRef,val}', to_jsonb(:erased::text))::text
+                        where (agg_id in (select id from cns_cmd.cns_req where df_id = :dfId)
+                               or agg_id in (select id from cns_cmd.cns_art where df_id = :dfId))
+                          and published_at is not null
+                          and payload_json::jsonb #>> '{dpRef,val}' is not null
+                          and payload_json::jsonb #>> '{dpRef,val}' <> :erased
+                        """)
+                .bind("erased", ERASED).bind("dfId", dfId)
+                .fetch().rowsUpdated();
+        return rows.flatMap(r -> events.map(e -> r + e));
+    }
 }

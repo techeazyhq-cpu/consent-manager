@@ -34,6 +34,11 @@ public interface CnsArtRepoPort {
     Flux<CnsArt> findUnlinkedByExtRef(ExtDpRefTyp typ, String val);
 
     /** Every consent linked to the principal {@code dpId}, for closing their account (ADR-059). */
+    /** Up to {@code limit} of a fiduciary's consents still in force (a fiduciary closing, ADR-064). */
+    default Flux<CnsArt> findIssuedByDfId(String dfId, int limit) {
+        return Flux.error(new UnsupportedOperationException("findIssuedByDfId"));
+    }
+
     default Flux<CnsArt> findByDpId(String dpId) {
         return Flux.error(new UnsupportedOperationException("findByDpId"));
     }

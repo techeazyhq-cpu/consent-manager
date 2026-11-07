@@ -102,6 +102,14 @@ public class R2dbcCnsReqRepoAdapter implements CnsReqRepoPort {
     }
 
     @Override
+    public Flux<CnsReq> findPendingByDfId(String dfId, int limit) {
+        return db.sql("select * from cns_cmd.cns_req where df_id = :dfId and sts = 'PENDING' order by id limit :limit")
+                .bind("dfId", dfId).bind("limit", limit)
+                .map(this::toDomain)
+                .all();
+    }
+
+    @Override
     public Flux<CnsReq> findByDpId(String dpId) {
         return db.sql("select * from cns_cmd.cns_req where dp_id = :dpId")
                 .bind("dpId", dpId)
