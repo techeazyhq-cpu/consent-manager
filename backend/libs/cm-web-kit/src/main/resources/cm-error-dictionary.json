@@ -1651,6 +1651,32 @@
       "raisedBy": [
         "cm-idn-otp-spi"
       ]
+    },
+    {
+      "code": "terms-document-unknown",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Unknown document",
+      "description": "The document named to accept is not one of the consent manager documents: terms or dpa.",
+      "action": "Name terms or dpa.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "terms-version-outdated",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "Document version not current",
+      "description": "The version offered for acceptance is not the version in force, so the acceptance was refused. The detail names the current version.",
+      "action": "Read the current version (GET /api/df-reg/me/terms), show it to the Owner and accept that one.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
     }
   ]
 }

@@ -55,6 +55,9 @@ import com.techeazyhq.cm.dfreg.infra.KeycloakDfApiClientProvisionAdapter;
 import com.techeazyhq.cm.dfreg.infra.KeycloakDfMemberDirectoryAdapter;
 import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.dfreg.app.DfApiKeyHandler;
+import com.techeazyhq.cm.dfreg.app.DfTermsHandler;
+import com.techeazyhq.cm.dfreg.dom.TermsDoc;
+import com.techeazyhq.cm.dfreg.infra.R2dbcDfTermsAdapter;
 import com.techeazyhq.cm.dfreg.app.VerifyApiRequestHandler;
 import com.techeazyhq.cm.dfreg.dom.DfAccessTokenPort;
 import com.techeazyhq.cm.dfreg.dom.SecretSealerPort;
@@ -263,6 +266,20 @@ public class DfRegBeanConfig {
     public VerifyApiRequestHandler verifyApiRequestHandler(R2dbcDfApiKeyAdapter keys, DfRepoPort dfRepo,
                                                            SecretSealerPort sealer, DfAccessTokenPort tokens) {
         return new VerifyApiRequestHandler(keys, dfRepo, keys, sealer, tokens, java.time.Clock.systemUTC());
+    }
+
+    @Bean
+    public R2dbcDfTermsAdapter dfTermsAdapter(DatabaseClient db) {
+        return new R2dbcDfTermsAdapter(db);
+    }
+
+    /** The versions of the consent manager's documents in force (ADR-063); bump one when the words change. */
+    @Bean
+    public DfTermsHandler dfTermsHandler(R2dbcDfTermsAdapter terms, AuditTrail audit,
+                                         @Value("${cm.dfreg.terms.terms-version:2026-11}") String termsVersion,
+                                         @Value("${cm.dfreg.terms.dpa-version:2026-11}") String dpaVersion) {
+        return new DfTermsHandler(terms, java.util.Map.of(TermsDoc.TERMS, termsVersion, TermsDoc.DPA, dpaVersion), audit,
+                java.time.Clock.systemUTC());
     }
 
     @Bean
