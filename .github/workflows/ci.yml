@@ -149,3 +149,11 @@ jobs:
             | docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas
       - name: The chart's OPA policy is the one the services are tested with
         run: diff infra/opa/policies/cns_authz.rego deploy/helm/consent-manager/files/opa/cns_authz.rego
+      - name: No deployment lifts the sign-in code limits
+        # ADR-061: the local stack exempts a few fixed test accounts from the limit on codes sent to one address. It is a
+        # Keycloak server setting for docker compose only, and must never reach a Helm chart, Terraform or a realm export.
+        run: |
+          if grep -rniE "EXEMPT_ADDRESSES|exempt-addresses" deploy infra/keycloak; then
+            echo "::error::A deployment sets the local-only sign-in exemption (ADR-061). Remove it."
+            exit 1
+          fi

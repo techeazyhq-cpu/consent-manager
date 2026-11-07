@@ -24,8 +24,10 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * Limits across sign-ins (ADR-061). A sign-in's own limits (the code's life, its wrong guesses, its resends) live in the
@@ -94,10 +96,36 @@ public final class OtpAbuseGuard {
 
     private final Slots slots;
     private final Limits limits;
+    private final Set<String> exemptFromSendLimits;
 
     public OtpAbuseGuard(Slots slots, Limits limits) {
+        this(slots, limits, Set.of());
+    }
+
+    /**
+     * {@code exemptFromSendLimits} are addresses (as {@link OtpIdentifier} writes them) that the limit on codes sent to one
+     * address does not apply to: for the fixed accounts a local test kit signs in as many times an hour. Nothing else is
+     * lifted for them: the network limit and the wrong-guess budget still apply, so such an address can't be guessed.
+     */
+    public OtpAbuseGuard(Slots slots, Limits limits, Set<String> exemptFromSendLimits) {
         this.slots = slots;
         this.limits = limits;
+        this.exemptFromSendLimits = Set.copyOf(exemptFromSendLimits);
+    }
+
+    /**
+     * The addresses in a list separated by commas, semicolons or line breaks (not spaces: a phone number has them),
+     * normalised as sign-in normalises them. An entry that isn't an email address or a number in international form is
+     * ignored, so a typo exempts nothing.
+     */
+    public static Set<String> parseExempt(String list) {
+        Set<String> out = new LinkedHashSet<>();
+        if (list != null) {
+            for (String entry : list.split("[,;\\r\\n]+")) {
+                OtpIdentifier.parse(entry).ifPresent(id -> out.add(id.value()));
+            }
+        }
+        return Set.copyOf(out);
     }
 
     /**
@@ -109,7 +137,9 @@ public final class OtpAbuseGuard {
             return new Admission(null, Denial.TOO_MANY_WRONG_GUESSES);
         }
         List<String> claimed = new ArrayList<>();
-        if (!claimAll(limits.sendsPerAddress(), "send", addressKey(to), claimed)) {
+        // exactly the address named: a +tag variant of an exempt address is not exempt
+        boolean exempt = exemptFromSendLimits.contains(to.value());
+        if (!exempt && !claimAll(limits.sendsPerAddress(), "send", addressKey(to), claimed)) {
             releaseAll(claimed);
             return new Admission(null, Denial.TOO_MANY_CODES);
         }

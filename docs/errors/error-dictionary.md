@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-122 entries: 115 API problems, 6 operational log codes and 1 event.
+123 entries: 115 API problems, 7 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -221,6 +221,7 @@ Written as `[CODE]` at the start of a WARN or ERROR message, for alerts and runb
 | `CM-ERASURE-STUCK` | ERROR | Account erasure stuck | An account erasure gave up on a step after eight attempts and stopped. Part of the person's data is erased and part is not. | Find the cause for the step named in the message and retry it in CM Admin; see docs/runbooks/erasure.md. | dsr |
 | `CM-ERRDICT-UNLISTED` | ERROR | Problem missing from the error dictionary | A service answered a problem whose code is not in the error dictionary, so it got a title made from its name. CI should have refused it. | Add the code to cm-error-dictionary.json and run node scripts/error-dictionary.mjs --write. | aud, bil, cns-cmd, cns-qry, df-reg, dsr, gw, ntf, stf |
 | `CM-INTERNAL-ERROR` | ERROR | Unexpected error ended a request | An exception nobody planned for ended a request. The caller was answered with internal-error and the correlation id; the exception and its stack trace are in this log message. | Find the log line by the correlation id the caller quotes, and fix the cause. A burst of them is an incident. | aud, bil, cns-cmd, cns-qry, df-reg, dsr, gw, ntf, stf |
+| `CM-OTP-LIMITS-EXEMPT` | WARN | Sign-in code limit lifted for some addresses | Keycloak started with addresses exempt from the limit on sign-in codes sent to one address (ADR-061). That is for the local stack, where a test kit signs in as the same accounts many times an hour. | In production this is a misconfiguration: remove spi-authenticator-cm-otp-authenticator-exempt-addresses from Keycloak's settings and restart it. | idn-otp-spi |
 | `CM-OUTBOX-RELAY-FAILED` | WARN | Outbox relay pass failed | The service could not publish waiting events to Pulsar in one pass. They stay in the outbox and are sent on the next pass. | If it repeats, check that Pulsar is reachable and the service's database is healthy; events are not lost. | bil, dsr, df-reg, cns-cmd |
 | `CM-USAGE-ALERT-FAILED` | WARN | Usage alert check failed | The usage alert sweep could not check one fiduciary, or the whole pass failed. It is tried again every minute. | If it repeats, check Redis and the billing database. | bil |
 
