@@ -26,7 +26,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [018](adr-018-regional-cells-for-data-residency.md) | Regional cells for data residency | Proposed |
 | [019](adr-019-identity-vault-and-crypto-shredding.md) | An Identity Vault holds personal data; erasure by crypto-shredding | Proposed |
 | [020](adr-020-regime-profiles-as-versioned-data.md) | Regime profiles as versioned, reviewed data | Proposed |
-| [021](adr-021-principal-requests-own-data-and-relay.md) | Principal requests: rights over the platform's own data, and relay to fiduciaries | Proposed; relay and grievances accepted in 058 |
+| [021](adr-021-principal-requests-own-data-and-relay.md) | Principal requests: rights over the platform's own data, and relay to fiduciaries | Proposed; relay and grievances accepted in 058, own-data erasure in 059 |
 | [022](adr-022-children-guardians-and-representatives.md) | Children, guardians and other representatives | Proposed |
 | [023](adr-023-pure-consent-manager-boundary-and-neutrality.md) | A pure consent manager: its boundary, neutrality and First Schedule duties | Proposed |
 | [024](adr-024-hipaa-authorisations-and-fhir-consent.md) | HIPAA authorisations in the consent model; FHIR Consent at the boundary | Proposed |
@@ -62,6 +62,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [054](adr-054-common-namespace-on-kubernetes.md) | The common namespace on Kubernetes: one chart for the shared servers, the apps in their own namespaces | Accepted |
 | [057](adr-057-an-undecided-consent-check-is-503-not-deny.md) | A consent check that can't be made is a 503, not a deny | Accepted |
 | [058](adr-058-principal-requests-relayed-and-grievances.md) | Principal requests relayed to fiduciaries, and grievances about the platform | Accepted |
+| [059](adr-059-closing-an-account-erasure-saga.md) | Closing an account: the erasure saga across five services, with the consent records kept | Accepted |
 
 ## Writing one
 

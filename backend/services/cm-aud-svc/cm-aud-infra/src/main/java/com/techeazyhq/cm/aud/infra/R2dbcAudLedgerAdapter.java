@@ -85,12 +85,24 @@ public class R2dbcAudLedgerAdapter implements AudLedgerPort {
                 .bind("prevHash", entry.prevHash())
                 .bind("entryHash", entry.entryHash()), entry)
                 .then();
-        Mono<Void> addPayload = db.sql("insert into aud.entry_payload (seq, payload_json) values (:seq, :payload)")
+        // About a principal already erased (ADR-059): chained, but neither the payload nor the link is kept.
+        Mono<Void> addPayload = db.sql("""
+                        insert into aud.entry_payload (seq, payload_json)
+                        select :seq, :payload
+                        where not exists (select 1 from aud.erased_subject x
+                                          where (x.kind = 'DP' and x.id = :dpId) or (x.kind = 'CNS_REQ' and x.id = :cnsReqId))
+                        """)
                 .bind("seq", entry.seq())
                 .bind("payload", draft.payloadJson())
+                .bind("dpId", draft.dpId() == null ? "" : draft.dpId())
+                .bind("cnsReqId", draft.cnsReqId() == null ? "" : draft.cnsReqId())
                 .then();
         Mono<Void> addSubject = draft.dpId() == null ? Mono.empty()
-                : db.sql("insert into aud.entry_subject (seq, dp_id) values (:seq, :dpId)")
+                : db.sql("""
+                        insert into aud.entry_subject (seq, dp_id)
+                        select :seq, :dpId
+                        where not exists (select 1 from aud.erased_subject x where x.kind = 'DP' and x.id = :dpId)
+                        """)
                         .bind("seq", entry.seq())
                         .bind("dpId", draft.dpId())
                         .then();
@@ -163,6 +175,33 @@ public class R2dbcAudLedgerAdapter implements AudLedgerPort {
         if (query.dpId() != null) spec = spec.bind("dpId", query.dpId());
         if (query.beforeSeq() != null) spec = spec.bind("beforeSeq", query.beforeSeq());
         return spec;
+    }
+
+    @Override
+    public Mono<Long> eraseAbout(String dpId, java.util.List<String> cnsReqIds) {
+        Mono<Long> payloads = db.sql("""
+                        delete from aud.entry_payload p
+                        where p.seq in (select s.seq from aud.entry_subject s where s.dp_id = :dpId)
+                           or p.seq in (select e.seq from aud.entry e where e.cns_req_id = any(:ids))
+                        """)
+                .bind("dpId", dpId)
+                .bind("ids", cnsReqIds.toArray(String[]::new))
+                .fetch().rowsUpdated();
+        Mono<Long> links = db.sql("delete from aud.entry_subject where dp_id = :dpId")
+                .bind("dpId", dpId)
+                .fetch().rowsUpdated();
+        // remembered, so the events the erasure itself causes keep no payload or link either
+        Mono<Long> remember = db.sql("""
+                        insert into aud.erased_subject (kind, id, erased_at)
+                        select 'DP', :dpId, now()
+                        union all select 'CNS_REQ', unnest(:ids::varchar[]), now()
+                        on conflict do nothing
+                        """)
+                .bind("dpId", dpId)
+                .bind("ids", cnsReqIds.toArray(String[]::new))
+                .fetch().rowsUpdated();
+        // in this order: the payloads are found through the links
+        return remember.then(payloads.flatMap(p -> links.map(l -> p + l)));
     }
 
     @Override

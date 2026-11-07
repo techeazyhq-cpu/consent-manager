@@ -189,6 +189,20 @@ class DpReqHandlerTest {
         }
 
         @Override
+        public Flux<DpReq> findOpenByDpId(String dpId) {
+            return Flux.fromStream(rows.values().stream().filter(r -> r.dpId().equals(dpId) && r.sts().open()));
+        }
+
+        @Override
+        public Mono<Long> eraseTextOf(String dpId) {
+            List<DpReq> mine = rows.values().stream().filter(r -> r.dpId().equals(dpId)).toList();
+            mine.forEach(r -> rows.put(r.id(), DpReq.rehydrate(r.id(), r.knd(), r.dpId(), r.dfId(), r.cnsReqId(),
+                    r.prpsCode(), r.rgt(), null, r.receivedAt(), r.dueBy(), r.sts(), r.acknowledgedAt(), r.closedAt(),
+                    r.closedBy(), r.closedByName(), null, r.refusalGround())));
+            return Mono.just((long) mine.size());
+        }
+
+        @Override
         public Mono<Long> countOpenByDpId(String dpId) {
             return Mono.just(rows.values().stream().filter(r -> r.dpId().equals(dpId) && r.sts().open()).count());
         }

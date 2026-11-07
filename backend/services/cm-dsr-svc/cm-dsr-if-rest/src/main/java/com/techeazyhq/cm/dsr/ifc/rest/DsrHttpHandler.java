@@ -28,7 +28,9 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import com.techeazyhq.cm.dsr.app.DpErasureHandler;
 import com.techeazyhq.cm.dsr.app.DpReqHandler;
+import com.techeazyhq.cm.dsr.dom.DpErasure;
 import com.techeazyhq.cm.dsr.app.DsrCaller;
 import com.techeazyhq.cm.dsr.dom.DpReq;
 import com.techeazyhq.cm.seckit.AuthCtx;
@@ -48,11 +50,51 @@ import reactor.core.publisher.Mono;
 public class DsrHttpHandler {
 
     private final DpReqHandler requests;
+    private final DpErasureHandler erasures;
     private final Clock clock;
 
-    public DsrHttpHandler(DpReqHandler requests, Clock clock) {
+    public DsrHttpHandler(DpReqHandler requests, DpErasureHandler erasures, Clock clock) {
         this.requests = requests;
+        this.erasures = erasures;
         this.clock = clock;
+    }
+
+    // ---- closing an account (ADR-059) ----
+
+    /** The principal closes their account; {@code confirmation} must be the words the portal asks them to type. */
+    public Mono<ServerResponse> closeAccount(ServerRequest request) {
+        return request.principal().cast(JwtAuthenticationToken.class)
+                .map(token -> ((Jwt) token.getPrincipal()).getClaimAsString("email"))
+                .defaultIfEmpty("")
+                .zipWith(caller(request))
+                .zipWith(request.bodyToMono(CloseDto.class).defaultIfEmpty(new CloseDto(null)))
+                .flatMap(t -> erasures.request(t.getT1().getT2(), t.getT1().getT1().isBlank() ? null : t.getT1().getT1(),
+                        t.getT2().confirmation()))
+                .flatMap(e -> ServerResponse.status(HttpStatus.ACCEPTED).bodyValue(ErasureDto.of(e)));
+    }
+
+    public Mono<ServerResponse> myErasure(ServerRequest request) {
+        return caller(request).flatMap(erasures::mine)
+                .flatMap(e -> ServerResponse.ok().bodyValue(ErasureDto.of(e)))
+                .switchIfEmpty(ServerResponse.noContent().build());
+    }
+
+    public Mono<ServerResponse> erasures(ServerRequest request) {
+        DpErasure.Sts sts = request.queryParam("sts").filter(s -> !s.isBlank()).map(s -> {
+            try {
+                return DpErasure.Sts.valueOf(s.trim().toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                throw new DomRuleViolation(400, "invalid-sts", "sts is RUNNING, DONE or STUCK");
+            }
+        }).orElse(null);
+        return caller(request).flatMap(c -> erasures.list(c, sts).map(ErasureDto::of).collectList())
+                .flatMap(list -> ServerResponse.ok().bodyValue(list));
+    }
+
+    public Mono<ServerResponse> retryErasure(ServerRequest request) {
+        String id = request.pathVariable("id");
+        return caller(request).flatMap(c -> erasures.retry(c, id))
+                .flatMap(e -> ServerResponse.ok().bodyValue(ErasureDto.of(e)));
     }
 
     // ---- the principal ----
@@ -162,6 +204,19 @@ public class DsrHttpHandler {
                 r.rgt() == null ? null : r.rgt().name(), r.details(), r.sts().name(), r.receivedAt(), r.dueBy(),
                 r.overdue(clock.instant()), r.acknowledgedAt(), r.closedAt(), r.closedByName(), r.response(),
                 r.refusalGround());
+    }
+
+    record CloseDto(String confirmation) {
+    }
+
+    /** No email: staff see a pseudonymous id, the step and why it is stuck. */
+    record ErasureDto(String id, String dpId, String sts, String step, int attempts, Instant requestedAt,
+                      Instant finishedAt, String lastError, int consentsWithdrawn) {
+
+        static ErasureDto of(DpErasure e) {
+            return new ErasureDto(e.id(), e.dpId(), e.sts().name(), e.step() == null ? null : e.step().name(),
+                    e.attempts(), e.requestedAt(), e.finishedAt(), e.lastError(), e.consentsWithdrawn());
+        }
     }
 
     record RaiseDto(String kind, String cnsReqId, String right, String details) {

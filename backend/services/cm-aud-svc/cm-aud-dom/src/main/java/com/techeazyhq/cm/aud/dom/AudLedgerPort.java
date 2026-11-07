@@ -45,6 +45,13 @@ public interface AudLedgerPort {
     /** Whether entry {@code seq} is about principal {@code dpId} (false once their data is erased). */
     Mono<Boolean> concerns(long seq, String dpId);
 
+    /**
+     * Erases what the ledger holds about principal {@code dpId} (ADR-059): the payloads of entries about them or about
+     * their consent requests {@code cnsReqIds}, and the links that list their entries for them. The entries stay, and
+     * the chain still verifies: each committed to its payload's hash, not the payload. How many rows were removed.
+     */
+    Mono<Long> eraseAbout(String dpId, java.util.List<String> cnsReqIds);
+
     /** The last entry, or empty for an empty ledger. */
     Mono<AudEntry> head();
 }

@@ -34,6 +34,15 @@ public interface DpReqRepoPort {
     /** A principal's requests, newest first. */
     Flux<DpReq> findByDpId(String dpId, int limit);
 
+    /** The principal's open requests, for withdrawing when they close their account. */
+    Flux<DpReq> findOpenByDpId(String dpId);
+
+    /**
+     * Erases the words of every request the principal made and every answer to them (ADR-059): what was asked, of
+     * whom, when and how it ended stay, as the record of a right exercised. Returns how many requests it touched.
+     */
+    Mono<Long> eraseTextOf(String dpId);
+
     /** How many requests the principal has open, against {@code DpReqPolicy.MAX_OPEN}. */
     Mono<Long> countOpenByDpId(String dpId);
 

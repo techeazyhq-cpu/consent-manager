@@ -416,10 +416,23 @@ public class CnsCmdBeanConfig {
         return new PulsarDfMessageConsumer(reactivePulsarClient, objectMapper, webhooks);
     }
 
+    /** Closing a principal's account (ADR-059): this context's step. */
+    @Bean
+    public com.techeazyhq.cm.cnscmd.app.EraseDpConsentsHandler eraseDpConsentsHandler(CnsReqRepoPort reqs,
+            CnsArtRepoPort arts, LinkDpCmdHandler link, DatabaseClient db) {
+        return new com.techeazyhq.cm.cnscmd.app.EraseDpConsentsHandler(reqs, arts, link,
+                new com.techeazyhq.cm.cnscmd.infra.R2dbcDpContactErasureAdapter(db));
+    }
+
     @EventListener(ApplicationReadyEvent.class)
     public void startSagaConsumer(ApplicationReadyEvent event) {
         event.getApplicationContext().getBean(PulsarCnsSagaEvtConsumer.class).start();
         event.getApplicationContext().getBean(PulsarDfMessageConsumer.class).start();
+        com.techeazyhq.cm.cnscmd.app.EraseDpConsentsHandler erase =
+                event.getApplicationContext().getBean(com.techeazyhq.cm.cnscmd.app.EraseDpConsentsHandler.class);
+        com.techeazyhq.cm.evtkit.ErasureSteps.serve(event.getApplicationContext().getBean(ReactivePulsarClient.class),
+                event.getApplicationContext().getBean(ObjectMapper.class), "cnscmd",
+                com.techeazyhq.cm.evtkit.ErasureSteps.CONSENTS, cmd -> erase.handle(cmd.dpId(), cmd.email()));
     }
 
     @ConfigurationProperties(prefix = "cm.service-urls")

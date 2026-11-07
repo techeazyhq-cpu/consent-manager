@@ -56,6 +56,7 @@ class R2dbcAudLedgerAdapterIT extends PgIntegrationTestBase {
 
     private static DatabaseClient db;
     private static AudLedgerService ledger;
+    private static R2dbcAudLedgerAdapter adapter;
 
     @BeforeAll
     static void migrate() {
@@ -72,9 +73,8 @@ class R2dbcAudLedgerAdapterIT extends PgIntegrationTestBase {
                 .option(ConnectionFactoryOptions.PASSWORD, POSTGRES.getPassword())
                 .build());
         db = DatabaseClient.create(cf);
-        ledger = new AudLedgerService(
-                new R2dbcAudLedgerAdapter(db, TransactionalOperator.create(new R2dbcTransactionManager(cf))),
-                Clock.systemUTC());
+        adapter = new R2dbcAudLedgerAdapter(db, TransactionalOperator.create(new R2dbcTransactionManager(cf)));
+        ledger = new AudLedgerService(adapter, Clock.systemUTC());
     }
 
     @BeforeEach
@@ -83,6 +83,7 @@ class R2dbcAudLedgerAdapterIT extends PgIntegrationTestBase {
         appendOnly.forEach(table -> sql("alter table aud." + table + " disable trigger all"));
         sql("delete from aud.checkpoint_anchor");
         sql("delete from aud.checkpoint");
+        sql("delete from aud.erased_subject");
         sql("delete from aud.entry_subject");
         sql("delete from aud.entry_payload");
         sql("delete from aud.entry");
@@ -156,13 +157,22 @@ class R2dbcAudLedgerAdapterIT extends PgIntegrationTestBase {
     void erasingAPrincipalsDataKeepsTheChainVerifiable() {
         ledger.record(draft("art-1", "dp-erased")).block();
         ledger.record(draft("art-2", "dp-kept")).block();
+        // raised before they had an account: no principal on the entry, only the request (with their email)
+        ledger.record(new AudDraft(UUID.randomUUID(), "CnsReqCreatedEvt", Instant.now(), "req-art-3", null, "df-1",
+                null, "{\"dpRef\":{\"typ\":\"EMAIL\",\"val\":\"p@example.com\"}}")).block();
 
-        sql("delete from aud.entry_payload where seq in (select seq from aud.entry_subject where dp_id = 'dp-erased')");
-        sql("delete from aud.entry_subject where dp_id = 'dp-erased'");
+        // as the erasure saga's audit step does it (ADR-059), twice: it is idempotent
+        assertEquals(3L, adapter.eraseAbout("dp-erased", java.util.List.of("req-art-3")).block());
+        assertEquals(0L, adapter.eraseAbout("dp-erased", java.util.List.of("req-art-3")).block());
+
+        // an event the erasure caused, arriving after it: chained, with no payload or link
+        ledger.record(draft("art-1", "dp-erased")).block();
+        ledger.record(new AudDraft(UUID.randomUUID(), "CnsDeniedEvt", Instant.now(), "req-art-3", null, "df-1",
+                null, "{}")).block();
 
         AudChainVerifier.Verdict verdict = ledger.verify().block();
         assertTrue(verdict.intact());
-        assertEquals(1, verdict.payloadsErased());
+        assertEquals(4, verdict.payloadsErased());
         assertTrue(ledger.find(new AudQuery(null, null, null, "dp-erased", 10)).collectList().block().isEmpty());
     }
 

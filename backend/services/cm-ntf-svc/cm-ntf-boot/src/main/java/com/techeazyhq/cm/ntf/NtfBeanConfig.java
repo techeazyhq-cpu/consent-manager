@@ -212,8 +212,20 @@ public class NtfBeanConfig {
         return new PulsarNtfCmdConsumer(reactivePulsarClient, objectMapper, notifyDpCmdHandler, notifyDfCmdHandler);
     }
 
+    @Bean
+    public com.techeazyhq.cm.ntf.app.EraseDpHandler eraseDpHandler(NtfDispatchService dispatch, PushDvcRepoPort devices) {
+        return new com.techeazyhq.cm.ntf.app.EraseDpHandler(dispatch, devices);
+    }
+
     @EventListener(ApplicationReadyEvent.class)
     public void startConsumers(ApplicationReadyEvent event) {
         event.getApplicationContext().getBean(PulsarNtfCmdConsumer.class).start();
+        // a principal closing their account: the notice, then their devices (ADR-059)
+        com.techeazyhq.cm.ntf.app.EraseDpHandler erase =
+                event.getApplicationContext().getBean(com.techeazyhq.cm.ntf.app.EraseDpHandler.class);
+        com.techeazyhq.cm.evtkit.ErasureSteps.serve(event.getApplicationContext().getBean(ReactivePulsarClient.class),
+                event.getApplicationContext().getBean(ObjectMapper.class), "ntf",
+                com.techeazyhq.cm.evtkit.ErasureSteps.NOTICE_AND_DEVICES,
+                cmd -> erase.handle(cmd.erasureId(), cmd.dpId(), cmd.email()));
     }
 }

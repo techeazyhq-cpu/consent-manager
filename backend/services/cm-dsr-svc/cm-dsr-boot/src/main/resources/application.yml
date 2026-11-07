@@ -51,6 +51,12 @@ cm:
     service-url: pulsar://localhost:6650
   service-urls:
     cns-qry: http://localhost:8083 # whose consent a request concerns, asked with the principal's own token
+  # The data principals' realm, where closing an account deletes the principal's user (ADR-059)
+  keycloak:
+    base-url: http://localhost:8080
+    realm: cm-dp
+    admin-username: admin
+    admin-password: admin
   dsr:
     # How long the answerer has, fixed at receipt (ADR-021) until regime profiles carry it (ADR-020): DPDPA Rules give
     # a grievance at most 90 days, and relayed requests are held to the same.

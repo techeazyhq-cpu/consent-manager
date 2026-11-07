@@ -61,6 +61,9 @@ import type {
   SubPln,
   UsageRespDto,
   DfInsightsDto,
+  DpErasureDto,
+  DpErasureSts,
+  DpErasureStep,
   DpReqDto,
   DpReqSts,
   DpRight,
@@ -496,6 +499,21 @@ export const dsr = {
       }),
     withdraw: (base: string, token: string, id: string) =>
       request<DpReqDto>(base, dsrPath("/api/dsr/me/requests", id, "withdraw"), token, { method: "POST" }),
+    /** Closes the principal's account (ADR-059); confirmation is CLOSE_ACCOUNT_CONFIRMATION, typed by them. */
+    closeAccount: (base: string, token: string, confirmation: string) =>
+      request<DpErasureDto>(base, "/api/dsr/me/account/close", token, {
+        method: "POST",
+        body: JSON.stringify({ confirmation }),
+      }),
+    /** How far closing the account got; null when it was never asked for. */
+    erasure: (base: string, token: string) => request<DpErasureDto | null>(base, "/api/dsr/me/account/close", token),
+  },
+  /** Every account closing, for platform staff; administrators restart a stuck one. */
+  erasures: {
+    list: (base: string, token: string, sts?: DpErasureSts) =>
+      request<DpErasureDto[]>(base, `/api/dsr/erasures${sts ? `?sts=${sts}` : ""}`, token),
+    retry: (base: string, token: string, id: string) =>
+      request<DpErasureDto>(base, `/api/dsr/erasures/${encodeURIComponent(id)}/retry`, token, { method: "POST" }),
   },
   df: answerer("/api/dsr/df/requests"),
   grievances: answerer("/api/dsr/grievances"),
@@ -519,3 +537,15 @@ function answerer(prefix: string) {
       }),
   };
 }
+
+/** What a principal types to close their account (ADR-059), so it is never done by a stray click. */
+export const CLOSE_ACCOUNT_CONFIRMATION = "CLOSE MY ACCOUNT";
+
+/** Each step of closing an account, in the words the people watching it read. */
+export const ERASURE_STEP_LABELS: Record<DpErasureStep, string> = {
+  NOTICE_AND_DEVICES: "Sending the notice and forgetting devices",
+  CONSENTS: "Withdrawing consents and erasing contact details",
+  AUDIT: "Erasing audit details",
+  REQUESTS: "Withdrawing requests and erasing their words",
+  IDENTITY: "Deleting the account",
+};

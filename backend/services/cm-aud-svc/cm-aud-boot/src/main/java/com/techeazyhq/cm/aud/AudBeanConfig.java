@@ -101,8 +101,19 @@ public class AudBeanConfig {
         return new PulsarAudEvtConsumer(reactivePulsarClient, new AudEvtParser(objectMapper), audLedgerService);
     }
 
+    @Bean
+    public com.techeazyhq.cm.aud.app.AudErasureService audErasureService(com.techeazyhq.cm.aud.dom.AudLedgerPort ledger) {
+        return new com.techeazyhq.cm.aud.app.AudErasureService(ledger);
+    }
+
     @EventListener(ApplicationReadyEvent.class)
     public void startConsumers(ApplicationReadyEvent event) {
         event.getApplicationContext().getBean(PulsarAudEvtConsumer.class).start();
+        // a principal closing their account: their payloads and subject links (ADR-059)
+        com.techeazyhq.cm.aud.app.AudErasureService erase =
+                event.getApplicationContext().getBean(com.techeazyhq.cm.aud.app.AudErasureService.class);
+        com.techeazyhq.cm.evtkit.ErasureSteps.serve(event.getApplicationContext().getBean(ReactivePulsarClient.class),
+                event.getApplicationContext().getBean(ObjectMapper.class), "aud",
+                com.techeazyhq.cm.evtkit.ErasureSteps.AUDIT, cmd -> erase.erase(cmd.dpId(), cmd.cnsReqIds()));
     }
 }

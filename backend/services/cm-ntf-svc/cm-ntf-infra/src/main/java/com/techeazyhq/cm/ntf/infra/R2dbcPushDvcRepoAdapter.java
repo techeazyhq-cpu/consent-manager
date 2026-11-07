@@ -81,6 +81,11 @@ public class R2dbcPushDvcRepoAdapter implements PushDvcRepoPort {
     }
 
     @Override
+    public Mono<Long> deleteAllOf(String dpId) {
+        return db.sql("delete from ntf.push_dvc where dp_id = :dpId").bind("dpId", dpId).fetch().rowsUpdated();
+    }
+
+    @Override
     public Mono<Boolean> delete(String dpId, String id) {
         UUID uuid;
         try {

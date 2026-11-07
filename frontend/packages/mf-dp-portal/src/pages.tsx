@@ -21,6 +21,7 @@ import type { CnsArtRdMdl } from "api-client";
 import { Button, Card, PageHeader, Spinner } from "ui-kit/src/index";
 import ConsentCard, { DfLogo, statusOrder } from "./ConsentCard";
 import { ExportRecords } from "./History";
+import { CloseAccount } from "./CloseAccount";
 import PushToggle from "./PushToggle";
 import { awaitsDecision } from "./labels";
 import type { Portal } from "./portal";
@@ -275,6 +276,7 @@ export function Account({ portal, onSignOut }: { portal: Portal; onSignOut: () =
         here.
       </p>
       <ExportRecords portal={portal} />
+      <CloseAccount portal={portal} onClosed={onSignOut} />
       <Button onClick={onSignOut}>Sign out</Button>
     </>
   );

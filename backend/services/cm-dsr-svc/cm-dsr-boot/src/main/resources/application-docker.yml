@@ -29,3 +29,5 @@ cm:
     service-url: pulsar://pulsar:6650
   service-urls:
     cns-qry: http://cm-cns-qry-svc:8083
+  keycloak:
+    base-url: http://keycloak:8080

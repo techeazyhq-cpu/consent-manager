@@ -212,6 +212,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
+      CM_KEYCLOAK_ADMIN-USERNAME: admin
+      CM_KEYCLOAK_ADMIN-PASSWORD: admin
 
   cm-gw:
     <<: *svc-limits

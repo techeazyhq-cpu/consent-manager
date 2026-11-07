@@ -25,6 +25,7 @@ dependencies {
     implementation(project(":cm-cns-cmd-dom"))
     implementation(project(":cm-cns-cmd-app"))
     implementation(project(":cm-cns-cmd-infra"))
+    implementation(project(":cm-evt-kit")) // the erasure saga's step (ADR-059)
     implementation(project(":cm-cns-cmd-if-rest"))
     implementation(project(":cm-sec-kit"))
     implementation(project(":cm-web-kit"))

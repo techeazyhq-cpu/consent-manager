@@ -347,3 +347,13 @@
   background: var(--cm-surface-2);
   border-radius: 4px;
 }
+
+/* Closing the account (ADR-059) */
+.dp-danger-zone {
+  border-color: var(--cm-danger);
+}
+
+.dp-danger-zone ul {
+  margin: 6px 0 10px;
+  padding-left: 20px;
+}

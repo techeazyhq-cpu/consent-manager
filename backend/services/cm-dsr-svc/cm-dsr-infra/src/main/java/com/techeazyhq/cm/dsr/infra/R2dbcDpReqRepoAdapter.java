@@ -102,6 +102,25 @@ public class R2dbcDpReqRepoAdapter implements DpReqRepoPort {
     }
 
     @Override
+    public Flux<DpReq> findOpenByDpId(String dpId) {
+        return db.sql("select * from dsr.dp_req where dp_id = :dpId and sts in " + OPEN)
+                .bind("dpId", dpId)
+                .map(R2dbcDpReqRepoAdapter::row)
+                .all();
+    }
+
+    @Override
+    public Mono<Long> eraseTextOf(String dpId) {
+        return db.sql("""
+                        update dsr.dp_req set details = null, response = null
+                        where dp_id = :dpId and (details is not null or response is not null)
+                        """)
+                .bind("dpId", dpId)
+                .fetch()
+                .rowsUpdated();
+    }
+
+    @Override
     public Mono<Long> countOpenByDpId(String dpId) {
         return db.sql("select count(*) as n from dsr.dp_req where dp_id = :dpId and sts in " + OPEN)
                 .bind("dpId", dpId)

@@ -78,6 +78,9 @@ public class SecurityConfig {
                         // Grievances about the platform are answered by its staff (ADR-058); principals and
                         // fiduciaries reach their own requests under /api/dsr/me and /api/dsr/df.
                         .pathMatchers("/api/dsr/grievances", "/api/dsr/grievances/**").hasAnyRole(STAFF)
+                        // Account erasures (ADR-059): staff watch them; administrators restart a stuck one.
+                        .pathMatchers(HttpMethod.POST, "/api/dsr/erasures/**").hasRole("CM_ADMIN")
+                        .pathMatchers("/api/dsr/erasures", "/api/dsr/erasures/**").hasAnyRole(STAFF)
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.authenticationManagerResolver(
                         RealmTokens.resolver(issuerBase, jwksBase, realmPrefix)))

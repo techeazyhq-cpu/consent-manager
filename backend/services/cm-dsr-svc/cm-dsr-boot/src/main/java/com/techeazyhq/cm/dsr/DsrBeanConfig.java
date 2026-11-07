@@ -34,10 +34,16 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techeazyhq.cm.audkit.AuditTrail;
+import com.techeazyhq.cm.dsr.app.DpErasureHandler;
 import com.techeazyhq.cm.dsr.app.DpReqHandler;
 import com.techeazyhq.cm.dsr.app.DsrDeadlines;
 import com.techeazyhq.cm.dsr.dom.DpCnsPort;
+import com.techeazyhq.cm.dsr.dom.DpErasurePorts;
 import com.techeazyhq.cm.dsr.dom.DpReqRepoPort;
+import com.techeazyhq.cm.dsr.infra.KeycloakDpIdentityAdapter;
+import com.techeazyhq.cm.dsr.infra.PulsarErasureSteps;
+import com.techeazyhq.cm.dsr.infra.R2dbcDpErasureRepoAdapter;
+import com.techeazyhq.cm.kckit.KeycloakAdminAuthFilter;
 import com.techeazyhq.cm.dsr.infra.R2dbcDpReqRepoAdapter;
 import com.techeazyhq.cm.dsr.infra.R2dbcDsrOutbox;
 import com.techeazyhq.cm.dsr.infra.WebClientDpCnsAdapter;
@@ -82,6 +88,34 @@ public class DsrBeanConfig {
     public DpReqHandler dpReqHandler(DpReqRepoPort reqs, DpCnsPort consents, R2dbcDsrOutbox outbox, AuditTrail audit,
                                      DsrDeadlines deadlines, Clock clock) {
         return new DpReqHandler(reqs, consents, outbox, audit, deadlines, clock);
+    }
+
+    @Bean
+    public DpErasurePorts.Repo dpErasureRepo(DatabaseClient db, ObjectMapper objectMapper) {
+        return new R2dbcDpErasureRepoAdapter(db, objectMapper);
+    }
+
+    @Bean
+    public PulsarErasureSteps erasureSteps(ReactivePulsarClient reactivePulsarClient, ObjectMapper objectMapper) {
+        return new PulsarErasureSteps(reactivePulsarClient, objectMapper);
+    }
+
+    /** The data principals' realm, through the Keycloak Admin API (as cm-stf-svc and cm-df-reg-svc reach theirs). */
+    @Bean
+    public DpErasurePorts.Identity dpIdentity(WebClient.Builder builder,
+                                              @Value("${cm.keycloak.base-url:http://localhost:8080}") String baseUrl,
+                                              @Value("${cm.keycloak.realm:cm-dp}") String realm,
+                                              @Value("${cm.keycloak.admin-username:admin}") String adminUser,
+                                              @Value("${cm.keycloak.admin-password:admin}") String adminPassword) {
+        KeycloakAdminAuthFilter auth = new KeycloakAdminAuthFilter(builder.clone(), baseUrl, adminUser, adminPassword);
+        return new KeycloakDpIdentityAdapter(builder.clone().baseUrl(baseUrl).filter(auth.filter()).build(), realm);
+    }
+
+    @Bean
+    public DpErasureHandler dpErasureHandler(DpErasurePorts.Repo erasures, PulsarErasureSteps steps,
+                                             DpErasurePorts.Identity identity, DpReqHandler requests, AuditTrail audit,
+                                             Clock clock) {
+        return new DpErasureHandler(erasures, steps, identity, requests, audit, clock);
     }
 
     @Bean(destroyMethod = "close")

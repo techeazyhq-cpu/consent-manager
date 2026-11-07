@@ -620,3 +620,21 @@ export interface DpReqDto {
   /** The legal ground a refusal rests on. */
   refusalGround: string | null;
 }
+
+/** A principal closing their account (ADR-059): the erasure saga, step by step. */
+export type DpErasureSts = "RUNNING" | "DONE" | "STUCK";
+export type DpErasureStep = "NOTICE_AND_DEVICES" | "CONSENTS" | "AUDIT" | "REQUESTS" | "IDENTITY";
+
+export interface DpErasureDto {
+  id: string;
+  /** Pseudonymous: no email is ever shown. */
+  dpId: string;
+  sts: DpErasureSts;
+  /** The step running or stuck; null once done. */
+  step: DpErasureStep | null;
+  attempts: number;
+  requestedAt: string;
+  finishedAt: string | null;
+  lastError: string | null;
+  consentsWithdrawn: number;
+}
