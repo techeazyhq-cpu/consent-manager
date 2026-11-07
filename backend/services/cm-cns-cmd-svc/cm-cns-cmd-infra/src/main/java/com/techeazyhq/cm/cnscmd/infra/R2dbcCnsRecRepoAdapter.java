@@ -90,19 +90,29 @@ public class R2dbcCnsRecRepoAdapter implements CnsRecRepoPort {
         return spec.then();
     }
 
-    /** Appends at the record's next place; an event already recorded (a redelivery) is ignored. */
+    /**
+     * Appends at the record's next place, and queues the event for its receipt in the same statement; an event already
+     * recorded (a redelivery) is ignored, and queued no second time.
+     */
     private Mono<Void> append(String cnsReqId, CnsRecEvt evt) {
         Mono<Void> lock = db.sql("select pg_advisory_xact_lock(hashtext(:key))")
                 .bind("key", "cns_rec:" + cnsReqId)
                 .then();
         DatabaseClient.GenericExecuteSpec insert = db.sql("""
-                        insert into cns_cmd.cns_rec_evt (rec_id, seq, evt_id, occurred_at, type, actor, d_cats,
-                                                         valid_from, valid_until, detail)
-                        select c.id, coalesce((select max(seq) from cns_cmd.cns_rec_evt e where e.rec_id = c.id), 0) + 1,
-                               :evtId, :occurredAt, :type, :actor, cast(:dCats as jsonb), :validFrom, :validUntil, :detail
-                        from cns_cmd.cns_rec c
-                        where c.cns_req_id = :cnsReqId
-                        on conflict (evt_id) do nothing
+                        with added as (
+                            insert into cns_cmd.cns_rec_evt (rec_id, seq, evt_id, occurred_at, type, actor, d_cats,
+                                                             valid_from, valid_until, detail)
+                            select c.id,
+                                   coalesce((select max(seq) from cns_cmd.cns_rec_evt e where e.rec_id = c.id), 0) + 1,
+                                   :evtId, :occurredAt, :type, :actor, cast(:dCats as jsonb), :validFrom, :validUntil,
+                                   :detail
+                            from cns_cmd.cns_rec c
+                            where c.cns_req_id = :cnsReqId
+                            on conflict (evt_id) do nothing
+                            returning rec_id, seq, occurred_at
+                        )
+                        insert into cns_cmd.cns_rcpt_pending (rec_id, seq, occurred_at)
+                        select rec_id, seq, occurred_at from added
                         """)
                 .bind("cnsReqId", cnsReqId)
                 .bind("evtId", evt.evtId())
@@ -134,15 +144,14 @@ public class R2dbcCnsRecRepoAdapter implements CnsRecRepoPort {
                 .concatMap(this::withEvents);
     }
 
+    /** The oldest events still waiting for a receipt, from the queue (V7), which holds only those. */
     @Override
     public Flux<Pending> pendingReceipts(int limit) {
         return db.sql("""
-                        select c.cns_req_id, e.seq
-                        from cns_cmd.cns_rec_evt e
-                        join cns_cmd.cns_rec c on c.id = e.rec_id
-                        left join cns_cmd.cns_rcpt r on r.rec_id = e.rec_id and r.seq = e.seq
-                        where r.id is null
-                        order by e.occurred_at
+                        select c.cns_req_id, p.seq
+                        from cns_cmd.cns_rcpt_pending p
+                        join cns_cmd.cns_rec c on c.id = p.rec_id
+                        order by p.occurred_at
                         limit :limit
                         """)
                 .bind("limit", limit)
@@ -150,9 +159,13 @@ public class R2dbcCnsRecRepoAdapter implements CnsRecRepoPort {
                 .all();
     }
 
+    /** Saves the receipt and takes its event off the queue, in one statement: either both happen or neither. */
     @Override
     public Mono<CnsRcpt> saveReceipt(CnsRcpt rcpt) {
         return db.sql("""
+                        with done as (
+                            delete from cns_cmd.cns_rcpt_pending where rec_id = :recId and seq = :seq
+                        )
                         insert into cns_cmd.cns_rcpt (id, rec_id, seq, issued_at, kid, jws, sha256)
                         values (:id, :recId, :seq, :issuedAt, :kid, :jws, :sha256)
                         """)
