@@ -1,10 +1,10 @@
 # VAPT and performance: Data Fiduciary API
 
-- **Date:** 19 October 2026
+- **Date:** 19 October 2026; load rerun 7 November 2026 (V-03, [Performance](#performance))
 - **Target:** the local stack (`infra/docker-compose.yml`), gateway at `localhost:9000`, with notification-service
   beside it. No cloud environment was tested.
 - **Build:** `main` after #214 (API keys and signed requests, ADR-041) and #215 (deployment, ADR-042), plus the fixes
-  below.
+  below. The load rerun ran on `main` after #264 (Spring Boot 4, ADR-056; common servers, ADR-053).
 - **Kit:** [`tests/`](../../tests/README.md). Everything here can be rerun from it.
 
 ## Summary
@@ -14,11 +14,11 @@
 | Scripted penetration checks (`tests/security/vapt.mjs`) | **68 of 68 pass** after fixes. The first run passed 57 of 61 |
 | OWASP ZAP API scan, from the OpenAPI spec, through signed requests | 112 rules pass, 0 fail; 3 warnings remain, triaged below |
 | Trivy, the eight service images | 16–20 fixable HIGH/CRITICAL per image before; 2–4 after, all accepted with an expiry and since fixed (V-13). No secrets |
-| Load at 50 requests a second (expected mix) | 0 failures; verify p95 214 ms (before the pool fixes) |
-| Load at 100 requests a second | Failed: a connection-pool deadlock in cm-cns-cmd-svc, found and fixed. **The rerun is pending** |
+| Load at 50, 75 and 100 requests a second (expected mix) | **0 failures** at each; at 100, verify p95 51 ms. The pool deadlock (V-03) is fixed |
+| Ramp to the knee | Clean to about 125 requests a second; beyond, Postgres (1 CPU here) saturates and verify answers DENY (V-17) |
 
-Fourteen findings: 3 high, 5 medium, 3 low, 2 accepted, 1 false positive. Ten are fixed, the CI gate is in place,
-and one is open and tracked.
+Seventeen findings: 1 critical, 3 high, 6 medium, 3 low, 2 accepted, 1 fixed by an upgrade (V-13), 1 false positive.
+Twelve are fixed, the CI gate is in place, two are accepted, and two are open (V-11, V-17).
 
 ## How it was tested
 
@@ -40,7 +40,7 @@ and one is open and tracked.
 |---|---|---|---|
 | V-01 | High | One fiduciary could read another's consent request and its history by id | Fixed |
 | V-02 | High | The gateway refused API-key requests with 503 from about 30 at once | Fixed |
-| V-03 | High | Under a backlog, cm-cns-cmd-svc deadlocked its own connection pool and stopped answering until restarted | Fixed, rerun pending |
+| V-03 | High | Under a backlog, cm-cns-cmd-svc deadlocked its own connection pool and stopped answering until restarted | Fixed; 0 failures at 100 requests a second (rerun 2026-11-07) |
 | V-04 | Medium | Known HIGH and CRITICAL vulnerabilities in every service image | Fixed; the 4 accepted until 2027-01-31 were fixed in #260 and #261 (V-13) |
 | V-05 | Medium | Oversized or control-character input reached the database as a 500 | Fixed |
 | V-06 | Medium | One batch with a control-character notice broke its fiduciary's batch list for good | Fixed |
@@ -54,6 +54,26 @@ and one is open and tracked.
 | V-14 | False positive | ZAP's SQL injection on `/api/aud/activity` | Closed |
 | V-15 | Critical | Anyone signed in, a fiduciary's API key included, could approve, decline or withdraw any consent by its id | Fixed (ADR-044) |
 | V-16 | Accepted | Two HIGH advisories without a patched release in the mobile app's build tooling (braces, node-forge) | Accepted until 2026-12-31 |
+| V-17 | Medium | Overloaded, the PEP answers a valid consent with DENY (403 `consent-not-verified`), not 503 | Open |
+
+### V-17: overload reported as DENY (Medium, open)
+
+Found by the load rerun on 7 November 2026. In the ramp past about 150 requests a second, 13,043 consent checks came
+back 403 `consent-not-verified`. All of them were for a consent the principal had given and not withdrawn.
+
+`PepVerifyGatewayFilter` fails closed, as ADR-016's table decides for the `pdp` breaker ("Deny (fails closed,
+ADR-006)"). It fails closed *as a decision*: when the PDP call times out, errors or finds the breaker open, `allowed()`
+falls back to `false`, and the caller gets the same 403 as for a withdrawn consent. In the ramp, OPA's CPU fell to 0 as
+Postgres saturated: the breaker had opened, and every check was answered DENY without asking OPA.
+
+A fiduciary can't tell "no consent" from "try again". One that acts on the answer stops processing, or asks the person
+again, for consent they gave; in an outage that reaches every principal at once. Asking again for consent already given
+is the nagging ADR-028 rules out.
+
+**To fix:** revisit ADR-016's `pdp` row. Still never allow, but answer an unavailable PDP with 503
+`consent-check-unavailable` and `Retry-After`, keeping 403 for decisions. OPA's own live-status lookup (`http.send` to
+cns-qry, 2 s timeout, `infra/opa/policies/cns_authz.rego`) needs the same split, so that a timeout there isn't read as
+"not live".
 
 ### V-16: the mobile app's build tooling (accepted)
 
@@ -125,9 +145,8 @@ database until it was restarted. Three causes compounded:
 - **Pool waits:** every service waits at most 3 s for a connection, then fails, instead of holding requests until the
   gateway's 10 s limit.
 
-**Not yet measured after the fix.** Docker Desktop's VM (7.5 GiB) ran out of memory several times during the runs,
-which also made the earlier measurements noisy. Rerun `tests/perf/run-benchmarks.sh` before relying on capacity
-figures.
+**Measured after the fix (7 November 2026):** the mix at 50, 75 and 100 requests a second, 2 minutes each, with
+0 failures, and nothing stuck afterwards. See [Performance](#performance).
 
 ### V-04: dependency vulnerabilities (Medium)
 
@@ -250,11 +269,65 @@ All of these passed from the first run:
 
 ## Performance
 
-**Environment:** one Windows laptop. Docker Desktop's VM has 7.5 GiB and runs everything: one instance of each service,
-one PostgreSQL, Pulsar standalone, Keycloak, OPA, and notification-service with its own Pulsar and PostgreSQL. These
-numbers show behaviour and bottlenecks; they are not production capacity.
+These numbers show behaviour and bottlenecks on a laptop; they are not production capacity.
 
-### Expected mix at 50 requests a second, 2 minutes
+### Rerun, 7 November 2026
+
+**Environment:** one Windows laptop, Docker Desktop's VM at 10 GiB and 12 CPUs. One instance of each service at
+`CM_SVC_MEM=768m CM_SVC_CPUS=2`. The common servers (ADR-053) keep their ADR-052 limits: **PostgreSQL 1 CPU**, Pulsar
+standalone, Keycloak and Mailpit. notification-service runs beside them in its shared mode and delivers every
+notification. `tests/perf/run-benchmarks.sh` as in this change: a one-minute warm-up first, then each run.
+
+**The expected mix, 2 minutes each:**
+
+| Rate | Requests | Failed | verify p95 | read p95 | token p95 | raise p95 |
+|---|---|---|---|---|---|---|
+| 50/s | 6,032 | 0 | 27 ms | 24 ms | 24 ms | 39 ms |
+| 75/s | 9,167 | 0 | 64 ms | 49 ms | 54 ms | 91 ms |
+| 100/s | 12,062 | 0 | 51 ms | 40 ms | 61 ms | 84 ms |
+
+Every threshold passed, at each rate, with room to spare: p95 300 ms for verify and reads, 500 ms for tokens, 800 ms
+for new requests. At 100 a second the median verify is 22 ms and p99 94 ms. This closes V-03.
+
+**A cold start isn't a fair measurement.** The same mix at 50 a second straight after the stack started failed 18% of
+requests, with p95s of 4 to 7 s: for the first minute the gateway and cm-cns-cmd-svc ran at their 2-CPU limit while the
+JVMs compiled. The script now warms up for a minute first, and doesn't report it.
+
+**API key against OAuth, 50 reads a second each, 1 minute:**
+
+| Read | Median | p95 | p99 |
+|---|---|---|---|
+| with an API key (df-reg checks the key and signature, then the gateway exchanges it) | 14.3 ms | 19.9 ms | 31.1 ms |
+| with a bearer token | 9.4 ms | 12.6 ms | 30.2 ms |
+
+The key's check costs about 5 ms. The bearer side used a DF Console member's token. Since ADR-048, members have their
+own limit of 20 a second, so 1,795 of its 3,000 reads got 429, exactly 20 a second through. That is the limit working;
+a fair OAuth comparison needs the API client's own client-credentials token (see "To finish").
+
+**The ramp, 10 to 450 a second over 4 minutes:**
+
+| Offered | Failed | p95 | |
+|---|---|---|---|
+| up to 107/s | 0% | ≤ 123 ms | |
+| 123/s | 0% | 112 ms | |
+| 135/s | 0% | 422 ms | the knee: latency climbs |
+| 167/s | 22% | 1.7 s | PDP breaker opens; verify answers DENY (V-17) |
+| 200–300/s | 52–61% | 0.3–4 s | about 85–125 a second succeed |
+
+**Where the limit is:** PostgreSQL, at its 1-CPU limit from about 125 a second. The gateway (≈ 100%) and df-reg
+(≈ 95%) were each about half their 2 CPUs, and OPA, Redis and Pulsar were light. Past the knee, Postgres's latency
+reaches the PDP's live-status lookup; its breaker opens, and from then on every consent check is answered DENY without
+asking (V-17). Raises, reads and token refreshes fail as 503, which is correct.
+
+df-reg works almost as hard as the gateway: every API-key request asks it to check the key and the signature. A short
+cache of verified keys at the gateway would take that load off, if the knee is raised past Postgres.
+
+### Before the pool fixes, 19 October 2026
+
+**Environment:** Docker Desktop's VM had 7.5 GiB and ran everything: one instance of each service, one PostgreSQL,
+Pulsar standalone, Keycloak, OPA, and notification-service with its own Pulsar and PostgreSQL.
+
+#### Expected mix at 50 requests a second, 2 minutes
 
 Measured with the bulkhead fix (V-02), before the pool fixes (V-03).
 
@@ -268,7 +341,7 @@ Measured with the bulkhead fix (V-02), before the pool fixes (V-03).
 6,033 requests, 0 failed. Every threshold passed: p95 300 ms for verify and reads, 500 ms for tokens, 800 ms for new
 requests.
 
-### At 100 requests a second
+#### At 100 requests a second
 
 | Run | Requests | Failed | Notes |
 |---|---|---|---|
@@ -283,12 +356,12 @@ emails the load tests asked for.
 
 ### To finish
 
-- Rerun `KEYS_FILE=… tests/perf/run-benchmarks.sh` on a stack with more memory (`.wslconfig` with `memory=10GB`), and
-  add the results here:
-  - the mix at 50, 75 and 100 requests a second
-  - API key against OAuth
-  - the ramp to the knee
-- Then set the pool size per service from the measured concurrency.
+- **V-17:** answer an unavailable PDP with 503, not DENY, then rerun the ramp: past the knee, verify should fail as
+  503 like everything else.
+- **OAuth comparison:** take the API client's client-credentials token for the bearer side of `auth`, not a console
+  member's (ADR-048).
+- **The knee with Postgres unconstrained:** rerun the ramp with Postgres at 2 CPUs or more, to find the next limit
+  (the gateway, df-reg's key checks, or the pools), then set each service's pool size from the measured concurrency.
 
 ## Rerunning
 
