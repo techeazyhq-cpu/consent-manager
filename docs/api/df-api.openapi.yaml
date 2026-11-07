@@ -637,6 +637,18 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: |
+            The consent couldn't be checked right now (`consent-check-unavailable`). This is not a decision: don't treat
+            the consent as withdrawn or ask the person again; don't use the data yet, and retry after `Retry-After`
+            seconds.
+          headers:
+            Retry-After:
+              description: Seconds to wait before checking again.
+              schema: { type: integer, minimum: 1 }
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /api/cns-cmd/cns-arts/{cnsArtId}/token:
     post:

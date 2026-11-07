@@ -76,6 +76,8 @@ class GwPepPdpIT {
 
     private static final String CM_DF = "http://localhost:8080/realms/cm-df";
     private static final Map<String, String> LIVE_STATUS = new ConcurrentHashMap<>();
+    /** A live status the stand-in can't give: it answers 503, as cm-cns-cmd-svc does with its database overloaded. */
+    private static final String UNAVAILABLE = "UNAVAILABLE";
     private static final CnsTknKeys KEYS = keys();
     private static final HttpServer CNS_CMD = standInCnsCmd();
 
@@ -162,6 +164,15 @@ class GwPepPdpIT {
     }
 
     @Test
+    void aConsentWhoseStatusCannotBeHadIsUnavailableNotDenied() {
+        LIVE_STATUS.put("art-busy", UNAVAILABLE);
+
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, verify("art-busy", token("art-busy", "df-a", "ORDER_UPDATES", KEYS),
+                "df-a", "ORDER_UPDATES"));
+        assertEquals(0, forwarded.get(), "an unknown decision is never forwarded");
+    }
+
+    @Test
     void aFiduciarysSystemsAboveThePlansRatePerSecondGet429() {
         HttpServer bil = freePlanBil();
         LettuceConnectionFactory redis = new LettuceConnectionFactory(REDIS.getHost(), REDIS.getMappedPort(6379));
@@ -191,7 +202,7 @@ class GwPepPdpIT {
 
     private HttpStatus verify(String cnsArtId, String cnsTkn, String callerDfId, String purpose) {
         PepVerifyGatewayFilter pep = new PepVerifyGatewayFilter(WebClient.builder(), breakers(),
-                "http://" + OPA.getHost() + ":" + OPA.getMappedPort(8181));
+                "http://" + OPA.getHost() + ":" + OPA.getMappedPort(8181), Duration.ofSeconds(30));
         MockServerWebExchange exchange = MockServerWebExchange.builder(MockServerHttpRequest
                         .get("/api/cns-qry/cns-arts/" + cnsArtId + "/verify?purpose=" + purpose)
                         .header("X-Cns-Tkn", cnsTkn))
@@ -241,6 +252,10 @@ class GwPepPdpIT {
             server.createContext("/internal/cns-arts/", exchange -> {
                 String id = exchange.getRequestURI().getPath().split("/")[3];
                 String status = LIVE_STATUS.get(id);
+                if (UNAVAILABLE.equals(status)) {
+                    respond(exchange, 503, "{}");
+                    return;
+                }
                 respond(exchange, status == null ? 404 : 200, status == null ? "{}" : "{\"status\":\"" + status + "\"}");
             });
             server.start();

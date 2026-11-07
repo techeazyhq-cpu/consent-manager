@@ -16,7 +16,9 @@ moment ago. Authorisation rules should be data, reviewable on their own, rather 
    `scope` (data categories) and `exp` (the artefact's validity).
 2. **Policy enforcement point (PEP): the gateway.** `cm-gw`'s `PepVerifyGatewayFilter` intercepts
    `GET /api/cns-qry/cns-arts/{id}/verify`, takes the token from the `X-Cns-Tkn` header and asks the policy decision
-   point; only `allow: true` is forwarded, anything else is a 403.
+   point; only `allow: true` is forwarded, anything else is a 403. (Amended by
+   [ADR-057](adr-057-an-undecided-consent-check-is-503-not-deny.md): a check that can't be made is a 503, still never
+   forwarded.)
 3. **Policy decision point (PDP): Open Policy Agent.** `infra/opa/policies/cns_authz.rego` allows a `READ` when the
    token's purpose matches the requested purpose, `access_type` is `ALLOW`, it has not expired, **and** the artefact's
    live status, fetched from `cm-cns-qry-svc`'s internal endpoint, is `ISSUED`. The live check is what makes a

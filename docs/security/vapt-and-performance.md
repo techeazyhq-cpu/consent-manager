@@ -15,10 +15,10 @@
 | OWASP ZAP API scan, from the OpenAPI spec, through signed requests | 112 rules pass, 0 fail; 3 warnings remain, triaged below |
 | Trivy, the eight service images | 16–20 fixable HIGH/CRITICAL per image before; 2–4 after, all accepted with an expiry and since fixed (V-13). No secrets |
 | Load at 50, 75 and 100 requests a second (expected mix) | **0 failures** at each; at 100, verify p95 51 ms. The pool deadlock (V-03) is fixed |
-| Ramp to the knee | Clean to about 125 requests a second; beyond, Postgres (1 CPU here) saturates and verify answers DENY (V-17) |
+| Ramp to the knee | Clean to about 125 requests a second; beyond, Postgres (1 CPU here) saturates. Verify answered DENY there (V-17, since fixed: now 503) |
 
 Seventeen findings: 1 critical, 3 high, 6 medium, 3 low, 2 accepted, 1 fixed by an upgrade (V-13), 1 false positive.
-Twelve are fixed, the CI gate is in place, two are accepted, and two are open (V-11, V-17).
+Thirteen are fixed, the CI gate is in place, two are accepted, and one is open (V-11).
 
 ## How it was tested
 
@@ -54,9 +54,9 @@ Twelve are fixed, the CI gate is in place, two are accepted, and two are open (V
 | V-14 | False positive | ZAP's SQL injection on `/api/aud/activity` | Closed |
 | V-15 | Critical | Anyone signed in, a fiduciary's API key included, could approve, decline or withdraw any consent by its id | Fixed (ADR-044) |
 | V-16 | Accepted | Two HIGH advisories without a patched release in the mobile app's build tooling (braces, node-forge) | Accepted until 2026-12-31 |
-| V-17 | Medium | Overloaded, the PEP answers a valid consent with DENY (403 `consent-not-verified`), not 503 | Open |
+| V-17 | Medium | Overloaded, the PEP answers a valid consent with DENY (403 `consent-not-verified`), not 503 | Fixed (ADR-057); ramp rerun to confirm |
 
-### V-17: overload reported as DENY (Medium, open)
+### V-17: overload reported as DENY (Medium)
 
 Found by the load rerun on 7 November 2026. In the ramp past about 150 requests a second, 13,043 consent checks came
 back 403 `consent-not-verified`. All of them were for a consent the principal had given and not withdrawn.
@@ -70,10 +70,21 @@ A fiduciary can't tell "no consent" from "try again". One that acts on the answe
 again, for consent they gave; in an outage that reaches every principal at once. Asking again for consent already given
 is the nagging ADR-028 rules out.
 
-**To fix:** revisit ADR-016's `pdp` row. Still never allow, but answer an unavailable PDP with 503
-`consent-check-unavailable` and `Retry-After`, keeping 403 for decisions. OPA's own live-status lookup (`http.send` to
-cns-qry, 2 s timeout, `infra/opa/policies/cns_authz.rego`) needs the same split, so that a timeout there isn't read as
-"not live".
+**Fix** ([ADR-057](../adr/adr-057-an-undecided-consent-check-is-503-not-deny.md), amending ADR-016's `pdp` row):
+- Still never an allow, but a check that can't be made is now 503 `urn:cm:problem:consent-check-unavailable` with
+  `Retry-After` (the breaker's 30 s open-state wait when it is open, otherwise 1 s). A decision stays 403
+  `consent-not-verified`: no token, a bad or expired one, another fiduciary's, another purpose, or not `ISSUED`.
+- OPA tells the two apart. `cns_authz.rego` calls cm-cns-cmd-svc with `raise_error: false` and publishes
+  `decision := {allow, undetermined}`, which the PEP queries. A JWKS that can't be had, or a live status that times
+  out or comes back 5xx or 429 for a token that otherwise grants, is `undetermined`. A 404 is still a deny, and a token
+  that doesn't grant is denied even while the status can't be had.
+- The PEP treats its own failures the same way: OPA unreachable, slower than 2 s, failing, behind an open breaker,
+  or answering without a decision.
+- Covered by `opa test` (a status timeout and 503, a JWKS timeout and 503), `PepVerifyGatewayFilterTest` (allow,
+  deny, undetermined, unreachable, too slow, breaker open), `GwPdpDownTest`, and `GwPepPdpIT` against a real OPA with
+  the status endpoint answering 503.
+
+Not yet confirmed under load: the ramp needs rerunning (see "To finish").
 
 ### V-16: the mobile app's build tooling (accepted)
 
@@ -311,13 +322,13 @@ a fair OAuth comparison needs the API client's own client-credentials token (see
 | up to 107/s | 0% | ≤ 123 ms | |
 | 123/s | 0% | 112 ms | |
 | 135/s | 0% | 422 ms | the knee: latency climbs |
-| 167/s | 22% | 1.7 s | PDP breaker opens; verify answers DENY (V-17) |
+| 167/s | 22% | 1.7 s | PDP breaker opens; verify answered DENY (V-17, fixed since: now 503) |
 | 200–300/s | 52–61% | 0.3–4 s | about 85–125 a second succeed |
 
 **Where the limit is:** PostgreSQL, at its 1-CPU limit from about 125 a second. The gateway (≈ 100%) and df-reg
 (≈ 95%) were each about half their 2 CPUs, and OPA, Redis and Pulsar were light. Past the knee, Postgres's latency
-reaches the PDP's live-status lookup; its breaker opens, and from then on every consent check is answered DENY without
-asking (V-17). Raises, reads and token refreshes fail as 503, which is correct.
+reaches the PDP's live-status lookup; its breaker opens, and from then on every consent check was answered DENY without
+asking (V-17). Raises, reads and token refreshes fail as 503, which is correct; since the V-17 fix, verify should too.
 
 df-reg works almost as hard as the gateway: every API-key request asks it to check the key and the signature. A short
 cache of verified keys at the gateway would take that load off, if the knee is raised past Postgres.
@@ -356,8 +367,9 @@ emails the load tests asked for.
 
 ### To finish
 
-- **V-17:** answer an unavailable PDP with 503, not DENY, then rerun the ramp: past the knee, verify should fail as
-  503 like everything else.
+- **V-17:** fixed (ADR-057); rerun the ramp (`KEYS_FILE=… tests/perf/run-benchmarks.sh`, its `ramp` step) to
+  confirm that past the knee verify fails as 503 `consent-check-unavailable` like everything else, with no 403 for a
+  consent in force.
 - **OAuth comparison:** take the API client's client-credentials token for the bearer side of `auth`, not a console
   member's (ADR-048).
 - **The knee with Postgres unconstrained:** rerun the ramp with Postgres at 2 CPUs or more, to find the next limit

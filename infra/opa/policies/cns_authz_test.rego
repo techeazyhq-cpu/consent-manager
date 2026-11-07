@@ -39,6 +39,25 @@ no_keys_http_send(request) := {"status_code": 503, "raw_body": ""} if endswith(r
 
 no_keys_http_send(request) := {"status_code": 200, "body": {"status": "ISSUED"}} if contains(request.url, "/internal/cns-arts/")
 
+# What http.send gives with raise_error false when the call times out or can't connect.
+timed_out := {"status_code": 0, "error": {"code": "eval_http_send_network_error", "message": "request timed out"}}
+
+keys_timeout_http_send(request) := timed_out if endswith(request.url, "/.well-known/jwks.json")
+
+keys_timeout_http_send(request) := {"status_code": 200, "body": {"status": "ISSUED"}} if contains(request.url, "/internal/cns-arts/")
+
+status_timeout_http_send(request) := {"status_code": 200, "raw_body": published_jwks} if endswith(request.url, "/.well-known/jwks.json")
+
+status_timeout_http_send(request) := timed_out if contains(request.url, "/internal/cns-arts/")
+
+status_503_http_send(request) := {"status_code": 200, "raw_body": published_jwks} if endswith(request.url, "/.well-known/jwks.json")
+
+status_503_http_send(request) := {"status_code": 503, "body": {}} if contains(request.url, "/internal/cns-arts/")
+
+status_404_http_send(request) := {"status_code": 200, "raw_body": published_jwks} if endswith(request.url, "/.well-known/jwks.json")
+
+status_404_http_send(request) := {"status_code": 404, "body": {}} if contains(request.url, "/internal/cns-arts/")
+
 in_one_hour := (time.now_ns() / 1000000000) + 3600
 
 claims(overrides) := object.union(
@@ -74,8 +93,18 @@ decide(consent_token, overrides) if {
 		with http.send as mock_http_send
 }
 
+# The decision cm-gw asks for, given what cm-cns-cmd-svc answers (each mock below).
+
+allowed := {"allow": true, "undetermined": false}
+
+denied := {"allow": false, "undetermined": false}
+
+undetermined := {"allow": false, "undetermined": true}
+
 test_a_genuine_token_for_this_artefact_fiduciary_and_purpose_is_allowed if {
 	decide(token({}), {})
+	authorization.decision == allowed with input as request(token({}), {})
+		with http.send as mock_http_send
 }
 
 test_a_token_signed_with_any_other_key_is_denied_even_with_the_right_kid if {
@@ -117,4 +146,52 @@ test_a_revoked_artefact_is_denied_even_with_a_genuine_token if {
 test_without_the_signing_keys_everything_is_denied if {
 	not authorization.allow with input as request(token({}), {})
 		with http.send as no_keys_http_send
+}
+
+test_a_definite_deny_is_not_undetermined if {
+	authorization.decision == denied with input as request(token({}), {"requested_purpose": "MARKETING"})
+		with http.send as mock_http_send
+	authorization.decision == denied with input as request(token({"cns_art_id": "art-revoked"}), {"cns_art_id": "art-revoked"})
+		with http.send as mock_http_send
+}
+
+# V-17: "couldn't check" is never an allow, but it is not a deny either.
+test_a_jwks_503_is_undetermined if {
+	authorization.decision == undetermined with input as request(token({}), {})
+		with http.send as no_keys_http_send
+}
+
+test_a_jwks_timeout_is_undetermined if {
+	authorization.decision == undetermined with input as request(token({}), {})
+		with http.send as keys_timeout_http_send
+}
+
+test_without_the_keys_a_request_without_a_caller_is_still_denied if {
+	authorization.decision == denied with input as request(token({}), {"caller_df_id": ""})
+		with http.send as no_keys_http_send
+}
+
+test_a_status_timeout_is_undetermined if {
+	authorization.decision == undetermined with input as request(token({}), {})
+		with http.send as status_timeout_http_send
+}
+
+test_a_status_503_is_undetermined if {
+	authorization.decision == undetermined with input as request(token({}), {})
+		with http.send as status_503_http_send
+}
+
+test_an_unknown_artefact_is_denied if {
+	authorization.decision == denied with input as request(token({}), {})
+		with http.send as status_404_http_send
+}
+
+test_a_token_that_does_not_grant_is_denied_even_when_the_status_cannot_be_had if {
+	authorization.decision == denied with input as request(token({}), {"caller_df_id": "df-2"})
+		with http.send as status_timeout_http_send
+	authorization.decision == denied with input as request(token({}), {"requested_purpose": "MARKETING"})
+		with http.send as status_timeout_http_send
+	forged := io.jwt.encode_sign({"alg": "RS256", "kid": "test-cm-key"}, claims({}), attacker_key)
+	authorization.decision == denied with input as request(forged, {})
+		with http.send as status_timeout_http_send
 }

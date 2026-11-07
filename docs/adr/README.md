@@ -21,7 +21,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [013](adr-013-verified-consent-tokens.md) | Consent tokens are verified, and bound to their artefact and fiduciary | Accepted, offline verification superseded by 027 (proposed) |
 | [014](adr-014-tamper-evident-audit-ledger.md) | A tamper-evident audit ledger, hash-chained like a blockchain | Accepted |
 | [015](adr-015-ledger-checkpoints-anchored-by-a-timestamp-authority.md) | Ledger checkpoints, anchored by an external RFC 3161 timestamp authority | Accepted |
-| [016](adr-016-circuit-breakers-on-every-synchronous-call.md) | A circuit breaker on every synchronous call to another service | Accepted |
+| [016](adr-016-circuit-breakers-on-every-synchronous-call.md) | A circuit breaker on every synchronous call to another service | Accepted, `pdp` row amended by 057 |
 | [017](adr-017-platform-staff-and-operator-role.md) | Platform staff in their own service, with an operator role | Accepted |
 | [018](adr-018-regional-cells-for-data-residency.md) | Regional cells for data residency | Proposed |
 | [019](adr-019-identity-vault-and-crypto-shredding.md) | An Identity Vault holds personal data; erasure by crypto-shredding | Proposed |
@@ -60,6 +60,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [052](adr-052-resource-limits-for-the-local-stack.md) | CPU and memory limits for the local stack | Accepted |
 | [053](adr-053-common-servers-for-both-applications.md) | One common set of servers for consent-manager and notification-service | Accepted |
 | [054](adr-054-common-namespace-on-kubernetes.md) | The common namespace on Kubernetes: one chart for the shared servers, the apps in their own namespaces | Accepted |
+| [057](adr-057-an-undecided-consent-check-is-503-not-deny.md) | A consent check that can't be made is a 503, not a deny | Accepted |
 
 ## Writing one
 
