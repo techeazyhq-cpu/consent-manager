@@ -67,6 +67,16 @@ public final class DfFactory {
 
     public static Df rehydrate(String id, String name, String contactEmail, DfPrfl prfl, String subPlnName,
                                 DfSts sts, Instant registeredAt, String cmDfApiClientSecret, Instant activatedAt,
+                                Instant suspendedAt, String suspensionReason, DfSts leavingFrom, Instant leavingAt,
+                                Instant leavesAt, String leavingBy, int leaveCancellations) {
+        Df df = rehydrate(id, name, contactEmail, prfl, subPlnName, sts, registeredAt, cmDfApiClientSecret, activatedAt,
+                suspendedAt, suspensionReason);
+        df.restoreLeaving(leavingFrom, leavingAt, leavesAt, leavingBy, leaveCancellations);
+        return df;
+    }
+
+    public static Df rehydrate(String id, String name, String contactEmail, DfPrfl prfl, String subPlnName,
+                                DfSts sts, Instant registeredAt, String cmDfApiClientSecret, Instant activatedAt,
                                 Instant suspendedAt, String suspensionReason) {
         Df df = rehydrate(id, name, contactEmail, prfl, subPlnName, sts, registeredAt, cmDfApiClientSecret, activatedAt);
         df.restoreSuspension(suspendedAt, suspensionReason);

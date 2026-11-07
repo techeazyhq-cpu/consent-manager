@@ -98,7 +98,10 @@ public class VerifyApiRequestHandler {
                         .flatMap(df -> df.sts() == DfSts.SUSPENDED
                                 ? Mono.<Df>error(new DomRuleViolation(403, "df-suspended",
                                         "The fiduciary this key belongs to is suspended"))
-                                : Mono.just(df))
+                                : df.sts() == DfSts.LEAVING
+                                        ? Mono.<Df>error(new DomRuleViolation(403, "df-leaving",
+                                                "The fiduciary this key belongs to is leaving the platform"))
+                                        : Mono.just(df))
                         .filter(df -> df.sts() == DfSts.ACTIVE)
                         .switchIfEmpty(Mono.error(new DomRuleViolation(403, "df-not-active",
                                 "The fiduciary this key belongs to isn't active")))

@@ -1716,6 +1716,58 @@
       "raisedBy": [
         "cm-df-reg-svc"
       ]
+    },
+    {
+      "code": "df-leaving",
+      "kind": "problem",
+      "status": 403,
+      "category": "state",
+      "title": "Fiduciary is leaving",
+      "description": "The fiduciary this API key belongs to has asked to leave the platform. Nothing new is accepted during the wind-down; its records stay readable until it closes.",
+      "action": "An Owner can cancel the departure once before the wind-down ends, in the DF Console.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "df-cannot-leave",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Fiduciary cannot leave now",
+      "description": "Only an active or suspended fiduciary can ask to leave; this one is pending, already leaving or closed.",
+      "action": "Check the fiduciary's status.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "df-not-leaving",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Fiduciary is not leaving",
+      "description": "There is no departure to cancel.",
+      "action": "Check the fiduciary's status.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "leave-cancel-used",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Departure already cancelled once",
+      "description": "A departure can be called off once, and this fiduciary has already used that.",
+      "action": "The wind-down continues. Contact the consent manager's support if this is a mistake.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
     }
   ]
 }

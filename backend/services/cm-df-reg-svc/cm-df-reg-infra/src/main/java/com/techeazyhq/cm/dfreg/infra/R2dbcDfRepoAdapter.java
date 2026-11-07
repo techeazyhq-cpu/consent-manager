@@ -59,16 +59,23 @@ public class R2dbcDfRepoAdapter implements DfRepoPort {
         DatabaseClient.GenericExecuteSpec spec = db.sql("""
                         insert into df_reg.df (id, name, contact_email, sts, registered_at, cm_df_api_client_secret, activated_at,
                                                legal_name, contact_phone, website, registered_address, industry, cin,
-                                               gstin, dpo_name, dpo_email, sub_pln_name, suspended_at, suspension_reason)
+                                               gstin, dpo_name, dpo_email, sub_pln_name, suspended_at, suspension_reason,
+                                               leaving_from, leaving_at, leaves_at, leaving_by, leave_cancellations)
                         values (:id, :name, :contactEmail, :sts, :registeredAt, :clientSecret, :activatedAt,
                                 :legalName, :contactPhone, :website, :registeredAddress, :industry, :cin,
-                                :gstin, :dpoName, :dpoEmail, :subPlnName, :suspendedAt, :suspensionReason)
+                                :gstin, :dpoName, :dpoEmail, :subPlnName, :suspendedAt, :suspensionReason,
+                                :leavingFrom, :leavingAt, :leavesAt, :leavingBy, :leaveCancellations)
                         on conflict (id) do update set
                             sts = excluded.sts,
                             cm_df_api_client_secret = excluded.cm_df_api_client_secret,
                             activated_at = excluded.activated_at,
                             suspended_at = excluded.suspended_at,
-                            suspension_reason = excluded.suspension_reason
+                            suspension_reason = excluded.suspension_reason,
+                            leaving_from = excluded.leaving_from,
+                            leaving_at = excluded.leaving_at,
+                            leaves_at = excluded.leaves_at,
+                            leaving_by = excluded.leaving_by,
+                            leave_cancellations = excluded.leave_cancellations
                         """)
                 .bind("id", df.id())
                 .bind("name", df.name())
@@ -90,6 +97,11 @@ public class R2dbcDfRepoAdapter implements DfRepoPort {
         spec = bindNullable(spec, "subPlnName", df.subPlnName());
         spec = bindNullableInstant(spec, "suspendedAt", df.suspendedAt());
         spec = bindNullable(spec, "suspensionReason", df.suspensionReason());
+        spec = bindNullable(spec, "leavingFrom", df.leavingFrom() == null ? null : df.leavingFrom().name());
+        spec = bindNullableInstant(spec, "leavingAt", df.leavingAt());
+        spec = bindNullableInstant(spec, "leavesAt", df.leavesAt());
+        spec = bindNullable(spec, "leavingBy", df.leavingBy());
+        spec = spec.bind("leaveCancellations", df.leaveCancellations());
 
         Mono<Void> upsert = spec.then();
         List<DomainEvt> pending = df.pullEvts();
@@ -163,7 +175,12 @@ public class R2dbcDfRepoAdapter implements DfRepoPort {
                 opened(row.get("cm_df_api_client_secret", String.class)),
                 row.get("activated_at", Instant.class),
                 row.get("suspended_at", Instant.class),
-                row.get("suspension_reason", String.class));
+                row.get("suspension_reason", String.class),
+                row.get("leaving_from", String.class) == null ? null : DfSts.valueOf(row.get("leaving_from", String.class)),
+                row.get("leaving_at", Instant.class),
+                row.get("leaves_at", Instant.class),
+                row.get("leaving_by", String.class),
+                row.get("leave_cancellations", Integer.class) == null ? 0 : row.get("leave_cancellations", Integer.class));
     }
 
     private DatabaseClient.GenericExecuteSpec bindNullable(DatabaseClient.GenericExecuteSpec spec, String name, String value) {

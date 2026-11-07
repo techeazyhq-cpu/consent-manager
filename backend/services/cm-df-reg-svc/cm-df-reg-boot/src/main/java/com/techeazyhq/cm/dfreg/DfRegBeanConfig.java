@@ -55,6 +55,7 @@ import com.techeazyhq.cm.dfreg.infra.KeycloakDfApiClientProvisionAdapter;
 import com.techeazyhq.cm.dfreg.infra.KeycloakDfMemberDirectoryAdapter;
 import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.dfreg.app.DfApiKeyHandler;
+import com.techeazyhq.cm.dfreg.app.DfLeavingHandler;
 import com.techeazyhq.cm.dfreg.app.DfSuspensionHandler;
 import com.techeazyhq.cm.dfreg.app.DfTermsHandler;
 import com.techeazyhq.cm.dfreg.dom.TermsDoc;
@@ -259,14 +260,22 @@ public class DfRegBeanConfig {
     }
 
     @Bean
-    public DfApiKeyHandler dfApiKeyHandler(R2dbcDfApiKeyAdapter keys, SecretSealerPort sealer, AuditTrail audit) {
-        return new DfApiKeyHandler(keys, sealer, audit);
+    public DfApiKeyHandler dfApiKeyHandler(R2dbcDfApiKeyAdapter keys, SecretSealerPort sealer, AuditTrail audit,
+                                           DfRepoPort dfRepo) {
+        return new DfApiKeyHandler(keys, sealer, audit, dfRepo);
     }
 
     @Bean
     public VerifyApiRequestHandler verifyApiRequestHandler(R2dbcDfApiKeyAdapter keys, DfRepoPort dfRepo,
                                                            SecretSealerPort sealer, DfAccessTokenPort tokens) {
         return new VerifyApiRequestHandler(keys, dfRepo, keys, sealer, tokens, java.time.Clock.systemUTC());
+    }
+
+    @Bean
+    public DfLeavingHandler dfLeavingHandler(DfRepoPort dfRepo, DfMemberDirectoryPort members,
+                                             com.techeazyhq.cm.dfreg.dom.EmailPort email, AuditTrail audit,
+                                             @Value("${cm.dfreg.offboarding.wind-down-days:30}") int windDownDays) {
+        return new DfLeavingHandler(dfRepo, members, email, audit, java.time.Clock.systemUTC(), windDownDays);
     }
 
     @Bean
