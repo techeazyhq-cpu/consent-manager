@@ -33,6 +33,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techeazyhq.cm.bil.app.AssignSubPlnCmdHandler;
 import com.techeazyhq.cm.bil.app.BilOverviewQryHandler;
 import com.techeazyhq.cm.bil.app.PlnChgReqHandler;
+import com.techeazyhq.cm.bil.app.UsgAlertHandler;
+import com.techeazyhq.cm.bil.app.UsgAlertQryHandler;
+import com.techeazyhq.cm.bil.app.UsgAlertSweep;
+import com.techeazyhq.cm.bil.dom.UsgAlertRepoPort;
+import com.techeazyhq.cm.bil.infra.R2dbcUsgAlertRepoAdapter;
 import com.techeazyhq.cm.bil.dom.PlnChgReqRepoPort;
 import com.techeazyhq.cm.bil.infra.R2dbcBilOutbox;
 import com.techeazyhq.cm.bil.infra.R2dbcPlnChgReqRepoAdapter;
@@ -74,6 +79,33 @@ public class BilBeanConfig {
     @Bean
     public AuditTrail auditTrail(R2dbcBilOutbox outbox) {
         return AuditTrail.to("bil", outbox::enqueue);
+    }
+
+    @Bean
+    public java.time.Clock clock() {
+        return java.time.Clock.systemUTC();
+    }
+
+    /** Usage alerts (ADR-060): recorded once per fiduciary, month and threshold, and relayed to cm-df-reg-svc. */
+    @Bean
+    public UsgAlertRepoPort usgAlertRepoPort(DatabaseClient db) {
+        return new R2dbcUsgAlertRepoAdapter(db);
+    }
+
+    @Bean
+    public UsgAlertHandler usgAlertHandler(UsgAlertRepoPort alerts, R2dbcBilOutbox outbox, AuditTrail audit) {
+        return new UsgAlertHandler(alerts, outbox, audit);
+    }
+
+    @Bean
+    public UsgAlertSweep usgAlertSweep(DfSubRepoPort subs, SubPlnRepoPort plans, UsgPort usage, UsgAlertHandler handler,
+                                       java.time.Clock clock) {
+        return new UsgAlertSweep(subs, plans, usage, handler, clock);
+    }
+
+    @Bean
+    public UsgAlertQryHandler usgAlertQryHandler(UsgAlertRepoPort alerts, java.time.Clock clock) {
+        return new UsgAlertQryHandler(alerts, clock);
     }
 
     @Bean

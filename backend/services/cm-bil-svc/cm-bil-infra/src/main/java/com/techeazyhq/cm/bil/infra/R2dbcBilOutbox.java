@@ -37,19 +37,25 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techeazyhq.cm.audkit.PlatformActionEvt;
+import com.techeazyhq.cm.bil.dom.UsgAlertEvtPort;
+import com.techeazyhq.cm.bil.dom.UsgThresholdEvt;
 import com.techeazyhq.cm.evtkit.PulsarTopics;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
- * Billing's outbox (ADR-004, ADR-040): an action is written in the same transaction as the change it describes, and a
- * relay publishes what's waiting to {@code persistent://cm/bil/evt-platform-action-v1}, where the audit ledger reads it.
+ * Billing's outbox (ADR-004, ADR-040, ADR-060): an event is written in the same transaction as the change it describes,
+ * and a relay publishes what's waiting. Two kinds, each to its own topic: an audited action to
+ * {@code evt-platform-action}, where the audit ledger reads it, and a usage threshold to {@code evt-usg-threshold},
+ * where cm-df-reg-svc reads it.
  */
-public class R2dbcBilOutbox {
+public class R2dbcBilOutbox implements UsgAlertEvtPort {
 
     private static final Logger LOG = LoggerFactory.getLogger(R2dbcBilOutbox.class);
     static final String TOPIC_NAME = "platform-action";
+    static final String USG_THRESHOLD_TOPIC = "usg-threshold";
+    static final String USG_THRESHOLD_TYPE = "UsgThresholdEvt";
 
     private final DatabaseClient db;
     private final ObjectMapper objectMapper;
@@ -64,17 +70,30 @@ public class R2dbcBilOutbox {
     }
 
     public Mono<Void> enqueue(PlatformActionEvt evt) {
-        return Mono.fromCallable(() -> objectMapper.writeValueAsString(evt))
+        return insert(evt.evtId(), "PlatformAction", evt.target() != null ? evt.target() : evt.ctx(),
+                "PlatformActionEvt", evt, evt.occurredAt());
+    }
+
+    @Override
+    public Mono<Void> thresholdReached(UsgThresholdEvt evt) {
+        return insert(evt.evtId(), "UsgAlert", evt.dfId() + "/" + evt.period() + "/" + evt.threshold(),
+                USG_THRESHOLD_TYPE, evt, evt.occurredAt());
+    }
+
+    private Mono<Void> insert(UUID evtId, String aggType, String aggId, String evtType, Object body, Instant at) {
+        return Mono.fromCallable(() -> objectMapper.writeValueAsString(body))
                 .flatMap(payload -> db.sql("""
                                 insert into bil.outbox_evt (id, evt_id, agg_type, agg_id, evt_type, payload_json, created_at)
-                                values (:id, :evtId, 'PlatformAction', :aggId, 'PlatformActionEvt', :payload, :createdAt)
+                                values (:id, :evtId, :aggType, :aggId, :evtType, :payload, :createdAt)
                                 on conflict (evt_id) do nothing
                                 """)
                         .bind("id", UUID.randomUUID())
-                        .bind("evtId", evt.evtId())
-                        .bind("aggId", evt.target() != null ? evt.target() : evt.ctx())
+                        .bind("evtId", evtId)
+                        .bind("aggType", aggType)
+                        .bind("aggId", aggId)
+                        .bind("evtType", evtType)
                         .bind("payload", payload)
-                        .bind("createdAt", evt.occurredAt())
+                        .bind("createdAt", at)
                         .then());
     }
 
@@ -91,8 +110,9 @@ public class R2dbcBilOutbox {
         if (!passRunning.compareAndSet(false, true)) {
             return;
         }
-        db.sql("select id, payload_json from bil.outbox_evt where published_at is null order by created_at limit 100")
-                .map((row, meta) -> new Row(row.get("id", UUID.class), row.get("payload_json", String.class)))
+        db.sql("select id, evt_type, payload_json from bil.outbox_evt where published_at is null order by created_at limit 100")
+                .map((row, meta) -> new Row(row.get("id", UUID.class), row.get("evt_type", String.class),
+                        row.get("payload_json", String.class)))
                 .all()
                 .collectList()
                 .flatMapMany(Flux::fromIterable)
@@ -104,7 +124,7 @@ public class R2dbcBilOutbox {
     }
 
     private Mono<Void> publishAndMark(Row row) {
-        String topic = PulsarTopics.evt("bil", TOPIC_NAME);
+        String topic = PulsarTopics.evt("bil", USG_THRESHOLD_TYPE.equals(row.evtType()) ? USG_THRESHOLD_TOPIC : TOPIC_NAME);
         return senders.computeIfAbsent(topic, t -> pulsar.messageSender(Schema.STRING).topic(t).cache(senderCache)
                         .maxInflight(100).build())
                 .sendOne(MessageSpec.of(row.payloadJson()))
@@ -112,6 +132,6 @@ public class R2dbcBilOutbox {
                         .bind("now", Instant.now()).bind("id", row.id()).then());
     }
 
-    private record Row(UUID id, String payloadJson) {
+    private record Row(UUID id, String evtType, String payloadJson) {
     }
 }

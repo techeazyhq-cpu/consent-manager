@@ -31,7 +31,9 @@ import com.techeazyhq.cm.bil.app.BilCaller;
 import com.techeazyhq.cm.bil.app.BilOverviewQryHandler;
 import com.techeazyhq.cm.bil.app.GetDfSubStatusQryHandler;
 import com.techeazyhq.cm.bil.app.PlnChgReqHandler;
+import com.techeazyhq.cm.bil.app.UsgAlertQryHandler;
 import com.techeazyhq.cm.bil.dom.PlnChgReq;
+import com.techeazyhq.cm.bil.dom.UsgAlert;
 import com.techeazyhq.cm.seckit.AuthCtx;
 import com.techeazyhq.cm.webkit.DomRuleViolation;
 
@@ -39,20 +41,35 @@ import reactor.core.publisher.Mono;
 
 /**
  * Billing as fiduciaries and platform staff see it (ADR-039). {@code /api/bil/me/**} is the caller's own fiduciary,
- * from the {@code df_id} in their token: its subscription and its plan change requests. The overview and the request
- * queue are for platform staff.
+ * from the {@code df_id} in their token: its subscription, its plan change requests and its usage alerts (ADR-060). The
+ * overview, the request queue and everyone's usage alerts are for platform staff.
  */
 public class BilAccountHttpHandler {
 
     private final GetDfSubStatusQryHandler status;
     private final BilOverviewQryHandler overview;
     private final PlnChgReqHandler requests;
+    private final UsgAlertQryHandler alerts;
 
     public BilAccountHttpHandler(GetDfSubStatusQryHandler status, BilOverviewQryHandler overview,
-                                 PlnChgReqHandler requests) {
+                                 PlnChgReqHandler requests, UsgAlertQryHandler alerts) {
         this.status = status;
         this.overview = overview;
         this.requests = requests;
+        this.alerts = alerts;
+    }
+
+    /** The caller's fiduciary's usage alerts, newest first. */
+    public Mono<ServerResponse> myAlerts(ServerRequest request) {
+        return caller(request).flatMap(c -> alerts.mine(c).map(AlertDto::of).collectList())
+                .flatMap(list -> ServerResponse.ok().bodyValue(list));
+    }
+
+    /** Every fiduciary's usage alerts for {@code ?period=yyyy-MM} (this month by default), for platform staff. */
+    public Mono<ServerResponse> alerts(ServerRequest request) {
+        String period = request.queryParam("period").filter(s -> !s.isBlank()).orElse(null);
+        return caller(request).flatMap(c -> alerts.forPeriod(c, period).map(AlertDto::of).collectList())
+                .flatMap(list -> ServerResponse.ok().bodyValue(list));
     }
 
     public Mono<ServerResponse> mySubscription(ServerRequest request) {
@@ -130,6 +147,14 @@ public class BilAccountHttpHandler {
                     return new BilCaller(ctx.subject(), email != null ? email : ctx.subject(), ctx.dfId(), mayRequest,
                             ctx.isPlatformStaff(), ctx.isCmAdmin());
                 });
+    }
+
+    record AlertDto(String dfId, String period, int threshold, long used, long quota, String planName,
+                    Instant raisedAt) {
+
+        static AlertDto of(UsgAlert a) {
+            return new AlertDto(a.dfId(), a.period(), a.threshold(), a.used(), a.quota(), a.planName(), a.raisedAt());
+        }
     }
 
     record ChangeReqDto(String subPlnName, String note) {

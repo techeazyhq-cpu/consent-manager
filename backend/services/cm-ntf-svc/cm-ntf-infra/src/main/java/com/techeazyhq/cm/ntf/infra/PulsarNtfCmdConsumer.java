@@ -29,6 +29,8 @@ import com.techeazyhq.cm.ntf.app.NotifyDfCmd;
 import com.techeazyhq.cm.ntf.app.NotifyDfCmdHandler;
 import com.techeazyhq.cm.ntf.app.NotifyDpCmd;
 import com.techeazyhq.cm.ntf.app.NotifyDpCmdHandler;
+import com.techeazyhq.cm.ntf.app.NotifyEmailCmd;
+import com.techeazyhq.cm.ntf.app.NotifyEmailCmdHandler;
 import com.techeazyhq.cm.ntf.dom.NtfDeliveryRejectedException;
 
 import reactor.core.publisher.Mono;
@@ -51,13 +53,16 @@ public class PulsarNtfCmdConsumer {
     private final ObjectMapper objectMapper;
     private final NotifyDpCmdHandler notifyDpCmdHandler;
     private final NotifyDfCmdHandler notifyDfCmdHandler;
+    private final NotifyEmailCmdHandler notifyEmailCmdHandler;
 
     public PulsarNtfCmdConsumer(ReactivePulsarClient reactivePulsarClient, ObjectMapper objectMapper,
-                                 NotifyDpCmdHandler notifyDpCmdHandler, NotifyDfCmdHandler notifyDfCmdHandler) {
+                                 NotifyDpCmdHandler notifyDpCmdHandler, NotifyDfCmdHandler notifyDfCmdHandler,
+                                 NotifyEmailCmdHandler notifyEmailCmdHandler) {
         this.reactivePulsarClient = reactivePulsarClient;
         this.objectMapper = objectMapper;
         this.notifyDpCmdHandler = notifyDpCmdHandler;
         this.notifyDfCmdHandler = notifyDfCmdHandler;
+        this.notifyEmailCmdHandler = notifyEmailCmdHandler;
     }
 
     public void start() {
@@ -68,6 +73,11 @@ public class PulsarNtfCmdConsumer {
         consume(PulsarTopics.cmd("ntf", "notify-df"), "ntf-notify-df-sub", json -> {
             NotifyDfCmd cmd = readValue(json, NotifyDfCmd.class);
             return notifyDfCmdHandler.handle(cmd);
+        });
+        // an email another service holds the address for, e.g. a fiduciary's usage alert (ADR-060)
+        consume(PulsarTopics.cmd("ntf", "notify-email"), "ntf-notify-email-sub", json -> {
+            NotifyEmailCmd cmd = readValue(json, NotifyEmailCmd.class);
+            return notifyEmailCmdHandler.handle(cmd);
         });
     }
 

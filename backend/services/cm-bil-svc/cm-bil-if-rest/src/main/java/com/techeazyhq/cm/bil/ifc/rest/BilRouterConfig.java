@@ -32,6 +32,7 @@ import com.techeazyhq.cm.bil.app.GetUsgQryHandler;
 import com.techeazyhq.cm.bil.app.ListSubPlnsQryHandler;
 import com.techeazyhq.cm.bil.app.SetDfSubStsCmdHandler;
 import com.techeazyhq.cm.bil.app.SubEligQryHandler;
+import com.techeazyhq.cm.bil.app.UsgAlertQryHandler;
 import com.techeazyhq.cm.bil.app.UsgReservationHandler;
 
 @Configuration
@@ -46,12 +47,16 @@ public class BilRouterConfig {
                                                       GetDfSubStatusQryHandler getDfSubStatusHandler,
                                                       UsgReservationHandler usgReservationHandler,
                                                       BilOverviewQryHandler overviewHandler,
-                                                      PlnChgReqHandler plnChgReqHandler) {
+                                                      PlnChgReqHandler plnChgReqHandler,
+                                                      UsgAlertQryHandler usgAlertQryHandler) {
         BilHandler handler = new BilHandler(assignSubPlnHandler, setDfSubStsHandler, getUsgHandler, subEligHandler,
                 listSubPlnsHandler, getDfSubStatusHandler, usgReservationHandler);
-        BilAccountHttpHandler account = new BilAccountHttpHandler(getDfSubStatusHandler, overviewHandler, plnChgReqHandler);
+        BilAccountHttpHandler account = new BilAccountHttpHandler(getDfSubStatusHandler, overviewHandler, plnChgReqHandler,
+                usgAlertQryHandler);
         return RouterFunctions.route()
                 .GET("/api/bil/me/subscription", account::mySubscription)
+                .GET("/api/bil/me/usage-alerts", account::myAlerts)
+                .GET("/api/bil/usage-alerts", account::alerts)
                 .GET("/api/bil/me/plan-change-requests", account::myRequests)
                 .POST("/api/bil/me/plan-change-requests", account::requestChange)
                 .POST("/api/bil/me/plan-change-requests/{id}/withdraw", account::withdraw)

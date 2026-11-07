@@ -25,6 +25,7 @@ dependencies {
     api(project(":cm-web-kit"))
     api(project(":cm-aud-kit"))
     compileOnly("org.springframework:spring-tx:7.0.10")
+    implementation("org.slf4j:slf4j-api:2.0.20")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
