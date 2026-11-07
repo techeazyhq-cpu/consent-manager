@@ -289,11 +289,12 @@ describe("webhooks", () => {
 
   it("offers every type the API sends", () => {
     expect(WEBHOOK_TYPES).toEqual(["consent.requested", "consent.notification_failed", "consent.given", "consent.refused",
-      "consent.modified", "consent.renewed", "consent.withdrawn", "consent.lapsed", "receipt.issued"]);
+      "consent.modified", "consent.renewed", "consent.withdrawn", "consent.lapsed", "receipt.issued",
+      "principal_request.received", "principal_request.withdrawn"]);
   });
 
   it("labels every message type", () => {
-    for (const t of ["consent.given", "consent.withdrawn", "consent.lapsed", "receipt.issued", "webhook.test"]) {
+    for (const t of ["consent.given", "consent.withdrawn", "consent.lapsed", "receipt.issued", "principal_request.received", "webhook.test"]) {
       expect(WEBHOOK_TYPE_LABELS[t]).toBeTruthy();
     }
   });

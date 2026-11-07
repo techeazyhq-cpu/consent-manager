@@ -109,6 +109,12 @@ tags:
     description: Verify consent before using personal data.
   - name: Account
     description: The fiduciary's own subscription and audit trail.
+  - name: Principal requests
+    description: |
+      Requests from data principals about one of their consents with you, relayed by the Consent Manager (ADR-058):
+      to see, correct or erase their data, a complaint, or a nomination. Answer each by its dueBy; a refusal names its
+      legal ground. principal_request.received tells your webhooks as each arrives. Every member reads; Owners,
+      Administrators, Consent managers and API clients answer.
   - name: Webhooks
     description: |
       Be told of every change to your consents (ADR-047). What is posted to your endpoints is in
@@ -1016,6 +1022,118 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
 
+  /api/dsr/df/requests:
+    get:
+      tags: [Principal requests]
+      operationId: listPrincipalRequests
+      summary: Requests relayed to you
+      description: Open ones first, soonest due; then answered, refused and withdrawn ones, newest first. Up to 200.
+      parameters:
+        - name: sts
+          in: query
+          schema: { $ref: '#/components/schemas/PrincipalRequestStatus' }
+      responses:
+        '200':
+          description: The requests.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PrincipalRequest' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/dsr/df/requests/{principalRequestId}:
+    get:
+      tags: [Principal requests]
+      operationId: getPrincipalRequest
+      summary: One request, with the person's own words
+      parameters:
+        - $ref: '#/components/parameters/PrincipalRequestId'
+      responses:
+        '200':
+          description: The request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrincipalRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/dsr/df/requests/{principalRequestId}/acknowledge:
+    post:
+      tags: [Principal requests]
+      operationId: acknowledgePrincipalRequest
+      summary: Say you are working on it
+      description: Optional; answering also acknowledges.
+      parameters:
+        - $ref: '#/components/parameters/PrincipalRequestId'
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: The request as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrincipalRequest' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/dsr/df/requests/{principalRequestId}/resolve:
+    post:
+      tags: [Principal requests]
+      operationId: resolvePrincipalRequest
+      summary: Answer the request
+      description: What was done, for the person to read.
+      parameters:
+        - $ref: '#/components/parameters/PrincipalRequestId'
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PrincipalRequestAnswer' }
+      responses:
+        '200':
+          description: The request as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrincipalRequest' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /api/dsr/df/requests/{principalRequestId}/refuse:
+    post:
+      tags: [Principal requests]
+      operationId: refusePrincipalRequest
+      summary: Refuse the request, citing its legal ground
+      description: The person sees the explanation and the ground, and where to go next.
+      parameters:
+        - $ref: '#/components/parameters/PrincipalRequestId'
+        - $ref: '#/components/parameters/SignatureTimestamp'
+        - $ref: '#/components/parameters/SignatureNonce'
+        - $ref: '#/components/parameters/Signature'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PrincipalRequestRefusal' }
+      responses:
+        '200':
+          description: The request as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PrincipalRequest' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
 components:
   securitySchemes:
     apiKey:
@@ -1059,6 +1177,11 @@ components:
       schema: { type: string, format: uuid }
     EndpointId:
       name: endpointId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PrincipalRequestId:
+      name: principalRequestId
       in: path
       required: true
       schema: { type: string, format: uuid }
@@ -1517,3 +1640,36 @@ components:
         target: { type: [string, 'null'] }
         details: { type: object, additionalProperties: { type: string } }
         erased: { type: boolean }
+    PrincipalRequestStatus:
+      type: string
+      enum: [OPEN, ACKNOWLEDGED, RESOLVED, REFUSED, WITHDRAWN]
+    PrincipalRequest:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [RELAY] }
+        dfId: { type: string }
+        cnsReqId: { type: string, format: uuid, description: The consent the request is about; it tells you who is asking. }
+        prpsCode: { type: [string, 'null'] }
+        right: { type: string, enum: [ACCESS, CORRECTION, ERASURE, GRIEVANCE, NOMINATION] }
+        details: { type: [string, 'null'], description: The person's own words. }
+        sts: { $ref: '#/components/schemas/PrincipalRequestStatus' }
+        receivedAt: { type: string, format: date-time }
+        dueBy: { type: string, format: date-time, description: Fixed when the request was received. }
+        overdue: { type: boolean }
+        acknowledgedAt: { type: [string, 'null'], format: date-time }
+        closedAt: { type: [string, 'null'], format: date-time }
+        answeredBy: { type: [string, 'null'] }
+        response: { type: [string, 'null'] }
+        refusalGround: { type: [string, 'null'] }
+    PrincipalRequestAnswer:
+      type: object
+      required: [response]
+      properties:
+        response: { type: string, maxLength: 2000 }
+    PrincipalRequestRefusal:
+      type: object
+      required: [response, ground]
+      properties:
+        response: { type: string, maxLength: 2000 }
+        ground: { type: string, maxLength: 300, description: The legal ground the refusal rests on. }

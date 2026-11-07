@@ -127,3 +127,4 @@ export { friendlyError } from "api-client";
 
 export { AuditTable, describeAudit, type AuditRow } from "./audit";
 export { AppShell, Icons, OrgLogo, forgetLogo, humanise, useHashRoute, type NavItem } from "./shell";
+export { DpRequestQueue, dueLabel } from "./requests";

@@ -58,6 +58,10 @@ spring:
               uri: http://cm-stf-svc:8087
               predicates:
                 - Path=/api/stf/**
+            - id: dsr
+              uri: http://cm-dsr-svc:8088
+              predicates:
+                - Path=/api/dsr/**
 
 cm:
   # Tokens come from three realms (ADR-035): their issuer is the browser-facing address (cm.security.issuer-base,

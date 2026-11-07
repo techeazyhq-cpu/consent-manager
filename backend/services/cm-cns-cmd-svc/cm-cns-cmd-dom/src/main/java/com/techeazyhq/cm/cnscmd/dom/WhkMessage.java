@@ -37,7 +37,11 @@ public record WhkMessage(String id, String type, String dfId, Instant occurredAt
     /** Every type an endpoint can subscribe to. */
     public static final List<String> TYPES = List.of(
             "consent.requested", "consent.notification_failed", "consent.given", "consent.refused",
-            "consent.modified", "consent.renewed", "consent.withdrawn", "consent.lapsed", "receipt.issued");
+            "consent.modified", "consent.renewed", "consent.withdrawn", "consent.lapsed", "receipt.issued",
+            "principal_request.received", "principal_request.withdrawn");
+
+    /** The types cm-dsr-svc relays (ADR-058): a principal's request about the fiduciary's data, and its withdrawal. */
+    public static final List<String> RELAYED_TYPES = List.of("principal_request.received", "principal_request.withdrawn");
 
     /** Sent on request, so a fiduciary can check its endpoint and its signature checks. Not subscribable. */
     public static final String TEST = "webhook.test";
@@ -81,6 +85,19 @@ public record WhkMessage(String id, String type, String dfId, Instant occurredAt
                     });
             default -> null;
         });
+    }
+
+    /**
+     * A message cm-dsr-svc wrote for a fiduciary (ADR-058), or empty for a type it may not send. The message id is the
+     * one it chose, so a redelivered event becomes no second delivery.
+     */
+    public static Optional<WhkMessage> relayed(String id, String type, String dfId, Instant occurredAt,
+                                               Map<String, Object> data) {
+        if (id == null || id.isBlank() || dfId == null || dfId.isBlank() || occurredAt == null
+                || !RELAYED_TYPES.contains(type)) {
+            return Optional.empty();
+        }
+        return Optional.of(new WhkMessage(id, type, dfId, occurredAt, data == null ? Map.of() : new LinkedHashMap<>(data)));
     }
 
     private static WhkMessage msg(DomainEvt e, String type, String dfId, Map<String, Object> data,

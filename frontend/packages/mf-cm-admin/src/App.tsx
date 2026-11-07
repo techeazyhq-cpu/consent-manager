@@ -25,6 +25,7 @@ import Dashboard from "./Dashboard";
 import Onboard from "./Onboard";
 import TenantDetail from "./TenantDetail";
 import Staff from "./Staff";
+import Grievances from "./Grievances";
 import Security from "./Security";
 import type { Session } from "./session";
 import { parseRoute } from "./routes";
@@ -50,6 +51,7 @@ export default function CmAdminApp({ auth, gwBase }: Props) {
     ...(session.isAdmin
       ? [{ key: "staff", href: "#/staff", label: "Platform staff", section: "Platform", icon: Icons.people }]
       : []),
+    { key: "grievances", href: "#/grievances", label: "Grievances", section: "Platform", icon: Icons.inbox },
     { key: "audit", href: "#/audit", label: "Audit", section: "Platform", icon: Icons.list },
     { key: "security", href: "#/security", label: "Sign-in & security", section: "Platform", icon: Icons.shield },
   ];
@@ -74,6 +76,7 @@ export default function CmAdminApp({ auth, gwBase }: Props) {
       {route.page === "security" ? <Security session={session} /> : null}
       {route.page === "billing" ? <Billing session={session} tab={route.tab} /> : null}
       {route.page === "audit" ? <Audit session={session} /> : null}
+      {route.page === "grievances" ? <Grievances session={session} /> : null}
     </AppShell>
   );
 }

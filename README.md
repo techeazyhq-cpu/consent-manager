@@ -27,6 +27,7 @@ Notifications are delivered through [notification-service](https://github.com/te
 | `cm-bil-svc` | 8085 | Subscription plans, usage metering, eligibility checks |
 | `cm-aud-svc` | 8086 | Tamper-evident audit ledger: every platform event in a SHA-256 hash chain, with Merkle checkpoints timestamped by an external RFC 3161 authority ([how to verify](docs/audit-ledger.md)) |
 | `cm-stf-svc` | 8087 | Platform staff: administrators add and disable operators; everyone on staff sees their account and sessions, and can sign out everywhere ([ADR-017](docs/adr/adr-017-platform-staff-and-operator-role.md)) |
+| `cm-dsr-svc` | 8088 | Principal requests: a principal's request about one of their consents, relayed to its fiduciary by webhook and answered in the DF Console, and grievances about the platform answered by its staff ([ADR-058](docs/adr/adr-058-principal-requests-relayed-and-grievances.md)) |
 | `cm-idn-otp-spi` | (Keycloak) | Keycloak provider: passwordless sign-in with an email or SMS code |
 | `cm-idn-theme` | (Keycloak) | Keycloak login themes: one sign-in page per audience (data principal, fiduciary, admin) |
 

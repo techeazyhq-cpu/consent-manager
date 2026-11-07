@@ -75,6 +75,9 @@ public class SecurityConfig {
                         .pathMatchers("/api/bil/**").hasRole("CM_ADMIN")
                         // A tenant's consent counts and masked requests, for CM Admin's tenant detail.
                         .pathMatchers("/api/cns-qry/admin/**").hasAnyRole("CM_ADMIN", "CM_OPERATOR")
+                        // Grievances about the platform are answered by its staff (ADR-058); principals and
+                        // fiduciaries reach their own requests under /api/dsr/me and /api/dsr/df.
+                        .pathMatchers("/api/dsr/grievances", "/api/dsr/grievances/**").hasAnyRole(STAFF)
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.authenticationManagerResolver(
                         RealmTokens.resolver(issuerBase, jwksBase, realmPrefix)))

@@ -327,3 +327,23 @@
     justify-content: flex-start;
   }
 }
+
+/* Your rights (ADR-058): the request forms and an organisation's answer */
+.dp-form {
+  display: grid;
+  gap: 10px;
+  max-width: 560px;
+}
+
+.dp-form select,
+.dp-form textarea {
+  width: 100%;
+}
+
+.dp-answer {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--cm-primary);
+  background: var(--cm-surface-2);
+  border-radius: 4px;
+}

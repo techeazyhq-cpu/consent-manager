@@ -200,6 +200,19 @@ services:
       CM_KEYCLOAK_ADMIN-USERNAME: admin
       CM_KEYCLOAK_ADMIN-PASSWORD: admin
 
+  cm-dsr-svc:
+    <<: *svc-limits
+    build:
+      context: ../
+      dockerfile: infra/docker/Dockerfile.service
+      args:
+        JAR_PATH: backend/services/cm-dsr-svc/cm-dsr-boot/build/libs/cm-dsr-boot-0.1.0-SNAPSHOT.jar
+    ports:
+      - "8088:8088"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JAVA_TOOL_OPTIONS: *svc-jvm
+
   cm-gw:
     <<: *svc-limits
     build:
@@ -220,6 +233,7 @@ services:
       - cm-ntf-svc
       - cm-bil-svc
       - cm-stf-svc
+      - cm-dsr-svc
 
   # ---- The sandbox (ADR-034, ADR-037): `docker compose --profile sandbox up -d` ----
   # The same images as production with SPRING_PROFILES_ACTIVE=docker,sandbox: their own database (cm_sandbox), Keycloak

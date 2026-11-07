@@ -28,6 +28,7 @@ import Webhooks from "./Webhooks";
 import DevDocs from "./DevDocs";
 import Audit from "./Audit";
 import Billing from "./Billing";
+import PrincipalRequests from "./PrincipalRequests";
 import { Account, Dashboard, Organisation, Requests } from "./pages";
 import { PurposeDetail, PurposeEditor, Purposes } from "./Purposes";
 import Playground from "./Playground";
@@ -61,6 +62,13 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
       : []),
     { key: "requests", href: "#/requests", label: "Requests", section: "Consent", icon: Icons.list },
     { key: "batches", href: "#/batches", label: "Lists sent", section: "Consent", icon: Icons.inbox },
+    {
+      key: "principal-requests",
+      href: "#/principal-requests",
+      label: "Principal requests",
+      section: "Consent",
+      icon: Icons.people,
+    },
     { key: "docs", href: "#/docs", label: "Developer docs", section: "Developers", icon: Icons.list },
     { key: "playground", href: "#/playground", label: "API playground", section: "Developers", icon: Icons.code },
     ...(managesApiKeys(role)
@@ -108,6 +116,7 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
         )
       ) : null}
       {route.page === "requests" ? <Requests key={statusFilter?.join() ?? "all"} console={c} initial={statusFilter} /> : null}
+      {route.page === "principal-requests" ? <PrincipalRequests console={c} /> : null}
       {route.page === "playground" ? <Playground console={c} /> : null}
       {route.page === "api-keys" ? <ApiKeys console={c} /> : null}
       {route.page === "webhooks" ? <Webhooks console={c} /> : null}

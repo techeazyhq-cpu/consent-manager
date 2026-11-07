@@ -593,3 +593,30 @@ export interface CnsReqBatchSubmitRespDto {
   /** Requests left this month (after this batch, if stored). */
   available: number;
 }
+
+/** A principal's request (ADR-058): RELAY is about one of their consents, for its fiduciary; GRIEVANCE is about the platform. */
+export type DpReqKind = "RELAY" | "GRIEVANCE";
+export type DpRight = "ACCESS" | "CORRECTION" | "ERASURE" | "GRIEVANCE" | "NOMINATION";
+export type DpReqSts = "OPEN" | "ACKNOWLEDGED" | "RESOLVED" | "REFUSED" | "WITHDRAWN";
+
+export interface DpReqDto {
+  id: string;
+  kind: DpReqKind;
+  dfId: string | null;
+  cnsReqId: string | null;
+  prpsCode: string | null;
+  right: DpRight | null;
+  details: string | null;
+  sts: DpReqSts;
+  receivedAt: string;
+  /** Fixed when the request was received. */
+  dueBy: string;
+  /** Still open past dueBy. */
+  overdue: boolean;
+  acknowledgedAt: string | null;
+  closedAt: string | null;
+  answeredBy: string | null;
+  response: string | null;
+  /** The legal ground a refusal rests on. */
+  refusalGround: string | null;
+}

@@ -152,7 +152,9 @@ body {
   text-transform: uppercase;
 }
 
-.cm-badge-pending {
+.cm-badge-pending,
+.cm-badge-open,
+.cm-badge-acknowledged {
   background: rgba(240, 169, 58, 0.18);
   color: var(--cm-warning);
 }
@@ -161,6 +163,7 @@ body {
 .cm-badge-active,
 .cm-badge-approved,
 .cm-badge-granted,
+.cm-badge-resolved,
 .cm-badge-delivered {
   background: rgba(53, 201, 143, 0.18);
   color: var(--cm-success);
@@ -170,6 +173,7 @@ body {
 .cm-badge-revoked,
 .cm-badge-suspended,
 .cm-badge-declined,
+.cm-badge-refused,
 .cm-badge-notification_failed,
 .cm-badge-failed {
   background: rgba(239, 90, 111, 0.18);

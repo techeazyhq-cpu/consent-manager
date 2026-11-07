@@ -58,7 +58,7 @@ public class PulsarAudEvtConsumer {
             Map.entry("NtfDpDeliveryFailedEvt", new String[] {"ntf", "dp-delivery-failed"}));
 
     /** Contexts whose people's actions the ledger records (ADR-040), each on its {@code evt-platform-action} topic. */
-    static final List<String> ACTION_CONTEXTS = List.of("dfreg", "bil", "stf", "cnscmd");
+    static final List<String> ACTION_CONTEXTS = List.of("dfreg", "bil", "stf", "cnscmd", "dsr");
 
     private final ReactivePulsarClient pulsar;
     private final AudEvtParser parser;

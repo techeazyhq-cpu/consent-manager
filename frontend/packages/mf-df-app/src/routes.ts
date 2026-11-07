@@ -21,6 +21,7 @@ export type Route =
   | { page: "dashboard" }
   | { page: "raise"; prpsCode?: string }
   | { page: "requests" }
+  | { page: "principal-requests" }
   | { page: "team" }
   | { page: "organisation" }
   | { page: "billing" }
@@ -50,6 +51,8 @@ export function parseRoute(hash: string): Route {
     case "audit":
     case "account":
       return { page: parts[0] };
+    case "principal-requests":
+      return { page: "principal-requests" };
     case "playground":
       return { page: "playground" };
     case "api-keys":

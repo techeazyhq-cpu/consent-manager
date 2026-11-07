@@ -1,6 +1,6 @@
 # ADR-021: Principal requests: rights over the platform's own data, and relay to fiduciaries
 
-- **Status:** Proposed
+- **Status:** Proposed; relayed requests and grievances accepted in [ADR-058](adr-058-principal-requests-relayed-and-grievances.md)
 - **Date:** 2026-10-11
 - **Design:** [compliance architecture §1, §6.7](../compliance/compliance-architecture.md)
 
