@@ -64,6 +64,7 @@ import type {
   DpErasureDto,
   DpErasureSts,
   DpErasureStep,
+  UsgAlertDto,
   DpReqDto,
   DpReqSts,
   DpRight,
@@ -352,6 +353,9 @@ export const bil = {
       method: "PUT",
       body: JSON.stringify({ active }),
     }),
+  /** Every tenant's usage alerts for a month (yyyy-MM, this month by default), newest first (platform staff). */
+  alerts: (base: string, token: string, period?: string) =>
+    request<UsgAlertDto[]>(base, `/api/bil/usage-alerts${period ? `?period=${encodeURIComponent(period)}` : ""}`, token),
   /** Every tenant's plan and this month's usage, closest to its allowance first (platform staff). */
   overview: (base: string, token: string) => request<BilOverviewRow[]>(base, "/api/bil/overview", token),
   /** Plan change requests from every tenant: those waiting, or all (platform staff). */
@@ -450,6 +454,8 @@ export const webhooks = {
 export const myBilling = {
   subscription: (base: string, token: string) => request<DfSubStatusResult>(base, "/api/bil/me/subscription", token),
   requests: (base: string, token: string) => request<PlnChgReqDto[]>(base, "/api/bil/me/plan-change-requests", token),
+  /** When this fiduciary's usage reached 80% and 100% of its allowance, newest first (ADR-060). */
+  alerts: (base: string, token: string) => request<UsgAlertDto[]>(base, "/api/bil/me/usage-alerts", token),
   requestPlan: (base: string, token: string, subPlnName: string, note?: string) =>
     request<PlnChgReqDto>(base, "/api/bil/me/plan-change-requests", token, {
       method: "POST",

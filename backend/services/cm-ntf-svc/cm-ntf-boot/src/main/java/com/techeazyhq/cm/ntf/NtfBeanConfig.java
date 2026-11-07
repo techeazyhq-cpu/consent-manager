@@ -208,8 +208,15 @@ public class NtfBeanConfig {
     @Bean
     public PulsarNtfCmdConsumer pulsarNtfCmdConsumer(ReactivePulsarClient reactivePulsarClient, ObjectMapper objectMapper,
                                                        NotifyDpCmdHandler notifyDpCmdHandler,
-                                                       NotifyDfCmdHandler notifyDfCmdHandler) {
-        return new PulsarNtfCmdConsumer(reactivePulsarClient, objectMapper, notifyDpCmdHandler, notifyDfCmdHandler);
+                                                       NotifyDfCmdHandler notifyDfCmdHandler,
+                                                       com.techeazyhq.cm.ntf.app.NotifyEmailCmdHandler notifyEmailCmdHandler) {
+        return new PulsarNtfCmdConsumer(reactivePulsarClient, objectMapper, notifyDpCmdHandler, notifyDfCmdHandler,
+                notifyEmailCmdHandler);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.ntf.app.NotifyEmailCmdHandler notifyEmailCmdHandler(NtfDispatchService dispatch) {
+        return new com.techeazyhq.cm.ntf.app.NotifyEmailCmdHandler(dispatch);
     }
 
     @Bean

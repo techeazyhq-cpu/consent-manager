@@ -17,7 +17,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { bil, dfReg, type BilOverviewRow, type PlnChgReqDto, type PlnChgReqSts, type SubPln } from "api-client";
+import { bil, dfReg, type BilOverviewRow, type PlnChgReqDto, type PlnChgReqSts, type SubPln, type UsgAlertDto } from "api-client";
 import { Badge, Button, Card, ErrorBanner, PageHeader, Spinner, UsageMeter, friendlyError, shareUsed } from "ui-kit/src/index";
 import { BILLING_TABS, billingHref, tenantHref, type BillingTab } from "./routes";
 import { freshToken, type Session } from "./session";
@@ -41,17 +41,31 @@ function useTenantNames(session: Session) {
 
 function Overview({ session, names }: { session: Session; names: Record<string, string> }) {
   const [rows, setRows] = useState<BilOverviewRow[] | null>(null);
+  const [alerts, setAlerts] = useState<UsgAlertDto[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     freshToken(session.auth)
-      .then((token) => bil.overview(session.gwBase, token))
-      .then(setRows)
+      .then((token) => Promise.all([bil.overview(session.gwBase, token), bil.alerts(session.gwBase, token)]))
+      .then(([overview, thisMonth]) => {
+        setRows(overview);
+        setAlerts(thisMonth);
+      })
       .catch((err) => {
         setError(friendlyError(err));
         setRows([]);
       });
   }, [session]);
+
+  // the highest alert each tenant has raised this month (ADR-060)
+  const alertOf = useMemo(() => {
+    const top = new Map<string, UsgAlertDto>();
+    for (const a of alerts) {
+      const seen = top.get(a.dfId);
+      if (!seen || a.threshold > seen.threshold) top.set(a.dfId, a);
+    }
+    return top;
+  }, [alerts]);
 
   const byPlan = useMemo(() => {
     const totals = new Map<string, { tenants: number; used: number }>();
@@ -77,6 +91,10 @@ function Overview({ session, names }: { session: Session; names: Record<string, 
         <div className="cm-stat">
           <b>{near}</b>
           <span>At 80% or more of their allowance</span>
+        </div>
+        <div className="cm-stat">
+          <b>{alertOf.size}</b>
+          <span>Alerted this month</span>
         </div>
         <div className="cm-stat">
           <b>{suspended}</b>
@@ -119,6 +137,12 @@ function Overview({ session, names }: { session: Session; names: Record<string, 
                     {r.curPeriodUsg.toLocaleString()} of {r.reqPerMonthQta.toLocaleString()} (
                     {shareUsed(r.curPeriodUsg, r.reqPerMonthQta)}%)
                     <UsageMeter used={r.curPeriodUsg} of={r.reqPerMonthQta} label={`Allowance used by ${names[r.dfId] ?? r.dfId}`} />
+                    {alertOf.get(r.dfId) ? (
+                      <div className="cm-note" style={{ margin: 0 }}>
+                        {alertOf.get(r.dfId)!.threshold >= 100 ? "Used up" : `Passed ${alertOf.get(r.dfId)!.threshold}%`}
+                        , emailed {new Date(alertOf.get(r.dfId)!.raisedAt).toLocaleDateString()}
+                      </div>
+                    ) : null}
                   </td>
                   <td>{r.reqPerSecQta.toLocaleString()}</td>
                 </tr>

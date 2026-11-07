@@ -25,6 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
@@ -165,6 +167,32 @@ public class DfRegBeanConfig {
     @Bean
     public ReactivePulsarClient reactivePulsarClient(PulsarClient pulsarClient) {
         return AdaptedReactivePulsarClientFactory.create(pulsarClient);
+    }
+
+    /** Usage alerts (ADR-060): cm-bil-svc says a fiduciary is near its allowance; this service holds who to tell. */
+    @Bean
+    public com.techeazyhq.cm.dfreg.dom.EmailPort emailPort(PulsarDfEvtProducer producer, ObjectMapper objectMapper) {
+        return new com.techeazyhq.cm.dfreg.infra.PulsarEmailAdapter(producer, objectMapper);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.dfreg.app.OnUsgThresholdEvtHandler onUsgThresholdEvtHandler(DfRepoPort dfs,
+            com.techeazyhq.cm.dfreg.dom.EmailPort email,
+            @Value("${cm.dfreg.usage-alerts.platform-emails:}") java.util.List<String> platformEmails) {
+        return new com.techeazyhq.cm.dfreg.app.OnUsgThresholdEvtHandler(dfs, email,
+                platformEmails.stream().map(String::trim).filter(s -> !s.isEmpty()).toList());
+    }
+
+    @Bean
+    public com.techeazyhq.cm.dfreg.infra.PulsarUsgThresholdConsumer pulsarUsgThresholdConsumer(
+            ReactivePulsarClient reactivePulsarClient, ObjectMapper objectMapper,
+            com.techeazyhq.cm.dfreg.app.OnUsgThresholdEvtHandler handler) {
+        return new com.techeazyhq.cm.dfreg.infra.PulsarUsgThresholdConsumer(reactivePulsarClient, objectMapper, handler);
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void startConsumers(ApplicationReadyEvent event) {
+        event.getApplicationContext().getBean(com.techeazyhq.cm.dfreg.infra.PulsarUsgThresholdConsumer.class).start();
     }
 
     @Bean
