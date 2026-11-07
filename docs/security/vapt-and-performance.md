@@ -13,7 +13,7 @@
 |---|---|
 | Scripted penetration checks (`tests/security/vapt.mjs`) | **68 of 68 pass** after fixes. The first run passed 57 of 61 |
 | OWASP ZAP API scan, from the OpenAPI spec, through signed requests | 112 rules pass, 0 fail; 3 warnings remain, triaged below |
-| Trivy, the eight service images | 16–20 fixable HIGH/CRITICAL per image before; 2–4 after, all accepted with an expiry. No secrets |
+| Trivy, the eight service images | 16–20 fixable HIGH/CRITICAL per image before; 2–4 after, all accepted with an expiry and since fixed (V-13). No secrets |
 | Load at 50 requests a second (expected mix) | 0 failures; verify p95 214 ms (before the pool fixes) |
 | Load at 100 requests a second | Failed: a connection-pool deadlock in cm-cns-cmd-svc, found and fixed. **The rerun is pending** |
 
@@ -41,7 +41,7 @@ and one is open and tracked.
 | V-01 | High | One fiduciary could read another's consent request and its history by id | Fixed |
 | V-02 | High | The gateway refused API-key requests with 503 from about 30 at once | Fixed |
 | V-03 | High | Under a backlog, cm-cns-cmd-svc deadlocked its own connection pool and stopped answering until restarted | Fixed, rerun pending |
-| V-04 | Medium | Known HIGH and CRITICAL vulnerabilities in every service image | Fixed, 4 accepted until 2027-01-31 |
+| V-04 | Medium | Known HIGH and CRITICAL vulnerabilities in every service image | Fixed; the 4 accepted until 2027-01-31 were fixed in #260 and #261 (V-13) |
 | V-05 | Medium | Oversized or control-character input reached the database as a 500 | Fixed |
 | V-06 | Medium | One batch with a control-character notice broke its fiduciary's batch list for good | Fixed |
 | V-07 | Medium | The read model lost events that arrived before their request (#219) | Fixed in #221 |
