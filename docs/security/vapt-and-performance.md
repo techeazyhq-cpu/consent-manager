@@ -315,8 +315,25 @@ JVMs compiled. The script now warms up for a minute first, and doesn't report it
 | with a bearer token | 9.4 ms | 12.6 ms | 30.2 ms |
 
 The key's check costs about 5 ms. The bearer side used a DF Console member's token. Since ADR-048, members have their
-own limit of 20 a second, so 1,795 of its 3,000 reads got 429, exactly 20 a second through. That is the limit working;
-a fair OAuth comparison needs the API client's own client-credentials token (see "To finish").
+own limit of 20 a second, so 1,795 of its 3,000 reads got 429, exactly 20 a second through. That is the limit working,
+and the comparison was rerun with the API client's own token (below).
+
+**API key against OAuth, done fairly (7 November 2026, OPA at 1 CPU):** the bearer side is now fiduciary B's
+`df-api-<dfId>` client-credentials token, the one the gateway exchanges an API key for (ADR-041). Both sides count
+against the plan's quota, PREMIUM's 500 a second. The same 50 reads a second each, plus 50 JWKS fetches, 1 minute,
+three times after a warm-up:
+
+| Request | Median | p95 | p99 |
+|---|---|---|---|
+| read with an API key | 14.6–15.3 ms | 22.8–25.0 ms | 44–78 ms |
+| read with the API client's bearer token | 9.5–9.9 ms | 14.7–15.7 ms | 35–62 ms |
+| JWKS (public, no authentication: the gateway's floor) | 5.7–5.9 ms | 8.2–8.5 ms | 12–37 ms |
+
+27,004 requests, none failed, no 429. An API key costs about 5 ms at the median and 9 ms at p95 over a bearer token:
+df-reg's check of the key and signature, and the exchange. The read itself, through the gateway to cm-cns-qry-svc,
+is about 4 ms over the gateway's floor. Production hands fiduciaries keys only (the client secret stays in df-reg),
+so the key's figures are the ones they see. The short cache of verified keys at the gateway, suggested under "Where
+the limit is", would close most of the gap.
 
 **The ramp, 10 to 450 a second over 4 minutes:**
 
@@ -396,8 +413,6 @@ breaker should. Latency rose from about 50/s (p95 0.6–4 s) before any failure,
 
 ### To finish
 
-- **OAuth comparison:** take the API client's client-credentials token for the bearer side of `auth`, not a console
-  member's (ADR-048).
 - **The knee with Postgres unconstrained:** rerun the ramp with Postgres at 2 CPUs or more, to find the next limit
   (the gateway, df-reg's key checks, or the pools), then set each service's pool size from the measured concurrency.
 

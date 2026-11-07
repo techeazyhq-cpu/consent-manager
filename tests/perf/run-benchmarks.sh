@@ -44,12 +44,14 @@ k6 warm-up -e SCENARIO=mix -e RATE=50 -e DURATION=1m
 k6 mix-50 -e SCENARIO=mix -e RATE=50 -e DURATION=2m
 k6 mix-75 -e SCENARIO=mix -e RATE=75 -e DURATION=2m
 k6 mix-100 -e SCENARIO=mix -e RATE=100 -e DURATION=2m
-# a console token lasts minutes: take a fresh one for the OAuth side, or stop, as a stale one fails every OAuth request
+# The OAuth side is B's systems' own client-credentials token, counted against the plan's quota like the API key's,
+# not a console member's (ADR-048: 20 a second). It lasts minutes: take a fresh one, or stop, as a stale one fails
+# every OAuth request
 KEYS_FILE="$KEYS_FILE_NODE" node -e "
-import('./tests/security/lib/cm1.mjs').then(async ({ dfSignIn }) => {
+import('./tests/security/lib/cm1.mjs').then(async ({ dfApiClientToken }) => {
   const fs = await import('node:fs');
   const k = JSON.parse(fs.readFileSync(process.env.KEYS_FILE, 'utf8'));
-  k.tokenB = await dfSignIn('contact@security-b.example.test');
+  k.clientTokenB = await dfApiClientToken(k.dfB);
   fs.writeFileSync(process.env.KEYS_FILE, JSON.stringify(k, null, 2), { mode: 0o600 });
 })" || { echo "Couldn't refresh the OAuth token in $KEYS_FILE_NODE"; exit 1; }
 k6 auth-50 -e SCENARIO=auth -e RATE=50 -e DURATION=1m

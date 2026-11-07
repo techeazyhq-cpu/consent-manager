@@ -25,5 +25,6 @@ tests/security/zap-scan.sh
 docker run --rm -i --add-host host.docker.internal:host-gateway -v "$KEYS_FILE:/keys.json:ro" -v "$PWD/tests/perf:/perf:ro" -e SCENARIO=mix -e RATE=100 grafana/k6:1.3.0 run /perf/df-api.js
 ```
 
-Each run of `setup-keys.mjs` issues new keys: run `teardown-keys.mjs` when done. `run-benchmarks.sh` signs in afresh
-for the OAuth side, as console tokens last minutes.
+Each run of `setup-keys.mjs` issues new keys: run `teardown-keys.mjs` when done. `run-benchmarks.sh` takes a fresh token
+for the OAuth side, as tokens last minutes: B's API client's own (client credentials, read through the local Keycloak's
+admin account), so both sides count against the plan's quota.
