@@ -31,7 +31,8 @@ thread, Windows became slow whenever the stacks were up. Measured idle:
    | notification-service's Pulsar | 1.5 | 1.5 GB | 740 MB |
    | Postgres, `pulsar-init` | 1.0 | 512 MB | 70–145 MB |
    | notification-service's three APIs | 1.0 | 768 MB | 360–410 MB (their heap is 75% of the limit) |
-   | Redis, Mailpit, OPA, catchers, UIs | 0.25 | 128 MB | under 25 MB |
+   | OPA (`CM_OPA_CPUS`) | 1.0 | 256 MB | under 25 MB; 119 MB at 200 requests a second |
+   | Redis, Mailpit, the sandbox's OPA, catchers, UIs | 0.25 | 128 MB | under 25 MB |
 
 2. **Each JVM sizes itself from its limit.** The services run with `-XX:MaxRAMPercentage=60 -XX:+UseSerialGC
    -XX:+ExitOnOutOfMemoryError`, so the heap is about 300 MB of a 512 MB limit. A service that runs out of memory
@@ -40,7 +41,7 @@ thread, Windows became slow whenever the stacks were up. Measured idle:
 3. **Pulsar is health-checked over HTTP:** `curl http://localhost:8080/admin/v2/brokers/health` asks the running
    broker the same question in-process. The consent-manager Pulsar fell from about 340% CPU to under 20%.
 4. **Overridable for bigger runs.** `CM_SVC_CPUS` and `CM_SVC_MEM` (services), `CM_SBX_CPUS` and `CM_SBX_MEM`
-   (sandbox), and `NS_APP_CPUS` and `NS_APP_MEM` (notification-service's APIs). Raise them for performance testing,
+   (sandbox), `CM_OPA_CPUS` (OPA), and `NS_APP_CPUS` and `NS_APP_MEM` (notification-service's APIs). Raise them for performance testing,
    whose figures (VAPT) were measured without limits.
 5. **Docker's own share** is the person's machine setting, not the repository's. The recommendation is
    `%UserProfile%\.wslconfig` with `processors=8` and `memory=8GB`, so that Windows keeps 4 threads and about 7.5 GB
@@ -54,4 +55,7 @@ thread, Windows became slow whenever the stacks were up. Measured idle:
   CPU instead of taking all of it.
 - A service near its limit fails loudly (exit on out-of-memory) instead of slowing the machine. Raise the limit when
   a feature needs more.
+- **OPA at 0.25 CPU was too little** (7 November 2026): every consent check waits on it, and at about 90 requests a
+  second its decisions passed the PEP's 2 s, so every check was 503 (ADR-057). At 1.0 CPU and 256 MB the ramp is clean
+  to about 200 a second; idle it costs nothing more. See `docs/security/vapt-and-performance.md`.
 - Production is unchanged: the Helm chart has its own requests and limits (ADR-042).

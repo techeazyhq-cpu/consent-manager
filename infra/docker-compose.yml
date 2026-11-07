@@ -77,7 +77,13 @@ networks:
 
 services:
   opa:
-    <<: *small-limits
+    # Every consent check waits on OPA. At 0.25 CPU it was the knee, at about 90 requests a second; with 1 it is
+    # Postgres again (vapt-and-performance.md, ADR-052). Idle it uses under 25 MB, but 119 MB at 200 a second.
+    deploy:
+      resources:
+        limits:
+          cpus: "${CM_OPA_CPUS:-1.0}"
+          memory: 256m
     image: openpolicyagent/opa:1.20.1
     command: ["run", "--server", "--addr=0.0.0.0:8181", "/policies"]
     ports:

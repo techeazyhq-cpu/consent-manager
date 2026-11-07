@@ -377,6 +377,7 @@ warm-up, twice: as the compose file has it, then with OPA's CPU raised from 0.25
 |---|---|---|---|---|---|
 | OPA at 0.25 CPU | 89/s | 16,209, all 503 | 0 | 4,604 (503, a few 500 and 429) | OPA, at its 0.25-CPU cap |
 | OPA at 1 CPU | 145/s (4% at 175/s) | 11,863, all 503 | 0 | 0 | PostgreSQL at 1 CPU, the gateway near 2 |
+| OPA at 1 CPU, 128 MB (the compose file since) | 204/s | 11,141, all 503 | 0 | 2,866 (503, 51 × 500), past 270/s | PostgreSQL and the gateway |
 
 **V-17 holds.** Overloaded, verify says "try again", never "no consent".
 
@@ -384,16 +385,17 @@ warm-up, twice: as the compose file has it, then with OPA's CPU raised from 0.25
 past the PEP's 2 s; the PDP breaker opened and every check was 503 for its 30 s. With 1 CPU the knee moved back to
 where 7 November's was, at Postgres. On 7 November OPA looked light at about 25%, but 25% *is* its cap, so it may
 already have been close; these runs don't settle whether ADR-057's policy costs more per decision. Production isn't
-affected: the chart gives OPA two replicas and no CPU limit. Only `infra/docker-compose.yml`'s `small-limits` caps
-it.
+affected: the chart gives OPA two replicas and no CPU limit.
+
+**Fixed in the compose file:** OPA now has 1 CPU (`CM_OPA_CPUS`) and 256 MB (ADR-052). The third run, at 1 CPU and
+128 MB, was clean to about 200 a second with p95 under 0.9 s, but OPA reached 119 MB of its 128, so the limit is
+256 MB.
 
 With OPA at 1 CPU, raises, reads and tokens didn't fail at all; only verify was refused past the knee, as the PDP
 breaker should. Latency rose from about 50/s (p95 0.6–4 s) before any failure, as Postgres queued.
 
 ### To finish
 
-- **OPA's limit on a laptop:** `small-limits` (0.25 CPU) makes OPA the knee at about 90 a second; give it its own,
-  larger limit in `infra/docker-compose.yml` (ADR-052), or measure ADR-057's policy cost per decision first.
 - **OAuth comparison:** take the API client's client-credentials token for the bearer side of `auth`, not a console
   member's (ADR-048).
 - **The knee with Postgres unconstrained:** rerun the ramp with Postgres at 2 CPUs or more, to find the next limit
