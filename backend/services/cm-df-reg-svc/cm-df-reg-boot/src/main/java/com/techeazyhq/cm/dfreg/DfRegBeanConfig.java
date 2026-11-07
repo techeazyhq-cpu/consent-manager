@@ -57,6 +57,7 @@ import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.dfreg.app.DfApiKeyHandler;
 import com.techeazyhq.cm.dfreg.app.DfClosureHandler;
 import com.techeazyhq.cm.dfreg.app.DfLeavingHandler;
+import com.techeazyhq.cm.dfreg.app.DfRetentionHandler;
 import com.techeazyhq.cm.dfreg.app.DfSuspensionHandler;
 import com.techeazyhq.cm.dfreg.app.DfTermsHandler;
 import com.techeazyhq.cm.dfreg.dom.TermsDoc;
@@ -288,6 +289,26 @@ public class DfRegBeanConfig {
     @Bean
     public DfClosingJob dfClosingJob(DfClosureHandler closure) {
         return new DfClosingJob(closure);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.dfreg.dom.RecordsPurgePort recordsPurgePort(WebClient.Builder builder,
+            @Value("${cm.service-urls.cns-cmd}") String cnsCmd, @Value("${cm.service-urls.cns-qry}") String cnsQry,
+            @Value("${cm.service-urls.aud}") String aud) {
+        return new com.techeazyhq.cm.dfreg.infra.WebClientRecordsPurgeAdapter(builder, java.util.List.of(cnsCmd, cnsQry, aud));
+    }
+
+    /** How long a closed fiduciary's records are kept (ADR-064): 7 years by default; to be confirmed with counsel per cell. */
+    @Bean
+    public DfRetentionHandler dfRetentionHandler(DfRepoPort dfRepo, com.techeazyhq.cm.dfreg.dom.RecordsPurgePort records,
+                                                 R2dbcDfTermsAdapter terms, AuditTrail audit,
+                                                 @Value("${cm.dfreg.retention.consent-days:2555}") long days) {
+        return new DfRetentionHandler(dfRepo, records, terms, audit, java.time.Clock.systemUTC(), java.time.Duration.ofDays(days));
+    }
+
+    @Bean
+    public DfRetentionJob dfRetentionJob(DfRetentionHandler retention) {
+        return new DfRetentionJob(retention);
     }
 
     @Bean

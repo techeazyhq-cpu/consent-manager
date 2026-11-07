@@ -40,9 +40,11 @@ public class CnsQryRouterConfig {
                                                          DpDashboardQryHandler dpDashboardHandler,
                                                          InternalStatusQryHandler internalStatusHandler,
                                                          AdminCnsQryHandler adminCnsQryHandler,
-                                                         DfInsightsQryHandler dfInsightsQryHandler) {
+                                                         DfInsightsQryHandler dfInsightsQryHandler,
+                                                         com.techeazyhq.cm.cnsqry.app.PurgeDfRecordsHandler purgeDfRecords) {
         CnsQryHandler handler = new CnsQryHandler(getCnsArtHandler, getCnsHstHandler, dpDashboardHandler, internalStatusHandler);
         AdminCnsHandler adminHandler = new AdminCnsHandler(adminCnsQryHandler);
+        DfPurgeHttpHandler dfPurge = new DfPurgeHttpHandler(purgeDfRecords);
         DfInsightsHandler insights = new DfInsightsHandler(dfInsightsQryHandler);
         return RouterFunctions.route()
                 .GET("/api/cns-qry/admin/dfs/{dfId}/stats", adminHandler::stats)
@@ -53,6 +55,7 @@ public class CnsQryRouterConfig {
                 .GET("/api/cns-qry/cns-arts/{id}/history", handler::getCnsHst)
                 .GET("/api/cns-qry/cns-arts/{id}/verify", handler::verify)
                 .GET("/api/cns-qry/dp-dashboard", handler::dpDashboard)
+                .POST("/internal/dfs/{id}/purge", dfPurge::purge)
                 .GET("/internal/cns-arts/{id}/status", handler::internalStatus)
                 .build();
     }

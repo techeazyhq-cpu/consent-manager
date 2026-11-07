@@ -424,6 +424,14 @@ public class CnsCmdBeanConfig {
                 new com.techeazyhq.cm.cnscmd.infra.R2dbcDpContactErasureAdapter(db));
     }
 
+    /** A closed fiduciary's records past their retention (ADR-064). */
+    @Bean
+    public com.techeazyhq.cm.cnscmd.app.PurgeDfRecordsHandler purgeDfRecordsHandler(DatabaseClient db,
+            org.springframework.transaction.reactive.TransactionalOperator tx) {
+        return new com.techeazyhq.cm.cnscmd.app.PurgeDfRecordsHandler(
+                new com.techeazyhq.cm.cnscmd.infra.R2dbcDfRecordsPurgeAdapter(db, tx));
+    }
+
     /** A fiduciary closing (ADR-064): this context's step. */
     @Bean
     public com.techeazyhq.cm.cnscmd.app.CloseDfConsentsHandler closeDfConsentsHandler(CnsReqRepoPort reqs,

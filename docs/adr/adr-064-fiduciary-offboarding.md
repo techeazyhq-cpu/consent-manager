@@ -121,8 +121,23 @@ id; its old records are not reattached. The registration numbers are kept, so st
    the reason is in the audit entry. Principals receive the revocation receipt, not a custom notice naming who has gone.
    *Not yet:* the Keycloak API client, webhooks endpoints and the ledger's payloads about the team are not removed;
    the sandbox copy is not touched.
-4. The purge job (consent records and ledger payloads after their retention), the export, staff-initiated ending with
-   two-person approval, and 5. screens and runbook: not yet.
+4. **Retention purge** (done, in part): an hourly job in cm-df-reg-svc (`cm.dfreg.retention.*`) takes each `CLOSED`
+   fiduciary that is not under a legal hold and is older than `cm.dfreg.retention.consent-days` (2555, seven years) and
+   has each holding service delete what is past that: cm-cns-cmd-svc its consent requests with their consents, records,
+   events and receipts (and, when none is left, its purposes, webhook endpoints and batches); cm-cns-qry-svc its read-model
+   rows; cm-aud-svc the payloads and principal links of its ledger entries; and cm-df-reg-svc its acceptances of the terms.
+   When nothing is left it is marked purged (`tenant.purged`) and not looked at again. Calls are batched and repeatable.
+   *The append-only guarantees:* the consent events, receipts and published purpose versions are protected by triggers that
+   refuse any change. The purge is the one deletion allowed: it sets `cm.retention_purge` for its own transaction
+   (migrations V8 and V9 in cm-cns-cmd-svc), and every other delete or update is still refused. The audit ledger's entries
+   are never deleted, so the hash chain and checkpoints still verify; only their payloads go, as for an erased principal.
+   *Legal hold:* an administrator places one on a fiduciary (`PUT /api/df-reg/dfs/{id}/legal-hold` with a reason, `DELETE`
+   to release); nothing of it is purged while held. Both are audited.
+   *Not yet:* a hold on a **principal** (only whole fiduciaries can be held); the **8-year invoice** retention in
+   cm-bil-svc (D3) and its usage counters; the Redis cache entries of purged consents (they expire); the sandbox copy.
+   The retention period is one setting for all records of all cells: a cell with a different statutory period needs it
+   made per cell. 7 years is a default to be confirmed with counsel, as the ADR says above.
+5. The export, staff-initiated ending with two-person approval, and the screens and runbook: not yet.
 
 ## What the owner needs to decide
 

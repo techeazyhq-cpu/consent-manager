@@ -56,6 +56,11 @@ public class R2dbcDfTermsAdapter implements DfTermsRepoPort {
     }
 
     @Override
+    public Mono<Long> deleteByDfId(String dfId) {
+        return db.sql("delete from df_reg.df_terms_acceptance where df_id = :dfId").bind("dfId", dfId).fetch().rowsUpdated();
+    }
+
+    @Override
     public Flux<DfTermsAcceptance> findByDfId(String dfId) {
         return db.sql("select * from df_reg.df_terms_acceptance where df_id = :dfId order by accepted_at desc")
                 .bind("dfId", dfId).map(R2dbcDfTermsAdapter::row).all();

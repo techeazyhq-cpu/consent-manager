@@ -60,11 +60,13 @@ public class R2dbcDfRepoAdapter implements DfRepoPort {
                         insert into df_reg.df (id, name, contact_email, sts, registered_at, cm_df_api_client_secret, activated_at,
                                                legal_name, contact_phone, website, registered_address, industry, cin,
                                                gstin, dpo_name, dpo_email, sub_pln_name, suspended_at, suspension_reason,
-                                               leaving_from, leaving_at, leaves_at, leaving_by, leave_cancellations, closed_at)
+                                               leaving_from, leaving_at, leaves_at, leaving_by, leave_cancellations, closed_at,
+                                               legal_hold_reason, legal_hold_at, purged_at)
                         values (:id, :name, :contactEmail, :sts, :registeredAt, :clientSecret, :activatedAt,
                                 :legalName, :contactPhone, :website, :registeredAddress, :industry, :cin,
                                 :gstin, :dpoName, :dpoEmail, :subPlnName, :suspendedAt, :suspensionReason,
-                                :leavingFrom, :leavingAt, :leavesAt, :leavingBy, :leaveCancellations, :closedAt)
+                                :leavingFrom, :leavingAt, :leavesAt, :leavingBy, :leaveCancellations, :closedAt,
+                                :legalHoldReason, :legalHoldAt, :purgedAt)
                         on conflict (id) do update set
                             sts = excluded.sts,
                             cm_df_api_client_secret = excluded.cm_df_api_client_secret,
@@ -77,6 +79,9 @@ public class R2dbcDfRepoAdapter implements DfRepoPort {
                             leaving_by = excluded.leaving_by,
                             leave_cancellations = excluded.leave_cancellations,
                             closed_at = excluded.closed_at,
+                            legal_hold_reason = excluded.legal_hold_reason,
+                            legal_hold_at = excluded.legal_hold_at,
+                            purged_at = excluded.purged_at,
                             contact_email = excluded.contact_email,
                             legal_name = excluded.legal_name,
                             contact_phone = excluded.contact_phone,
@@ -114,6 +119,9 @@ public class R2dbcDfRepoAdapter implements DfRepoPort {
         spec = bindNullable(spec, "leavingBy", df.leavingBy());
         spec = spec.bind("leaveCancellations", df.leaveCancellations());
         spec = bindNullableInstant(spec, "closedAt", df.closedAt());
+        spec = bindNullable(spec, "legalHoldReason", df.legalHoldReason());
+        spec = bindNullableInstant(spec, "legalHoldAt", df.legalHoldAt());
+        spec = bindNullableInstant(spec, "purgedAt", df.purgedAt());
 
         Mono<Void> upsert = spec.then();
         List<DomainEvt> pending = df.pullEvts();
@@ -193,7 +201,10 @@ public class R2dbcDfRepoAdapter implements DfRepoPort {
                 row.get("leaves_at", Instant.class),
                 row.get("leaving_by", String.class),
                 row.get("leave_cancellations", Integer.class) == null ? 0 : row.get("leave_cancellations", Integer.class),
-                row.get("closed_at", Instant.class));
+                row.get("closed_at", Instant.class),
+                row.get("legal_hold_reason", String.class),
+                row.get("legal_hold_at", Instant.class),
+                row.get("purged_at", Instant.class));
     }
 
     private DatabaseClient.GenericExecuteSpec bindNullable(DatabaseClient.GenericExecuteSpec spec, String name, String value) {

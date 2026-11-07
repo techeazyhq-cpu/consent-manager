@@ -57,6 +57,7 @@ public class SecurityConfig {
                         // stopping a fiduciary is urgent, so an operator may; putting it back is an administrator's call (ADR-064)
                         .pathMatchers(HttpMethod.POST, "/api/df-reg/dfs/*/suspend").hasAnyRole(STAFF)
                         .pathMatchers(HttpMethod.POST, "/api/df-reg/dfs/*/resume").hasRole("CM_ADMIN")
+                        .pathMatchers("/api/df-reg/dfs/*/legal-hold").hasRole("CM_ADMIN")
                         .pathMatchers("/api/df-reg/dfs", "/api/df-reg/dfs/*/activate", "/api/df-reg/dfs/*/profile",
                                 "/api/df-reg/dfs/*/members").hasRole("CM_ADMIN")
                         .anyExchange().authenticated())

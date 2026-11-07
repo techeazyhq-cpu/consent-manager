@@ -74,6 +74,14 @@ public class CnsQryBeanConfig {
                 : uncachedCnsArtRdMdlRepo;
     }
 
+    /** A closed fiduciary's rows past their retention (ADR-064). */
+    @Bean
+    public com.techeazyhq.cm.cnsqry.app.PurgeDfRecordsHandler purgeDfRecordsHandler(DatabaseClient db,
+            org.springframework.transaction.reactive.TransactionalOperator tx) {
+        return new com.techeazyhq.cm.cnsqry.app.PurgeDfRecordsHandler(
+                new com.techeazyhq.cm.cnsqry.infra.R2dbcDfRecordsPurgeAdapter(db, tx));
+    }
+
     @Bean
     public CnsHstRdMdlRepoPort cnsHstRdMdlRepoPort(DatabaseClient db) {
         return new R2dbcCnsHstRdMdlRepoAdapter(db);
