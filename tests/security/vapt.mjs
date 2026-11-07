@@ -26,7 +26,7 @@
 
 import { randomBytes, randomUUID } from 'node:crypto';
 import { writeFileSync } from 'node:fs';
-import { GW, call, dfSignIn, loadKeys, send, sign } from './lib/cm1.mjs';
+import { GW, call, dfSignIn, dpSignIn, loadKeys, send, sign } from './lib/cm1.mjs';
 
 const K = loadKeys(process.env.KEYS_FILE ?? (() => { throw new Error('Set KEYS_FILE'); })());
 // console tokens last minutes: sign A's owner in now rather than use the one saved at setup
@@ -225,6 +225,16 @@ await check('IDOR-12', 'Access control', "A consent token tampered with (payload
   const forged = `${h}.${Buffer.from(JSON.stringify({ ...claims, purpose_code: 'MARKETING' })).toString('base64url')}.${sig}`;
   return is(await call(K.a, 'GET', `/api/cns-qry/cns-arts/${K.grantedA.cnsArtId}/verify?purpose=MARKETING`,
     { headers: { 'X-Cns-Tkn': forged } }), 403);
+});
+await check('IDOR-13', 'Access control', "A principal claims requests sent to someone else's email", '403, nothing linked', async () => {
+  // A raises a request to a victim who has no account yet; an attacker signs in and names the victim's address
+  const victim = `vapt-victim-${randomBytes(3).toString('hex')}@example.test`;
+  const raised = await call(K.a, 'POST', RAISE, { body: { ...request('a'), extDpRefVal: victim } });
+  const attacker = await dpSignIn(`vapt-attacker-${randomBytes(3).toString('hex')}@example.test`);
+  const claim = await send('POST', new URL('/api/cns-cmd/dp-links', GW), { Authorization: `Bearer ${attacker}`,
+    'Content-Type': 'application/json' }, JSON.stringify({ extDpRefTyp: 'EMAIL', extDpRefVal: victim }));
+  const seen = await send('GET', new URL(`/api/cns-qry/cns-arts/${raised.json?.id}`, GW), { Authorization: `Bearer ${attacker}` });
+  return [claim.status === 403 && seen.status === 404, `claim ${claim.status}; attacker reads the request: ${seen.status}`];
 });
 
 // ---------------------------------------------------------------- privilege: an API key is not a person

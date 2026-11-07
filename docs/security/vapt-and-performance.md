@@ -17,8 +17,8 @@
 | Load at 50, 75 and 100 requests a second (expected mix) | **0 failures** at each; at 100, verify p95 51 ms. The pool deadlock (V-03) is fixed |
 | Ramp to the knee | Clean to about 125 requests a second; beyond, Postgres (1 CPU here) saturates. Verify answered DENY there (V-17, since fixed: now 503) |
 
-Seventeen findings: 1 critical, 3 high, 6 medium, 3 low, 2 accepted, 1 fixed by an upgrade (V-13), 1 false positive.
-Thirteen are fixed, the CI gate is in place, two are accepted, and one is open (V-11).
+Nineteen findings: 1 critical, 4 high, 7 medium, 3 low, 2 accepted, 1 fixed by an upgrade (V-13), 1 false positive.
+Fifteen are fixed, the CI gate is in place, two are accepted, and one is open (V-11).
 
 ## How it was tested
 
@@ -56,6 +56,31 @@ Thirteen are fixed, the CI gate is in place, two are accepted, and one is open (
 | V-16 | Accepted | Two HIGH advisories without a patched release in the mobile app's build tooling (braces, node-forge) | Accepted until 2026-12-31 |
 | V-17 | Medium | Overloaded, the PEP answers a valid consent with DENY (403 `consent-not-verified`), not 503 | Fixed (ADR-057); confirmed by the ramp, 0 of 16,209 refusals a 403 |
 | V-18 | Medium | The receipt job read every consent event and receipt every 2 s, a cost that grew with each consent ever recorded | Fixed (V7, a queue of events awaiting receipts) |
+| V-19 | High | A signed-in principal could claim another person's pending consent requests by naming their email to `/api/cns-cmd/dp-links` | Fixed; IDOR-13 checks it |
+
+### V-19: claiming someone else's consent requests (High)
+
+Found 2026-11-07 while building account erasure (ADR-059). A fiduciary can ask for consent from someone who has no
+account yet, addressed to their email or phone number. When they first sign in, the portal calls
+`POST /api/cns-cmd/dp-links` with their address, and every request sent to it is linked to them.
+
+**The problem:** the endpoint took the address from the request body, and checked neither that it was the caller's nor
+that the caller was a data principal. Anyone signed in to the DP portal could name another person's address and claim
+their pending requests. They could then read the notices, and give or refuse consent in that person's name, which
+V-15's ownership checks then accepted as theirs.
+
+**The fix:** both the principal and the contact now come from the caller's token.
+- The principal is `sub`.
+- The contact is the `email` claim, only when `email_verified` is true. The one-time-code sign-in sets that by sending
+  the code to the address.
+- A phone number is linked only when the token carries a verified `phone_number`; the cm-dp realm doesn't issue one
+  today, and neither app links by phone.
+- A body naming another contact is refused with 403 `contact-not-yours`. A caller who isn't a data principal gets 403
+  `not-a-data-principal`.
+- The portal and the mobile app send their own address, so they work unchanged.
+
+`DpLinkHandlerTest` covers each case. `vapt.mjs` IDOR-13 raises a request to a victim and has an attacker claim it:
+403, and the attacker can't read the request (404).
 
 ### V-18: a receipt job that grew with history (Medium)
 
