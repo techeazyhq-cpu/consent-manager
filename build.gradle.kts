@@ -39,14 +39,11 @@ subprojects {
         useJUnitPlatform()
     }
 
-    // Patched releases of libraries that Spring Boot 3.5 brings in, within the lines it uses, until its own managed
+    // Patched releases of libraries brought in transitively, within the lines they use, until their own managed
     // versions catch up. Trivy found HIGH and CRITICAL vulnerabilities in the versions before these (VAPT, docs/security).
-    // Spring's dependency-management plugin sets Netty and Jackson from its BOM after any rule below; these are the
-    // BOM's own overrides.
-    extra["netty.version"] = "4.1.137.Final"
-    extra["jackson-bom.version"] = "2.21.7"
-    // 4.0.14 bundles BouncyCastle 1.86 inside its bouncy-castle-bc package jar, out of reach of the rule below;
-    // Spring Boot 3.5's 4.0.11 bundled 1.84 (CVE-2026-8763, CVE-2026-13506, #217).
+    // Spring Boot 4.0 manages Netty 4.2 and Jackson 2.21.7 itself; the rules below catch what still asks for older ones.
+    // Spring Boot 4.0.9's Pulsar 4.1.3 nests BouncyCastle 1.78.1 in its bouncy-castle-bc package jar, out of reach of
+    // the rules below; 4.0.14 nests 1.86 (CVE-2026-8763, CVE-2026-13506, #217).
     extra["pulsar.version"] = "4.0.14"
     configurations.configureEach {
         resolutionStrategy.eachDependency {

@@ -23,5 +23,5 @@ plugins {
 // Calls to Keycloak's Admin REST API, shared by the services that manage identities there: cm-df-reg-svc (each
 // fiduciary's API client) and cm-stf-svc (platform staff accounts).
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-webflux:3.5.16")
+    implementation("org.springframework.boot:spring-boot-starter-webflux:4.0.9")
 }

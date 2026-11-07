@@ -17,6 +17,3 @@
 # Known vulnerabilities accepted for now, each with why and until when (docs/security/vapt-and-performance.md). An
 # entry past its date stops being ignored, and CI's image scan fails again until it is fixed or decided anew.
 
-# spring-webflux 6.2.19: fixed only in Spring Framework 7 (Spring Boot 4), a migration of its own (#216).
-CVE-2026-47890 exp:2027-01-31
-CVE-2026-47892 exp:2027-01-31

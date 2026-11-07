@@ -23,7 +23,7 @@
 # Each backend service activates its "docker" Spring profile (application-docker.yml,
 # sitting next to each service's default application.yml) for container-network hostnames —
 # not per-field environment variable overrides. Spring's relaxed env-var binding does not
-# merge indexed list properties (e.g. cm-gw's spring.cloud.gateway.routes[]) across sources,
+# merge indexed list properties (e.g. cm-gw's spring.cloud.gateway.server.webflux.routes[]) across sources,
 # so overriding even one field of one route via an env var silently drops the rest of that
 # route list; discovered and fixed during Phase 1 verification.
 

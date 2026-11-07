@@ -24,7 +24,7 @@ dependencies {
     api(project(":cm-bil-dom"))
     api(project(":cm-web-kit"))
     api(project(":cm-aud-kit"))
-    compileOnly("org.springframework:spring-tx:6.2.19")
+    compileOnly("org.springframework:spring-tx:7.0.10")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")

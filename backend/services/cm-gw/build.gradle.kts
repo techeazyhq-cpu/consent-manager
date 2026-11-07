@@ -25,14 +25,15 @@ dependencies {
     implementation(project(":cm-sec-kit"))
     implementation(project(":cm-res-kit"))
 
-    implementation("org.springframework.cloud:spring-cloud-starter-gateway:4.3.5")
+    implementation("org.springframework.cloud:spring-cloud-starter-gateway-server-webflux:5.0.4")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
-    implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:3.3.3")
+    implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:5.0.3")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("com.fasterxml.jackson.core:jackson-databind")
 
     testImplementation("io.projectreactor:reactor-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-webflux-test")
     testImplementation(project(":cm-test-kit"))
-    testImplementation("org.springframework.security:spring-security-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-security-test")
 }
