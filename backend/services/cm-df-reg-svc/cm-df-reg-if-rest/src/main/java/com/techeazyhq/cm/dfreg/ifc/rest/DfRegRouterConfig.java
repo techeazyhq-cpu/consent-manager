@@ -26,6 +26,7 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 
 import com.techeazyhq.cm.dfreg.app.ActivateDfCmdHandler;
 import com.techeazyhq.cm.dfreg.app.DfApiKeyHandler;
+import com.techeazyhq.cm.dfreg.app.DfEndContractHandler;
 import com.techeazyhq.cm.dfreg.app.DfLeavingHandler;
 import com.techeazyhq.cm.dfreg.app.DfRetentionHandler;
 import com.techeazyhq.cm.dfreg.app.DfSuspensionHandler;
@@ -56,6 +57,7 @@ public class DfRegRouterConfig {
                                                         DfSuspensionHandler suspensionHandler,
                                                         DfLeavingHandler leavingHandler,
                                                         DfRetentionHandler retentionHandler,
+                                                        DfEndContractHandler endContractHandler,
                                                         VerifyApiRequestHandler verifyApiRequestHandler) {
         DfHandler dfHandler = new DfHandler(registerHandler, activateHandler, getActiveHandler, listHandler, getDfHandler,
                 uploadLogoHandler, getLogoHandler);
@@ -65,6 +67,7 @@ public class DfRegRouterConfig {
         DfSuspensionHttpHandler suspensions = new DfSuspensionHttpHandler(suspensionHandler);
         DfLeavingHttpHandler leaving = new DfLeavingHttpHandler(leavingHandler);
         DfLegalHoldHttpHandler legalHold = new DfLegalHoldHttpHandler(retentionHandler);
+        DfEndContractHttpHandler endContract = new DfEndContractHttpHandler(endContractHandler);
         return RouterFunctions.route()
                 .GET("/api/df-reg/dfs", dfHandler::list)
                 .POST("/api/df-reg/dfs", dfHandler::register)
@@ -88,6 +91,12 @@ public class DfRegRouterConfig {
                 .POST("/internal/api-keys/verify", apiKeys::verify)
                 .POST("/api/df-reg/dfs/{id}/suspend", suspensions::suspend)
                 .POST("/api/df-reg/dfs/{id}/resume", suspensions::resume)
+                .POST("/api/df-reg/dfs/{id}/end-contract", endContract::proposeEnd)
+                .POST("/api/df-reg/dfs/{id}/cancel-end-contract", endContract::proposeCancel)
+                .GET("/api/df-reg/leave-proposals", endContract::list)
+                .POST("/api/df-reg/leave-proposals/{id}/approve", endContract::approve)
+                .POST("/api/df-reg/leave-proposals/{id}/reject", endContract::reject)
+                .POST("/api/df-reg/leave-proposals/{id}/withdraw", endContract::withdraw)
                 .PUT("/api/df-reg/dfs/{id}/legal-hold", legalHold::place)
                 .DELETE("/api/df-reg/dfs/{id}/legal-hold", legalHold::release)
                 .GET("/api/df-reg/me/leave", leaving::status)

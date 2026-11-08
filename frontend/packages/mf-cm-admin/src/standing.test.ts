@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { canResume, canSuspend, standingLine } from "./standing";
+import { canProposeCancel, canProposeEnd, canResume, canSuspend, mayDecide, standingLine } from "./standing";
 
 describe("standing", () => {
   it("only an active tenant can be suspended and only a suspended one resumed", () => {
@@ -33,5 +33,18 @@ describe("standing", () => {
     expect(standingLine({ sts: "LEAVING", leavesAt: "2026-12-08T00:00:00Z" })).toContain("closes");
     expect(standingLine({ sts: "CLOSED", closedAt: "2026-12-08T00:00:00Z" })).toContain("retention");
     expect(standingLine({ sts: "CLOSED", closedAt: "2026-12-08T00:00:00Z", purgedAt: "2033-12-08T00:00:00Z" })).toContain("purged");
+  });
+
+  it("ending a contract is proposed for active or suspended tenants and called off for leaving ones", () => {
+    expect(canProposeEnd("ACTIVE") && canProposeEnd("SUSPENDED")).toBe(true);
+    for (const sts of ["PENDING", "LEAVING", "CLOSED"] as const) expect(canProposeEnd(sts)).toBe(false);
+    expect(canProposeCancel("LEAVING")).toBe(true);
+    for (const sts of ["PENDING", "ACTIVE", "SUSPENDED", "CLOSED"] as const) expect(canProposeCancel(sts)).toBe(false);
+  });
+
+  it("only an administrator other than the proposer decides", () => {
+    expect(mayDecide("alice", "bob", ["CM_ADMIN"])).toBe(true);
+    expect(mayDecide("alice", "alice", ["CM_ADMIN"])).toBe(false);
+    expect(mayDecide("alice", "bob", ["CM_OPERATOR"])).toBe(false);
   });
 });

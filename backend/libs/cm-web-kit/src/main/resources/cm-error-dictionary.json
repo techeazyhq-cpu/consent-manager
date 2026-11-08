@@ -1807,6 +1807,58 @@
       "raisedBy": [
         "cm-df-reg-svc"
       ]
+    },
+    {
+      "code": "leave-proposal-pending",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "A proposal already waits",
+      "description": "A proposal to end or keep this fiduciary's contract already waits for a second member of staff.",
+      "action": "Approve, reject or withdraw the waiting proposal first.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "leave-proposal-same-person",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "A second person must decide",
+      "description": "The member of staff who proposed this cannot approve or reject it: ending a contract takes two people.",
+      "action": "Ask another administrator to decide it.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "leave-proposal-decided",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Proposal already decided",
+      "description": "The proposal was already approved, rejected or withdrawn.",
+      "action": "Nothing more to do; propose again if it is still wanted.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "leave-proposal-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Proposal not found",
+      "description": "There is no such proposal.",
+      "action": "Check the proposal id.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
     }
   ]
 }

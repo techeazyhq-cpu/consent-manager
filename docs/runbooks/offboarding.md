@@ -24,8 +24,15 @@ matters.
 
 ## A tenant has asked to leave
 
-Nothing for staff to do. It appears as **Leaving** on the dashboard with its closing date. Staff cannot end a tenant's
-contract from CM Admin yet (that needs the two-person approval the ADR describes). To stop a tenant now, suspend it.
+Nothing for staff to do. It appears as **Leaving** on the dashboard with its closing date.
+
+## Ending a tenant's contract (staff)
+
+It takes two people. In CM Admin, open the tenant, **Ending the contract**: an operator or administrator types the reason
+and proposes. A **different administrator** then approves (the 30-day wind-down starts and the team is emailed the
+reason) or rejects it. The proposer can withdraw it, and cannot decide it. Only one proposal waits per tenant. To call a
+departure off (whoever began it) use the same card: it needs the same two people, and does not use up the Owner's one
+cancellation. To stop a tenant **now**, suspend it: that needs one person and is reversible.
 
 If an Owner asks you to cancel a departure they already cancelled once, it cannot be cancelled again; that is the
 design (D5). Changing it is a decision for the owner of the platform, not a database edit.
@@ -79,7 +86,6 @@ whole tenant; holding a single principal's records is not built.
 
 ## Not built yet (so do it by hand, carefully, or wait)
 
-- Staff-initiated ending of a contract, with two-person approval.
 - One export of everything a leaving tenant has (today: its consent records, receipts and audit entries come from their
   own pages and APIs).
 - Removal of the tenant's Keycloak API client and webhook endpoints at closing, and its sandbox copy.

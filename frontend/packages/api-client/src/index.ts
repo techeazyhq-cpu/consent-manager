@@ -44,6 +44,7 @@ import type {
   DfRole,
   ApiKeyDto,
   DfStandingDto,
+  LeaveProposalDto,
   LeaveStatusDto,
   LegalHoldDto,
   TermsAcceptanceDto,
@@ -165,6 +166,19 @@ export const dfReg = {
     request<LegalHoldDto>(base, `/api/df-reg/dfs/${id}/legal-hold`, token, { method: "PUT", body: JSON.stringify({ reason }) }),
   releaseLegalHold: (base: string, token: string, id: string) =>
     request<LegalHoldDto>(base, `/api/df-reg/dfs/${id}/legal-hold`, token, { method: "DELETE" }),
+  /** Staff proposing to end a fiduciary's contract; a second member of staff must approve (ADR-064 D7). */
+  proposeEndContract: (base: string, token: string, id: string, reason: string) =>
+    request<LeaveProposalDto>(base, `/api/df-reg/dfs/${id}/end-contract`, token, { method: "POST", body: JSON.stringify({ reason }) }),
+  proposeCancelEnding: (base: string, token: string, id: string, reason: string) =>
+    request<LeaveProposalDto>(base, `/api/df-reg/dfs/${id}/cancel-end-contract`, token, { method: "POST", body: JSON.stringify({ reason }) }),
+  leaveProposals: (base: string, token: string, status: string, dfId?: string) =>
+    request<LeaveProposalDto[]>(base, `/api/df-reg/leave-proposals?status=${status}${dfId ? `&dfId=${encodeURIComponent(dfId)}` : ""}`, token),
+  approveProposal: (base: string, token: string, id: string) =>
+    request<LeaveProposalDto>(base, `/api/df-reg/leave-proposals/${id}/approve`, token, { method: "POST" }),
+  rejectProposal: (base: string, token: string, id: string, note?: string) =>
+    request<LeaveProposalDto>(base, `/api/df-reg/leave-proposals/${id}/reject`, token, { method: "POST", body: JSON.stringify({ note }) }),
+  withdrawProposal: (base: string, token: string, id: string) =>
+    request<LeaveProposalDto>(base, `/api/df-reg/leave-proposals/${id}/withdraw`, token, { method: "POST" }),
   /** Platform staff reading a fiduciary's acceptances of the terms, as evidence (ADR-063). */
   termsEvidence: (base: string, token: string, id: string) =>
     request<TermsAcceptanceDto[]>(base, `/api/df-reg/dfs/${id}/terms`, token),
