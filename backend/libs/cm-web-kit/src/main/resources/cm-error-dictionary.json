@@ -814,6 +814,19 @@
       ]
     },
     {
+      "code": "invalid-processor",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Processor is not valid",
+      "description": "The name, role, country or contact of the processor is missing or malformed.",
+      "action": "Give a name of up to 200 characters, a role of up to 500, a two-letter ISO country code and an email address for the contact.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
       "code": "invalid-purpose",
       "kind": "problem",
       "status": 400,
@@ -1173,6 +1186,45 @@
       "title": "For the person only",
       "description": "Only the person the consent is about can do this, not the fiduciary or its systems.",
       "action": "Ask the person to do it themselves.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "processor-exists",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "Processor already registered",
+      "description": "A processor with that name is already in the fiduciary's register (names are compared ignoring case).",
+      "action": "Use the existing entry, or choose a different name.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "processor-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Processor not found",
+      "description": "There is no such processor in the fiduciary's register.",
+      "action": "List the register and use one of its ids.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "processor-retired",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Processor is retired",
+      "description": "A purpose draft or publication names a processor that has been retired from the register.",
+      "action": "Remove it from the recipients and transfers, or reinstate the processor.",
       "retryable": false,
       "raisedBy": [
         "cm-cns-cmd-svc"

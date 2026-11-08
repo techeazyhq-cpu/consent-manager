@@ -28,6 +28,7 @@ import com.techeazyhq.cm.cnscmd.dom.PrpsDef;
 import com.techeazyhq.cm.cnscmd.dom.PrpsDefRepoPort;
 import com.techeazyhq.cm.cnscmd.dom.PrpsVer;
 import com.techeazyhq.cm.cnscmd.dom.PrpsVerContent;
+import com.techeazyhq.cm.cnscmd.dom.ProcessorRepoPort;
 import com.techeazyhq.cm.webkit.DomRuleViolation;
 
 import reactor.core.publisher.Flux;
@@ -40,11 +41,13 @@ import reactor.core.publisher.Mono;
 public class PrpsDefCmds {
 
     private final PrpsDefRepoPort repo;
+    private final ProcessorRepoPort processors;
     private final AuditTrail audit;
     private final Clock clock;
 
-    public PrpsDefCmds(PrpsDefRepoPort repo, AuditTrail audit, Clock clock) {
+    public PrpsDefCmds(PrpsDefRepoPort repo, ProcessorRepoPort processors, AuditTrail audit, Clock clock) {
         this.repo = repo;
+        this.processors = processors;
         this.audit = audit;
         this.clock = clock;
     }
@@ -63,7 +66,8 @@ public class PrpsDefCmds {
         return repo.findByCode(dfId, code)
                 .flatMap(existing -> Mono.<PrpsDef>error(new DomRuleViolation(409, "purpose-exists",
                         "There is already a purpose " + code + ": draft a new version of it instead")))
-                .switchIfEmpty(Mono.defer(() -> invalidAs400(() -> PrpsDef.create(dfId, code, content, clock.instant()))
+                .switchIfEmpty(Mono.defer(() -> ProcessorCmds.refuseRetired(processors, dfId, content)
+                        .then(invalidAs400(() -> PrpsDef.create(dfId, code, content, clock.instant())))
                         .flatMap(repo::save)
                         .flatMap(def -> audit.record("purpose.created", dfId, def.code(),
                                 AuditTrail.details("purpose", def.code())).thenReturn(def))));
@@ -72,11 +76,11 @@ public class PrpsDefCmds {
     /** Starts or replaces the draft of the next version. */
     @Transactional
     public Mono<PrpsDef> saveDraft(String dfId, String code, PrpsVerContent content) {
-        return change(dfId, code, def -> {
+        return ProcessorCmds.refuseRetired(processors, dfId, content).then(change(dfId, code, def -> {
             PrpsVer draft = def.saveDraft(content, clock.instant());
             return audit.record("purpose.draft-saved", dfId, def.code(),
                     AuditTrail.details("purpose", def.code(), "version", String.valueOf(draft.verNo())));
-        });
+        }));
     }
 
     @Transactional
@@ -92,12 +96,15 @@ public class PrpsDefCmds {
     /** Publishes the draft as the current version; from now on requests are made from it. */
     @Transactional
     public Mono<PrpsDef> publish(String dfId, String code) {
-        return change(dfId, code, def -> {
+        // a processor may have been retired since the draft was saved
+        return found(dfId, code)
+                .flatMap(def -> def.draft().map(d -> ProcessorCmds.refuseRetired(processors, dfId, d.content())).orElse(Mono.empty()))
+                .then(change(dfId, code, def -> {
             PrpsVer published = def.publish(clock.instant());
             return audit.record("purpose.published", dfId, def.code(),
                     AuditTrail.details("purpose", def.code(), "version", String.valueOf(published.verNo()),
                             "change", published.change().kind().name()));
-        });
+        }));
     }
 
     private Mono<PrpsDef> change(String dfId, String code, Function<PrpsDef, Mono<Void>> action) {

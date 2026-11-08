@@ -175,8 +175,21 @@ public class CnsCmdBeanConfig {
     }
 
     @Bean
-    public PrpsDefCmds prpsDefCmds(PrpsDefRepoPort prpsDefRepo, AuditTrail audit) {
-        return new PrpsDefCmds(prpsDefRepo, audit, java.time.Clock.systemUTC());
+    public PrpsDefCmds prpsDefCmds(PrpsDefRepoPort prpsDefRepo,
+                                   com.techeazyhq.cm.cnscmd.dom.ProcessorRepoPort processorRepo, AuditTrail audit) {
+        return new PrpsDefCmds(prpsDefRepo, processorRepo, audit, java.time.Clock.systemUTC());
+    }
+
+    /** A fiduciary's register of processors, which purposes name (ADR-075). */
+    @Bean
+    public com.techeazyhq.cm.cnscmd.dom.ProcessorRepoPort processorRepoPort(DatabaseClient db) {
+        return new com.techeazyhq.cm.cnscmd.infra.R2dbcProcessorRepoAdapter(db);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.cnscmd.app.ProcessorCmds processorCmds(
+            com.techeazyhq.cm.cnscmd.dom.ProcessorRepoPort processorRepo, PrpsDefRepoPort prpsDefRepo, AuditTrail audit) {
+        return new com.techeazyhq.cm.cnscmd.app.ProcessorCmds(processorRepo, prpsDefRepo, audit, java.time.Clock.systemUTC());
     }
 
     @Bean
