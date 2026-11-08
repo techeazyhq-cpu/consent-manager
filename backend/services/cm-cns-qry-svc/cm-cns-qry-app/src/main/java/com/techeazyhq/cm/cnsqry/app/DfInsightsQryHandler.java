@@ -21,6 +21,8 @@ package com.techeazyhq.cm.cnsqry.app;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 
 import com.techeazyhq.cm.cnsqry.dom.DfInsights;
 import com.techeazyhq.cm.cnsqry.dom.DfInsightsPort;
@@ -45,11 +47,30 @@ public class DfInsightsQryHandler {
     }
 
     public Mono<DfInsights> handle(String dfId, int days) {
+        return handle(dfId, days, ZoneOffset.UTC, false);
+    }
+
+    /**
+     * The figures for the last {@code days}, with the days cut in {@code zone}; with {@code compare}, also the totals for
+     * the window of equal length just before (ADR-049's "Not yet", ADR-078).
+     */
+    public Mono<DfInsights> handle(String dfId, int days, ZoneId zone, boolean compare) {
         int window = Math.min(Math.max(days, 1), MAX_DAYS);
         Instant to = clock.instant();
         Instant from = to.minus(Duration.ofDays(window));
-        return Mono.zip(port.byPurpose(dfId, from, to).collectList(), port.decisions(dfId, from, to),
-                        port.byDay(dfId, from, to).collectList(), port.changes(dfId, from, to))
-                .map(t -> DfInsights.of(from, to, t.getT1(), t.getT2(), t.getT3(), t.getT4()));
+        Mono<DfInsights> current = Mono.zip(port.byPurpose(dfId, from, to).collectList(), port.decisions(dfId, from, to),
+                        port.byDay(dfId, from, to, zone).collectList(), port.changes(dfId, from, to))
+                .map(t -> DfInsights.of(from, to, t.getT1(), t.getT2(), t.getT3(), t.getT4(), zone));
+        if (!compare) {
+            return current;
+        }
+        Instant before = from.minus(Duration.ofDays(window));
+        Mono<DfInsights.Previous> previous = Mono.zip(port.byPurpose(dfId, before, from).collectList(),
+                        port.decisions(dfId, before, from), port.changes(dfId, before, from))
+                .map(t -> {
+                    DfInsights totals = DfInsights.of(before, from, t.getT1(), t.getT2(), java.util.List.of(), t.getT3(), zone);
+                    return new DfInsights.Previous(before, from, totals.outcomes(), t.getT2(), t.getT3());
+                });
+        return Mono.zip(current, previous).map(t -> t.getT1().withPrevious(t.getT2()));
     }
 }

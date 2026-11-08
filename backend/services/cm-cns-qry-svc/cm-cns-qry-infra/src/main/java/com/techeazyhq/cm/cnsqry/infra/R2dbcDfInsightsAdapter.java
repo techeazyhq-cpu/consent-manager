@@ -91,12 +91,12 @@ public class R2dbcDfInsightsAdapter implements DfInsightsPort {
     }
 
     @Override
-    public Flux<DfInsights.Day> byDay(String dfId, Instant from, Instant to) {
+    public Flux<DfInsights.Day> byDay(String dfId, Instant from, Instant to, java.time.ZoneId zone) {
         return db.sql(REQS + """
                         , raised as (
-                            select (created_at at time zone 'UTC')::date as day, count(*) as n from req group by 1),
+                            select (created_at at time zone :tz)::date as day, count(*) as n from req group by 1),
                           decided as (
-                            select (decided_at at time zone 'UTC')::date as day,
+                            select (decided_at at time zone :tz)::date as day,
                                    count(*) filter (where decision = 'ISSUED') as given,
                                    count(*) filter (where decision = 'DENIED') as refused
                             from req where decision is not null group by 1)
@@ -105,7 +105,7 @@ public class R2dbcDfInsightsAdapter implements DfInsightsPort {
                         from raised r full join decided d on r.day = d.day
                         order by 1
                         """)
-                .bind("dfId", dfId).bind("from", from).bind("to", to)
+                .bind("dfId", dfId).bind("from", from).bind("to", to).bind("tz", zone.equals(java.time.ZoneOffset.UTC) ? "UTC" : zone.getId())
                 .map((row, meta) -> new DfInsights.Day(row.get("day", LocalDate.class), n(row, "raised"),
                         n(row, "given"), n(row, "refused")))
                 .all();

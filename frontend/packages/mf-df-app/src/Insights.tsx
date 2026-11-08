@@ -20,7 +20,7 @@ import { useEffect, useState } from "react";
 import { insights, type CnsLcySts, type DfInsightsDto } from "api-client";
 import { ErrorBanner, Spinner, friendlyError, humanise } from "ui-kit/src/index";
 import type { Console } from "./console";
-import { PERIODS, decidedRate, fmtDay, fmtDuration, niceMax, share } from "./dashboard";
+import { PERIODS, changeNote, decidedRate, fmtDay, fmtDuration, niceMax, share } from "./dashboard";
 import { purposeHref } from "./routes";
 import { freshToken } from "./token";
 
@@ -46,7 +46,7 @@ function Stat({ value, label, note, onClick }: { value: string; label: string; n
 }
 
 /** Given and refused, day by day, stacked; hover a day for its figures, or read them as a table. */
-function DecisionsChart({ days }: { days: DfInsightsDto["days"] }) {
+function DecisionsChart({ days, zone }: { days: DfInsightsDto["days"]; zone: string }) {
   const [hover, setHover] = useState<number | null>(null);
   const [table, setTable] = useState(false);
   const W = 720;
@@ -78,7 +78,7 @@ function DecisionsChart({ days }: { days: DfInsightsDto["days"] }) {
           <table className="cm-table">
             <thead>
               <tr>
-                <th>Day (UTC)</th>
+                <th>Day ({zone})</th>
                 <th>Raised</th>
                 <th>Given</th>
                 <th>Refused</th>
@@ -186,15 +186,33 @@ function roundTop(x: number, top: number, w: number, h: number, r: number): stri
  */
 export function Insights({ console: c, onFilter }: { console: Console; onFilter: (sts?: CnsLcySts[]) => void }) {
   const [days, setDays] = useState(30);
+  const [compare, setCompare] = useState(false);
+  // days are cut in the viewer's own time zone unless they ask for UTC (ADR-078)
+  const local = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const [tz, setTz] = useState(local);
   const [data, setData] = useState<DfInsightsDto | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const download = async (view: "days" | "purposes") => {
+    try {
+      const blob = await insights.exportCsv(c.gwBase, await freshToken(c.auth), days, view, tz);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `consent-insights-${view}-${days}d.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(friendlyError(err));
+    }
+  };
 
   useEffect(() => {
     let live = true;
     setError(null);
     (async () => {
       try {
-        const d = await insights.get(c.gwBase, await freshToken(c.auth), days);
+        const d = await insights.get(c.gwBase, await freshToken(c.auth), days, { tz, compare });
         if (live) setData(d);
       } catch (err) {
         if (live) setError(friendlyError(err));
@@ -203,7 +221,7 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
     return () => {
       live = false;
     };
-  }, [c.auth, c.gwBase, days]);
+  }, [c.auth, c.gwBase, days, tz, compare]);
 
   const o = data?.outcomes;
   const rate = o ? decidedRate(o) : null;
@@ -221,24 +239,42 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
             {p.label}
           </button>
         ))}
-        <span className="cm-note" style={{ marginLeft: "auto" }}>
-          Requests raised in the last {PERIODS.find((p) => p.days === days)?.label}
-        </span>
+        <label className="cm-note" style={{ marginLeft: "auto" }}>
+          <input type="checkbox" checked={compare} onChange={(e) => setCompare(e.target.checked)} /> Compare with the {days} days before
+        </label>
+        <select aria-label="Time zone" value={tz} onChange={(e) => setTz(e.target.value)}>
+          <option value={local}>Days in {local}</option>
+          {local !== "UTC" ? <option value="UTC">Days in UTC</option> : null}
+        </select>
+        <button className="cm-btn" onClick={() => download("days")}>
+          Download days (CSV)
+        </button>
+        <button className="cm-btn" onClick={() => download("purposes")}>
+          Download purposes (CSV)
+        </button>
       </div>
+      <p className="cm-note">Requests raised in the last {PERIODS.find((p) => p.days === days)?.label}</p>
       {error ? <ErrorBanner message={error} /> : null}
       {!data || !o ? (
         error ? null : <Spinner label="Working out the figuresâ€¦" />
       ) : (
         <>
           <div className="cm-summary">
-            <Stat value={String(o.raised)} label="Raised" />
+            <Stat value={String(o.raised)} label="Raised" note={changeNote(o.raised, data.previous?.outcomes.raised, days)} />
             <Stat
               value={String(o.given)}
               label="Given"
-              note={rate != null ? `${rate}% of those who decided` : undefined}
+              note={[rate != null ? `${rate}% of those who decided` : undefined, changeNote(o.given, data.previous?.outcomes.given, days)]
+                .filter(Boolean)
+                .join(" · ") || undefined}
               onClick={() => onFilter(["ISSUED", "REVOKED", "EXPIRED"])}
             />
-            <Stat value={String(o.refused)} label="Refused" onClick={() => onFilter(["DENIED"])} />
+            <Stat
+              value={String(o.refused)}
+              label="Refused"
+              note={changeNote(o.refused, data.previous?.outcomes.refused, days)}
+              onClick={() => onFilter(["DENIED"])}
+            />
             <Stat
               value={String(o.awaiting)}
               label="Awaiting a decision"
@@ -259,11 +295,11 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
             />
           </div>
 
-          <DecisionsChart days={data.days} />
+          <DecisionsChart days={data.days} zone={data.zone} />
 
           <h3 className="cm-section-title">After consent was given</h3>
           <div className="cm-summary">
-            <Stat value={String(data.changes.withdrawn)} label="Withdrawn" />
+            <Stat value={String(data.changes.withdrawn)} label="Withdrawn" note={changeNote(data.changes.withdrawn, data.previous?.changes.withdrawn, days)} />
             <Stat value={String(data.changes.narrowed)} label="Narrowed or shortened" />
             <Stat value={String(data.changes.renewed)} label="Renewed" />
             <Stat value={String(data.changes.lapsed)} label="Lapsed" />

@@ -364,6 +364,16 @@ export interface DfInsightsDto {
   /** Every day of the window, UTC: raised that day, and given or refused that day. */
   days: { date: string; raised: number; given: number; refused: number }[];
   changes: { withdrawn: number; narrowed: number; renewed: number; lapsed: number };
+  /** The time zone the days are cut in (an IANA name). */
+  zone: string;
+  /** The window of equal length just before this one, when asked for (ADR-078). */
+  previous?: {
+    from: string;
+    to: string;
+    outcomes: InsightOutcomes;
+    decisions: { decided: number; medianSeconds: number | null; p90Seconds: number | null; withinADay: number };
+    changes: { withdrawn: number; narrowed: number; renewed: number; lapsed: number };
+  } | null;
 }
 
 /** A fiduciary's webhook endpoint (ADR-047); its secret is never shown again after it's made or rotated. */
