@@ -160,6 +160,17 @@ opa:
   image: openpolicyagent/opa:1.20.1
   replicas: 2
   resources: {requests: {cpu: 100m, memory: 64Mi}, limits: {memory: 128Mi}}
+  # The policy from a signed bundle served over HTTPS, so a change to the policy goes out without a chart release, and a bundle
+  # nobody signed is never loaded (ADR-068). Off, the policy in this chart (files/opa) is used, as before.
+  bundle:
+    enabled: false
+    # where the pipeline publishes bundles, and the name under it of the one to run (a name that points at the current version)
+    serviceUrl: ""
+    resource: cm-authz.tar.gz
+    # the public key the bundles are signed with (PEM), and the name the build gave it (OPA_SIGNING_KEY_ID)
+    publicKey: ""
+    keyId: cm-policy
+    pollSeconds: {min: 60, max: 120}
 
 ingress:
   enabled: true
