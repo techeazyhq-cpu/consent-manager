@@ -22,9 +22,30 @@ metadata:
   name: {{ .Release.Name }}-opa-policies
   labels: {{- include "cm.labels" $ctx | nindent 4 }}
 data:
+  {{- if not .Values.opa.bundle.enabled }}
   {{- (.Files.Glob "files/opa/*.rego").AsConfig | nindent 2 }}
+  {{- end }}
   data.json: |
     {"config": {"cns_cmd_base_url": "http://cm-cns-cmd-svc:8082"}}
+{{- if .Values.opa.bundle.enabled }}
+  {{- /* the policy is the bundle's: this release adds only its own data (where cm-cns-cmd-svc is), under a root the bundle does not own */}}
+  config.yaml: |
+    services:
+      bundles:
+        url: {{ required "opa.bundle.serviceUrl is needed when opa.bundle.enabled" .Values.opa.bundle.serviceUrl | quote }}
+    bundles:
+      authz:
+        service: bundles
+        resource: {{ .Values.opa.bundle.resource | quote }}
+        polling: {min_delay_seconds: {{ .Values.opa.bundle.pollSeconds.min }}, max_delay_seconds: {{ .Values.opa.bundle.pollSeconds.max }}}
+        signing:
+          keyid: {{ .Values.opa.bundle.keyId | quote }}
+    keys:
+      {{ .Values.opa.bundle.keyId }}:
+        algorithm: RS256
+        key: |
+          {{- required "opa.bundle.publicKey is needed when opa.bundle.enabled: a bundle must be verified" .Values.opa.bundle.publicKey | trim | nindent 10 }}
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -40,16 +61,21 @@ spec:
       labels: {{- include "cm.selectorLabels" $ctx | nindent 8 }}
         app.kubernetes.io/part-of: consent-manager
       annotations:
-        checksum/policies: {{ (.Files.Glob "files/opa/*.rego").AsConfig | sha256sum }}
+        checksum/policies: {{ if .Values.opa.bundle.enabled }}{{ toYaml .Values.opa.bundle | sha256sum }}{{ else }}{{ (.Files.Glob "files/opa/*.rego").AsConfig | sha256sum }}{{ end }}
     spec:
       automountServiceAccountToken: false
       securityContext: {{- include "cm.podSecurityContext" (dict "uid" 1000) | nindent 8 }}
       containers:
         - name: opa
           image: {{ .Values.opa.image }}
+          {{- if .Values.opa.bundle.enabled }}
+          # the bundle's policy, verified against the public key; not ready until a bundle has loaded
+          args: ["run", "--server", "--addr=0.0.0.0:8181", "--log-format=json", "--config-file=/policies/config.yaml", "/policies/data.json"]
+          {{- else }}
           args: ["run", "--server", "--addr=0.0.0.0:8181", "--log-format=json", "/policies"]
+          {{- end }}
           ports: [{name: http, containerPort: 8181}]
-          readinessProbe: {httpGet: {path: /health, port: http}, periodSeconds: 5}
+          readinessProbe: {httpGet: {path: "{{ if .Values.opa.bundle.enabled }}/health?bundles{{ else }}/health{{ end }}", port: http}, periodSeconds: 5}
           livenessProbe: {httpGet: {path: /health, port: http}, periodSeconds: 10}
           resources: {{- toYaml .Values.opa.resources | nindent 12 }}
           securityContext: {{- include "cm.containerSecurityContext" . | nindent 12 }}

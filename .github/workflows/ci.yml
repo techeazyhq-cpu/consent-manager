@@ -147,6 +147,19 @@ jobs:
           done
           helm template cm consent-manager -f consent-manager/values-gcp.yaml -f consent-manager/values-sandbox.yaml \
             | docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas
+      - name: The chart renders with the policy taken from a signed bundle (ADR-068), and refuses to without a key
+        run: |
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          printf 'opa:\n  bundle:\n    enabled: true\n    serviceUrl: https://policy.example.com/bundles\n    publicKey: |\n      -----BEGIN PUBLIC KEY-----\n      AAAA\n      -----END PUBLIC KEY-----\n' > deploy/helm/ci-bundle.yaml
+          helm template cm consent-manager -f consent-manager/values-aws.yaml -f ci-bundle.yaml \
+            | docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas -kubernetes-version 1.30.0
+          # a bundle with no key to verify it against must never render: it would load anything
+          printf 'opa:\n  bundle:\n    enabled: true\n    serviceUrl: https://policy.example.com/bundles\n' > deploy/helm/ci-bundle-nokey.yaml
+          if helm template cm consent-manager -f consent-manager/values-aws.yaml -f ci-bundle-nokey.yaml > /dev/null 2>&1; then
+            echo "::error::The chart rendered a policy bundle with no public key to verify it"
+            exit 1
+          fi
+          rm -f deploy/helm/ci-bundle.yaml deploy/helm/ci-bundle-nokey.yaml
       - name: The chart's OPA policy is the one the services are tested with
         run: diff infra/opa/policies/cns_authz.rego deploy/helm/consent-manager/files/opa/cns_authz.rego
       - name: No deployment lifts the sign-in code limits
@@ -157,3 +170,40 @@ jobs:
             echo "::error::A deployment sets the local-only sign-in exemption (ADR-061). Remove it."
             exit 1
           fi
+
+  opa-bundle:
+    name: Authorisation policy bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "22"
+      - name: Build a signed bundle, serve it, and start OPA against it with and without tampering (ADR-068)
+        # real OPA servers: the right key loads it; an altered bundle and a different key are both refused
+        run: node tests/security/e2e-opa-bundle.mjs
+      - name: Build the bundle (signed on main, when the signing key is configured)
+        env:
+          OPA_SIGNING_KEY_PEM: ${{ secrets.OPA_BUNDLE_SIGNING_KEY }}
+          OPA_SIGNING_KEY_ID: ${{ vars.OPA_BUNDLE_KEY_ID || 'cm-policy' }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] && [ -n "$OPA_SIGNING_KEY_PEM" ]; then
+            umask 077
+            printf '%s\n' "$OPA_SIGNING_KEY_PEM" > "$RUNNER_TEMP/opa-signing-key.pem"
+            OPA_SIGNING_KEY="$RUNNER_TEMP/opa-signing-key.pem" bash scripts/opa-bundle.sh --out dist/opa
+            rm -f "$RUNNER_TEMP/opa-signing-key.pem"
+          else
+            echo "::notice::Building an unsigned bundle: signing happens on main, with OPA_BUNDLE_SIGNING_KEY set"
+            bash scripts/opa-bundle.sh --out dist/opa
+          fi
+      - name: Upload the bundle and its manifest
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: opa-bundle
+          path: |
+            dist/opa/*.tar.gz
+            dist/opa/manifest-*.json
+            dist/opa/*.public.pem
+            dist/opa/test-report.txt
+          retention-days: 30
