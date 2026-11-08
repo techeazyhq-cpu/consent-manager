@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { changeNote } from "./dashboard";
+import { changeNote, comparisonSpan, monthWindows, monthsAgo, sameWindow } from "./dashboard";
 
 describe("changeNote", () => {
   it("says nothing when no comparison is shown", () => {

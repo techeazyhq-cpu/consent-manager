@@ -26,6 +26,35 @@ export const PERIODS = [
   { days: 365, label: "12 months" },
 ];
 
+/** What the dashboard is showing: the last N days, or one calendar month (ADR-088). */
+export type Window = { kind: "days"; days: number } | { kind: "month"; month: string };
+
+/** The month as `yyyy-MM`, counting back from {@code now} (0 is this month, 1 the last), in UTC. */
+export function monthsAgo(back: number, now: Date = new Date()): string {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** The two calendar months offered, worked out from today. */
+export function monthWindows(now: Date = new Date()): { window: Window; label: string }[] {
+  return [
+    { window: { kind: "month", month: monthsAgo(0, now) }, label: "This month" },
+    { window: { kind: "month", month: monthsAgo(1, now) }, label: "Last month" },
+  ];
+}
+
+export const sameWindow = (a: Window, b: Window) =>
+  a.kind === b.kind && (a.kind === "days" ? a.days === (b as typeof a).days : a.month === (b as typeof a).month);
+
+/**
+ * What a comparison is against, in words that follow "on the": "30 days before" for a span of days; for a month still going "same days
+ * of last month"; for a month that has ended "month before".
+ */
+export function comparisonSpan(w: Window, now: Date = new Date()): string {
+  if (w.kind === "days") return `${w.days} days before`;
+  return w.month === monthsAgo(0, now) ? "same days of last month" : "month before";
+}
+
 /** A duration in seconds as a person says it: "45 s", "12 min", "3.5 h", "2 days"; "—" when there is none. */
 export function fmtDuration(seconds: number | null | undefined): string {
   if (seconds == null) return "—";
@@ -46,9 +75,9 @@ export function decidedRate(o: Pick<InsightOutcomes, "given" | "refused">): numb
  * How a figure moved against the window just before, in a few words: "up 20% on the 30 days before", "down 3", "same as the
  * 30 days before", or "nothing in the 30 days before" when there is nothing to compare with. Undefined when no comparison is shown.
  */
-export function changeNote(now: number, before: number | undefined, days: number): string | undefined {
+export function changeNote(now: number, before: number | undefined, span: number | string): string | undefined {
   if (before === undefined) return undefined;
-  const window = `${days} days before`;
+  const window = typeof span === "number" ? `${span} days before` : span;
   if (before === 0) return now === 0 ? `same as the ${window}` : `none in the ${window}`;
   if (now === before) return `same as the ${window}`;
   const pct = Math.round((100 * Math.abs(now - before)) / before);
