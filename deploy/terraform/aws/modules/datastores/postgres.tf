@@ -119,3 +119,58 @@ resource "aws_db_instance_automated_backups_replication" "postgres" {
   retention_period       = var.backup_retention_days
   kms_key_id             = aws_kms_key.disaster_recovery.arn
 }
+
+# A service that has outgrown the shared instance, or must not share fate with it (ADR-074). Same protections as the shared one.
+resource "aws_db_instance" "dedicated" {
+  for_each = var.dedicated_databases
+
+  identifier     = "${var.name}-${each.key}"
+  engine         = "postgres"
+  engine_version = var.postgres_engine_version
+  instance_class = coalesce(each.value.instance_class, var.postgres_instance_class)
+
+  db_name                       = each.value.db_name
+  username                      = each.value.username
+  manage_master_user_password   = true
+  master_user_secret_kms_key_id = aws_kms_key.primary.arn
+
+  multi_az               = true
+  db_subnet_group_name   = aws_db_subnet_group.postgres.name
+  vpc_security_group_ids = [aws_security_group.postgres.id]
+  publicly_accessible    = false
+  parameter_group_name   = aws_db_parameter_group.postgres.name
+  ca_cert_identifier     = "rds-ca-rsa2048-g1"
+
+  storage_type          = "gp3"
+  allocated_storage     = coalesce(each.value.allocated_storage, var.postgres_allocated_storage_gb)
+  max_allocated_storage = var.postgres_max_allocated_storage_gb
+  storage_encrypted     = true
+  kms_key_id            = aws_kms_key.primary.arn
+
+  backup_retention_period   = var.backup_retention_days
+  backup_window             = "01:00-01:30"
+  maintenance_window        = "sun:03:00-sun:04:00"
+  copy_tags_to_snapshot     = true
+  deletion_protection       = true
+  skip_final_snapshot       = false
+  final_snapshot_identifier = "${var.name}-${each.key}-final"
+  delete_automated_backups  = false
+
+  iam_database_authentication_enabled   = true
+  auto_minor_version_upgrade            = true
+  performance_insights_enabled          = true
+  performance_insights_kms_key_id       = aws_kms_key.primary.arn
+  performance_insights_retention_period = 7
+  enabled_cloudwatch_logs_exports       = ["postgresql", "upgrade"]
+
+  tags = var.tags
+}
+
+resource "aws_db_instance_automated_backups_replication" "dedicated" {
+  for_each = var.dedicated_databases
+  provider = aws.disaster_recovery
+
+  source_db_instance_arn = aws_db_instance.dedicated[each.key].arn
+  retention_period       = var.backup_retention_days
+  kms_key_id             = aws_kms_key.disaster_recovery.arn
+}

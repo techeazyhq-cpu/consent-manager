@@ -26,6 +26,19 @@ output "helm_values" {
       database = { url = module.datastores.postgres_jdbc_url }
       redis    = { host = module.datastores.redis_primary_endpoint }
     }
+    # a service with an instance of its own (ADR-074): its `database:` block. The password is the instance's owner secret
+    # (postgres_dedicated), copied into the application secret under passwordKey.
+    services = {
+      for service, db in module.datastores.postgres_dedicated : service => {
+        database = {
+          host        = db.host
+          port        = db.port
+          name        = db.name
+          user        = db.user
+          passwordKey = "${upper(replace(service, "-", "_"))}_DB_PASSWORD"
+        }
+      }
+    }
     networkPolicy = {
       datastoreEgress = [
         {

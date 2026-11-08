@@ -31,6 +31,8 @@
 #   BACKUP_UPLOAD_CMD  a command run once per file with its path as the only argument, to send it off the machine,
 #                      for example: aws s3 cp --sse aws:kms --no-progress   (the path is appended). Optional.
 #   BACKUP_METRICS_FILE     a node_exporter textfile (*.prom) for Prometheus: last run ok, last success time (ADR-070)
+#   BACKUP_MANIFEST_PREFIX  the manifest is <prefix>-<time>.json (default: manifest). A service on a database server of its own
+#                      (ADR-074) is backed up by a run of its own with its PG* variables, BACKUP_DATABASES and a prefix of its own.
 #   BACKUP_KEEP_LOCAL_DAYS  delete local dumps older than this many days after a good run (default: 7; 0 keeps all)
 #   PG_EXEC            a prefix that runs the PostgreSQL client tools somewhere else, e.g.
 #                      "docker exec -i -e PGPASSWORD=cm -e PGUSER=cm common-postgres-1" for the local stack, whose host has
@@ -42,11 +44,12 @@ set -euo pipefail
 : "${BACKUP_DATABASES:=consent_manager keycloak}"
 : "${BACKUP_DIR:=./backups}"
 : "${BACKUP_KEEP_LOCAL_DAYS:=7}"
+: "${BACKUP_MANIFEST_PREFIX:=manifest}"
 : "${PG_EXEC:=}"
 
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 mkdir -p "$BACKUP_DIR"
-manifest="$BACKUP_DIR/manifest-$stamp.json"
+manifest="$BACKUP_DIR/$BACKUP_MANIFEST_PREFIX-$stamp.json"
 
 # PG_EXEC is split on purpose: it is a command prefix
 # shellcheck disable=SC2086
@@ -116,7 +119,7 @@ if [ -n "${BACKUP_UPLOAD_CMD:-}" ]; then
 fi
 
 if [ "$failed" = 0 ] && [ "$BACKUP_KEEP_LOCAL_DAYS" -gt 0 ]; then
-  find "$BACKUP_DIR" -maxdepth 1 \( -name '*.dump' -o -name 'manifest-*.json' \) -mtime "+$BACKUP_KEEP_LOCAL_DAYS" -delete
+  find "$BACKUP_DIR" -maxdepth 1 \( -name '*.dump' -o -name "$BACKUP_MANIFEST_PREFIX-*.json" \) -mtime "+$BACKUP_KEEP_LOCAL_DAYS" -delete
 fi
 
 # For Prometheus (ADR-070): a node_exporter textfile, rewritten each run. A failed run keeps the last success's timestamp, so

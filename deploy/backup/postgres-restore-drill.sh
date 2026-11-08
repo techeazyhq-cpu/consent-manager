@@ -27,7 +27,7 @@
 # Row counts that differ from the manifest are reported, not failed: a live system keeps writing between the counts and the dump.
 # On a quiet system they match, and "--exact" makes a difference fail.
 #
-#   deploy/backup/postgres-restore-drill.sh [--exact] [manifest.json]    (default: the newest manifest in BACKUP_DIR)
+#   deploy/backup/postgres-restore-drill.sh [--exact] [manifest.json]    (default: the newest <BACKUP_MANIFEST_PREFIX>-*.json in BACKUP_DIR)
 #
 # BACKUP_METRICS_FILE (a *.prom path) also writes <name>.drill.prom for Prometheus. The same variables as postgres-backup.sh: PGHOST, PGPORT, PGUSER, PGPASSWORD, BACKUP_DIR, PG_EXEC. The role needs CREATEDB.
 set -euo pipefail
@@ -36,7 +36,7 @@ set -euo pipefail
 : "${PG_EXEC:=}"
 exact=0
 if [ "${1:-}" = "--exact" ]; then exact=1; shift; fi
-manifest="${1:-$(ls -1t "$BACKUP_DIR"/manifest-*.json 2>/dev/null | head -1)}"
+manifest="${1:-$(ls -1t "$BACKUP_DIR/${BACKUP_MANIFEST_PREFIX:-manifest}"-*.json 2>/dev/null | head -1)}"
 [ -n "$manifest" ] && [ -f "$manifest" ] || { echo "No manifest found in $BACKUP_DIR" >&2; exit 2; }
 
 # shellcheck disable=SC2086

@@ -4,8 +4,11 @@
 
 ## Before
 
-- A new database exists, on the same server or another (create the server first if it is another), with a login that owns it and
-  can create a schema in it.
+- A new database exists, on the same server or another, with a login that owns it and can create a schema in it. On AWS, a
+  server per service is Terraform: add the service to `dedicated_databases` (for example
+  `{"cm-aud-svc" = {db_name = "cm_aud", username = "cm_aud"}}`), apply, and copy the `postgres_dedicated` output into the
+  release's values; the owner's password is in the RDS-managed secret it names, to be copied into the application secret as
+  `CM_AUD_SVC_DB_PASSWORD`. Azure and GCP: create the server by hand.
 - You have a recent backup ([backup-and-recovery.md](backup-and-recovery.md)) and a quiet hour.
 - The new login's password is in the release's secret under a key of its own (`AUD_DB_PASSWORD`).
 
@@ -34,7 +37,8 @@ for the target. It prints the tables and rows copied and exits non-zero on any d
 
 4. Scale it back up. In its log, Flyway must say `Schema "aud" is up to date` (it found the copied history, so it re-ran nothing).
 5. Check the health endpoint, then the service's own function (for audit: the activity list, and a new consent action appearing in it).
-6. Add the new database to `BACKUP_DATABASES`.
+6. Back it up: a run of `postgres-backup.sh` for the new server with its own `PGHOST`, `BACKUP_DATABASES=cm_aud` and
+   `BACKUP_MANIFEST_PREFIX=aud` so its manifests stay apart (the drill takes the same prefix). The shared server's run no longer lists it.
 
 ## After
 
