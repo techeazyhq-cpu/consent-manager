@@ -33,6 +33,16 @@ groups:
         for: 10m
         labels: {severity: ticket}
         annotations: {summary: "{{ $labels.service }}: p95 latency above 2 s for 10 minutes"}
+      - alert: CircuitBreakerOpen
+        expr: resilience4j_circuitbreaker_state{state="open"} == 1
+        for: 1m
+        labels: {severity: page}
+        annotations: {summary: "{{ $labels.service }}: the circuit breaker {{ $labels.name }} is open, so calls to it are being refused"}
+      - alert: DatabasePoolExhausted
+        expr: r2dbc_pool_pending_connections > 0 and r2dbc_pool_acquired_connections >= r2dbc_pool_max_allocated_connections
+        for: 2m
+        labels: {severity: ticket}
+        annotations: {summary: "{{ $labels.service }}: requests are waiting for a database connection and every one is in use"}
       - alert: HeapNearlyFull
         expr: sum by (service) (jvm_memory_used_bytes{area="heap"}) / sum by (service) (jvm_memory_max_bytes{area="heap"}) > 0.9
         for: 10m

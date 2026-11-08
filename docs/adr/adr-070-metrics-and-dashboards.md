@@ -33,10 +33,9 @@ gateway is the public edge, so anything it serves on its port is served to the i
 ## Not yet / limits
 
 - **No Loki, no Tempo, no traces.** Log aggregation and tracing are the rest of #98.
-- **Circuit-breaker state is not exported.** The Resilience4j Micrometer binder is not on the classpath, so a breaker's state cannot
-  be graphed or alerted; the status page's probes remain the only signal.
-- **Database pool and Pulsar figures** are absent for the same reason (no R2DBC pool metrics wired); Postgres, Redis and Pulsar have no
-  exporters here.
+- **Postgres, Redis and Pulsar have no exporters here.** The services' own view of them (the R2DBC pool, circuit breakers) is
+  exported and alerted on (a breaker appears in the metrics once it has been used; ADR-070's first version wrongly said these
+  were missing), but the servers' own figures are not.
 - **Nothing routes the alerts.** The rules fire inside Prometheus; there is no Alertmanager and no pager. Where a deployment already
   has one (Prometheus Operator, a managed Prometheus), the rule files load as they are.
 - **The backup alerts need the job scheduled and its textfile scraped,** which is not done by this change (the CronJob is still open
