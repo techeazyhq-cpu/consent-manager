@@ -97,6 +97,27 @@ public class BilBeanConfig {
         return new UsgAlertHandler(alerts, outbox, audit);
     }
 
+    /** Plan prices, plan history and invoices (ADR-079). */
+    @Bean
+    public com.techeazyhq.cm.bil.dom.InvoiceRepoPort invoiceRepoPort(DatabaseClient db,
+                                                                    org.springframework.transaction.reactive.TransactionalOperator tx) {
+        return new com.techeazyhq.cm.bil.infra.R2dbcInvoiceRepoAdapter(db, tx);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.bil.app.InvoiceCmds invoiceCmds(com.techeazyhq.cm.bil.dom.InvoiceRepoPort repo, AuditTrail audit,
+                                                             java.time.Clock clock,
+                                                             @org.springframework.beans.factory.annotation.Value("${cm.bil.currency:INR}") String currency,
+                                                             @org.springframework.beans.factory.annotation.Value("${cm.bil.tax-label:Tax}") String taxLabel,
+                                                             @org.springframework.beans.factory.annotation.Value("${cm.bil.tax-bps:0}") int taxBps) {
+        return new com.techeazyhq.cm.bil.app.InvoiceCmds(repo, audit, clock, currency, taxLabel, taxBps);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.bil.app.InvoiceQueries invoiceQueries(com.techeazyhq.cm.bil.dom.InvoiceRepoPort repo) {
+        return new com.techeazyhq.cm.bil.app.InvoiceQueries(repo);
+    }
+
     @Bean
     public UsgAlertSweep usgAlertSweep(DfSubRepoPort subs, SubPlnRepoPort plans, UsgPort usage, UsgAlertHandler handler,
                                        java.time.Clock clock) {

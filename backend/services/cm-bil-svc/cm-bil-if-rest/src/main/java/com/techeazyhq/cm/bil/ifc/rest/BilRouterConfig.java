@@ -48,12 +48,28 @@ public class BilRouterConfig {
                                                       UsgReservationHandler usgReservationHandler,
                                                       BilOverviewQryHandler overviewHandler,
                                                       PlnChgReqHandler plnChgReqHandler,
-                                                      UsgAlertQryHandler usgAlertQryHandler) {
+                                                      UsgAlertQryHandler usgAlertQryHandler,
+                                                      com.techeazyhq.cm.bil.app.InvoiceCmds invoiceCmds,
+                                                      com.techeazyhq.cm.bil.app.InvoiceQueries invoiceQueries,
+                                                      com.techeazyhq.cm.bil.dom.InvoiceRepoPort invoiceRepo) {
         BilHandler handler = new BilHandler(assignSubPlnHandler, setDfSubStsHandler, getUsgHandler, subEligHandler,
                 listSubPlnsHandler, getDfSubStatusHandler, usgReservationHandler);
         BilAccountHttpHandler account = new BilAccountHttpHandler(getDfSubStatusHandler, overviewHandler, plnChgReqHandler,
                 usgAlertQryHandler);
+        BilInvoiceHttpHandler invoices = new BilInvoiceHttpHandler(invoiceCmds, invoiceQueries, invoiceRepo);
         return RouterFunctions.route()
+                // invoices (ADR-079)
+                .GET("/api/bil/me/invoices", invoices::myInvoices)
+                .GET("/api/bil/me/invoices/{id}", invoices::myInvoice)
+                .GET("/api/bil/me/invoices/{id}/html", invoices::myInvoiceHtml)
+                .GET("/api/bil/invoices", invoices::all)
+                .GET("/api/bil/invoices/export", invoices::export)
+                .GET("/api/bil/plan-prices", invoices::prices)
+                .PUT("/api/bil/plan-prices/{name}", invoices::setPrice)
+                .POST("/api/bil/invoices/run", invoices::run)
+                .POST("/api/bil/invoices/{id}/paid", invoices::paid)
+                .POST("/api/bil/invoices/{id}/credit-note", invoices::creditNote)
+                .PUT("/api/bil/dfs/{id}/billing-end", invoices::endBilling)
                 .GET("/api/bil/me/subscription", account::mySubscription)
                 .GET("/api/bil/me/usage-alerts", account::myAlerts)
                 .GET("/api/bil/usage-alerts", account::alerts)

@@ -135,6 +135,19 @@
       ]
     },
     {
+      "code": "billing-period-open",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "The month has not ended",
+      "description": "Invoices are issued for calendar months (UTC) that have ended.",
+      "action": "Run the invoices after the month ends.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
       "code": "cannot-change-admin",
       "kind": "problem",
       "status": 409,
@@ -645,6 +658,19 @@
       ]
     },
     {
+      "code": "invalid-credit-reason",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "A credit note needs a reason",
+      "description": "The reason is missing or longer than 500 characters.",
+      "action": "Give a reason of up to 500 characters.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
       "code": "invalid-decision",
       "kind": "problem",
       "status": 400,
@@ -762,6 +788,19 @@
       ]
     },
     {
+      "code": "invalid-month",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "The month is not valid",
+      "description": "The month is not in the form yyyy-MM, for example 2026-10.",
+      "action": "Send the month as yyyy-MM.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
       "code": "invalid-operator",
       "kind": "problem",
       "status": 400,
@@ -808,6 +847,19 @@
       "title": "Plan change request not valid",
       "description": "The request names no plan, the plan the fiduciary already has, or a note that is too long.",
       "action": "Choose a different plan and keep the note short.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "invalid-price",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "The price is not valid",
+      "description": "A monthly price is a whole number of minor units from 0 up to a thousand million.",
+      "action": "Send monthlyMinor as a non-negative whole number.",
       "retryable": false,
       "raisedBy": [
         "cm-bil-svc"
@@ -891,6 +943,45 @@
       "retryable": false,
       "raisedBy": [
         "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "invoice-already-credited",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "The invoice cannot be credited",
+      "description": "The invoice has been credited already, or is a credit note.",
+      "action": "Read the credit note that exists; an invoice is credited once.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "invoice-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Invoice not found",
+      "description": "There is no such invoice for the caller.",
+      "action": "List the invoices and use one of their ids.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "invoice-not-payable",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "The invoice cannot be marked paid",
+      "description": "Only an invoice that is still issued is marked paid.",
+      "action": "Read the invoice: it may be paid or credited already.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
       ]
     },
     {
@@ -1606,6 +1697,19 @@
       "retryable": false,
       "raisedBy": [
         "cm-dsr-svc"
+      ]
+    },
+    {
+      "code": "CM-INVOICE-RUN-FAILED",
+      "kind": "log",
+      "level": "WARN",
+      "category": "operations",
+      "title": "Invoice run failed",
+      "description": "The monthly invoice run for last month failed part way. Invoices already issued stay; it is tried again every hour.",
+      "action": "If it repeats, check the billing database and the plan prices, then run the month by hand from the admin console.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-bil-svc"
       ]
     },
     {

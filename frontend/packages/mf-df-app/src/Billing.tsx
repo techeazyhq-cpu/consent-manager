@@ -17,12 +17,88 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { bil, myBilling, type DfSubStatusResult, type PlnChgReqDto, type SubPln, type UsgAlertDto } from "api-client";
+import { bil, formatMinor, invoices, myBilling, type DfSubStatusResult, type InvoiceDto, type PlnChgReqDto, type SubPln, type UsgAlertDto } from "api-client";
 import { Badge, Button, Card, ErrorBanner, PageHeader, Spinner, UsageMeter, friendlyError, shareUsed } from "ui-kit/src/index";
 import type { Console } from "./console";
 import { fmtDate } from "./labels";
 import { managesTeam } from "./roles";
 import { freshToken } from "./token";
+
+/** An invoice's period as a person reads it: "November 2026". */
+export function periodLabel(inv: Pick<InvoiceDto, "periodFrom">): string {
+  return new Date(inv.periodFrom).toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+/** What an invoice or credit note is called in a list: "Invoice INV-2026-000007" or "Credit note CN-2026-000001". */
+export const invoiceTitle = (inv: Pick<InvoiceDto, "kind" | "number">) =>
+  `${inv.kind === "CREDIT_NOTE" ? "Credit note" : "Invoice"} ${inv.number}`;
+
+/** The fiduciary's invoices and credit notes (ADR-079): read and print; payment is arranged with the platform. */
+function Invoices({ console: c }: { console: Console }) {
+  const [list, setList] = useState<InvoiceDto[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    freshToken(c.auth)
+      .then((token) => invoices.mine(c.gwBase, token))
+      .then(setList)
+      .catch((err) => {
+        setError(friendlyError(err));
+        setList([]);
+      });
+  }, [c.auth, c.gwBase]);
+
+  // the page is fetched with the person's token, so it is opened from the text, not from a link the browser would send without one
+  const open = async (id: string) => {
+    try {
+      const html = await invoices.mineHtml(c.gwBase, await freshToken(c.auth), id);
+      const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+      window.open(url, "_blank", "noopener");
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      setError(friendlyError(err));
+    }
+  };
+
+  if (list === null || (list.length === 0 && !error)) {
+    return list === null ? <Spinner /> : <p className="cm-note">No invoices yet. A paid plan is invoiced after each month ends.</p>;
+  }
+  return (
+    <>
+      {error ? <ErrorBanner message={error} /> : null}
+      <div style={{ overflowX: "auto" }}>
+        <table className="cm-table">
+          <thead>
+            <tr>
+              <th>Document</th>
+              <th>Period</th>
+              <th>Total</th>
+              <th>Status</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((i) => (
+              <tr key={i.id}>
+                <td>{invoiceTitle(i)}</td>
+                <td>{periodLabel(i)}</td>
+                <td>{formatMinor(i.totalMinor, i.currency)}</td>
+                <td>
+                  <Badge status={i.status} />
+                </td>
+                <td>
+                  <button className="df-link-button" onClick={() => open(i.id)}>
+                    View or print
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
 
 /** What the meter says about this month, in words. */
 export function usageNote(s: Pick<DfSubStatusResult, "curPeriodUsg" | "reqPerMonthQta" | "resetsAt">): string {
@@ -262,6 +338,9 @@ export default function Billing({ console: c }: { console: Console }) {
         </table>
       </div>
       {!mayAsk ? <p className="cm-note">An Owner or Administrator asks for another plan.</p> : null}
+
+      <h3 className="cm-section-title">Invoices</h3>
+      <Invoices console={c} />
 
       {past.length ? (
         <>

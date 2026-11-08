@@ -564,6 +564,34 @@ export interface PrpsVer {
 }
 
 /** A purpose with every version, oldest first; requests are made from `currentVer`. */
+/** An invoice or a credit note (ADR-079). Amounts are in minor units of {@code currency}: 1250 is 12.50. */
+export interface InvoiceDto {
+  id: string;
+  number: string;
+  kind: "INVOICE" | "CREDIT_NOTE";
+  fiduciaryId: string;
+  periodFrom: string;
+  periodTo: string;
+  currency: string;
+  subtotalMinor: number;
+  taxLabel: string;
+  taxBps: number;
+  taxMinor: number;
+  totalMinor: number;
+  status: "ISSUED" | "PAID" | "CREDITED";
+  issuedAt: string;
+  paidAt?: string | null;
+  paidNote?: string | null;
+  creditsInvoiceId?: string | null;
+  reason?: string | null;
+  lines: { lineNo: number; description: string; plan: string; from: string; to: string; days: string; amountMinor: number }[];
+}
+
+export interface PlanPriceDto {
+  planName: string;
+  monthlyMinor: number;
+}
+
 /** A processor in a fiduciary's register (ADR-075). */
 export interface ProcessorDto {
   id: string;

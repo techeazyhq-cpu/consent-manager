@@ -55,6 +55,17 @@ public class R2dbcDfSubRepoAdapter implements DfSubRepoPort {
                 .bind("curPeriodFrom", dfSub.curPeriodFrom())
                 .bind("curPeriodTo", dfSub.curPeriodTo())
                 .then()
+                // the plan history the invoices are worked out from (ADR-079): a change of plan ends one stretch and opens another
+                .then(db.sql("update bil.plan_hst set to_at = now() where df_id = :dfId and to_at is null and sub_pln_id <> :subPlnId")
+                        .bind("dfId", dfSub.id()).bind("subPlnId", dfSub.subPlnId()).fetch().rowsUpdated())
+                .then(db.sql("""
+                                insert into bil.plan_hst (df_id, sub_pln_id, from_at)
+                                select :dfId, :subPlnId,
+                                       case when exists (select 1 from bil.plan_hst where df_id = :dfId) then now() else :from end
+                                where not exists (select 1 from bil.plan_hst where df_id = :dfId and to_at is null)
+                                """)
+                        .bind("dfId", dfSub.id()).bind("subPlnId", dfSub.subPlnId()).bind("from", dfSub.curPeriodFrom())
+                        .fetch().rowsUpdated())
                 .thenReturn(dfSub);
     }
 
