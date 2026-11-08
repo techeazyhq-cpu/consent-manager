@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-158 entries: 147 API problems, 10 operational log codes and 1 event.
+159 entries: 148 API problems, 10 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -224,6 +224,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 
 | Code | Status | Title | What it means | What to do | Retry | Raised by |
 |---|---|---|---|---|---|---|
+| `otp-send-limited` | 429 | Too many sign-in codes sent | The notification service has sent as many sign-in codes to this address or number, or by this channel, as it allows in the hour or day, whoever asked. The sign-in is told to wait. | Wait and ask for a code again later; do not retry in a loop. If it is a real person, they can use the code already sent. | yes | ntf |
 | `rate-limit-exceeded` | 429 | Too many requests a second | The fiduciary's plan allows only so many requests a second, and this call went over it. | Wait for the Retry-After interval and slow down, or ask for a plan with a higher rate. | yes | gw |
 | `signup-rate-limited` | 429 | Too many sign-up requests | Too many applications were made from this address or for this contact address, or sign-up is busy today. | Try again later; a person is held to three applications a day for one contact address. | yes | df-reg, gw |
 

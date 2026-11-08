@@ -164,8 +164,20 @@ public class NtfBeanConfig {
     }
 
     @Bean
-    public OtpSendCmdHandler otpSendCmdHandler(NtfDispatchService ntfDispatchService) {
-        return new OtpSendCmdHandler(ntfDispatchService);
+    public OtpSendCmdHandler otpSendCmdHandler(NtfDispatchService ntfDispatchService,
+                                               com.techeazyhq.cm.ntf.dom.OtpSendLedgerPort ledger,
+                                               com.techeazyhq.cm.ntf.app.EmailFingerprint emailFingerprint,
+                                               @Value("${cm.ntf.otp-limits.destination-per-hour:20}") int perDestinationPerHour,
+                                               @Value("${cm.ntf.otp-limits.destination-per-day:40}") int perDestinationPerDay,
+                                               @Value("${cm.ntf.otp-limits.channel-per-hour:1000}") int perChannelPerHour) {
+        return new OtpSendCmdHandler(ntfDispatchService, ledger, emailFingerprint,
+                new com.techeazyhq.cm.ntf.dom.OtpSendLedgerPort.Limits(perDestinationPerHour, perDestinationPerDay, perChannelPerHour));
+    }
+
+    /** What sign-in codes this service has sent, for its own limit on them (ADR-080). */
+    @Bean
+    public com.techeazyhq.cm.ntf.dom.OtpSendLedgerPort otpSendLedgerPort(DatabaseClient db) {
+        return new com.techeazyhq.cm.ntf.infra.R2dbcOtpSendLedgerAdapter(db);
     }
 
     @Bean

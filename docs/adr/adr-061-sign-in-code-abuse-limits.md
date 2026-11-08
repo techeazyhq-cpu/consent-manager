@@ -76,8 +76,8 @@ Limits that hold across sign-ins, realms and Keycloak nodes (`OtpAbuseGuard`), i
 - **Telling the account's owner** that codes were requested or guesses refused for their address.
 - **Device fingerprinting, anomaly detection, CAPTCHA or proof of work**, which the epic names. The limits above remove
   the cheap abuse; whether the rest is worth its cost to honest people should be decided from what the event shows.
-- **A limit in cm-ntf-svc**, which is where the SMS is paid for, and so protects against a caller other than Keycloak.
-  Nothing else calls its `/internal/otp/send` today.
+- ~~**A limit in cm-ntf-svc**~~ Done: [ADR-080](adr-080-otp-send-limit-in-the-notification-service.md) keeps a ledger in the
+  notification service's database that holds whoever asks and survives restarts.
 - **Persistence across a full Keycloak restart.** The cache is in memory; a restart of every node forgets the counts.
   A rolling restart keeps them.
 
