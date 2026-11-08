@@ -18,6 +18,8 @@
 {{- $root := . }}
 {{- range $name, $s := .Values.services }}
 {{- $ctx := dict "root" $root "name" $name }}
+{{- $dbm := mergeOverwrite (deepCopy $root.Values.config.database) ($s.database | default dict) }}
+{{- $dbCa := and $s.schema ($dbm.tls | default dict).caConfigMap }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -92,12 +94,23 @@ spec:
           securityContext: {{- include "cm.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
             - {name: tmp, mountPath: /tmp}
+            {{- if $dbCa }}
+            - {name: db-ca, mountPath: /etc/db-ca, readOnly: true}
+            {{- end }}
             {{- if $s.consentTokenKeys }}
             - {name: cns-tkn-keys, mountPath: /var/lib/cm/keys, readOnly: true}
             {{- end }}
       volumes:
         - name: tmp
           emptyDir: {sizeLimit: 256Mi}
+        {{- if $dbCa }}
+        # the database server's certificate authority (ADR-085), so the connection is to that server and no other
+        - name: db-ca
+          configMap:
+            name: {{ $dbm.tls.caConfigMap }}
+            items:
+              - {key: {{ $dbm.tls.caKey | default "ca-bundle.pem" }}, path: ca-bundle.pem}
+        {{- end }}
         {{- if $s.consentTokenKeys }}
         # the consent token signing keys (ADR-006) and the receipt signing keys (ADR-025), each its own set, from the
         # secret store, never created in the pod

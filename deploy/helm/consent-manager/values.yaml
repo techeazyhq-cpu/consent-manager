@@ -52,6 +52,13 @@ config:
     # (`user`, which then only reads and writes rows). Both default to `user`, as before. A service can set its own under `services.<name>.database`.
     # migrationUser: cm
     # migrationPasswordKey: MIGRATION_DB_PASSWORD
+    # TLS to the server that proves it is the right one (ADR-085). mode: require | verify-ca | verify-full (the last is the one to use);
+    # caConfigMap: a ConfigMap with the server's certificate authority bundle (Amazon RDS's, Azure's, Cloud SQL's), mounted into every
+    # pod that uses the database, key caKey. With a mode set it replaces jdbcParams and r2dbcParams below.
+    tls:
+      mode: ""
+      caConfigMap: ""
+      caKey: ca-bundle.pem
     # appended to every JDBC and R2DBC URL; the common chart's server has no TLS, a cloud's requires it
     # (values-<cloud>.yaml), verify-full with the cloud's CA in production
     jdbcParams: "sslmode=prefer"
