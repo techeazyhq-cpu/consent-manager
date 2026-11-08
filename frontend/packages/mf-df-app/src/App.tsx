@@ -16,13 +16,14 @@
  * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { AuthInfo } from "auth-kit";
-import type { CnsLcySts, DfRole } from "api-client";
+import { leaving, type CnsLcySts, type DfRole, type LeaveStatusDto } from "api-client";
 import { AppShell, ErrorBanner, Icons, PageHeader, useHashRoute, type NavItem } from "ui-kit/src/index";
 import "./console.css";
 import { useConsole } from "./console";
 import { BatchDetail, Batches, SendToMany } from "./Batches";
+import Agreements from "./Agreements";
 import ApiKeys from "./ApiKeys";
 import Webhooks from "./Webhooks";
 import DevDocs from "./DevDocs";
@@ -36,6 +37,8 @@ import Raise from "./Raise";
 import Team from "./Team";
 import { ROLE_LABELS, managesApiKeys, managesTeam, raisesRequests, readsAudit } from "./roles";
 import { parseRoute } from "./routes";
+import { standingNotice } from "./standing";
+import { freshToken } from "./token";
 
 interface Props {
   auth: AuthInfo;
@@ -50,6 +53,14 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
   const c = useConsole(auth, gwBase, dfId, role);
   // a status picked on the dashboard, applied when the requests page opens
   const [statusFilter, setStatusFilter] = useState<CnsLcySts[] | undefined>();
+  // an organisation that is suspended, leaving or closed says so on every page (ADR-064)
+  const [standing, setStanding] = useState<LeaveStatusDto | null>(null);
+  useEffect(() => {
+    freshToken(auth)
+      .then((token) => leaving.status(gwBase, token))
+      .then(setStanding)
+      .catch(() => setStanding(null));
+  }, [auth, gwBase, route.page]);
 
   const items: NavItem[] = [
     { key: "dashboard", href: "#/dashboard", label: "Dashboard", section: "Consent", icon: Icons.dashboard },
@@ -78,6 +89,7 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
     { key: "team", href: "#/team", label: "Team", section: "Organisation", icon: Icons.people },
     { key: "organisation", href: "#/organisation", label: "Organisation", section: "Organisation", icon: Icons.building },
     { key: "billing", href: "#/billing", label: "Billing", section: "Organisation", icon: Icons.card },
+    { key: "agreements", href: "#/agreements", label: "Agreements", section: "Organisation", icon: Icons.shield },
     ...(readsAudit(role)
       ? [{ key: "audit", href: "#/audit", label: "Audit", section: "Organisation", icon: Icons.shield }]
       : []),
@@ -99,6 +111,11 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
       onSignOut={auth.logout}
     >
       {c.error ? <ErrorBanner message={c.error} /> : null}
+      {standingNotice(standing?.sts, standing?.leavesAt) ? (
+        <div className="cm-error-banner" role="status">
+          {standingNotice(standing?.sts, standing?.leavesAt)} {route.page === "agreements" ? null : <a href="#/agreements">Details</a>}
+        </div>
+      ) : null}
       {route.page === "dashboard" ? (
         <Dashboard
           console={c}
@@ -138,6 +155,7 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
       {route.page === "organisation" ? <Organisation console={c} /> : null}
       {route.page === "account" ? <Account console={c} /> : null}
       {route.page === "billing" ? <Billing console={c} /> : null}
+      {route.page === "agreements" ? <Agreements console={c} /> : null}
       {route.page === "audit" ? <Audit console={c} /> : null}
     </AppShell>
   );

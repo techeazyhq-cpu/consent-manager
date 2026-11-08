@@ -43,6 +43,11 @@ import type {
   DfRespDto,
   DfRole,
   ApiKeyDto,
+  DfStandingDto,
+  LeaveStatusDto,
+  LegalHoldDto,
+  TermsAcceptanceDto,
+  TermsStatusDto,
   AudActivityRow,
   IssuedApiKeyDto,
   AudVerifyResult,
@@ -150,12 +155,42 @@ export const dfReg = {
     }),
   activate: (base: string, token: string, id: string) =>
     request<DfRespDto>(base, `/api/df-reg/dfs/${id}/activate`, token, { method: "POST" }),
+  /** Platform staff stopping an active fiduciary, with the reason the team is given (ADR-064). */
+  suspend: (base: string, token: string, id: string, reason: string) =>
+    request<DfStandingDto>(base, `/api/df-reg/dfs/${id}/suspend`, token, { method: "POST", body: JSON.stringify({ reason }) }),
+  resume: (base: string, token: string, id: string) =>
+    request<DfStandingDto>(base, `/api/df-reg/dfs/${id}/resume`, token, { method: "POST" }),
+  /** A legal hold stops the retention purge of a fiduciary's records until released (ADR-064). */
+  placeLegalHold: (base: string, token: string, id: string, reason: string) =>
+    request<LegalHoldDto>(base, `/api/df-reg/dfs/${id}/legal-hold`, token, { method: "PUT", body: JSON.stringify({ reason }) }),
+  releaseLegalHold: (base: string, token: string, id: string) =>
+    request<LegalHoldDto>(base, `/api/df-reg/dfs/${id}/legal-hold`, token, { method: "DELETE" }),
+  /** Platform staff reading a fiduciary's acceptances of the terms, as evidence (ADR-063). */
+  termsEvidence: (base: string, token: string, id: string) =>
+    request<TermsAcceptanceDto[]>(base, `/api/df-reg/dfs/${id}/terms`, token),
   /** Platform staff inviting the first Owner of an active fiduciary that has none (ADR-033). */
   inviteOwner: (base: string, token: string, id: string, body: { email: string; name: string }) =>
     request<DfMemberRespDto>(base, `/api/df-reg/dfs/${id}/members`, token, {
       method: "POST",
       body: JSON.stringify({ ...body, role: "OWNER" }),
     }),
+};
+
+/** The consent manager's terms of service and data processing agreement, for the signed-in member's fiduciary (ADR-063). */
+export const terms = {
+  status: (base: string, token: string) => request<TermsStatusDto[]>(base, "/api/df-reg/me/terms", token),
+  /** Only an Owner accepts, and only the version in force. */
+  accept: (base: string, token: string, document: string, version: string) =>
+    request<TermsAcceptanceDto>(base, "/api/df-reg/me/terms", token, { method: "POST", body: JSON.stringify({ document, version }) }),
+};
+
+/** The signed-in member's own fiduciary leaving the platform (ADR-064). */
+export const leaving = {
+  status: (base: string, token: string) => request<LeaveStatusDto>(base, "/api/df-reg/me/leave", token),
+  /** The Owner confirms by typing the organisation's name. */
+  leave: (base: string, token: string, organisationName: string) =>
+    request<LeaveStatusDto>(base, "/api/df-reg/me/leave", token, { method: "POST", body: JSON.stringify({ organisationName }) }),
+  cancel: (base: string, token: string) => request<LeaveStatusDto>(base, "/api/df-reg/me/leave/cancel", token, { method: "POST" }),
 };
 
 /** The signed-in member's own fiduciary's team (ADR-033). */

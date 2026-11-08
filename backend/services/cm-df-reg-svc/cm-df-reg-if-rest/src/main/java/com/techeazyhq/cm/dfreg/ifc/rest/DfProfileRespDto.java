@@ -44,12 +44,22 @@ public record DfProfileRespDto(
         String cin,
         String gstin,
         String dpoName,
-        String dpoEmail) {
+        String dpoEmail,
+        Instant suspendedAt,
+        String suspensionReason,
+        Instant leavingAt,
+        Instant leavesAt,
+        Instant closedAt,
+        String legalHoldReason,
+        Instant legalHoldAt,
+        Instant purgedAt) {
 
     public static DfProfileRespDto of(Df df) {
         DfPrfl prfl = df.prfl();
         return new DfProfileRespDto(df.id(), df.name(), df.contactEmail(), df.sts(), df.subPlnName(),
                 df.registeredAt(), df.activatedAt(), prfl.legalName(), prfl.contactPhone(), prfl.website(),
-                prfl.registeredAddress(), prfl.industry(), prfl.cin(), prfl.gstin(), prfl.dpoName(), prfl.dpoEmail());
+                prfl.registeredAddress(), prfl.industry(), prfl.cin(), prfl.gstin(), prfl.dpoName(), prfl.dpoEmail(),
+                df.suspendedAt(), df.suspensionReason(), df.leavingAt(), df.leavesAt(), df.closedAt(), df.legalHoldReason(),
+                df.legalHoldAt(), df.purgedAt());
     }
 }

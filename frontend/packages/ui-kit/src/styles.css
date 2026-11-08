@@ -153,6 +153,7 @@ body {
 }
 
 .cm-badge-pending,
+.cm-badge-leaving,
 .cm-badge-open,
 .cm-badge-acknowledged {
   background: rgba(240, 169, 58, 0.18);
@@ -161,6 +162,7 @@ body {
 
 .cm-badge-issued,
 .cm-badge-active,
+.cm-badge-accepted,
 .cm-badge-approved,
 .cm-badge-granted,
 .cm-badge-resolved,
@@ -181,6 +183,7 @@ body {
 }
 
 .cm-badge-expired,
+.cm-badge-closed,
 .cm-badge-withdrawn,
 .cm-badge-paused {
   background: rgba(150, 164, 184, 0.18);
