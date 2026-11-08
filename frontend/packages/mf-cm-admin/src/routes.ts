@@ -20,7 +20,7 @@
 export const TENANT_TABS = ["overview", "subscription", "consents", "team", "audit"] as const;
 export type TenantTab = (typeof TENANT_TABS)[number];
 
-export const BILLING_TABS = ["overview", "requests", "plans"] as const;
+export const BILLING_TABS = ["overview", "requests", "plans", "invoices"] as const;
 export type BillingTab = (typeof BILLING_TABS)[number];
 
 export type Route =

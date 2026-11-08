@@ -17,12 +17,12 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { bil, dfReg, type BilOverviewRow, type PlnChgReqDto, type PlnChgReqSts, type SubPln, type UsgAlertDto } from "api-client";
+import { bil, dfReg, formatMinor, invoices, type BilOverviewRow, type InvoiceDto, type PlanPriceDto, type PlnChgReqDto, type PlnChgReqSts, type SubPln, type UsgAlertDto } from "api-client";
 import { Badge, Button, Card, ErrorBanner, PageHeader, Spinner, UsageMeter, friendlyError, shareUsed } from "ui-kit/src/index";
 import { BILLING_TABS, billingHref, tenantHref, type BillingTab } from "./routes";
 import { freshToken, type Session } from "./session";
 
-const TAB_LABELS: Record<BillingTab, string> = { overview: "Overview", requests: "Plan change requests", plans: "Plans" };
+const TAB_LABELS: Record<BillingTab, string> = { overview: "Overview", requests: "Plan change requests", plans: "Plans", invoices: "Invoices" };
 
 const fmt = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
@@ -368,6 +368,216 @@ function Plans({ session }: { session: Session }) {
 }
 
 /** The platform's billing (ADR-039): every tenant's usage, the plan change requests, and the plans. */
+/** The last month that has ended, as yyyy-MM (UTC): the one invoices are issued for. */
+export function lastMonth(now: Date = new Date()): string {
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** A price typed as major units ("2999.50") in minor units (299950); null when it is not a non-negative amount with at most two decimals. */
+export function parsePrice(text: string): number | null {
+  const t = text.trim();
+  if (!/^\d+(\.\d{1,2})?$/.test(t)) return null;
+  const [whole, frac = ""] = t.split(".");
+  return Number(whole) * 100 + Number(frac.padEnd(2, "0"));
+}
+
+/** Plan prices, the month's invoices, and what staff do with them (ADR-079). Changing anything is for administrators. */
+function Invoices({ session, names }: { session: Session; names: Record<string, string> }) {
+  const [month, setMonth] = useState(lastMonth());
+  const [list, setList] = useState<InvoiceDto[] | null>(null);
+  const [prices, setPrices] = useState<PlanPriceDto[]>([]);
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+
+  const load = async () => {
+    try {
+      const token = await freshToken(session.auth);
+      const [l, p] = await Promise.all([invoices.all(session.gwBase, token, { month }), invoices.prices(session.gwBase, token)]);
+      setList(l);
+      setPrices(p);
+    } catch (err) {
+      setError(friendlyError(err));
+      setList((prev) => prev ?? []);
+    }
+  };
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, month]);
+
+  const run = async (action: (token: string) => Promise<unknown>, done?: string) => {
+    setBusy(true);
+    setError(null);
+    setNote(null);
+    try {
+      await action(await freshToken(session.auth));
+      if (done) setNote(done);
+      await load();
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const download = async () => {
+    try {
+      const blob = await invoices.exportCsv(session.gwBase, await freshToken(session.auth), month);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoices-${month}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(friendlyError(err));
+    }
+  };
+
+  return (
+    <>
+      {error ? <ErrorBanner message={error} /> : null}
+      {note ? <p className="cm-note">{note}</p> : null}
+
+      <h3 className="cm-section-title">Monthly price of each plan</h3>
+      <p className="cm-note">Invoices are worked out from these prices and from which plan each tenant was on, day by day.</p>
+      <div style={{ overflowX: "auto" }}>
+        <table className="cm-table">
+          <thead>
+            <tr>
+              <th>Plan</th>
+              <th>Now</th>
+              <th>New price</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {prices.map((p) => {
+              const typed = draft[p.planName] ?? "";
+              const minor = parsePrice(typed);
+              return (
+                <tr key={p.planName}>
+                  <td>
+                    <strong>{p.planName}</strong>
+                  </td>
+                  <td>{(p.monthlyMinor / 100).toFixed(2)}</td>
+                  <td>
+                    <input
+                      aria-label={`New monthly price of ${p.planName}`}
+                      value={typed}
+                      inputMode="decimal"
+                      placeholder="e.g. 2999.00"
+                      onChange={(e) => setDraft({ ...draft, [p.planName]: e.target.value })}
+                    />
+                  </td>
+                  <td>
+                    <Button
+                      disabled={busy || minor === null}
+                      onClick={() =>
+                        run(async (t) => {
+                          await invoices.setPrice(session.gwBase, t, p.planName, minor as number);
+                          setDraft({ ...draft, [p.planName]: "" });
+                        }, `${p.planName} is now ${(minor as number) / 100} a month, from the next invoice run.`)
+                      }
+                    >
+                      Set
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <h3 className="cm-section-title">Invoices</h3>
+      <div className="cm-toolbar">
+        <label>
+          Month <input type="month" value={month} max={lastMonth()} onChange={(e) => e.target.value && setMonth(e.target.value)} />
+        </label>
+        <Button
+          disabled={busy}
+          onClick={() =>
+            run(async (t) => {
+              const made = await invoices.run(session.gwBase, t, month);
+              setNote(made.length ? `Issued ${made.length} invoice(s) for ${month}.` : `Nothing new to invoice for ${month}.`);
+            })
+          }
+        >
+          Issue this month's invoices
+        </Button>
+        <Button onClick={download}>Download CSV</Button>
+      </div>
+      <p className="cm-note">Months are calendar months in UTC. They are also issued automatically after each month ends.</p>
+
+      {list === null ? (
+        <Spinner />
+      ) : list.length === 0 ? (
+        <p className="cm-note">No invoices for {month}.</p>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table className="cm-table">
+            <thead>
+              <tr>
+                <th>Number</th>
+                <th>Tenant</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((i) => (
+                <tr key={i.id}>
+                  <td>
+                    {i.number}
+                    {i.kind === "CREDIT_NOTE" ? <div className="cm-note" style={{ margin: 0 }}>Credit note: {i.reason}</div> : null}
+                  </td>
+                  <td>
+                    <a href={tenantHref(i.fiduciaryId)}>{names[i.fiduciaryId] ?? i.fiduciaryId}</a>
+                  </td>
+                  <td>{formatMinor(i.totalMinor, i.currency)}</td>
+                  <td>
+                    <Badge status={i.status} />
+                    {i.paidNote ? <div className="cm-note" style={{ margin: 0 }}>{i.paidNote}</div> : null}
+                  </td>
+                  <td>
+                    {i.kind === "INVOICE" && i.status === "ISSUED" ? (
+                      <Button
+                        disabled={busy}
+                        onClick={() => {
+                          const how = window.prompt(`Mark ${i.number} paid. How was it paid (reference)?`, "");
+                          if (how !== null) run((t) => invoices.markPaid(session.gwBase, t, i.id, how));
+                        }}
+                      >
+                        Mark paid
+                      </Button>
+                    ) : null}{" "}
+                    {i.kind === "INVOICE" && i.status !== "CREDITED" ? (
+                      <Button
+                        disabled={busy}
+                        onClick={() => {
+                          const why = window.prompt(`Credit ${i.number} in full. Why?`, "");
+                          if (why) run((t) => invoices.creditNote(session.gwBase, t, i.id, why));
+                        }}
+                      >
+                        Credit
+                      </Button>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function Billing({ session, tab }: { session: Session; tab: BillingTab }) {
   const names = useTenantNames(session);
   return (
@@ -390,6 +600,7 @@ export default function Billing({ session, tab }: { session: Session; tab: Billi
       {tab === "overview" ? <Overview session={session} names={names} /> : null}
       {tab === "requests" ? <Requests session={session} names={names} /> : null}
       {tab === "plans" ? <Plans session={session} /> : null}
+      {tab === "invoices" ? <Invoices session={session} names={names} /> : null}
     </>
   );
 }

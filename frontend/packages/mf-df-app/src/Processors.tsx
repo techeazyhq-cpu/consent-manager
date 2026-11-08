@@ -97,11 +97,19 @@ export default function Processors({ console: c }: { console: Console }) {
           <h3 className="cm-section-title" style={{ marginTop: 0 }}>
             Add a processor
           </h3>
-          <div className="cm-fields">
-            <Field label="Name" value={name} onChange={setName} placeholder="e.g. Courier Ltd" />
-            <Field label="What it does with the data" value={role} onChange={setRole} placeholder="Delivers your orders" />
-            <Field label="Country (two letters)" value={country} onChange={setCountry} placeholder="IN" />
-            <Field label="Contact email" value={contact} onChange={setContact} placeholder="privacy@courier.example" />
+          <div className="cm-form-grid">
+            <Field label="Name">
+              <input value={name} maxLength={200} onChange={(e) => setName(e.target.value)} placeholder="e.g. Courier Ltd" />
+            </Field>
+            <Field label="What it does with the data">
+              <input value={role} maxLength={500} onChange={(e) => setRole(e.target.value)} placeholder="Delivers your orders" />
+            </Field>
+            <Field label="Country (two letters)">
+              <input value={country} maxLength={2} onChange={(e) => setCountry(e.target.value)} placeholder="IN" />
+            </Field>
+            <Field label="Contact email">
+              <input type="email" value={contact} maxLength={254} onChange={(e) => setContact(e.target.value)} placeholder="privacy@courier.example" />
+            </Field>
           </div>
           <Button variant="primary" disabled={busy || name.trim() === ""} onClick={add}>
             Add

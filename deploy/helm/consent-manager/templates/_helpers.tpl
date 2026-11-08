@@ -86,6 +86,12 @@ capabilities: {drop: [ALL]}
   {{- include "cm.secretRef" (dict "root" $root "key" "DFREG_SECRETS_KEY") | nindent 2 }}
 - {name: CM_KEYCLOAK_TOKENHOST, value: ""}
 {{- end }}
+{{- if eq $name "cm-bil-svc" }}
+# what invoices are issued in (ADR-079)
+- {name: CM_BIL_CURRENCY, value: {{ $c.billing.currency | quote }}}
+- {name: CM_BIL_TAX_LABEL, value: {{ $c.billing.taxLabel | quote }}}
+- {name: CM_BIL_TAX_BPS, value: {{ $c.billing.taxBps | quote }}}
+{{- end }}
 {{- if eq $name "cm-cns-cmd-svc" }}
 # the address consent tokens name for their status list (ADR-077)
 - {name: CM_CNS_TKN_STATUS_LIST_BASE_URL, value: {{ printf "https://%s" $root.Values.ingress.apiHost | quote }}}

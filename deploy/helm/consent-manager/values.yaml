@@ -52,6 +52,11 @@ config:
     # (values-<cloud>.yaml), verify-full with the cloud's CA in production
     jdbcParams: "sslmode=prefer"
     r2dbcParams: "sslMode=prefer"
+  # Invoices (ADR-079): one currency for the platform (ISO 4217), and one tax rate in basis points (1800 is 18%) shown as its own line.
+  billing:
+    currency: INR
+    taxLabel: Tax
+    taxBps: 0
   redis:
     host: redis.common.svc.cluster.local
     port: 6379

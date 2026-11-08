@@ -68,6 +68,8 @@ import type {
   PrpsChange,
   PrpsContent,
   PrpsDefDto,
+  InvoiceDto,
+  PlanPriceDto,
   ProcessorDto,
   ProcessorUseDto,
   PrpsSummaryDto,
@@ -361,6 +363,50 @@ export const prps = {
     request<PrpsChange>(base, `/api/cns-cmd/prps-defs/${encodeURIComponent(code)}/draft/change`, token),
   publish: (base: string, token: string, code: string) =>
     request<PrpsDefDto>(base, `/api/cns-cmd/prps-defs/${encodeURIComponent(code)}/publish`, token, { method: "POST" }),
+};
+
+/** Money in minor units as a person reads it: 1250 INR is shown as 12.50 with the currency's own symbol where the locale knows it. */
+export function formatMinor(minor: number, currency: string, locale?: string): string {
+  try {
+    return new Intl.NumberFormat(locale, { style: "currency", currency }).format(minor / 100);
+  } catch {
+    return `${(minor / 100).toFixed(2)} ${currency}`;
+  }
+}
+
+const inv = (path: string) => `/api/bil${path}`;
+
+/** Invoices (ADR-079). A fiduciary reads its own; platform staff read everyone's, and administrators run the month, mark paid and credit. */
+export const invoices = {
+  mine: (base: string, token: string) => request<InvoiceDto[]>(base, inv("/me/invoices"), token),
+  /** The printable page of one of the caller's invoices, as HTML text. */
+  mineHtml: async (base: string, token: string, id: string) => {
+    const res = await fetch(`${base}${inv(`/me/invoices/${encodeURIComponent(id)}/html`)}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
+    return res.text();
+  },
+  all: (base: string, token: string, filter: { df?: string; month?: string } = {}) => {
+    const q = new URLSearchParams();
+    if (filter.df) q.set("df", filter.df);
+    if (filter.month) q.set("month", filter.month);
+    return request<InvoiceDto[]>(base, inv(`/invoices?${q}`), token);
+  },
+  /** Issues the invoices of a month that has ended; returns the ones newly issued. */
+  run: (base: string, token: string, month: string) =>
+    request<InvoiceDto[]>(base, inv(`/invoices/run?month=${encodeURIComponent(month)}`), token, { method: "POST" }),
+  markPaid: (base: string, token: string, id: string, note: string) =>
+    request<InvoiceDto>(base, inv(`/invoices/${encodeURIComponent(id)}/paid`), token, { method: "POST", body: JSON.stringify({ note }) }),
+  creditNote: (base: string, token: string, id: string, reason: string) =>
+    request<InvoiceDto>(base, inv(`/invoices/${encodeURIComponent(id)}/credit-note`), token, { method: "POST", body: JSON.stringify({ reason }) }),
+  prices: (base: string, token: string) => request<PlanPriceDto[]>(base, inv("/plan-prices"), token),
+  setPrice: (base: string, token: string, planName: string, monthlyMinor: number) =>
+    request<PlanPriceDto>(base, inv(`/plan-prices/${encodeURIComponent(planName)}`), token, { method: "PUT", body: JSON.stringify({ monthlyMinor }) }),
+  /** The accounting export of a month (or all) as CSV. */
+  exportCsv: async (base: string, token: string, month?: string) => {
+    const res = await fetch(`${base}${inv(`/invoices/export${month ? `?month=${encodeURIComponent(month)}` : ""}`)}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
+    return res.blob();
+  },
 };
 
 const proc = (path: string) => `/api/cns-cmd/processors${path}`;

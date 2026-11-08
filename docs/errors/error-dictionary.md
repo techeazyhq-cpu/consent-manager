@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-150 entries: 140 API problems, 9 operational log codes and 1 event.
+158 entries: 147 API problems, 10 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -52,6 +52,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `invalid-batch` | 400 | Batch not valid | The batch request was refused. The detail says why. | Correct the batch as the detail says. | no | cns-cmd |
 | `invalid-change` | 400 | Change not valid | The change to the consent or purpose was refused. The detail says why. | Correct the change as the detail says. | no | cns-cmd |
 | `invalid-count` | 400 | Count out of range | The number of requests to reserve or release must be from 1 to 100,000. | Send a count in range. | no | bil |
+| `invalid-credit-reason` | 400 | A credit note needs a reason | The reason is missing or longer than 500 characters. | Give a reason of up to 500 characters. | no | bil |
 | `invalid-decision` | 400 | Decision not valid | A decline needs a reason, or the note was too long. | Say why the request is declined, in the note. | no | bil |
 | `invalid-df-id` | 400 | Fiduciary id not valid | A fiduciary id must be a UUID. | Use the id as given by the platform. | no | df-reg |
 | `invalid-df-profile` | 400 | Fiduciary profile not valid | A field of the fiduciary's profile was refused. The detail names it. | Correct the profile field named in the detail. | no | df-reg |
@@ -61,10 +62,12 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `invalid-list` | 400 | Recipient list not valid | The recipient list could not be read. The detail says why. | Correct the list as the detail says. | no | cns-cmd |
 | `invalid-logo` | 400 | Logo not valid | The logo is not a supported image. | Upload a PNG, JPEG or SVG logo. | no | df-reg |
 | `invalid-member` | 400 | Team member not valid | A required field of the new member is missing or not valid. The detail names it. | Correct the field named in the detail. | no | df-reg |
+| `invalid-month` | 400 | The month is not valid | The month is not in the form yyyy-MM, for example 2026-10. | Send the month as yyyy-MM. | no | bil |
 | `invalid-operator` | 400 | Operator not valid | A required field of the new operator is missing or not valid. | Correct the field named in the detail. | no | stf |
 | `invalid-parameter` | 400 | Parameter not valid | A query parameter has the wrong form. The detail names it. | Correct the parameter. | no | cns-cmd |
 | `invalid-period` | 400 | Month not valid | A month is written like 2026-11. | Use that form. | no | bil |
 | `invalid-plan-change-request` | 400 | Plan change request not valid | The request names no plan, the plan the fiduciary already has, or a note that is too long. | Choose a different plan and keep the note short. | no | bil |
+| `invalid-price` | 400 | The price is not valid | A monthly price is a whole number of minor units from 0 up to a thousand million. | Send monthlyMinor as a non-negative whole number. | no | bil |
 | `invalid-processor` | 400 | Processor is not valid | The name, role, country or contact of the processor is missing or malformed. | Give a name of up to 200 characters, a role of up to 500, a two-letter ISO country code and an email address for the contact. | no | cns-cmd |
 | `invalid-purpose` | 400 | Purpose not valid | The purpose or its content was refused. The detail names what is wrong. | Correct what the detail names. | no | cns-cmd |
 | `invalid-request` | 400 | Request not valid | The request is missing something it needs, or a value is not valid. The detail says which. | Correct the request as the detail says. | no | cns-cmd, df-reg |
@@ -138,6 +141,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `dp-request-not-found` | 404 | Request not found | No request with that id is visible to the caller. | Check the id. | no | dsr |
 | `draft-not-found` | 404 | Draft not found | The purpose has no draft. | Draft a change first. | no | cns-cmd |
 | `erasure-not-found` | 404 | Erasure not found | No erasure with that id exists. | List the erasures and use an id from it. | no | dsr |
+| `invoice-not-found` | 404 | Invoice not found | There is no such invoice for the caller. | List the invoices and use one of their ids. | no | bil |
 | `leave-proposal-not-found` | 404 | Proposal not found | There is no such proposal. | Check the proposal id. | no | df-reg |
 | `member-not-found` | 404 | Team member not found | No member with that id belongs to this fiduciary. | List the team and use an id from it. | no | df-reg |
 | `plan-change-request-not-found` | 404 | Plan change request not found | No plan change request with that id is visible to the caller. | List the requests and use an id from the list. | no | bil |
@@ -175,6 +179,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | Code | Status | Title | What it means | What to do | Retry | Raised by |
 |---|---|---|---|---|---|---|
 | `api-key-revoked` | 409 | API key already revoked | The key was revoked earlier, and a revoked key cannot be changed or used. | Issue a new key if one is needed. | no | df-reg |
+| `billing-period-open` | 409 | The month has not ended | Invoices are issued for calendar months (UTC) that have ended. | Run the invoices after the month ends. | no | bil |
 | `cns-art-expired` | 409 | Consent has lapsed | The consent's validity ended. | Ask for consent again. | no | cns-cmd |
 | `cns-art-not-active` | 409 | Consent is not active | The consent has been withdrawn or has lapsed, so its token cannot be refreshed. | Ask for consent again. | no | cns-cmd |
 | `cns-art-not-in-force` | 409 | Consent is not in force | The consent is not in force, so it cannot be changed. | Read the consent's state first. | no | cns-cmd |
@@ -197,6 +202,8 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `email-not-available` | 409 | No email address to use | Email notifications go to the address the person signed in with. They signed in with a mobile number, so there is none. | Leave email off, or sign in with an email address. | no | ntf |
 | `erasure-not-stuck` | 409 | Erasure is not stuck | Only a stuck erasure can be retried. | Read its state first. | no | dsr |
 | `export-unavailable` | 409 | Export not available now | The organisation's data can be exported while it is active, suspended or leaving. Once it has closed its team and keys are gone and the records are kept only for their retention. | Take the export during the wind-down. | no | df-reg |
+| `invoice-already-credited` | 409 | The invoice cannot be credited | The invoice has been credited already, or is a credit note. | Read the credit note that exists; an invoice is credited once. | no | bil |
+| `invoice-not-payable` | 409 | The invoice cannot be marked paid | Only an invoice that is still issued is marked paid. | Read the invoice: it may be paid or credited already. | no | bil |
 | `leave-cancel-used` | 409 | Departure already cancelled once | A departure can be called off once, and this fiduciary has already used that. | The wind-down continues. Contact the consent manager's support if this is a mistake. | no | df-reg |
 | `leave-proposal-decided` | 409 | Proposal already decided | The proposal was already approved, rejected or withdrawn. | Nothing more to do; propose again if it is still wanted. | no | df-reg |
 | `no-draft` | 409 | No draft to publish | The purpose has no draft, so there is nothing to publish. | Draft a change first. | no | cns-cmd |
@@ -248,6 +255,7 @@ Written as `[CODE]` at the start of a WARN or ERROR message, for alerts and runb
 | `CM-ERASURE-STUCK` | ERROR | Account erasure stuck | An account erasure gave up on a step after eight attempts and stopped. Part of the person's data is erased and part is not. | Find the cause for the step named in the message and retry it in CM Admin; see docs/runbooks/erasure.md. | dsr |
 | `CM-ERRDICT-UNLISTED` | ERROR | Problem missing from the error dictionary | A service answered a problem whose code is not in the error dictionary, so it got a title made from its name. CI should have refused it. | Add the code to cm-error-dictionary.json and run node scripts/error-dictionary.mjs --write. | aud, bil, cns-cmd, cns-qry, df-reg, dsr, gw, ntf, stf |
 | `CM-INTERNAL-ERROR` | ERROR | Unexpected error ended a request | An exception nobody planned for ended a request. The caller was answered with internal-error and the correlation id; the exception and its stack trace are in this log message. | Find the log line by the correlation id the caller quotes, and fix the cause. A burst of them is an incident. | aud, bil, cns-cmd, cns-qry, df-reg, dsr, gw, ntf, stf |
+| `CM-INVOICE-RUN-FAILED` | WARN | Invoice run failed | The monthly invoice run for last month failed part way. Invoices already issued stay; it is tried again every hour. | If it repeats, check the billing database and the plan prices, then run the month by hand from the admin console. | bil |
 | `CM-OTP-LIMITS-EXEMPT` | WARN | Sign-in code limit lifted for some addresses | Keycloak started with addresses exempt from the limit on sign-in codes sent to one address (ADR-061). That is for the local stack, where a test kit signs in as the same accounts many times an hour. | In production this is a misconfiguration: remove spi-authenticator-cm-otp-authenticator-exempt-addresses from Keycloak's settings and restart it. | idn-otp-spi |
 | `CM-OUTBOX-RELAY-FAILED` | WARN | Outbox relay pass failed | The service could not publish waiting events to Pulsar in one pass. They stay in the outbox and are sent on the next pass. | If it repeats, check that Pulsar is reachable and the service's database is healthy; events are not lost. | bil, dsr, df-reg, cns-cmd |
 | `CM-USAGE-ALERT-FAILED` | WARN | Usage alert check failed | The usage alert sweep could not check one fiduciary, or the whole pass failed. It is tried again every minute. | If it repeats, check Redis and the billing database. | bil |
