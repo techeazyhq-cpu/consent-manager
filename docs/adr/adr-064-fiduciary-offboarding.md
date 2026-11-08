@@ -137,7 +137,12 @@ id; its old records are not reattached. The registration numbers are kept, so st
    cm-bil-svc (D3) and its usage counters; the Redis cache entries of purged consents (they expire); the sandbox copy.
    The retention period is one setting for all records of all cells: a cell with a different statutory period needs it
    made per cell. 7 years is a default to be confirmed with counsel, as the ADR says above.
-5. The export, staff-initiated ending with two-person approval, and the screens and runbook: not yet.
+5. **Screens and runbook** (done): the DF Console has an *Agreements* page (each document's version and acceptance, and
+   for the Owner Accept; leaving by typing the organisation's name, and cancelling once) and a banner on every page while
+   the organisation is suspended, leaving or closed. CM Admin's tenant page has a *Standing* card (suspend with a reason,
+   resume, place or release a legal hold) and the dashboard filters by the new standings. The
+   [offboarding runbook](../runbooks/offboarding.md) covers each state, the two failure log codes and the checks.
+6. The export, and staff-initiated ending with two-person approval: not yet.
 
 ## What the owner needs to decide
 

@@ -23,7 +23,7 @@ import DfLogo from "./DfLogo";
 import { tenantHref } from "./routes";
 import { freshToken, type Session } from "./session";
 
-type Filter = "ALL" | "ACTIVE" | "PENDING";
+type Filter = "ALL" | "ACTIVE" | "PENDING" | "SUSPENDED" | "LEAVING" | "CLOSED";
 
 /** Every data fiduciary as a logo tile; a tile opens everything about that tenant. */
 export default function Dashboard({ session }: { session: Session }) {
@@ -77,6 +77,10 @@ export default function Dashboard({ session }: { session: Session }) {
           <b>{dfs ? count("PENDING") : "–"}</b>
           <span>Awaiting activation</span>
         </div>
+        <div className="cm-stat">
+          <b>{dfs ? count("SUSPENDED") + count("LEAVING") : "–"}</b>
+          <span>Suspended or leaving</span>
+        </div>
       </div>
 
       <div className="cm-toolbar">
@@ -91,6 +95,9 @@ export default function Dashboard({ session }: { session: Session }) {
           <option value="ALL">All tenants</option>
           <option value="ACTIVE">Active</option>
           <option value="PENDING">Awaiting activation</option>
+          <option value="SUSPENDED">Suspended</option>
+          <option value="LEAVING">Leaving</option>
+          <option value="CLOSED">Closed</option>
         </select>
         <Button onClick={load}>Refresh</Button>
         <a className="cm-btn cm-btn-primary" href="#/onboard" style={{ textDecoration: "none" }}>

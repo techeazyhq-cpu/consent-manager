@@ -23,7 +23,8 @@ export type ExtDpRefTyp = "EMAIL" | "PHONE";
 export type CnsReqSts = "PENDING" | "GRANTED" | "DENIED" | "EXPIRED" | "NOTIFICATION_FAILED";
 export type CnsArtSts = "ISSUED" | "REVOKED" | "EXPIRED";
 export type CnsLcySts = "PENDING" | "DENIED" | "ISSUED" | "REVOKED" | "NOTIFICATION_FAILED" | "EXPIRED";
-export type DfSts = "PENDING" | "ACTIVE";
+/** A fiduciary's standing (ADR-064): SUSPENDED by staff, LEAVING through a wind-down, CLOSED for good. */
+export type DfSts = "PENDING" | "ACTIVE" | "SUSPENDED" | "LEAVING" | "CLOSED";
 export type DfSubSts = "ACTIVE" | "SUSPENDED";
 
 /**
@@ -63,6 +64,13 @@ export interface DfListItemRespDto {
   industry?: string | null;
   /** The plan chosen at onboarding; null means FREE. */
   subPlnName?: string | null;
+  suspendedAt?: string | null;
+  suspensionReason?: string | null;
+  /** When the wind-down ends and the fiduciary closes. */
+  leavesAt?: string | null;
+  closedAt?: string | null;
+  legalHoldReason?: string | null;
+  purgedAt?: string | null;
 }
 
 /** What onboarding asks for; everything after the plan is the organisation's profile, all optional. */
@@ -98,6 +106,14 @@ export interface DfProfileRespDto {
   gstin: string | null;
   dpoName: string | null;
   dpoEmail: string | null;
+  suspendedAt: string | null;
+  suspensionReason: string | null;
+  leavingAt: string | null;
+  leavesAt: string | null;
+  closedAt: string | null;
+  legalHoldReason: string | null;
+  legalHoldAt: string | null;
+  purgedAt: string | null;
 }
 
 /** A tenant's consent requests by lifecycle status, for CM Admin (counts only). */
@@ -662,4 +678,47 @@ export interface UsgAlertDto {
   quota: number;
   planName: string;
   raisedAt: string;
+}
+
+/** One of the consent manager's own documents a fiduciary accepts (ADR-063). */
+export type TermsDocument = "terms" | "dpa";
+
+export interface TermsAcceptanceDto {
+  id: string;
+  document: TermsDocument;
+  version: string;
+  acceptedBy: string;
+  acceptedAt: string;
+}
+
+/** A document's version in force and whether the signed-in member's fiduciary accepted it. */
+export interface TermsStatusDto {
+  document: TermsDocument;
+  currentVersion: string;
+  accepted: boolean;
+  acceptance: TermsAcceptanceDto | null;
+}
+
+/** Where the fiduciary's departure stands (ADR-064). */
+export interface LeaveStatusDto {
+  id: string;
+  sts: DfSts;
+  leavingAt: string | null;
+  leavesAt: string | null;
+  /** A departure can be called off once. */
+  canCancel: boolean;
+}
+
+/** The answer to suspending or resuming a fiduciary. */
+export interface DfStandingDto {
+  id: string;
+  sts: DfSts;
+  suspendedAt: string | null;
+  suspensionReason: string | null;
+}
+
+export interface LegalHoldDto {
+  id: string;
+  legalHoldReason: string | null;
+  legalHoldAt: string | null;
 }

@@ -36,6 +36,7 @@ import { PendingRequest } from "./Billing";
 import DfLogo, { forgetLogo } from "./DfLogo";
 import { checkLogo } from "./logo";
 import { TENANT_TABS, tenantHref, type TenantTab } from "./routes";
+import { canResume, canSuspend, standingLine } from "./standing";
 import { takeNotice, takeSecret } from "./secrets";
 import { freshToken, type Session } from "./session";
 
@@ -139,6 +140,7 @@ export default function TenantDetail({ session, dfId, tab }: { session: Session;
             if (s) setSecret(s);
             load();
           }}
+          onChanged={load}
           onLogo={() => {
             forgetLogo(df.id);
             setLogoVersion((v) => v + 1);
@@ -158,11 +160,13 @@ function Overview({
   df,
   onActivated,
   onLogo,
+  onChanged,
 }: {
   session: Session;
   df: DfProfileRespDto;
   onActivated: (secret?: string) => void;
   onLogo: () => void;
+  onChanged: () => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -215,6 +219,8 @@ function Overview({
           </Button>
         </Card>
       ) : null}
+
+      <Standing session={session} df={df} onChanged={onChanged} />
 
       <Card>
         <dl className="cm-fields">
@@ -556,6 +562,101 @@ function Team({ session, df }: { session: Session; df: DfProfileRespDto }) {
           </form>
         </Card>
       )}
+    </>
+  );
+}
+
+/**
+ * A tenant's standing (ADR-064): suspend it with a reason the team is given, resume it, and place or release a legal hold
+ * that stops its records being purged. Leaving and closing are the tenant's own doing and happen on a timer, so are only
+ * shown here.
+ */
+function Standing({ session, df, onChanged }: { session: Session; df: DfProfileRespDto; onChanged: () => void }) {
+  const [reason, setReason] = useState("");
+  const [holdReason, setHoldReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (action: (token: string) => Promise<unknown>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await action(await freshToken(session.auth));
+      setReason("");
+      setHoldReason("");
+      onChanged();
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (df.sts === "PENDING") return null;
+  const held = !!df.legalHoldReason;
+
+  return (
+    <>
+      <h3 className="cm-section-title">Standing</h3>
+      <Card style={{ marginBottom: 16 }}>
+        {error ? <ErrorBanner message={error} /> : null}
+        <p>
+          <Badge status={df.sts} /> {standingLine(df)}
+        </p>
+        {canSuspend(df.sts) ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (window.confirm(`Suspend ${df.name}? Its API keys stop working and it can't raise consent requests until resumed.`)) {
+                run((t) => dfReg.suspend(session.gwBase, t, df.id, reason.trim()));
+              }
+            }}
+          >
+            <Field label="Reason for suspending (shown to the tenant's team and kept in the audit trail)">
+              <input value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
+            </Field>
+            <Button type="submit" variant="danger" disabled={busy || !reason.trim()}>
+              Suspend
+            </Button>
+          </form>
+        ) : null}
+        {canResume(df.sts) ? (
+          <Button variant="primary" disabled={busy} onClick={() => run((t) => dfReg.resume(session.gwBase, t, df.id))}>
+            Resume
+          </Button>
+        ) : null}
+        {df.sts === "LEAVING" ? (
+          <p className="cm-note">The tenant's Owner asked to leave. It closes on {fmtDate(df.leavesAt)} without anyone's action.</p>
+        ) : null}
+
+        {(df.sts === "CLOSED" && !df.purgedAt) || df.sts === "LEAVING" || held ? (
+          <div style={{ marginTop: 16 }}>
+            <strong>Legal hold</strong>
+            {held ? (
+              <>
+                <p className="cm-note">
+                  Held since {fmtDate(df.legalHoldAt)}: {df.legalHoldReason}. Nothing of this tenant is purged while it is held.
+                </p>
+                <Button disabled={busy} onClick={() => run((t) => dfReg.releaseLegalHold(session.gwBase, t, df.id))}>
+                  Release the hold
+                </Button>
+              </>
+            ) : (
+              <>
+                <p className="cm-note">
+                  A closed tenant's records are deleted when their retention ends. A hold stops that until it is released.
+                </p>
+                <Field label="Reason for the hold (a case or order reference)">
+                  <input value={holdReason} maxLength={500} onChange={(e) => setHoldReason(e.target.value)} />
+                </Field>
+                <Button disabled={busy || !holdReason.trim()} onClick={() => run((t) => dfReg.placeLegalHold(session.gwBase, t, df.id, holdReason.trim()))}>
+                  Place a legal hold
+                </Button>
+              </>
+            )}
+          </div>
+        ) : null}
+      </Card>
     </>
   );
 }
