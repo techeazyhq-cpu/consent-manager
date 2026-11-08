@@ -88,6 +88,7 @@ public class CnsCmdRouterConfig {
         DpLinkHandler dpLinkHandler = new DpLinkHandler(linkDpHandler);
         DfClosureHttpHandler dfClosure = new DfClosureHttpHandler(closeDfConsents);
         DfPurgeHttpHandler dfPurge = new DfPurgeHttpHandler(purgeDfRecords);
+        DfExportHttpHandler dfExport = new DfExportHttpHandler(cnsRecords);
         CnsReqBatchHttpHandler batches = new CnsReqBatchHttpHandler(submitBatchHandler, batchQueries);
         PrpsDefHttpHandler purposes = new PrpsDefHttpHandler(prpsDefCmds);
         CnsRecHttpHandler recs = new CnsRecHttpHandler(cnsRecords);
@@ -142,6 +143,7 @@ public class CnsCmdRouterConfig {
                 .GET("/internal/cns-arts/{id}/status", cnsArtHandler::liveStatus)
                 .POST("/internal/dfs/{id}/close-consents", dfClosure::closeConsents)
                 .POST("/internal/dfs/{id}/purge", dfPurge::purge)
+                .GET("/internal/dfs/{id}/export", dfExport::export)
                 .POST("/api/cns-cmd/dp-links", dpLinkHandler::link)
                 .GET(JWKS_PATH, request -> ServerResponse.ok()
                         .contentType(MediaType.parseMediaType("application/jwk-set+json"))

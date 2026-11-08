@@ -114,6 +114,53 @@ public class CnsRecords {
                 });
     }
 
+    /**
+     * A fiduciary's own data in the Consent context, for the export it can take when leaving (ADR-064): its consent records
+     * as 27560 documents with their receipts, and its purposes with every version. At most {@code limit} records;
+     * {@code truncated} says when there were more.
+     */
+    public Mono<Map<String, Object>> exportForDf(String dfId, int limit) {
+        int cap = Math.max(1, Math.min(limit, 100_000));
+        return recs.findByDf(dfId, cap + 1).collectList().flatMap(all -> {
+            boolean truncated = all.size() > cap;
+            // the fiduciary's name and each purpose version are looked up once, not once per record
+            Mono<java.util.Optional<String>> name = dfNames.nameOf(dfId).map(java.util.Optional::of).onErrorResume(e -> Mono.empty())
+                    .defaultIfEmpty(java.util.Optional.empty()).cache();
+            java.util.Map<String, Mono<java.util.Optional<PrpsVer>>> versions = new java.util.concurrent.ConcurrentHashMap<>();
+            return Flux.fromIterable(truncated ? all.subList(0, cap) : all)
+                    .flatMapSequential(rec -> Mono.zip(
+                                    rec.prpsVer() == null ? Mono.just(java.util.Optional.<PrpsVer>empty())
+                                            : versions.computeIfAbsent(rec.prpsVer().prpsVerId(), id -> prpsDefs.findVersion(id)
+                                                    .map(java.util.Optional::of).defaultIfEmpty(java.util.Optional.empty()).cache()),
+                                    name, receipts(rec).map(CnsRecords::receiptView).collectList())
+                            .map(t -> {
+                                Map<String, Object> doc = CnsRecDoc.render(rec, t.getT1().orElse(null), t.getT2().orElse(null), platform);
+                                Map<String, Object> entry = new LinkedHashMap<>();
+                                entry.put("record", doc);
+                                entry.put("receipts", t.getT3());
+                                return entry;
+                            }), 8)
+                    .collectList()
+                    .flatMap(items -> prpsDefs.listByDf(dfId).map(def -> {
+                        Map<String, Object> m = new LinkedHashMap<>();
+                        m.put("code", def.code());
+                        m.put("createdAt", def.createdAt().toString());
+                        m.put("versions", def.versions());
+                        return m;
+                    }).collectList().map(purposes -> {
+                        Map<String, Object> consents = new LinkedHashMap<>();
+                        consents.put("count", items.size());
+                        consents.put("truncated", truncated);
+                        consents.put("items", items);
+                        Map<String, Object> out = new LinkedHashMap<>();
+                        out.put("consents", consents);
+                        out.put("purposes", purposes);
+                        out.put("receiptKeys", "/api/cns-cmd/.well-known/receipt-jwks.json");
+                        return out;
+                    }));
+        });
+    }
+
     public static Map<String, Object> receiptView(CnsRcpt r) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("receiptId", r.id());

@@ -149,7 +149,17 @@ id; its old records are not reattached. The registration numbers are kept, so st
    departure off by staff (`.../cancel-end-contract`) takes the same two people, and does not depend on or use the Owner's
    one cancellation. The team is emailed with the reason, and every step is audited with who proposed and who approved. In CM
    Admin it is the *Ending the contract* card on the tenant page.
-7. The one-file export of a leaving tenant's own data: not yet.
+7. **Export** (done, with a limit): `GET /api/df-reg/me/export`, for an Owner or Administrator while the organisation is
+   active, suspended or leaving, returns one JSON file (`cm:FiduciaryExport`): the profile and standing, the team, the API
+   keys by prefix only (no key, signing secret, hash or client secret is ever in it), acceptances of the terms, the purposes
+   with every version, the consent records as ISO/IEC TS 27560 documents with their signed receipts, and the audit
+   entries with their payloads. df-reg assembles it from cm-cns-cmd-svc and cm-aud-svc (`GET /internal/dfs/{id}/export`).
+   Taking one is audited (`tenant.exported`). It is refused once the organisation has closed (`export-unavailable`).
+   *The limit:* the consent records and audit entries are each capped at 5,000, and the file says `truncated: true` when it
+   was cut; a larger organisation has to ask the platform for the rest. Building it takes about thirty seconds at the cap
+   (the receipts and events are read per record), so it has its own gateway route, `df-reg-export`, with its own circuit
+   breaker and a 120 s limit, rather than the 10 s every other call has. The honest fix for large organisations is an
+   asynchronous export that is built in the background and downloaded when ready; it is not built.
 
 ## What the owner needs to decide
 

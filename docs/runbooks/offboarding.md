@@ -54,6 +54,19 @@ with the cause below it. The usual causes and fixes:
 
 Every step can be repeated, so retrying is safe. You do not need to repair anything by hand.
 
+## A tenant asks for its data
+
+An Owner or Administrator takes it themselves, in the DF Console under **Agreements**, **Download your data**: one JSON
+file with the profile, team, API key list (never the keys), purposes, consent records with receipts and audit entries.
+They can do it while the tenant is active, suspended or leaving, and each export is in the audit trail
+(`tenant.exported`). It is refused once the tenant has closed.
+
+It is capped at 5,000 consent records and 5,000 audit entries, and the file says `truncated: true` for a section that was
+cut. A bigger tenant needs the rest from the platform (the services' `GET /internal/dfs/{id}/export` take a `limit`).
+The export takes up to about a minute for a large tenant and runs on its own gateway route (`df-reg-export`, 120 s) so
+that it cannot open the circuit for everything else; if it fails with `dependency-unavailable`, that route's breaker is the
+one that opened.
+
 ## Retention and the purge
 
 A `CLOSED` tenant's records are deleted by an hourly job (`cm.dfreg.retention.*`) once they are older than
@@ -86,7 +99,7 @@ whole tenant; holding a single principal's records is not built.
 
 ## Not built yet (so do it by hand, carefully, or wait)
 
-- One export of everything a leaving tenant has (today: its consent records, receipts and audit entries come from their
-  own pages and APIs).
+- An asynchronous export for large tenants: the one that exists is capped at 5,000 consent records and 5,000 audit
+  entries, and says when it was cut.
 - Removal of the tenant's Keycloak API client and webhook endpoints at closing, and its sandbox copy.
 - The 8-year retention of invoices and usage in billing.

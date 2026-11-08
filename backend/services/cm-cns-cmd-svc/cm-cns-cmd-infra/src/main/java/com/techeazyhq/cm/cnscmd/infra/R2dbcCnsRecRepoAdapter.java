@@ -144,6 +144,15 @@ public class R2dbcCnsRecRepoAdapter implements CnsRecRepoPort {
                 .concatMap(this::withEvents);
     }
 
+    @Override
+    public Flux<CnsRec> findByDf(String dfId, int limit) {
+        return db.sql("select * from cns_cmd.cns_rec where df_id = :dfId order by created_at desc limit :limit")
+                .bind("dfId", dfId).bind("limit", limit)
+                .map((row, meta) -> header(row))
+                .all()
+                .concatMap(this::withEvents);
+    }
+
     /** The oldest events still waiting for a receipt, from the queue (V7), which holds only those. */
     @Override
     public Flux<Pending> pendingReceipts(int limit) {
