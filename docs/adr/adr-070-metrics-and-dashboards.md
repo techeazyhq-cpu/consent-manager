@@ -33,11 +33,11 @@ gateway is the public edge, so anything it serves on its port is served to the i
 ## Not yet / limits
 
 - **No Loki, no Tempo, no traces.** Log aggregation and tracing are the rest of #98.
-- **Postgres, Redis and Pulsar have no exporters here.** The services' own view of them (the R2DBC pool, circuit breakers) is
-  exported and alerted on (a breaker appears in the metrics once it has been used; ADR-070's first version wrongly said these
-  were missing), but the servers' own figures are not.
-- **Nothing routes the alerts.** The rules fire inside Prometheus; there is no Alertmanager and no pager. Where a deployment already
-  has one (Prometheus Operator, a managed Prometheus), the rule files load as they are.
+- ~~**Postgres, Redis and Pulsar have no exporters here.**~~ They do now, and Alertmanager routes the alerts: [ADR-087](adr-087-datastore-metrics-and-alert-routing.md).
+  (The services' own view of them, the R2DBC pool and circuit breakers, was already exported and alerted on; the first version of this
+  ADR wrongly said it was missing.)
+- ~~**Nothing routes the alerts.**~~ Alertmanager is in the profile (ADR-087). Where a deployment already has one (Prometheus
+  Operator, a managed Prometheus), the rule files load as they are.
 - **The backup alerts need the job scheduled and its textfile scraped,** which is not done by this change (the CronJob is still open
   in the backup runbook). Without the file they are silent, not failing.
 - **Helm does not add a scrape allowance** to the network policy; whoever runs Prometheus adds it for ports 8081 to 8088 and 9091.
