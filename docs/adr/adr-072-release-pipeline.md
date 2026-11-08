@@ -32,7 +32,7 @@ was a version that exists as images and as a chart.
 - **The workflow has not run.** It is checked with actionlint and by running its image-naming logic against the built JARs, but a
   first real run needs a tag; make the first one `v0.1.0-rc`-style only after changing the tag filter, or expect to fix small
   things on `v0.1.0`.
-- **No SBOM or provenance attestation yet,** and no automatic bump of `Chart.yaml` in the repository (the packaged chart takes its version from the tag).
+- ~~**No SBOM or provenance attestation yet,**~~ Done: [ADR-086](adr-086-release-bill-of-materials-and-provenance.md). The rest of this item: and no automatic bump of `Chart.yaml` in the repository (the packaged chart takes its version from the tag).
 - **No continuous deployment.** An environment is updated by running Helm with the published chart.
 
 ## Options considered

@@ -72,19 +72,37 @@ jobs:
             docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/.trivyignore:/.trivyignore:ro" \
               aquasec/trivy:0.69.3 image --ignorefile /.trivyignore --severity CRITICAL --ignore-unfixed --exit-code 1 --quiet \
               "${REGISTRY}/${name}:${TAG}" < /dev/null
+            # what is in the image, as a CycloneDX bill of materials (ADR-086)
+            mkdir -p sbom
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD/sbom:/out" aquasec/trivy:0.69.3 image \
+              --format cyclonedx --output "/out/${name}.cdx.json" --quiet "${REGISTRY}/${name}:${TAG}" < /dev/null
             echo "${REGISTRY}/${name}:${TAG}" >> images.txt
           done
           cat images.txt
           test "$(wc -l < images.txt)" -eq 9
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-      - name: Push and sign each image by digest
+      - name: Push each image, sign it by digest, and attach its bill of materials and its provenance
         run: |
           : > digests.txt
           while read -r image; do
             docker push "$image"
             digest=$(docker inspect --format '{{index .RepoDigests 0}}' "$image")
+            name=$(basename "${image%%:*}")
             cosign sign --yes "$digest"
+            # what it contains, and where it came from: this workflow, this tag, this commit (ADR-086). Signed with the same
+            # keyless identity, so a verifier can tell they were made by this repository's release workflow
+            cosign attest --yes --type cyclonedx --predicate "sbom/${name}.cdx.json" "$digest"
+            jq -n --arg repo "$GITHUB_REPOSITORY" --arg ref "$GITHUB_REF" --arg sha "$GITHUB_SHA" --arg run "$GITHUB_RUN_ID" \
+              --arg server "$GITHUB_SERVER_URL" --arg wf "$GITHUB_WORKFLOW_REF" '{
+                buildDefinition: {
+                  buildType: ($server + "/" + $repo + "/release@v1"),
+                  externalParameters: {workflow: $wf, ref: $ref},
+                  resolvedDependencies: [{uri: ("git+" + $server + "/" + $repo + "@" + $ref), digest: {gitCommit: $sha}}]},
+                runDetails: {
+                  builder: {id: ($server + "/" + $wf)},
+                  metadata: {invocationId: ($server + "/" + $repo + "/actions/runs/" + $run)}}}' > "provenance-${name}.json"
+            cosign attest --yes --type slsaprovenance1 --predicate "provenance-${name}.json" "$digest"
             echo "$digest" >> digests.txt
           done < images.txt
           cat digests.txt
@@ -108,9 +126,12 @@ jobs:
             echo
             sed 's/^/- `/; s/$/`/' digests.txt
             echo
+            echo "Each image also has a CycloneDX bill of materials and a SLSA provenance statement attached as signed attestations"
+            echo "(\`cosign verify-attestation --type cyclonedx <image> ...\`, \`--type slsaprovenance1\`), and the bills of materials are attached to this release."
+            echo
             echo "Chart: \`oci://${REGISTRY}/charts/consent-manager\` version \`${TAG}\`."
           } > notes.md
       - name: Create the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$VERSION" --title "$VERSION" --notes-file notes.md --verify-tag
+        run: gh release create "$VERSION" --title "$VERSION" --notes-file notes.md --verify-tag sbom/*.cdx.json
