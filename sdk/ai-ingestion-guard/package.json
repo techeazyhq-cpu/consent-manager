@@ -1,0 +1,12 @@
+{
+  "name": "@techeazyhq/cm-ai-ingestion-guard",
+  "version": "0.1.0",
+  "description": "A consent guard for AI ingestion pipelines: check consent before embedding, remove vectors when it ends",
+  "license": "Apache-2.0",
+  "author": "Vasantha Kumar <vasantha.kumar@hotmail.com>",
+  "type": "module",
+  "main": "src/index.mjs",
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test test/*.test.mjs" },
+  "private": true
+}

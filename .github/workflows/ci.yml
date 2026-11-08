@@ -44,6 +44,8 @@ jobs:
         run: node scripts/license-headers.mjs
       - name: Error dictionary
         run: node scripts/error-dictionary.mjs --check
+      - name: AI ingestion guard unit tests (ADR-069)
+        run: node --test sdk/ai-ingestion-guard/test/*.test.mjs
       - name: Check and unit-test the OPA authorisation policies
         run: >-
           docker run --rm -v "$PWD/infra/opa/policies:/policies:ro" openpolicyagent/opa:1.20.1 check /policies
