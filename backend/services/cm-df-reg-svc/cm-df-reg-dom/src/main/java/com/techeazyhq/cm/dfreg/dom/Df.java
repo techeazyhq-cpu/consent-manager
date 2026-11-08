@@ -41,6 +41,9 @@ public final class Df extends Agg<String> {
     private String leavingBy;
     private int leaveCancellations;
     private Instant closedAt;
+    private String legalHoldReason;
+    private Instant legalHoldAt;
+    private Instant purgedAt;
 
     Df(String id, String name, String contactEmail, DfPrfl prfl, String subPlnName, DfSts sts, Instant registeredAt,
        String cmDfApiClientSecret, Instant activatedAt) {
@@ -86,6 +89,59 @@ public final class Df extends Agg<String> {
 
     public Instant activatedAt() {
         return activatedAt;
+    }
+
+    /** Why a legal hold stops the retention purge for this fiduciary (ADR-064), or null when there is none. */
+    public String legalHoldReason() {
+        return legalHoldReason;
+    }
+
+    public Instant legalHoldAt() {
+        return legalHoldAt;
+    }
+
+    /** When the retention purge finished with this fiduciary, or null. */
+    public Instant purgedAt() {
+        return purgedAt;
+    }
+
+    /** A legal hold, whatever the status: nothing of this fiduciary is purged while it is held. */
+    public void placeLegalHold(String reason, Instant at) {
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("A reason for the legal hold is needed");
+        }
+        if (reason.trim().length() > 500) {
+            throw new IllegalArgumentException("The reason must be at most 500 characters");
+        }
+        this.legalHoldReason = reason.trim();
+        this.legalHoldAt = at;
+    }
+
+    public void releaseLegalHold() {
+        if (legalHoldReason == null) {
+            throw new IllegalStateException("There is no legal hold to release");
+        }
+        this.legalHoldReason = null;
+        this.legalHoldAt = null;
+    }
+
+    /** Whether the retention purge may run for this fiduciary now: closed, not yet purged, not held, and old enough. */
+    public boolean purgeable(Instant cutoff) {
+        return sts == DfSts.CLOSED && purgedAt == null && legalHoldReason == null && closedAt != null && closedAt.isBefore(cutoff);
+    }
+
+    /** Notes that the purge has deleted everything it holds for this fiduciary. */
+    public void markPurged(Instant at) {
+        if (sts != DfSts.CLOSED) {
+            throw new IllegalStateException("Only a closed DF is purged, not one in status " + sts);
+        }
+        this.purgedAt = at;
+    }
+
+    void restoreRetention(String reason, Instant holdAt, Instant purged) {
+        this.legalHoldReason = reason;
+        this.legalHoldAt = holdAt;
+        this.purgedAt = purged;
     }
 
     /** When the fiduciary was closed, or null. */

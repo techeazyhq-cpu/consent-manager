@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-133 entries: 124 API problems, 8 operational log codes and 1 event.
+135 entries: 125 API problems, 9 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -178,6 +178,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `df-cannot-leave` | 409 | Fiduciary cannot leave now | Only an active or suspended fiduciary can ask to leave; this one is pending, already leaving or closed. | Check the fiduciary's status. | no | df-reg |
 | `df-cannot-suspend` | 409 | Fiduciary cannot be suspended | Only an active fiduciary can be suspended; this one is pending or already suspended. | Check the fiduciary's status. | no | df-reg |
 | `df-leaving` | 403 | Fiduciary is leaving | The fiduciary this API key belongs to has asked to leave the platform. Nothing new is accepted during the wind-down; its records stay readable until it closes. | An Owner can cancel the departure once before the wind-down ends, in the DF Console. | no | df-reg |
+| `df-no-legal-hold` | 409 | No legal hold to release | The fiduciary is not under a legal hold. | Check the fiduciary's status. | no | df-reg |
 | `df-not-active` | 403 | Fiduciary not active | The fiduciary is registered but not active, or has been suspended, so it cannot act yet. | Activate the fiduciary, or contact the platform if it was suspended. | no | cns-cmd, df-reg |
 | `df-not-leaving` | 409 | Fiduciary is not leaving | There is no departure to cancel. | Check the fiduciary's status. | no | df-reg |
 | `df-not-suspended` | 409 | Fiduciary is not suspended | Only a suspended fiduciary can be resumed. | Check the fiduciary's status. | no | df-reg |
@@ -227,6 +228,7 @@ Written as `[CODE]` at the start of a WARN or ERROR message, for alerts and runb
 | Code | Level | Title | What it means | What to do | Raised by |
 |---|---|---|---|---|---|
 | `CM-DF-CLOSING-FAILED` | WARN | Closing a fiduciary failed | A fiduciary whose wind-down has ended could not be closed: a step failed, such as ending its consents or removing its team. It stays LEAVING and is tried again on the next pass; every step can be repeated. | Read the log line for the failing step, fix the cause (often cm-cns-cmd-svc or Keycloak unreachable) and it closes on the next pass. | df-reg |
+| `CM-DF-PURGE-FAILED` | WARN | Retention purge of a fiduciary failed | Deleting a closed fiduciary's records past their retention failed: one of cm-cns-cmd-svc, cm-cns-qry-svc or cm-aud-svc could not be reached or refused. Nothing partly deleted is lost; every call can be repeated. | Read the log line for the failing service, fix the cause and the next hourly pass retries. | df-reg |
 | `CM-ERASURE-STEP-FAILED` | WARN | Account erasure step failed | One attempt at an erasure step failed. It is tried again every two minutes until it gives up. | No action unless CM-ERASURE-STUCK follows; check the named step's service if it repeats. | dsr |
 | `CM-ERASURE-STUCK` | ERROR | Account erasure stuck | An account erasure gave up on a step after eight attempts and stopped. Part of the person's data is erased and part is not. | Find the cause for the step named in the message and retry it in CM Admin; see docs/runbooks/erasure.md. | dsr |
 | `CM-ERRDICT-UNLISTED` | ERROR | Problem missing from the error dictionary | A service answered a problem whose code is not in the error dictionary, so it got a title made from its name. CI should have refused it. | Add the code to cm-error-dictionary.json and run node scripts/error-dictionary.mjs --write. | aud, bil, cns-cmd, cns-qry, df-reg, dsr, gw, ntf, stf |

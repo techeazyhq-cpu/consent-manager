@@ -27,6 +27,7 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import com.techeazyhq.cm.dfreg.app.ActivateDfCmdHandler;
 import com.techeazyhq.cm.dfreg.app.DfApiKeyHandler;
 import com.techeazyhq.cm.dfreg.app.DfLeavingHandler;
+import com.techeazyhq.cm.dfreg.app.DfRetentionHandler;
 import com.techeazyhq.cm.dfreg.app.DfSuspensionHandler;
 import com.techeazyhq.cm.dfreg.app.DfTeamHandler;
 import com.techeazyhq.cm.dfreg.app.DfTermsHandler;
@@ -54,6 +55,7 @@ public class DfRegRouterConfig {
                                                         DfTermsHandler termsHandler,
                                                         DfSuspensionHandler suspensionHandler,
                                                         DfLeavingHandler leavingHandler,
+                                                        DfRetentionHandler retentionHandler,
                                                         VerifyApiRequestHandler verifyApiRequestHandler) {
         DfHandler dfHandler = new DfHandler(registerHandler, activateHandler, getActiveHandler, listHandler, getDfHandler,
                 uploadLogoHandler, getLogoHandler);
@@ -62,6 +64,7 @@ public class DfRegRouterConfig {
         DfTermsHttpHandler termsHttp = new DfTermsHttpHandler(termsHandler);
         DfSuspensionHttpHandler suspensions = new DfSuspensionHttpHandler(suspensionHandler);
         DfLeavingHttpHandler leaving = new DfLeavingHttpHandler(leavingHandler);
+        DfLegalHoldHttpHandler legalHold = new DfLegalHoldHttpHandler(retentionHandler);
         return RouterFunctions.route()
                 .GET("/api/df-reg/dfs", dfHandler::list)
                 .POST("/api/df-reg/dfs", dfHandler::register)
@@ -85,6 +88,8 @@ public class DfRegRouterConfig {
                 .POST("/internal/api-keys/verify", apiKeys::verify)
                 .POST("/api/df-reg/dfs/{id}/suspend", suspensions::suspend)
                 .POST("/api/df-reg/dfs/{id}/resume", suspensions::resume)
+                .PUT("/api/df-reg/dfs/{id}/legal-hold", legalHold::place)
+                .DELETE("/api/df-reg/dfs/{id}/legal-hold", legalHold::release)
                 .GET("/api/df-reg/me/leave", leaving::status)
                 .POST("/api/df-reg/me/leave", leaving::leave)
                 .POST("/api/df-reg/me/leave/cancel", leaving::cancel)

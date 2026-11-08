@@ -1781,6 +1781,32 @@
       "raisedBy": [
         "cm-df-reg-svc"
       ]
+    },
+    {
+      "code": "df-no-legal-hold",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "No legal hold to release",
+      "description": "The fiduciary is not under a legal hold.",
+      "action": "Check the fiduciary's status.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "CM-DF-PURGE-FAILED",
+      "kind": "log",
+      "level": "WARN",
+      "category": "operations",
+      "title": "Retention purge of a fiduciary failed",
+      "description": "Deleting a closed fiduciary's records past their retention failed: one of cm-cns-cmd-svc, cm-cns-qry-svc or cm-aud-svc could not be reached or refused. Nothing partly deleted is lost; every call can be repeated.",
+      "action": "Read the log line for the failing service, fix the cause and the next hourly pass retries.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
     }
   ]
 }

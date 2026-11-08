@@ -27,6 +27,9 @@ public interface DfTermsRepoPort {
     /** Keeps the acceptance unless this fiduciary already accepted that version of that document; returns the stored one. */
     Mono<DfTermsAcceptance> saveIfAbsent(DfTermsAcceptance acceptance);
 
+    /** Removes a closed fiduciary's acceptances once their retention has passed (ADR-064). */
+    Mono<Long> deleteByDfId(String dfId);
+
     /** Everything a fiduciary accepted, newest first. */
     Flux<DfTermsAcceptance> findByDfId(String dfId);
 }

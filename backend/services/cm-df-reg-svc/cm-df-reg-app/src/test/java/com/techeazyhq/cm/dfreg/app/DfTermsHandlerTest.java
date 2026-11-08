@@ -61,6 +61,15 @@ class DfTermsHandlerTest {
         }
 
         @Override
+        public Mono<Long> deleteByDfId(String dfId) {
+            return Mono.fromSupplier(() -> {
+                long n = stored.stream().filter(a -> a.dfId().equals(dfId)).count();
+                stored.removeIf(a -> a.dfId().equals(dfId));
+                return n;
+            });
+        }
+
+        @Override
         public Flux<DfTermsAcceptance> findByDfId(String dfId) {
             return Flux.fromIterable(stored).filter(a -> a.dfId().equals(dfId));
         }

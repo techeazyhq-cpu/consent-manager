@@ -53,6 +53,14 @@ import java.time.Duration;
 @EnableScheduling
 public class AudBeanConfig {
 
+    /** A closed fiduciary's payloads past their retention (ADR-064). */
+    @Bean
+    public com.techeazyhq.cm.aud.app.PurgeDfRecordsHandler purgeDfRecordsHandler(DatabaseClient databaseClient,
+            TransactionalOperator transactionalOperator) {
+        return new com.techeazyhq.cm.aud.app.PurgeDfRecordsHandler(
+                new com.techeazyhq.cm.aud.infra.R2dbcDfRecordsPurgeAdapter(databaseClient, transactionalOperator));
+    }
+
     @Bean
     public AudLedgerPort audLedgerPort(DatabaseClient databaseClient, TransactionalOperator transactionalOperator) {
         return new R2dbcAudLedgerAdapter(databaseClient, transactionalOperator);

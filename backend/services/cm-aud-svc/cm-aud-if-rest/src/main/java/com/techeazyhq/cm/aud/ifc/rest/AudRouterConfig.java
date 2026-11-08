@@ -30,10 +30,13 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 public class AudRouterConfig {
 
     @Bean
-    public RouterFunction<ServerResponse> audRoutes(AudLedgerService ledger, AudAnchoringService anchoring) {
+    public RouterFunction<ServerResponse> audRoutes(AudLedgerService ledger, AudAnchoringService anchoring,
+                                                  com.techeazyhq.cm.aud.app.PurgeDfRecordsHandler purgeDfRecords) {
         AudHandler handler = new AudHandler(ledger, anchoring);
         AudActivityHttpHandler activity = new AudActivityHttpHandler(ledger);
+        DfPurgeHttpHandler dfPurge = new DfPurgeHttpHandler(purgeDfRecords);
         return RouterFunctions.route()
+                .POST("/internal/dfs/{id}/purge", dfPurge::purge)
                 .GET("/api/aud/activity", activity::activity)
                 .GET("/api/aud/entries", handler::entries)
                 .GET("/api/aud/chain/head", handler::head)
