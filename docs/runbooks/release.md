@@ -22,6 +22,20 @@ cosign verify ghcr.io/techeazyhq-cpu/cm-gw:0.2.0 \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
+## Verify what an image contains and where it came from
+
+Each image has a CycloneDX bill of materials and a SLSA provenance statement attached as signed attestations, and the bills of
+materials are on the GitHub release:
+
+```bash
+ID='https://github.com/techeazyhq-cpu/consent-manager/'
+ISSUER=https://token.actions.githubusercontent.com
+cosign verify-attestation --type cyclonedx ghcr.io/techeazyhq-cpu/cm-gw:0.2.0   --certificate-identity-regexp "$ID" --certificate-oidc-issuer "$ISSUER" | jq -r '.payload | @base64d | fromjson | .predicate.components | length'
+cosign verify-attestation --type slsaprovenance1 ghcr.io/techeazyhq-cpu/cm-gw:0.2.0   --certificate-identity-regexp "$ID" --certificate-oidc-issuer "$ISSUER" | jq -r '.payload | @base64d | fromjson | .predicate.buildDefinition.resolvedDependencies[0]'
+```
+
+When a vulnerability is announced, search the bills of materials of the versions in use for the affected library.
+
 ## Install it
 
 ```bash
