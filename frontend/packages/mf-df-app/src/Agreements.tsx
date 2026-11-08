@@ -36,6 +36,7 @@ export default function Agreements({ console: c }: { console: Console }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const owner = bindsOrganisation(c.role);
+  const canExport = c.role === "OWNER" || c.role === "ADMIN";
 
   const load = useCallback(async () => {
     try {
@@ -124,6 +125,37 @@ export default function Agreements({ console: c }: { console: Console }) {
           </p>
         </Card>
       )}
+
+      {canExport ? (
+        <>
+          <h3 className="cm-section-title">Your data</h3>
+          <Card>
+            <p>
+              Everything the platform holds for your organisation, in one JSON file: your profile, team and API key list (never
+              the keys or secrets), your purposes with every version, your consent records with their signed receipts, and your
+              audit entries. People appear only by pseudonymous id. Large organisations may be cut at 5,000 of a section, and
+              the file says so.
+            </p>
+            <Button
+              disabled={busy}
+              onClick={() =>
+                run(async (token) => {
+                  const res = await fetch(`${c.gwBase}/api/df-reg/me/export`, { headers: { Authorization: `Bearer ${token}` } });
+                  if (!res.ok) throw Object.assign(new Error("export failed"), { problem: await res.json().catch(() => null), status: res.status });
+                  const url = URL.createObjectURL(await res.blob());
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `consent-manager-export-${new Date().toISOString().slice(0, 10)}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                })
+              }
+            >
+              {busy ? "Preparing…" : "Download your data"}
+            </Button>
+          </Card>
+        </>
+      ) : null}
 
       <h3 className="cm-section-title">Leaving Consent Manager</h3>
       <Card>

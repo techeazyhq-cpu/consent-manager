@@ -30,6 +30,12 @@ spring:
       server:
         webflux:
           routes:
+            # An organisation taking all of its data takes longer than any other call, so it has its own route, and with it its
+            # own circuit breaker and time limit (ADR-064): a slow export neither opens the circuit for df-reg nor is cut at 10 s.
+            - id: df-reg-export
+              uri: http://cm-df-reg-svc:8081
+              predicates:
+                - Path=/api/df-reg/me/export
             - id: df-reg
               uri: http://cm-df-reg-svc:8081
               predicates:

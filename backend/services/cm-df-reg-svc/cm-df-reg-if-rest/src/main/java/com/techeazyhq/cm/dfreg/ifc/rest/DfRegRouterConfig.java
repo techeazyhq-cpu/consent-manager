@@ -27,6 +27,7 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import com.techeazyhq.cm.dfreg.app.ActivateDfCmdHandler;
 import com.techeazyhq.cm.dfreg.app.DfApiKeyHandler;
 import com.techeazyhq.cm.dfreg.app.DfEndContractHandler;
+import com.techeazyhq.cm.dfreg.app.DfExportHandler;
 import com.techeazyhq.cm.dfreg.app.DfLeavingHandler;
 import com.techeazyhq.cm.dfreg.app.DfRetentionHandler;
 import com.techeazyhq.cm.dfreg.app.DfSuspensionHandler;
@@ -58,6 +59,7 @@ public class DfRegRouterConfig {
                                                         DfLeavingHandler leavingHandler,
                                                         DfRetentionHandler retentionHandler,
                                                         DfEndContractHandler endContractHandler,
+                                                        DfExportHandler exportHandler,
                                                         VerifyApiRequestHandler verifyApiRequestHandler) {
         DfHandler dfHandler = new DfHandler(registerHandler, activateHandler, getActiveHandler, listHandler, getDfHandler,
                 uploadLogoHandler, getLogoHandler);
@@ -68,6 +70,7 @@ public class DfRegRouterConfig {
         DfLeavingHttpHandler leaving = new DfLeavingHttpHandler(leavingHandler);
         DfLegalHoldHttpHandler legalHold = new DfLegalHoldHttpHandler(retentionHandler);
         DfEndContractHttpHandler endContract = new DfEndContractHttpHandler(endContractHandler);
+        DfExportHttpHandler export = new DfExportHttpHandler(exportHandler);
         return RouterFunctions.route()
                 .GET("/api/df-reg/dfs", dfHandler::list)
                 .POST("/api/df-reg/dfs", dfHandler::register)
@@ -99,6 +102,7 @@ public class DfRegRouterConfig {
                 .POST("/api/df-reg/leave-proposals/{id}/withdraw", endContract::withdraw)
                 .PUT("/api/df-reg/dfs/{id}/legal-hold", legalHold::place)
                 .DELETE("/api/df-reg/dfs/{id}/legal-hold", legalHold::release)
+                .GET("/api/df-reg/me/export", export::export)
                 .GET("/api/df-reg/me/leave", leaving::status)
                 .POST("/api/df-reg/me/leave", leaving::leave)
                 .POST("/api/df-reg/me/leave/cancel", leaving::cancel)

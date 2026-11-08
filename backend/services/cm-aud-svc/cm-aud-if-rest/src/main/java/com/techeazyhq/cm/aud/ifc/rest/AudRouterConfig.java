@@ -35,8 +35,10 @@ public class AudRouterConfig {
         AudHandler handler = new AudHandler(ledger, anchoring);
         AudActivityHttpHandler activity = new AudActivityHttpHandler(ledger);
         DfPurgeHttpHandler dfPurge = new DfPurgeHttpHandler(purgeDfRecords);
+        DfExportHttpHandler dfExport = new DfExportHttpHandler(ledger);
         return RouterFunctions.route()
                 .POST("/internal/dfs/{id}/purge", dfPurge::purge)
+                .GET("/internal/dfs/{id}/export", dfExport::export)
                 .GET("/api/aud/activity", activity::activity)
                 .GET("/api/aud/entries", handler::entries)
                 .GET("/api/aud/chain/head", handler::head)

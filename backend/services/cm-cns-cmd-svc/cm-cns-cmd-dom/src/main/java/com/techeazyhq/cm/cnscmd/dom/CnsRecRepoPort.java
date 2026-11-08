@@ -36,6 +36,11 @@ public interface CnsRecRepoPort {
     /** Every record whose subject is this principal, newest first. */
     Flux<CnsRec> findBySubject(String dpId);
 
+    /** Up to {@code limit} of a fiduciary's records, newest first, with their events (its own data export, ADR-064). */
+    default Flux<CnsRec> findByDf(String dfId, int limit) {
+        return Flux.error(new UnsupportedOperationException("findByDf"));
+    }
+
     /** Record events without a receipt yet, oldest first: {@code (record, seq)}. */
     Flux<Pending> pendingReceipts(int limit);
 

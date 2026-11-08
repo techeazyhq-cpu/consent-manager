@@ -1859,6 +1859,19 @@
       "raisedBy": [
         "cm-df-reg-svc"
       ]
+    },
+    {
+      "code": "export-unavailable",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Export not available now",
+      "description": "The organisation's data can be exported while it is active, suspended or leaving. Once it has closed its team and keys are gone and the records are kept only for their retention.",
+      "action": "Take the export during the wind-down.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
     }
   ]
 }

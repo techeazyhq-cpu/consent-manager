@@ -57,6 +57,7 @@ import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.dfreg.app.DfApiKeyHandler;
 import com.techeazyhq.cm.dfreg.app.DfClosureHandler;
 import com.techeazyhq.cm.dfreg.app.DfEndContractHandler;
+import com.techeazyhq.cm.dfreg.app.DfExportHandler;
 import com.techeazyhq.cm.dfreg.app.DfLeavingHandler;
 import com.techeazyhq.cm.dfreg.app.DfRetentionHandler;
 import com.techeazyhq.cm.dfreg.app.DfSuspensionHandler;
@@ -321,6 +322,19 @@ public class DfRegBeanConfig {
     public DfEndContractHandler dfEndContractHandler(com.techeazyhq.cm.dfreg.infra.R2dbcLeaveProposalAdapter proposals,
                                                      DfRepoPort dfRepo, DfLeavingHandler leaving, AuditTrail audit) {
         return new DfEndContractHandler(proposals, dfRepo, leaving, audit, java.time.Clock.systemUTC());
+    }
+
+    @Bean
+    public com.techeazyhq.cm.dfreg.dom.DataExportPort dataExportPort(WebClient.Builder builder,
+            @Value("${cm.service-urls.cns-cmd}") String cnsCmd, @Value("${cm.service-urls.aud}") String aud) {
+        return new com.techeazyhq.cm.dfreg.infra.WebClientDataExportAdapter(builder, cnsCmd, aud);
+    }
+
+    @Bean
+    public DfExportHandler dfExportHandler(DfRepoPort dfRepo, DfMemberDirectoryPort members, R2dbcDfApiKeyAdapter keys,
+                                           R2dbcDfTermsAdapter terms, com.techeazyhq.cm.dfreg.dom.DataExportPort data,
+                                           AuditTrail audit) {
+        return new DfExportHandler(dfRepo, members, keys, terms, data, audit, java.time.Clock.systemUTC());
     }
 
     @Bean

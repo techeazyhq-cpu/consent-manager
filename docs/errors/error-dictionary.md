@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-139 entries: 129 API problems, 9 operational log codes and 1 event.
+140 entries: 130 API problems, 9 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -188,6 +188,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `df-suspended` | 403 | Fiduciary suspended | The fiduciary this API key belongs to has been suspended by the consent manager. Nothing new is accepted until it is resumed; its records are untouched. | Contact the consent manager's support. The suspension reason was given to your Owner. | no | df-reg |
 | `dp-request-closed` | 409 | Request already closed | The request was already answered, refused or withdrawn. | Read its current state. | no | dsr |
 | `erasure-not-stuck` | 409 | Erasure is not stuck | Only a stuck erasure can be retried. | Read its state first. | no | dsr |
+| `export-unavailable` | 409 | Export not available now | The organisation's data can be exported while it is active, suspended or leaving. Once it has closed its team and keys are gone and the records are kept only for their retention. | Take the export during the wind-down. | no | df-reg |
 | `leave-cancel-used` | 409 | Departure already cancelled once | A departure can be called off once, and this fiduciary has already used that. | The wind-down continues. Contact the consent manager's support if this is a mistake. | no | df-reg |
 | `leave-proposal-decided` | 409 | Proposal already decided | The proposal was already approved, rejected or withdrawn. | Nothing more to do; propose again if it is still wanted. | no | df-reg |
 | `no-draft` | 409 | No draft to publish | The purpose has no draft, so there is nothing to publish. | Draft a change first. | no | cns-cmd |

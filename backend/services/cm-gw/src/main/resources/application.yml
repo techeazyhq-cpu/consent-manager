@@ -45,6 +45,12 @@ spring:
             # not same-origin, so the web apps on sibling hosts can still show fiduciaries' logos.
             - AddResponseHeader=Cross-Origin-Resource-Policy, same-site
           routes:
+            # An organisation taking all of its data takes longer than any other call, so it has its own route, and with it its
+            # own circuit breaker and time limit (ADR-064): a slow export neither opens the circuit for df-reg nor is cut at 10 s.
+            - id: df-reg-export
+              uri: http://localhost:8081
+              predicates:
+                - Path=/api/df-reg/me/export
             - id: df-reg
               uri: http://localhost:8081
               predicates:
@@ -124,6 +130,9 @@ resilience4j:
         timeout-duration: 2s
       bil-quota:
         timeout-duration: 2s
+      # the route of an organisation taking all of its data (ADR-064)
+      df-reg-export:
+        timeout-duration: 120s
 
 management:
   observations:

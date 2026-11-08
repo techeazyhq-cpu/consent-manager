@@ -53,6 +53,48 @@ public class AudLedgerService {
         return ledger.findRecords(query);
     }
 
+    /**
+     * A fiduciary's ledger entries with their payloads (null once erased), newest first, for the export it can take when
+     * leaving (ADR-064). At most {@code limit}; {@code truncated} says when there were more.
+     */
+    public Mono<java.util.Map<String, Object>> exportForDf(String dfId, int limit) {
+        int cap = Math.max(1, Math.min(limit, 100_000));
+        return collect(dfId, cap, null, new java.util.ArrayList<>()).map(all -> {
+            boolean truncated = all.size() > cap;
+            java.util.List<java.util.Map<String, Object>> items = (truncated ? all.subList(0, cap) : all).stream().map(r -> {
+                java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                AudEntry e = r.entry();
+                m.put("seq", e.seq());
+                m.put("eventId", e.evtId().toString());
+                m.put("type", e.evtType());
+                m.put("occurredAt", e.occurredAt().toString());
+                m.put("recordedAt", e.recordedAt().toString());
+                m.put("cnsReqId", e.cnsReqId());
+                m.put("cnsArtId", e.cnsArtId());
+                m.put("payloadSha256", e.payloadSha256());
+                m.put("entryHash", e.entryHash());
+                m.put("payload", r.payloadJson());
+                return m;
+            }).toList();
+            java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+            out.put("count", items.size());
+            out.put("truncated", truncated);
+            out.put("items", items);
+            return out;
+        });
+    }
+
+    private Mono<java.util.List<AudRecord>> collect(String dfId, int cap, Long before, java.util.List<AudRecord> acc) {
+        int want = Math.min(AudQuery.MAX_LIMIT, cap + 1 - acc.size());
+        if (want <= 0) {
+            return Mono.just(acc);
+        }
+        return ledger.findRecords(new AudQuery(null, null, dfId, null, want, AudQuery.Category.ALL, before)).collectList().flatMap(page -> {
+            acc.addAll(page);
+            return page.size() < want ? Mono.just(acc) : collect(dfId, cap, page.get(page.size() - 1).entry().seq(), acc);
+        });
+    }
+
     public Mono<AudEntry> head() {
         return ledger.head();
     }
