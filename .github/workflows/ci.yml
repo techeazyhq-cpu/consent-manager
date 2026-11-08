@@ -151,6 +151,14 @@ jobs:
           done
           helm template cm consent-manager -f consent-manager/values-gcp.yaml -f consent-manager/values-sandbox.yaml \
             | docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas
+      - name: The chart renders with a mesh, metrics and a scraper allowed (ADR-070, ADR-073)
+        run: |
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          for mesh in istio linkerd; do
+            helm template cm consent-manager -f consent-manager/values-aws.yaml --set mesh.provider=$mesh --set metrics.enabled=true \
+              --set 'networkPolicy.metricsNamespaceLabels.kubernetes\.io/metadata\.name=monitoring' \
+              | docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas -kubernetes-version 1.30.0
+          done
       - name: The chart renders with the policy taken from a signed bundle (ADR-068), and refuses to without a key
         run: |
           helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }

@@ -37,11 +37,17 @@ spec:
     metadata:
       labels: {{- include "cm.selectorLabels" $ctx | nindent 8 }}
         app.kubernetes.io/part-of: consent-manager
-      {{- if $root.Values.metrics.enabled }}
+      {{- if or $root.Values.metrics.enabled (eq $root.Values.mesh.provider "linkerd") }}
       annotations:
+        {{- if $root.Values.metrics.enabled }}
         prometheus.io/scrape: "true"
         prometheus.io/path: /actuator/prometheus
         prometheus.io/port: {{ ternary $root.Values.metrics.gatewayPort $s.port (eq $name "cm-gw") | quote }}
+        {{- end }}
+        {{- if eq $root.Values.mesh.provider "linkerd" }}
+        linkerd.io/inject: enabled
+        config.linkerd.io/default-inbound-policy: all-authenticated
+        {{- end }}
       {{- end }}
     spec:
       automountServiceAccountToken: false

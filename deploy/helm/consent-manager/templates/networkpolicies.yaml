@@ -60,6 +60,28 @@ spec:
         - podSelector:
             matchExpressions:
               - {key: app.kubernetes.io/name, operator: In, values: [opa{{ range $name, $s := .Values.services }}, {{ $name }}{{ end }}]}
+{{- with .Values.networkPolicy.metricsNamespaceLabels }}
+---
+# Prometheus reads the services' metrics ports and the gateway's management port (ADR-070).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $.Release.Name }}-metrics-scrape
+  labels: {{- include "cm.labels" $ctx | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels: {app.kubernetes.io/part-of: consent-manager}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: {{- toYaml . | nindent 14 }}
+      ports:
+        {{- range $name, $s := $.Values.services }}
+        - {protocol: TCP, port: {{ $s.port }}}
+        {{- end }}
+        - {protocol: TCP, port: {{ $.Values.metrics.gatewayPort }}}
+{{- end }}
 {{- with index .Values.services "cm-ntf-svc" }}
 ---
 # Keycloak, in the common namespace, posts sign-in codes to cm-ntf-svc (the realms' cm-otp config).
