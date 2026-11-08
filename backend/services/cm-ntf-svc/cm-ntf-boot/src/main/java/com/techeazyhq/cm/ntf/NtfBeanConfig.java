@@ -170,8 +170,32 @@ public class NtfBeanConfig {
 
     @Bean
     public NotifyDpCmdHandler notifyDpCmdHandler(NtfDispatchService ntfDispatchService, PushDvcRepoPort pushDvcRepoPort,
-                                                 DpDeliveryOutcomePort dpDeliveryOutcomePort) {
-        return new NotifyDpCmdHandler(ntfDispatchService, pushDvcRepoPort, dpDeliveryOutcomePort);
+                                                 DpDeliveryOutcomePort dpDeliveryOutcomePort,
+                                                 com.techeazyhq.cm.ntf.dom.DpPrefRepoPort dpPrefRepoPort,
+                                                 com.techeazyhq.cm.ntf.app.EmailFingerprint emailFingerprint) {
+        return new NotifyDpCmdHandler(ntfDispatchService, pushDvcRepoPort, dpDeliveryOutcomePort, dpPrefRepoPort, emailFingerprint);
+    }
+
+    /** How a linked principal hears of new consent requests (ADR-066). */
+    @Bean
+    public com.techeazyhq.cm.ntf.dom.DpPrefRepoPort dpPrefRepoPort(org.springframework.r2dbc.core.DatabaseClient db) {
+        return new com.techeazyhq.cm.ntf.infra.R2dbcDpPrefAdapter(db);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.ntf.app.DpPrefCmdHandler dpPrefCmdHandler(com.techeazyhq.cm.ntf.dom.DpPrefRepoPort prefs,
+                                                                       com.techeazyhq.cm.ntf.app.EmailFingerprint emailFingerprint) {
+        return new com.techeazyhq.cm.ntf.app.DpPrefCmdHandler(prefs, emailFingerprint, java.time.Clock.systemUTC());
+    }
+
+    /**
+     * The key that hashes the addresses of principals who chose how they hear of requests (ADR-066). The default is for the local
+     * stack only: a deployment sets {@code cm.ntf.email-fingerprint-key} to a secret of its own.
+     */
+    @Bean
+    public com.techeazyhq.cm.ntf.app.EmailFingerprint emailFingerprint(
+            @org.springframework.beans.factory.annotation.Value("${cm.ntf.email-fingerprint-key:local-dev-only-email-fingerprint-key}") String key) {
+        return new com.techeazyhq.cm.ntf.app.EmailFingerprint(key);
     }
 
     @Bean
@@ -220,8 +244,9 @@ public class NtfBeanConfig {
     }
 
     @Bean
-    public com.techeazyhq.cm.ntf.app.EraseDpHandler eraseDpHandler(NtfDispatchService dispatch, PushDvcRepoPort devices) {
-        return new com.techeazyhq.cm.ntf.app.EraseDpHandler(dispatch, devices);
+    public com.techeazyhq.cm.ntf.app.EraseDpHandler eraseDpHandler(NtfDispatchService dispatch, PushDvcRepoPort devices,
+                                                                   com.techeazyhq.cm.ntf.dom.DpPrefRepoPort prefs) {
+        return new com.techeazyhq.cm.ntf.app.EraseDpHandler(dispatch, devices, prefs);
     }
 
     @EventListener(ApplicationReadyEvent.class)

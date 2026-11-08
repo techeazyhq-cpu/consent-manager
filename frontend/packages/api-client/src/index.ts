@@ -48,6 +48,7 @@ import type {
   DfRejectedDto,
   LeaveStatusDto,
   LegalHoldDto,
+  NtfPreferencesDto,
   SignupApplicationDto,
   TermsAcceptanceDto,
   TermsStatusDto,
@@ -412,6 +413,10 @@ export const stf = {
 };
 
 export const ntf = {
+  /** How the caller hears of new requests (ADR-066): push and an email saying one waits. */
+  getPreferences: (base: string, token: string) => request<NtfPreferencesDto>(base, "/api/ntf/preferences", token),
+  setPreferences: (base: string, token: string, body: { push: boolean; email: boolean }) =>
+    request<NtfPreferencesDto>(base, "/api/ntf/preferences", token, { method: "PUT", body: JSON.stringify(body) }),
   // Always the caller's own devices: the DP is taken from the JWT, as in cnsQry.listMine.
   listPushDvcs: (base: string, token: string) => request<PushDvcRespDto[]>(base, "/api/ntf/push-dvcs", token),
   registerPushDvc: (base: string, token: string, body: { token: string; platform: PushPltf }) =>

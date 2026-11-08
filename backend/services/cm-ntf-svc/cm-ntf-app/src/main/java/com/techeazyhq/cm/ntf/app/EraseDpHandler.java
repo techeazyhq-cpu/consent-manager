@@ -23,6 +23,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.techeazyhq.cm.ntf.dom.DpPrefRepoPort;
 import com.techeazyhq.cm.ntf.dom.NtfChnl;
 import com.techeazyhq.cm.ntf.dom.NtfCtg;
 import com.techeazyhq.cm.ntf.dom.NtfDeliveryRejectedException;
@@ -56,10 +57,16 @@ public class EraseDpHandler {
 
     private final NtfDispatchService dispatch;
     private final PushDvcRepoPort devices;
+    private final DpPrefRepoPort prefs;
 
     public EraseDpHandler(NtfDispatchService dispatch, PushDvcRepoPort devices) {
+        this(dispatch, devices, DpPrefRepoPort.NONE);
+    }
+
+    public EraseDpHandler(NtfDispatchService dispatch, PushDvcRepoPort devices, DpPrefRepoPort prefs) {
         this.dispatch = dispatch;
         this.devices = devices;
+        this.prefs = prefs;
     }
 
     public Mono<Map<String, Object>> handle(String erasureId, String dpId, String email) {
@@ -72,6 +79,8 @@ public class EraseDpHandler {
                             return Mono.just(false);
                         });
         return notice.flatMap(sent -> devices.deleteAllOf(dpId)
-                .map(deleted -> Map.<String, Object>of("noticeSent", sent, "devicesDeleted", deleted)));
+                .flatMap(deleted -> prefs.deleteOf(dpId)
+                        .map(prefsDeleted -> Map.<String, Object>of("noticeSent", sent, "devicesDeleted", deleted,
+                                "preferencesDeleted", prefsDeleted))));
     }
 }

@@ -774,3 +774,14 @@ export interface DfRejectedDto {
   rejectedAt: string | null;
   rejectionReason: string | null;
 }
+
+/** How the calling principal hears of new consent requests (ADR-066). {@code emailAddress} is masked. */
+export interface NtfPreferencesDto {
+  /** Push to their devices: on until they pause it. */
+  push: boolean;
+  /** An email saying a request waits (the request's title only): off until they ask for it. */
+  email: boolean;
+  emailAddress: string | null;
+  /** Whether they signed in with an email address, which email goes to. */
+  canEmail: boolean;
+}

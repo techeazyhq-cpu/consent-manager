@@ -19,6 +19,8 @@
 package com.techeazyhq.cm.ntf.app;
 
 import com.techeazyhq.cm.ntf.dom.DpDeliveryOutcomePort;
+import com.techeazyhq.cm.ntf.dom.DpPref;
+import com.techeazyhq.cm.ntf.dom.DpPrefRepoPort;
 import com.techeazyhq.cm.ntf.dom.NtfChnl;
 import com.techeazyhq.cm.ntf.dom.NtfCtg;
 import com.techeazyhq.cm.ntf.dom.NtfDeliveryRejectedException;
@@ -43,12 +45,21 @@ public class NotifyDpCmdHandler {
     private final NtfDispatchService dispatchService;
     private final PushDvcRepoPort pushDvcRepo;
     private final DpDeliveryOutcomePort outcomePort;
+    private final DpPrefRepoPort prefs;
+    private final EmailFingerprint fingerprint;
 
     public NotifyDpCmdHandler(NtfDispatchService dispatchService, PushDvcRepoPort pushDvcRepo,
                               DpDeliveryOutcomePort outcomePort) {
+        this(dispatchService, pushDvcRepo, outcomePort, DpPrefRepoPort.NONE, null);
+    }
+
+    public NotifyDpCmdHandler(NtfDispatchService dispatchService, PushDvcRepoPort pushDvcRepo,
+                              DpDeliveryOutcomePort outcomePort, DpPrefRepoPort prefs, EmailFingerprint fingerprint) {
         this.dispatchService = dispatchService;
         this.pushDvcRepo = pushDvcRepo;
         this.outcomePort = outcomePort;
+        this.prefs = prefs;
+        this.fingerprint = fingerprint;
     }
 
     /**
@@ -63,11 +74,27 @@ public class NotifyDpCmdHandler {
         }
         NtfMsg msg = new NtfMsg(cmd.destination(), cmd.ntcTitle(), cmd.ntcText(), NtfCtg.TRANSACTIONAL,
                 "cm-notify-dp-" + cmd.cnsReqId());
-        return dispatchService.dispatch(channel, msg)
+        return optedOutOfEmail(channel, cmd.destination()).flatMap(optedOut -> optedOut ? skipped(cmd) : dispatchService.dispatch(channel, msg))
                 .onErrorResume(NtfDeliveryRejectedException.class, err -> {
                     LOG.warn("{} to the DP of consent request {} rejected: {}", channel, cmd.cnsReqId(), err.code());
                     return outcomePort.deliveryFailed(cmd.cnsReqId(), channel, err.code());
                 });
+    }
+
+    /**
+     * Whether the person this email goes to turned off organisations' request emails (ADR-066). They are found by a keyed hash of
+     * the address, so an address nobody chose anything for is mailed as ever. The request is not lost: it waits on their dashboard.
+     */
+    private Mono<Boolean> optedOutOfEmail(NtfChnl channel, String destination) {
+        if (channel != NtfChnl.EMAIL || fingerprint == null) {
+            return Mono.just(false);
+        }
+        return prefs.findByEmailHash(fingerprint.of(destination)).map(p -> !p.emailRequests()).defaultIfEmpty(false);
+    }
+
+    private Mono<Void> skipped(NotifyDpCmd cmd) {
+        LOG.info("Consent request {} was not emailed: its recipient turned off request emails; it waits on their dashboard", cmd.cnsReqId());
+        return Mono.empty();
     }
 
     /**
@@ -78,6 +105,12 @@ public class NotifyDpCmdHandler {
      * per-device ref (the idempotency key) keeps devices already reached from getting it twice.
      */
     private Mono<Void> pushToDevices(NotifyDpCmd cmd) {
+        // the dashboard always shows the request; push is what the principal chose (ADR-066)
+        return prefs.find(cmd.destination()).defaultIfEmpty(DpPref.defaults(cmd.destination()))
+                .flatMap(pref -> pref.pushEnabled() ? pushToDevicesNow(cmd) : Mono.<Void>empty());
+    }
+
+    private Mono<Void> pushToDevicesNow(NotifyDpCmd cmd) {
         return pushDvcRepo.findByDpId(cmd.destination())
                 .concatMap(dvc -> dispatchService.dispatch(NtfChnl.PUSH, pushMsg(cmd, dvc))
                         .onErrorResume(NtfDeliveryRejectedException.class, err -> {
