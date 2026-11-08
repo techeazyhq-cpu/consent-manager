@@ -40,9 +40,7 @@ reach across all of them.
   restore drill finds the right one. Scheduling those runs is still a job for whoever schedules the first (the CronJob is open in
   the backup runbook), and the retention job (ADR-064) still assumes one database.
 - **The sandbox** and the local compose stack keep one database.
-- **Per-service roles with least privilege** are not done. A service runs its migrations and its queries as one login, so a
-  runtime login without DDL needs the services to migrate as a separate user: a change to each service. The split makes it
-  possible, because a database now holds one schema.
+- **Per-service roles with least privilege** are done separately: [ADR-082](adr-082-least-privilege-database-logins.md), whose logins can only touch their own schema.
 
 ## Options considered
 
