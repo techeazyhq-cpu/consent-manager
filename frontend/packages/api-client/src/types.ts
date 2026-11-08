@@ -785,3 +785,34 @@ export interface NtfPreferencesDto {
   /** Whether they signed in with an email address, which email goes to. */
   canEmail: boolean;
 }
+
+/** The platform's public status (ADR-067). */
+export type StatusState = "OPERATIONAL" | "DEGRADED" | "OUTAGE";
+export type StatusOverall = "OPERATIONAL" | "DEGRADED" | "MAJOR_OUTAGE";
+export type StatusSeverity = "INFO" | "MAINTENANCE" | "INCIDENT";
+
+export interface StatusComponentDto {
+  id: string;
+  label: string;
+  state: StatusState;
+  /** Percent of probes that succeeded; null when it has not been watched yet. */
+  uptime24h: number | null;
+  uptime30d: number | null;
+}
+
+export interface StatusNoticeDto {
+  id: string;
+  title: string;
+  body: string;
+  severity: StatusSeverity;
+  componentIds: string[];
+  startedAt: string;
+  resolvedAt: string | null;
+}
+
+export interface StatusReportDto {
+  overall: StatusOverall;
+  updatedAt: string;
+  components: StatusComponentDto[];
+  notices: StatusNoticeDto[];
+}

@@ -154,6 +154,8 @@ body {
 
 .cm-badge-pending,
 .cm-badge-leaving,
+.cm-badge-degraded,
+.cm-badge-maintenance,
 .cm-badge-open,
 .cm-badge-acknowledged {
   background: rgba(240, 169, 58, 0.18);
@@ -163,6 +165,7 @@ body {
 .cm-badge-issued,
 .cm-badge-active,
 .cm-badge-accepted,
+.cm-badge-operational,
 .cm-badge-approved,
 .cm-badge-granted,
 .cm-badge-resolved,
@@ -173,6 +176,9 @@ body {
 
 .cm-badge-denied,
 .cm-badge-rejected,
+.cm-badge-outage,
+.cm-badge-major_outage,
+.cm-badge-incident,
 .cm-badge-revoked,
 .cm-badge-suspended,
 .cm-badge-declined,

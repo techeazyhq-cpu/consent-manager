@@ -50,6 +50,8 @@ import type {
   LegalHoldDto,
   NtfPreferencesDto,
   SignupApplicationDto,
+  StatusNoticeDto,
+  StatusReportDto,
   TermsAcceptanceDto,
   TermsStatusDto,
   AudActivityRow,
@@ -208,6 +210,20 @@ export const signup = {
   apply: (base: string, application: SignupApplicationDto) => publicPost<{ message: string }>(base, "/api/df-reg/signup", application),
   /** Confirms the contact address with the link's id and token. */
   verify: (base: string, id: string, token: string) => publicPost<{ status: string }>(base, "/api/df-reg/signup/verify", { id, token }),
+};
+
+/** The platform's status (ADR-067): public to read, posting notices is for staff. */
+export const platformStatus = {
+  /** No sign-in: a status page is read when sign-in is what is broken. */
+  get: async (base: string): Promise<StatusReportDto> => {
+    const res = await fetch(`${base}/api/status`);
+    if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
+    return (await res.json()) as StatusReportDto;
+  },
+  postNotice: (base: string, token: string, body: { title: string; body: string; severity: string; componentIds: string[] }) =>
+    request<StatusNoticeDto>(base, "/api/status/notices", token, { method: "POST", body: JSON.stringify(body) }),
+  resolveNotice: (base: string, token: string, id: string) =>
+    request<StatusNoticeDto>(base, `/api/status/notices/${encodeURIComponent(id)}/resolve`, token, { method: "POST" }),
 };
 
 /** The consent manager's terms of service and data processing agreement, for the signed-in member's fiduciary (ADR-063). */

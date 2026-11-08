@@ -28,6 +28,7 @@ import Staff from "./Staff";
 import Grievances from "./Grievances";
 import Erasures from "./Erasures";
 import Security from "./Security";
+import StatusAdmin from "./StatusAdmin";
 import type { Session } from "./session";
 import { parseRoute } from "./routes";
 
@@ -56,6 +57,7 @@ export default function CmAdminApp({ auth, gwBase }: Props) {
     { key: "erasures", href: "#/erasures", label: "Account erasures", section: "Platform", icon: Icons.user },
     { key: "audit", href: "#/audit", label: "Audit", section: "Platform", icon: Icons.list },
     { key: "security", href: "#/security", label: "Sign-in & security", section: "Platform", icon: Icons.shield },
+    { key: "status", href: "#/status", label: "Platform status", section: "Platform", icon: Icons.bell },
   ];
   // A tenant's page belongs under the dashboard in the menu.
   const current = route.page === "tenant" ? "dashboard" : route.page;
@@ -80,6 +82,7 @@ export default function CmAdminApp({ auth, gwBase }: Props) {
       {route.page === "audit" ? <Audit session={session} /> : null}
       {route.page === "grievances" ? <Grievances session={session} /> : null}
       {route.page === "erasures" ? <Erasures session={session} /> : null}
+      {route.page === "status" ? <StatusAdmin session={session} /> : null}
     </AppShell>
   );
 }

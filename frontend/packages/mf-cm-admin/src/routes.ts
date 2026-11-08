@@ -32,6 +32,7 @@ export type Route =
   | { page: "audit" }
   | { page: "grievances" }
   | { page: "erasures" }
+  | { page: "status" }
   | { page: "tenant"; dfId: string; tab: TenantTab };
 
 /** Anything unrecognised lands on the dashboard, the default page. */
@@ -44,6 +45,7 @@ export function parseRoute(hash: string): Route {
     case "audit":
     case "grievances":
     case "erasures":
+    case "status":
       return { page: parts[0] };
     case "billing":
       return {

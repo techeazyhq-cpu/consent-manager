@@ -26,6 +26,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * frontends and the DF Integration API, HTTP/2, PEP for consent-artefact verification,
  * and per-DF rate limiting sourced from cm-bil-svc's subscription quotas.
  */
+@org.springframework.scheduling.annotation.EnableScheduling
 @SpringBootApplication
 public class GwApplication {
 

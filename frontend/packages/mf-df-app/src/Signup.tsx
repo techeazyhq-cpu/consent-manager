@@ -101,7 +101,7 @@ function Form({ gwBase }: { gwBase: string }) {
         </form>
       </Card>
       <p className="cm-note">
-        Already have an account? <a href="#/dashboard">Sign in</a>.
+        Already have an account? <a href="#/dashboard">Sign in</a>. <a href="#/status" onClick={() => setTimeout(() => window.location.reload())}>Platform status</a>.
       </p>
     </>
   );
