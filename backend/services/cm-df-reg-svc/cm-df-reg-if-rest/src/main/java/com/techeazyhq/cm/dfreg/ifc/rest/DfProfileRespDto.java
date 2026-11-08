@@ -52,7 +52,10 @@ public record DfProfileRespDto(
         Instant closedAt,
         String legalHoldReason,
         Instant legalHoldAt,
-        Instant purgedAt) {
+        Instant purgedAt,
+        Instant signedUpAt,
+        Instant rejectedAt,
+        String rejectionReason) {
 
     public static DfProfileRespDto of(Df df) {
         DfPrfl prfl = df.prfl();
@@ -60,6 +63,6 @@ public record DfProfileRespDto(
                 df.registeredAt(), df.activatedAt(), prfl.legalName(), prfl.contactPhone(), prfl.website(),
                 prfl.registeredAddress(), prfl.industry(), prfl.cin(), prfl.gstin(), prfl.dpoName(), prfl.dpoEmail(),
                 df.suspendedAt(), df.suspensionReason(), df.leavingAt(), df.leavesAt(), df.closedAt(), df.legalHoldReason(),
-                df.legalHoldAt(), df.purgedAt());
+                df.legalHoldAt(), df.purgedAt(), df.signedUpAt(), df.rejectedAt(), df.rejectionReason());
     }
 }

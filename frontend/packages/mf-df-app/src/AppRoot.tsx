@@ -21,6 +21,8 @@ import { initKeycloak, toAuthInfo, type AuthInfo } from "auth-kit";
 import { ErrorBanner, Spinner, WrongAccountNotice } from "ui-kit/src/index";
 import { memberRoleOf } from "./roles";
 import DfConsoleApp from "./App";
+import Signup from "./Signup";
+import { parseSignupRoute } from "./signupRoute";
 
 const KC_BASE = import.meta.env.VITE_KC_BASE_URL ?? "http://localhost:8080";
 const KC_REALM = import.meta.env.VITE_KC_REALM ?? "cm-df";
@@ -33,6 +35,13 @@ const GW_BASE = import.meta.env.VITE_GW_BASE_URL ?? "http://localhost:9000";
  * they're signed in with the wrong account.
  */
 export default function AppRoot() {
+  // an organisation applying for itself has no account to sign in with (ADR-065)
+  const signupRoute = parseSignupRoute(window.location.hash);
+  if (signupRoute) return <Signup route={signupRoute} gwBase={GW_BASE} />;
+  return <SignedInConsole />;
+}
+
+function SignedInConsole() {
   const [auth, setAuth] = useState<AuthInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);

@@ -24,7 +24,7 @@ export type CnsReqSts = "PENDING" | "GRANTED" | "DENIED" | "EXPIRED" | "NOTIFICA
 export type CnsArtSts = "ISSUED" | "REVOKED" | "EXPIRED";
 export type CnsLcySts = "PENDING" | "DENIED" | "ISSUED" | "REVOKED" | "NOTIFICATION_FAILED" | "EXPIRED";
 /** A fiduciary's standing (ADR-064): SUSPENDED by staff, LEAVING through a wind-down, CLOSED for good. */
-export type DfSts = "PENDING" | "ACTIVE" | "SUSPENDED" | "LEAVING" | "CLOSED";
+export type DfSts = "PENDING" | "ACTIVE" | "SUSPENDED" | "LEAVING" | "CLOSED" | "REJECTED";
 export type DfSubSts = "ACTIVE" | "SUSPENDED";
 
 /**
@@ -71,6 +71,9 @@ export interface DfListItemRespDto {
   closedAt?: string | null;
   legalHoldReason?: string | null;
   purgedAt?: string | null;
+  /** When the organisation applied for itself on the public sign-up page (ADR-065); absent when staff registered it. */
+  signedUpAt?: string | null;
+  rejectionReason?: string | null;
 }
 
 /** What onboarding asks for; everything after the plan is the organisation's profile, all optional. */
@@ -114,6 +117,9 @@ export interface DfProfileRespDto {
   legalHoldReason: string | null;
   legalHoldAt: string | null;
   purgedAt: string | null;
+  signedUpAt: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
 }
 
 /** A tenant's consent requests by lifecycle status, for CM Admin (counts only). */
@@ -735,4 +741,36 @@ export interface LeaveProposalDto {
   decidedBy: string | null;
   decidedAt: string | null;
   decisionNote: string | null;
+}
+
+/** What an organisation tells the public sign-up page (ADR-065). */
+export interface SignupApplicationDto {
+  name: string;
+  contactEmail: string;
+  legalName?: string;
+  industry?: string;
+  website?: string;
+}
+
+export interface DfRejectedDto {
+  id: string;
+  sts: DfSts;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+}
+
+/** What an organisation tells the public sign-up page (ADR-065). */
+export interface SignupApplicationDto {
+  name: string;
+  contactEmail: string;
+  legalName?: string;
+  industry?: string;
+  website?: string;
+}
+
+export interface DfRejectedDto {
+  id: string;
+  sts: DfSts;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
 }

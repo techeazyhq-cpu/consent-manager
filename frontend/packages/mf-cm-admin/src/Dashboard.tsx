@@ -23,7 +23,7 @@ import DfLogo from "./DfLogo";
 import { tenantHref } from "./routes";
 import { freshToken, type Session } from "./session";
 
-type Filter = "ALL" | "ACTIVE" | "PENDING" | "SUSPENDED" | "LEAVING" | "CLOSED";
+type Filter = "ALL" | "ACTIVE" | "PENDING" | "SUSPENDED" | "LEAVING" | "CLOSED" | "REJECTED";
 
 /** Every data fiduciary as a logo tile; a tile opens everything about that tenant. */
 export default function Dashboard({ session }: { session: Session }) {
@@ -98,6 +98,7 @@ export default function Dashboard({ session }: { session: Session }) {
           <option value="SUSPENDED">Suspended</option>
           <option value="LEAVING">Leaving</option>
           <option value="CLOSED">Closed</option>
+          <option value="REJECTED">Rejected</option>
         </select>
         <Button onClick={load}>Refresh</Button>
         <a className="cm-btn cm-btn-primary" href="#/onboard" style={{ textDecoration: "none" }}>
@@ -122,6 +123,7 @@ export default function Dashboard({ session }: { session: Session }) {
               </div>
               <div className="cm-logo-tile-meta">{[df.industry, df.subPlnName ?? "FREE"].filter(Boolean).join(" · ")}</div>
               <Badge status={df.sts} />
+              {df.signedUpAt ? <div className="cm-logo-tile-meta">Self sign-up</div> : null}
             </a>
           ))}
         </div>

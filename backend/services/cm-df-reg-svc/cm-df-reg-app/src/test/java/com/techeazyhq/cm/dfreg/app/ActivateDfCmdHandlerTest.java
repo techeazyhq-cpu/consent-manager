@@ -181,4 +181,20 @@ class ActivateDfCmdHandlerTest {
                 () -> keys.handle(new IssueSandboxKeysHandler.Cmd(null, java.util.Optional.of(DfRole.OWNER), "Acme")).block());
         assertTrue(dfs.isEmpty());
     }
+
+    @Test
+    void onlyAnApplicationWaitingForActivationIsActivated() {
+        for (DfSts sts : List.of(DfSts.ACTIVE, DfSts.SUSPENDED, DfSts.LEAVING, DfSts.CLOSED, DfSts.REJECTED)) {
+            dfs.put("df-x", DfFactory.rehydrate("df-x", "Acme", "ops@acme.example", DfPrfl.EMPTY, null, sts, Instant.now(), "keep", null));
+
+            com.techeazyhq.cm.webkit.DomRuleViolation refusal = org.junit.jupiter.api.Assertions.assertThrows(
+                    com.techeazyhq.cm.webkit.DomRuleViolation.class, () -> handler.handle(new ActivateDfCmd("df-x")).block());
+
+            assertEquals(409, refusal.httpStatus(), sts.name());
+            assertEquals("df-cannot-activate", refusal.problemType());
+            assertEquals("keep", dfs.get("df-x").cmDfApiClientSecret(), "its client secret was not replaced");
+            assertEquals(sts, dfs.get("df-x").sts());
+        }
+        assertTrue(invited.isEmpty());
+    }
 }

@@ -44,6 +44,9 @@ public final class Df extends Agg<String> {
     private String legalHoldReason;
     private Instant legalHoldAt;
     private Instant purgedAt;
+    private Instant signedUpAt;
+    private Instant rejectedAt;
+    private String rejectionReason;
 
     Df(String id, String name, String contactEmail, DfPrfl prfl, String subPlnName, DfSts sts, Instant registeredAt,
        String cmDfApiClientSecret, Instant activatedAt) {
@@ -89,6 +92,46 @@ public final class Df extends Agg<String> {
 
     public Instant activatedAt() {
         return activatedAt;
+    }
+
+    /** When the organisation applied for itself on the public sign-up page (ADR-065); null when staff registered it. */
+    public Instant signedUpAt() {
+        return signedUpAt;
+    }
+
+    public Instant rejectedAt() {
+        return rejectedAt;
+    }
+
+    public String rejectionReason() {
+        return rejectionReason;
+    }
+
+    /** Notes that the organisation applied for itself, its contact address having been confirmed. */
+    public void markSelfService(Instant at) {
+        this.signedUpAt = at;
+    }
+
+    /** Staff declining an application that is still waiting (ADR-065). The reason is given to the applicant. */
+    public void reject(String reason, Instant at) {
+        if (sts != DfSts.PENDING) {
+            throw new IllegalStateException("Only an application waiting for activation can be rejected, not one in status " + sts);
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("A reason for rejecting the application is needed");
+        }
+        if (reason.trim().length() > 500) {
+            throw new IllegalArgumentException("The reason must be at most 500 characters");
+        }
+        this.sts = DfSts.REJECTED;
+        this.rejectedAt = at;
+        this.rejectionReason = reason.trim();
+    }
+
+    void restoreOnboarding(Instant signedUp, Instant rejected, String reason) {
+        this.signedUpAt = signedUp;
+        this.rejectedAt = rejected;
+        this.rejectionReason = reason;
     }
 
     /** Why a legal hold stops the retention purge for this fiduciary (ADR-064), or null when there is none. */

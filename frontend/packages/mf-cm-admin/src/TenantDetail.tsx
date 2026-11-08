@@ -172,6 +172,7 @@ function Overview({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const fields: [string, string | null | undefined][] = [
     ["Tenant ID", df.id],
@@ -186,13 +187,18 @@ function Overview({
     ["GSTIN", df.gstin],
     ["Data Protection Officer", [df.dpoName, df.dpoEmail].filter(Boolean).join(" · ")],
     ["Plan chosen at onboarding", df.subPlnName ?? "FREE"],
-    ["Registered", fmtDate(df.registeredAt)],
+    ["Registered", df.signedUpAt ? `${fmtDate(df.registeredAt)}, by the organisation itself on the sign-up page` : fmtDate(df.registeredAt)],
     ["Activated", fmtDate(df.activatedAt)],
   ];
 
   return (
     <>
       {error ? <ErrorBanner message={error} /> : null}
+      {df.sts === "REJECTED" ? (
+        <Card style={{ marginBottom: 16 }}>
+          <strong>Application rejected</strong> on {fmtDate(df.rejectedAt)}: {df.rejectionReason}
+        </Card>
+      ) : null}
       {df.sts === "PENDING" ? (
         <Card style={{ marginBottom: 16 }}>
           <strong>Awaiting activation.</strong>
@@ -218,6 +224,31 @@ function Overview({
           >
             {busy ? "Activating…" : "Activate"}
           </Button>
+          <div style={{ marginTop: 16 }}>
+            <Field label="Or reject the application, with a reason the applicant is emailed">
+              <input value={rejectReason} maxLength={500} onChange={(e) => setRejectReason(e.target.value)} />
+            </Field>
+            <Button
+              variant="danger"
+              disabled={busy || !rejectReason.trim()}
+              onClick={async () => {
+                if (!window.confirm(`Reject ${df.name}? ${df.contactEmail} is emailed the reason, and this can't be undone.`)) return;
+                setBusy(true);
+                setError(null);
+                try {
+                  await dfReg.reject(session.gwBase, await freshToken(session.auth), df.id, rejectReason.trim());
+                  setRejectReason("");
+                  onChanged();
+                } catch (err) {
+                  setError(friendlyError(err));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Reject
+            </Button>
+          </div>
         </Card>
       ) : null}
 
