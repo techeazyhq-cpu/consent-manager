@@ -19,6 +19,7 @@
 package com.techeazyhq.cm.cnscmd.app;
 
 import java.time.Clock;
+import java.util.List;
 import java.util.function.Function;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.cnscmd.dom.PrpsDef;
 import com.techeazyhq.cm.cnscmd.dom.PrpsDefRepoPort;
+import com.techeazyhq.cm.cnscmd.dom.PrpsParty;
 import com.techeazyhq.cm.cnscmd.dom.PrpsVer;
 import com.techeazyhq.cm.cnscmd.dom.PrpsVerContent;
 import com.techeazyhq.cm.cnscmd.dom.ProcessorRepoPort;
@@ -96,15 +98,36 @@ public class PrpsDefCmds {
     /** Publishes the draft as the current version; from now on requests are made from it. */
     @Transactional
     public Mono<PrpsDef> publish(String dfId, String code) {
-        // a processor may have been retired since the draft was saved
+        // a processor may have been retired since the draft was saved; the parties the version names are described as the register
+        // describes them now, once, for good (ADR-081)
         return found(dfId, code)
-                .flatMap(def -> def.draft().map(d -> ProcessorCmds.refuseRetired(processors, dfId, d.content())).orElse(Mono.empty()))
-                .then(change(dfId, code, def -> {
+                .flatMap(def -> def.draft()
+                        .map(d -> ProcessorCmds.refuseRetired(processors, dfId, d.content()).then(partiesOf(dfId, d.content())))
+                        .orElse(Mono.just(List.<PrpsParty>of())))
+                .flatMap(parties -> change(dfId, code, def -> {
+            def.draft().ifPresent(d -> def.saveDraft(d.content().withParties(parties), clock.instant()));
             PrpsVer published = def.publish(clock.instant());
             return audit.record("purpose.published", dfId, def.code(),
                     AuditTrail.details("purpose", def.code(), "version", String.valueOf(published.verNo()),
                             "change", published.change().kind().name()));
         }));
+    }
+
+    /** The register's details of each recipient and transfer the content names, in the order it names them; names not in the register have none. */
+    private Mono<List<PrpsParty>> partiesOf(String dfId, PrpsVerContent content) {
+        return processors.list(dfId).collectList().map(register -> {
+            java.util.Map<String, com.techeazyhq.cm.cnscmd.dom.Processor> byKey = new java.util.HashMap<>();
+            register.forEach(p -> byKey.put(com.techeazyhq.cm.cnscmd.dom.Processor.key(p.name()), p));
+            java.util.LinkedHashMap<String, PrpsParty> out = new java.util.LinkedHashMap<>();
+            java.util.stream.Stream.concat(content.recipients().stream(), content.transfers().stream()).forEach(name -> {
+                String key = com.techeazyhq.cm.cnscmd.dom.Processor.key(name);
+                com.techeazyhq.cm.cnscmd.dom.Processor p = byKey.get(key);
+                if (p != null && !out.containsKey(key)) {
+                    out.put(key, new PrpsParty(name.strip(), p.role(), p.country()));
+                }
+            });
+            return List.copyOf(out.values());
+        });
     }
 
     private Mono<PrpsDef> change(String dfId, String code, Function<PrpsDef, Mono<Void>> action) {

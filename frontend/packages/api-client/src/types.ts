@@ -243,6 +243,8 @@ export interface CnsReqTermsDto {
   ntcTitle: string;
   ntcText: string | null;
   ntcHash: string | null;
+  /** What the fiduciary says about the parties that receive the data, as of this version (ADR-081). */
+  parties?: PartyDto[];
 }
 
 /** One event of a consent record, as its ISO/IEC TS 27560 document lists it (ADR-025). */
@@ -543,6 +545,15 @@ export interface PrpsContent {
   maxValidityDays: number;
   flags: PrpsFlag[];
   notices: PrpsNtc[];
+  /** What the register said about the parties named, when this version was published; read only (ADR-081). */
+  parties?: PartyDto[];
+}
+
+/** A party a purpose version names, as described when it was published: who, what it does with the data, and where. */
+export interface PartyDto {
+  name: string;
+  role: string;
+  country: string;
 }
 
 /** How a version differs from the one before, as the platform classifies it. */

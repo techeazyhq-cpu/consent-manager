@@ -38,7 +38,21 @@ import java.util.regex.Pattern;
  */
 public record PrpsVerContent(String name, String description, List<PrpsDCat> dCats, List<String> recipients,
                              List<String> transfers, int retentionDays, int requestedValidityDays, int maxValidityDays,
-                             Set<PrpsFlag> flags, List<PrpsNtc> notices) {
+                             Set<PrpsFlag> flags, List<PrpsNtc> notices, List<PrpsParty> parties) {
+
+    /** A version with no details of its parties: what a fiduciary writes. They are filled in when it is published (ADR-081). */
+    public PrpsVerContent(String name, String description, List<PrpsDCat> dCats, List<String> recipients,
+                          List<String> transfers, int retentionDays, int requestedValidityDays, int maxValidityDays,
+                          Set<PrpsFlag> flags, List<PrpsNtc> notices) {
+        this(name, description, dCats, recipients, transfers, retentionDays, requestedValidityDays, maxValidityDays, flags, notices,
+                List.of());
+    }
+
+    /** The same version with the details of its parties as the register gave them at publication. */
+    public PrpsVerContent withParties(List<PrpsParty> details) {
+        return new PrpsVerContent(name, description, dCats, recipients, transfers, retentionDays, requestedValidityDays,
+                maxValidityDays, flags, notices, details);
+    }
 
     /**
      * The longest consent may last, until regime profiles (ADR-020) set it per law and purpose. Endless consent is
@@ -68,6 +82,7 @@ public record PrpsVerContent(String name, String description, List<PrpsDCat> dCa
         transfers = present(transfers);
         flags = flags == null || flags.isEmpty() ? Set.of() : Set.copyOf(EnumSet.copyOf(flags));
         notices = present(notices);
+        parties = present(parties);
     }
 
     /** A JSON list may hold nulls; they say nothing, so they are dropped rather than failing as a server error. */

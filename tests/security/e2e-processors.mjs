@@ -71,9 +71,15 @@ const purpose = await api(owner, 'POST', '/api/cns-cmd/prps-defs', { code, conte
 expect(purpose.status === 201, 'a purpose names the processor, and a name that is not in the register is accepted too', `${purpose.status}`);
 expect((await api(owner, 'POST', `/api/cns-cmd/prps-defs/${code}/publish`)).status === 200, 'and is published');
 
+const version = (await api(owner, 'GET', `/api/cns-cmd/prps-defs/${code}`)).json.versions.find((v) => v.sts === 'PUBLISHED');
+expect(version?.content.parties?.length === 1 && version.content.parties[0].name === 'Courier Ltd' && version.content.parties[0].role === 'Delivers orders' && version.content.parties[0].country === 'IN', 'the published version carries what the register said about the party it names, and only the registered one', JSON.stringify(version?.content.parties));
+
 const uses = await api(owner, 'GET', `/api/cns-cmd/processors/${id}/uses`);
 expect(uses.status === 200 && uses.json.length === 1 && uses.json[0].purpose === code, 'uses finds the purpose', JSON.stringify(uses.json));
 
+const edited = await api(owner, 'PUT', `/api/cns-cmd/processors/${id}`, { role: 'Something else', country: 'US', contactEmail: '' });
+const stillFrozen = (await api(owner, 'GET', `/api/cns-cmd/prps-defs/${code}`)).json.versions.find((v) => v.sts === 'PUBLISHED');
+expect(edited.status === 200 && stillFrozen.content.parties[0].role === 'Delivers orders' && stillFrozen.content.parties[0].country === 'IN', 'editing the register afterwards does not change the published version');
 expect((await api(owner, 'POST', `/api/cns-cmd/processors/${id}/retire`)).json.status === 'RETIRED', 'the processor is retired');
 const created = await api(owner, 'POST', '/api/cns-cmd/prps-defs', { code: `${code}_2`, content: content('courier ltd') });
 expect(created.status === 409 && created.json.code === 'processor-retired', 'a new purpose cannot name it', `${created.status} ${created.json.code}`);

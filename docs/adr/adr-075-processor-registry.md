@@ -33,7 +33,7 @@ not a supplier-management tool, so what belongs here is only what a notice needs
 
 ## Not yet / limits
 
-- **No link from a notice to the register.** A principal sees the name written in the notice, not the processor's role or country.
+- ~~**No link from a notice to the register.**~~ Done: [ADR-081](adr-081-processor-details-in-the-notice.md) copies the register's details into the version at publication. The rest of this item, as it was written: A principal sees the name written in the notice, not the processor's role or country.
   Showing them needs the register's details frozen into the purpose version at publication, which changes the version's content and
   its hash; it is the next step, not part of this one.
 - **The purpose editor does not offer the register's names** while you type, and does not flag a name that is not in it.
