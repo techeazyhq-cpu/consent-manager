@@ -1,0 +1,44 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# Where alerts go (ADR-087). Prometheus evaluates the rules in ../prometheus/rules; Alertmanager groups what fires, waits a little so
+# one cause is one message, repeats what is still wrong, and sends it to a receiver by severity.
+#
+# Locally nothing leaves this machine: both receivers are named and empty, so the alerts show in this UI (http://localhost:9093) and in
+# Prometheus. To be told, add a configuration to a receiver (below), or point a real Alertmanager at the rule files.
+route:
+  receiver: ticket
+  group_by: [alertname, service]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers: [severity="page"]
+      receiver: page
+      repeat_interval: 1h
+
+receivers:
+  - name: page
+    # webhook_configs: [{url: https://hooks.example.com/pager}]
+    # pagerduty_configs: [{routing_key: ...}]
+  - name: ticket
+    # email_configs: [{to: ops@example.com, from: alerts@example.com, smarthost: smtp.example.com:587}]
+
+inhibit_rules:
+  # a service that is down also fails its other checks: say that one thing
+  - source_matchers: [alertname="ServiceDown"]
+    target_matchers: [severity=~"page|ticket"]
+    equal: [service]

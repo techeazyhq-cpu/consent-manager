@@ -31,6 +31,10 @@ Never expose the gateway's management port (9091) through the ingress: it carrie
 | `SlowRequests` | the service's p95 against its CPU and heap panels; `cm-cns-qry-svc` is the usual one on a laptop (vapt-and-performance.md) |
 | `CircuitBreakerOpen` | a dependency is failing: the breaker's name says which (`cns-cmd`, `df-reg`, `keycloak-admin`, ...); look at that service first. The breaker closes by itself once calls succeed |
 | `DatabasePoolExhausted` | every database connection of that service is in use and requests wait; look for a slow query or a stuck transaction before raising the pool size |
+| `DatabaseDown` | PostgreSQL is unreachable by its exporter: every service that needs it is degraded or down; check the instance, then the network |
+| `DatabaseConnectionsNearlyAll` | the pools of all services add up to most of `max_connections` (ADR-052): find which database holds them (the dashboard breaks them down) before raising the maximum |
+| `RedisDown`, `RedisMemoryNearlyFull` | rate limits, the status page and usage counters live in Redis; the services fail open (ADR-016), so a Redis outage is quiet and must be seen here |
+| `PulsarDown` | events are not moving between services: consents recorded in one are not reaching the others; the outbox keeps them until it is back |
 | `HeapNearlyFull` | the container is memory-capped (ADR-052); raise the limit or look for a leak before the OOM restart |
 | `LogicalBackupMissing`, `LogicalBackupFailed` | [backup-and-recovery.md](backup-and-recovery.md): run `postgres-backup.sh` by hand and read its error |
 | `RestoreDrillOverdue` | run `postgres-restore-drill.sh`; a drill that was never run is a backup that was never tried |

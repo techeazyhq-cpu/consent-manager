@@ -21,6 +21,11 @@ global:
 rule_files:
   - /etc/prometheus/rules/*.yml
 
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
 scrape_configs:
   - job_name: cm-services
     metrics_path: /actuator/prometheus
@@ -35,6 +40,16 @@ scrape_configs:
       - {targets: ["cm-dsr-svc:8088"], labels: {service: cm-dsr-svc}}
       # the gateway serves its actuator on a separate internal port (CM_GW_MANAGEMENT_PORT)
       - {targets: ["cm-gw:9091"], labels: {service: cm-gw}}
+  - job_name: postgres
+    static_configs:
+      - {targets: ["postgres-exporter:9187"], labels: {service: postgres}}
+  - job_name: redis
+    static_configs:
+      - {targets: ["redis-exporter:9121"], labels: {service: redis}}
+  - job_name: pulsar
+    metrics_path: /metrics/
+    static_configs:
+      - {targets: ["pulsar:8080"], labels: {service: pulsar}}
   - job_name: opa
     metrics_path: /metrics
     static_configs:

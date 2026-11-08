@@ -18,9 +18,9 @@
 
 # Turns the local metrics stack on or off (ADR-070).
 #   up    recreates the services with /actuator/prometheus exposed (and the gateway's actuator on 9091), then starts
-#         Prometheus (http://localhost:9090) and Grafana (http://localhost:3001)
+#         Prometheus (http://localhost:9090), Alertmanager (http://localhost:9093), Grafana (http://localhost:3001) and the PostgreSQL and Redis exporters
 #   down  stops Prometheus and Grafana and recreates the services with the metrics endpoint off again
-# Adds about 450 MB and half a CPU to the stack, both capped (ADR-052).
+# Adds about 600 MB and 0.8 CPU to the stack, both capped (ADR-052).
 set -euo pipefail
 cd "$(dirname "$0")/../infra"
 
@@ -28,12 +28,12 @@ case "${1:-}" in
   up)
     export CM_METRICS_EXPOSURE="health,info,prometheus" CM_GW_MANAGEMENT_PORT=9091
     docker compose up -d --no-build cm-df-reg-svc cm-cns-cmd-svc cm-cns-qry-svc cm-ntf-svc cm-bil-svc cm-aud-svc cm-stf-svc cm-dsr-svc cm-gw
-    docker compose --profile observability up -d prometheus grafana
+    docker compose --profile observability up -d prometheus grafana alertmanager postgres-exporter redis-exporter
     echo "Prometheus: http://localhost:9090   Grafana: http://localhost:3001 (Consent Manager > services)"
     ;;
   down)
-    docker compose --profile observability stop prometheus grafana
-    docker compose --profile observability rm -f prometheus grafana
+    docker compose --profile observability stop prometheus grafana alertmanager postgres-exporter redis-exporter
+    docker compose --profile observability rm -f prometheus grafana alertmanager postgres-exporter redis-exporter
     docker compose up -d --no-build cm-df-reg-svc cm-cns-cmd-svc cm-cns-qry-svc cm-ntf-svc cm-bil-svc cm-aud-svc cm-stf-svc cm-dsr-svc cm-gw
     ;;
   *)

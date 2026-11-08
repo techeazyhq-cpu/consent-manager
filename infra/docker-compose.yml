@@ -274,6 +274,43 @@ services:
       - ./observability/prometheus:/etc/prometheus:ro
       - prom-data:/prometheus
 
+  # What the services depend on, as the servers themselves report it (ADR-087).
+  postgres-exporter:
+    profiles: [observability]
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.17.1
+    environment:
+      DATA_SOURCE_NAME: postgresql://cm:cm@postgres:5432/consent_manager?sslmode=disable # this laptop's database only
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 48m
+
+  redis-exporter:
+    profiles: [observability]
+    image: oliver006/redis_exporter:v1.74.0
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 32m
+
+  alertmanager:
+    profiles: [observability]
+    image: prom/alertmanager:v0.28.1
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager"]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 48m
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./observability/alertmanager:/etc/alertmanager:ro
+
   grafana:
     profiles: [observability]
     image: grafana/grafana:12.1.0
