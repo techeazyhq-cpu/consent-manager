@@ -85,6 +85,9 @@ capabilities: {drop: [ALL]}
 - {name: NTF_SVC_BASE_URL, value: {{ $c.notificationService.baseUrl | quote }}}
 - {name: SPRING_MAIL_HOST, value: {{ $c.mail.host | quote }}}
 - {name: SPRING_MAIL_PORT, value: {{ $c.mail.port | quote }}}
+# the key that hashes the addresses of principals who chose how they hear of requests (ADR-066): required, never a default
+- name: CM_NTF_EMAIL_FINGERPRINT_KEY
+  {{- include "cm.secretRef" (dict "root" $root "key" "NTF_EMAIL_FINGERPRINT_KEY") | nindent 2 }}
 - name: NTF_SVC_API_KEY
   {{- include "cm.secretRef" (dict "root" $root "key" "NTF_SVC_API_KEY" "optional" true) | nindent 2 }}
 - name: NTF_SVC_SIGNING_SECRET

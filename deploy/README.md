@@ -63,6 +63,7 @@ Terraform creates the secret entries without values. An operator sets them once:
 | `DFREG_SECRETS_KEY` | Base64 of 32 random bytes: seals API key signing secrets (ADR-041) |
 | `CNS_TKN_JWKS` | The consent token signing key set (ADR-006), a JSON Web Key Set with private keys |
 | `CNSCMD_SECRETS_KEY` | Base64 of 32 random bytes: seals webhook signing secrets (ADR-047) |
+| `NTF_EMAIL_FINGERPRINT_KEY` | Base64 of 32 random bytes: the key that hashes the addresses of principals who chose how they hear of requests (ADR-066). Changing it makes their choices stop applying until they save again |
 | `CNS_RCPT_JWKS` | The consent receipt signing key set (ADR-025), the same form, never the same keys. Keep retired keys in it, after the current one, for as long as receipts they signed are kept |
 | `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_DB_PASSWORD` | Keycloak's admin and database passwords (read by both charts' Secrets) |
 | `NTF_SVC_API_KEY`, `NTF_SVC_SIGNING_SECRET` | The notification-service client credentials |
@@ -146,7 +147,7 @@ Then consent-manager, whose `DB_PASSWORD` is `CM_DB_PASSWORD` (the other keys as
 kubectl create namespace consent-manager
 kubectl -n consent-manager create secret generic cm-secrets --from-literal=DB_PASSWORD=cm \
   --from-literal=KEYCLOAK_ADMIN_PASSWORD=admin --from-literal=DFREG_SECRETS_KEY="$(openssl rand -base64 32)" \
-  --from-literal=CNSCMD_SECRETS_KEY="$(openssl rand -base64 32)" \
+  --from-literal=CNSCMD_SECRETS_KEY="$(openssl rand -base64 32)" --from-literal=NTF_EMAIL_FINGERPRINT_KEY="$(openssl rand -base64 32)" \
   --from-file=CNS_TKN_JWKS=<a JWK set> --from-file=CNS_RCPT_JWKS=<another JWK set>
 helm upgrade --install cm deploy/helm/consent-manager -n consent-manager --set image.tag=0.1.0 \
   --set config.keycloak.publicUrl=http://localhost:8080 --set config.notificationService.provider=local

@@ -22,6 +22,7 @@ import { Button, Card, PageHeader, Spinner } from "ui-kit/src/index";
 import ConsentCard, { DfLogo, statusOrder } from "./ConsentCard";
 import { ExportRecords } from "./History";
 import { CloseAccount } from "./CloseAccount";
+import PrefsToggles from "./PrefsToggles";
 import PushToggle from "./PushToggle";
 import { awaitsDecision } from "./labels";
 import type { Portal } from "./portal";
@@ -246,7 +247,11 @@ export function Notifications({ portal }: { portal: Portal }) {
           When an organisation asks for your consent, it tells you by email or text message, at the address or number
           it has for you. You can also get a notification in this browser.
         </p>
+        <PrefsToggles auth={portal.auth} gwBase={portal.gwBase} onError={portal.setError} />
         <PushToggle auth={portal.auth} gwBase={portal.gwBase} onError={portal.setError} />
+        <p className="cm-note">
+          A request is always on your dashboard, and sign-in codes always come to you: those can't be turned off.
+        </p>
         <p className="cm-note">
           Signing out turns notifications off for this browser, so a shared computer doesn't keep receiving yours.
         </p>

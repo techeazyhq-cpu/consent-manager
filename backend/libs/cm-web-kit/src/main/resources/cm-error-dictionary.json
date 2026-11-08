@@ -1938,6 +1938,19 @@
       "raisedBy": [
         "cm-df-reg-svc"
       ]
+    },
+    {
+      "code": "email-not-available",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "No email address to use",
+      "description": "Email notifications go to the address the person signed in with. They signed in with a mobile number, so there is none.",
+      "action": "Leave email off, or sign in with an email address.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-ntf-svc"
+      ]
     }
   ]
 }

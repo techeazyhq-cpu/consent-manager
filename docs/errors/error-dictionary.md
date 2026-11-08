@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-145 entries: 135 API problems, 9 operational log codes and 1 event.
+146 entries: 136 API problems, 9 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -191,6 +191,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `df-not-suspended` | 409 | Fiduciary is not suspended | Only a suspended fiduciary can be resumed. | Check the fiduciary's status. | no | df-reg |
 | `df-suspended` | 403 | Fiduciary suspended | The fiduciary this API key belongs to has been suspended by the consent manager. Nothing new is accepted until it is resumed; its records are untouched. | Contact the consent manager's support. The suspension reason was given to your Owner. | no | df-reg |
 | `dp-request-closed` | 409 | Request already closed | The request was already answered, refused or withdrawn. | Read its current state. | no | dsr |
+| `email-not-available` | 409 | No email address to use | Email notifications go to the address the person signed in with. They signed in with a mobile number, so there is none. | Leave email off, or sign in with an email address. | no | ntf |
 | `erasure-not-stuck` | 409 | Erasure is not stuck | Only a stuck erasure can be retried. | Read its state first. | no | dsr |
 | `export-unavailable` | 409 | Export not available now | The organisation's data can be exported while it is active, suspended or leaving. Once it has closed its team and keys are gone and the records are kept only for their retention. | Take the export during the wind-down. | no | df-reg |
 | `leave-cancel-used` | 409 | Departure already cancelled once | A departure can be called off once, and this fiduciary has already used that. | The wind-down continues. Contact the consent manager's support if this is a mistake. | no | df-reg |

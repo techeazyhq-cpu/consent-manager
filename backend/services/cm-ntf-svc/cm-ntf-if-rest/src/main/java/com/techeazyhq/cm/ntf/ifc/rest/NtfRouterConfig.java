@@ -31,11 +31,15 @@ import com.techeazyhq.cm.ntf.app.PushDvcCmdHandler;
 public class NtfRouterConfig {
 
     @Bean
-    public RouterFunction<ServerResponse> ntfRoutes(OtpSendCmdHandler otpSendCmdHandler, PushDvcCmdHandler pushDvcCmdHandler) {
+    public RouterFunction<ServerResponse> ntfRoutes(OtpSendCmdHandler otpSendCmdHandler, PushDvcCmdHandler pushDvcCmdHandler,
+                                                   com.techeazyhq.cm.ntf.app.DpPrefCmdHandler dpPrefCmdHandler) {
         OtpSendHandler otpSendHandler = new OtpSendHandler(otpSendCmdHandler);
         PushDvcHandler pushDvcHandler = new PushDvcHandler(pushDvcCmdHandler);
+        DpPrefHttpHandler prefHandler = new DpPrefHttpHandler(dpPrefCmdHandler);
         return RouterFunctions.route()
                 .POST("/internal/otp/send", otpSendHandler::send)
+                .GET("/api/ntf/preferences", prefHandler::get)
+                .PUT("/api/ntf/preferences", prefHandler::put)
                 .GET("/api/ntf/push-dvcs", pushDvcHandler::list)
                 .POST("/api/ntf/push-dvcs", pushDvcHandler::register)
                 .DELETE("/api/ntf/push-dvcs/{id}", pushDvcHandler::remove)
