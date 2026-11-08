@@ -19,8 +19,9 @@
 import assert from 'node:assert/strict';
 import { generateKeyPairSync, sign } from 'node:crypto';
 import { createServer } from 'node:http';
+import { deflateSync } from 'node:zlib';
 import { test } from 'node:test';
-import { Decision, Sidecar, cachedJwks, verifyToken } from '../src/sidecar.mjs';
+import { Decision, Sidecar, cachedJwks, statusBit, verifyStatusList, verifyToken } from '../src/sidecar.mjs';
 import { handler } from '../src/server.mjs';
 
 const { privateKey, publicKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
@@ -206,4 +207,104 @@ test('over HTTP: 200 for ALLOW and DENY, 503 with Retry-After for UNAVAILABLE, 4
   } finally {
     server.close();
   }
+});
+
+// ---- list mode (ADR-077)
+
+const LIST_URI = 'https://api.example.com/api/cns-cmd/status-lists/df-1';
+
+/** A consent token that names its place in the fiduciary's status list. */
+const listedToken = (idx, over = {}) => token({ status: { status_list: { idx, uri: LIST_URI } }, ...over });
+
+/** A status list token: `ended` are the indexes whose bit is set. */
+function statusList({ ended = [], uri = LIST_URI, exp = NOW / 1000 + 60, key = privateKey, typ = 'statuslist+jwt', size = 1024 } = {}) {
+  const bits = Buffer.alloc(size / 8);
+  for (const i of ended) bits[Math.floor(i / 8)] |= 1 << (i % 8);
+  const head = b64({ alg: 'RS256', kid: 'k1', typ });
+  const body = b64({ iss: 'cm-cns-cmd-svc', sub: uri, iat: NOW / 1000, exp, ttl: 60, status_list: { bits: 1, lst: deflateSync(bits).toString('base64url') } });
+  return `${head}.${body}.${sign('sha256', Buffer.from(`${head}.${body}`), key).toString('base64url')}`;
+}
+
+test('a status list verifies, and its bits read least significant first', () => {
+  const r = verifyStatusList(statusList({ ended: [0, 9] }), jwks, { uri: LIST_URI, now: NOW });
+  assert.equal(r.ok, true);
+  assert.equal(statusBit(r.bits, 0), true);
+  assert.equal(statusBit(r.bits, 1), false);
+  assert.equal(statusBit(r.bits, 9), true);
+  assert.equal(statusBit(r.bits, 10), false);
+  assert.equal(statusBit(r.bits, 1024), null, 'an index outside the list is not an answer');
+});
+
+test('a status list is refused when forged, expired, another list, or the wrong type', () => {
+  const stranger = generateKeyPairSync('rsa', { modulusLength: 2048 }).privateKey;
+  const cases = [
+    ['status-list-signature', statusList({ key: stranger })],
+    ['status-list-expired', statusList({ exp: NOW / 1000 - 1 })],
+    ['status-list-other', statusList({ uri: 'https://elsewhere.example/list' })],
+    ['status-list-type', statusList({ typ: 'JWT' })],
+    ['status-list-malformed', 'nope'],
+  ];
+  for (const [reason, jwt] of cases) assert.equal(verifyStatusList(jwt, jwks, { uri: LIST_URI, now: NOW }).reason, reason, reason);
+});
+
+function listSidecar({ client, lists, now, origin = 'https://api.example.com' }) {
+  const fetched = [];
+  const s = new Sidecar({
+    client, jwks: async () => jwks, mode: 'list', listOrigin: origin, now,
+    fetchList: async (uri) => { fetched.push(uri); const next = lists(); if (next instanceof Error) throw next; return next; },
+  });
+  return { s, fetched };
+}
+
+test('list mode: the token and the list answer, and the list is fetched once, not once per check', async () => {
+  const c = clock();
+  const client = { verify: async () => { throw new Error('the live check must not be used'); }, token: async () => listedToken(5) };
+  const { s, fetched } = listSidecar({ client, lists: () => statusList({ ended: [6] }), now: c.now });
+
+  const first = await s.check('art-1', 'ORDER_UPDATES');
+  assert.equal(first.decision, 'ALLOW');
+  assert.equal(first.basis, 'status-list');
+  assert.equal(first.staleUntil, new Date((NOW / 1000 + 60) * 1000).toISOString());
+  for (let i = 0; i < 20; i++) await s.check('art-1', 'ORDER_UPDATES');
+  assert.equal(fetched.length, 1);
+  assert.equal(s.stats.listed, 21);
+});
+
+test('list mode: a withdrawal is seen when the held list is replaced, and says why', async () => {
+  const c = clock();
+  let list = statusList();
+  const client = { token: async () => listedToken(5) };
+  const { s } = listSidecar({ client, lists: () => list, now: c.now });
+  assert.equal((await s.check('art-1', 'ORDER_UPDATES')).decision, 'ALLOW');
+
+  c.advance(61);
+  list = statusList({ ended: [5], exp: c.t / 1000 + 60 });
+  assert.deepEqual(await s.check('art-1', 'ORDER_UPDATES'), { decision: 'DENY', reason: 'consent-ended', basis: 'status-list' });
+});
+
+test('list mode: an expired list that cannot be replaced is UNAVAILABLE, never a yes from stale data', async () => {
+  const c = clock();
+  let list = statusList();
+  const client = { token: async () => listedToken(5) };
+  const { s } = listSidecar({ client, lists: () => list, now: c.now });
+  await s.check('art-1', 'ORDER_UPDATES');
+
+  c.advance(61);
+  list = new TypeError('down');
+  const r = await s.check('art-1', 'ORDER_UPDATES');
+  assert.equal(r.decision, 'UNAVAILABLE');
+  assert.equal(r.reason, 'consent-check-unavailable');
+});
+
+test('list mode: a token that is not for this purpose, has no status, or names a foreign list is not an ALLOW', async () => {
+  const c = clock();
+  const run = async (tok, origin) => {
+    const { s } = listSidecar({ client: { token: async () => tok }, lists: () => statusList(), now: c.now, origin });
+    return s.check('art-1', 'ORDER_UPDATES');
+  };
+  assert.equal((await run(listedToken(5, { purpose_code: 'MARKETING' }))).reason, 'token-other-purpose');
+  assert.equal((await run(token())).reason, 'token-without-status');
+  assert.equal((await run(listedToken(5), 'https://other.example')).reason, 'status-list-foreign');
+  assert.equal((await run(null)).reason, 'consent-not-in-force');
+  assert.equal((await run(listedToken(99_999))).reason, 'status-index-outside-list');
 });

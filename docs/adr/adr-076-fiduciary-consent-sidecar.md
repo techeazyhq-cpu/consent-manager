@@ -35,10 +35,9 @@ an offline check cannot see a withdrawal, which is the one thing it exists to ho
 
 ## Not yet / limits
 
-- **No status list, so no fully offline validation.** Until the platform publishes the W3C Bitstring Status List of ADR-027
-  (a signed list per fiduciary, a `status` claim in the token), an offline verifier cannot see a withdrawal at all. The sidecar
-  therefore bridges outages only briefly and never answers without having recently asked the Consent Manager. When the list exists,
-  the sidecar can refresh it and replace grace with a list check.
+- **Fully offline validation came with the status list** ([ADR-077](adr-077-token-status-list.md)), after this ADR: the sidecar's
+  `PEP_MODE=list` answers from the token and the signed list. In the default `live` mode the limits below still apply: grace
+  bridges outages only briefly and never answers without having recently asked the Consent Manager.
 - **An OPA sidecar with the platform's own policy** was the other reading of the issue. The policy is built to call the platform's
   internal status endpoint, which a fiduciary cannot reach, and OPA cannot sign requests with an API key; a Rego bundle would need
   the status list first.

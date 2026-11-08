@@ -1,6 +1,6 @@
 # ADR-027: Short-lived consent tokens, a revocation status list, and verification availability
 
-- **Status:** Proposed; supersedes the token lifetime of [ADR-006](adr-006-consent-token-and-pep-pdp.md) and the offline
+- **Status:** Proposed; decision 4 (the status list) is implemented by [ADR-077](adr-077-token-status-list.md), in the IETF format; supersedes the token lifetime of [ADR-006](adr-006-consent-token-and-pep-pdp.md) and the offline
   verification of [ADR-013](adr-013-verified-consent-tokens.md)
 - **Date:** 2026-10-11
 - **Design:** [compliance architecture §6.3, Appendix B findings R1, R2](../compliance/compliance-architecture.md)

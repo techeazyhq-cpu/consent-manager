@@ -55,6 +55,8 @@ import java.time.Duration;
 public class CnsCmdRouterConfig {
 
     /** Public keys that verify consent tokens (ADR-006); unauthenticated, for OPA and for fiduciaries. */
+    public static final String STATUS_LISTS_PATH = "/api/cns-cmd/status-lists";
+
     public static final String JWKS_PATH = "/api/cns-cmd/.well-known/jwks.json";
 
     /** Public keys that verify consent receipts (ADR-025), retired ones included; unauthenticated, for anyone. */
@@ -76,6 +78,7 @@ public class CnsCmdRouterConfig {
                                                          CnsReqBatchQueries batchQueries,
                                                          PrpsDefCmds prpsDefCmds,
                                                          com.techeazyhq.cm.cnscmd.app.ProcessorCmds processorCmds,
+                                                         com.techeazyhq.cm.cnscmd.app.StatusLists statusLists,
                                                          CnsReqTerms cnsReqTerms,
                                                          ChangeCnsArtCmds changeCnsArtCmds,
                                                          CnsRecords cnsRecords,
@@ -93,6 +96,7 @@ public class CnsCmdRouterConfig {
         CnsReqBatchHttpHandler batches = new CnsReqBatchHttpHandler(submitBatchHandler, batchQueries);
         PrpsDefHttpHandler purposes = new PrpsDefHttpHandler(prpsDefCmds);
         ProcessorHttpHandler processors = new ProcessorHttpHandler(processorCmds);
+        StatusListHttpHandler statusListHandler = new StatusListHttpHandler(statusLists);
         CnsRecHttpHandler recs = new CnsRecHttpHandler(cnsRecords);
         WebhookHttpHandler whk = new WebhookHttpHandler(webhooks);
 
@@ -105,6 +109,8 @@ public class CnsCmdRouterConfig {
                 .DELETE("/api/cns-cmd/prps-defs/{code}/draft", purposes::discardDraft)
                 .GET("/api/cns-cmd/prps-defs/{code}/draft/change", purposes::draftChange)
                 .POST("/api/cns-cmd/prps-defs/{code}/publish", purposes::publish)
+                // a fiduciary's status list, open to anyone (ADR-077)
+                .GET(STATUS_LISTS_PATH + "/{dfId}", statusListHandler::get)
                 // the fiduciary's register of processors (ADR-075)
                 .GET("/api/cns-cmd/processors", processors::list)
                 .POST("/api/cns-cmd/processors", processors::register)

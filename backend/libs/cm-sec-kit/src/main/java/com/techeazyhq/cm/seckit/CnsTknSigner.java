@@ -64,6 +64,10 @@ public class CnsTknSigner {
                     .claim("access_type", claims.accessType().name())
                     .claim("scope", claims.scope())
                     .expirationTime(Date.from(claims.exp()));
+            if (claims.status() != null) {
+                builder.claim("status", java.util.Map.of("status_list",
+                        java.util.Map.of("idx", claims.status().idx(), "uri", claims.status().uri())));
+            }
 
             SignedJWT signedJwt = new SignedJWT(
                     new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(signingKey.getKeyID()).build(),
@@ -74,6 +78,34 @@ public class CnsTknSigner {
             return signedJwt.serialize();
         } catch (JOSEException e) {
             throw new IllegalStateException("Failed to sign CnsTkn", e);
+        }
+    }
+
+    /**
+     * A Status List Token (IETF Token Status List, ADR-077): which consent tokens of a fiduciary were withdrawn, as a compressed
+     * bit string, signed with the same keys as the tokens so a verifier needs no other key.
+     *
+     * @param uri       the address the list is served at, which tokens name in their {@code status} claim
+     * @param bits      zlib-compressed bit string, base64url, one bit per index: 1 means withdrawn
+     * @param ttl       how long a verifier may use it before fetching it again
+     */
+    public String signStatusList(String uri, String bits, Instant issuedAt, java.time.Duration ttl) {
+        try {
+            RSAKey signingKey = keys.signingKey();
+            JWTClaimsSet claims = new JWTClaimsSet.Builder()
+                    .issuer(ISSUER)
+                    .subject(uri)
+                    .issueTime(Date.from(issuedAt))
+                    .expirationTime(Date.from(issuedAt.plus(ttl)))
+                    .claim("ttl", ttl.toSeconds())
+                    .claim("status_list", java.util.Map.of("bits", 1, "lst", bits))
+                    .build();
+            SignedJWT jwt = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.RS256).keyID(signingKey.getKeyID())
+                    .type(new com.nimbusds.jose.JOSEObjectType("statuslist+jwt")).build(), claims);
+            jwt.sign(new RSASSASigner(signingKey));
+            return jwt.serialize();
+        } catch (JOSEException e) {
+            throw new IllegalStateException("Failed to sign a status list", e);
         }
     }
 
