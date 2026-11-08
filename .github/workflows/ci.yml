@@ -195,7 +195,7 @@ jobs:
             rm -f "$RUNNER_TEMP/opa-signing-key.pem"
           else
             echo "::notice::Building an unsigned bundle: signing happens on main, with OPA_BUNDLE_SIGNING_KEY set"
-            scripts/opa-bundle.sh --out dist/opa
+            bash scripts/opa-bundle.sh --out dist/opa
           fi
       - name: Upload the bundle and its manifest
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
