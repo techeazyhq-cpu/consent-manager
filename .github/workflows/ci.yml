@@ -153,6 +153,15 @@ jobs:
           done
           helm template cm consent-manager -f consent-manager/values-gcp.yaml -f consent-manager/values-sandbox.yaml \
             | docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas
+      - name: A service can query as a login of its own and migrate as the owner (ADR-082)
+        run: |
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          helm template cm consent-manager -f consent-manager/values-aws.yaml --set config.database.migrationUser=cm \
+            --set config.database.migrationPasswordKey=DB_PASSWORD --set services.cm-aud-svc.database.user=cm_aud_app \
+            --set services.cm-aud-svc.database.passwordKey=CM_AUD_RUNTIME_DB_PASSWORD > /tmp/lp.yaml
+          test "$(grep -c 'SPRING_R2DBC_USERNAME, value: "cm_aud_app"' /tmp/lp.yaml)" -eq 1
+          test "$(grep -c 'key: CM_AUD_RUNTIME_DB_PASSWORD' /tmp/lp.yaml)" -eq 1   # its queries only: the migration keeps the owner's password
+          test "$(grep -c 'SPRING_FLYWAY_USER, value: "cm"' /tmp/lp.yaml)" -eq 7   # every service migrates as the owner
       - name: A service can be given a database of its own, and only that service (ADR-074)
         run: |
           helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }

@@ -1,0 +1,51 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# The services connecting to PostgreSQL as logins that can only read and write their own schema (ADR-082). Their migrations still
+# run as the owner (application.yml's flyway user). The logins are made by deploy/database/create-runtime-roles.sh;
+# `bash scripts/least-privilege.sh up` does both for the local stack. The passwords are for this laptop's database only.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.least-privilege.yml up -d
+
+services:
+  cm-df-reg-svc:
+    environment:
+      SPRING_R2DBC_USERNAME: cm_df_reg_app
+      SPRING_R2DBC_PASSWORD: ${RUNTIME_PASSWORD_DF_REG:-cm-dev-df-reg-app}
+  cm-cns-cmd-svc:
+    environment:
+      SPRING_R2DBC_USERNAME: cm_cns_cmd_app
+      SPRING_R2DBC_PASSWORD: ${RUNTIME_PASSWORD_CNS_CMD:-cm-dev-cns-cmd-app}
+  cm-cns-qry-svc:
+    environment:
+      SPRING_R2DBC_USERNAME: cm_cns_qry_app
+      SPRING_R2DBC_PASSWORD: ${RUNTIME_PASSWORD_CNS_QRY:-cm-dev-cns-qry-app}
+  cm-ntf-svc:
+    environment:
+      SPRING_R2DBC_USERNAME: cm_ntf_app
+      SPRING_R2DBC_PASSWORD: ${RUNTIME_PASSWORD_NTF:-cm-dev-ntf-app}
+  cm-bil-svc:
+    environment:
+      SPRING_R2DBC_USERNAME: cm_bil_app
+      SPRING_R2DBC_PASSWORD: ${RUNTIME_PASSWORD_BIL:-cm-dev-bil-app}
+  cm-aud-svc:
+    environment:
+      SPRING_R2DBC_USERNAME: cm_aud_app
+      SPRING_R2DBC_PASSWORD: ${RUNTIME_PASSWORD_AUD:-cm-dev-aud-app}
+  cm-dsr-svc:
+    environment:
+      SPRING_R2DBC_USERNAME: cm_dsr_app
+      SPRING_R2DBC_PASSWORD: ${RUNTIME_PASSWORD_DSR:-cm-dev-dsr-app}

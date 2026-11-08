@@ -41,7 +41,7 @@ capabilities: {drop: [ALL]}
 {{/* Environment for one service: its "docker" profile, then the datastores, identity and secrets it uses. */}}
 {{- define "cm.serviceEnv" -}}
 {{- $root := .root -}}{{- $name := .name -}}{{- $s := .settings -}}
-{{- $c := $root.Values.config -}}{{- $db := mergeOverwrite (deepCopy $c.database) ($s.database | default dict) -}}{{- $dbKey := $db.passwordKey | default "DB_PASSWORD" -}}
+{{- $c := $root.Values.config -}}{{- $db := mergeOverwrite (deepCopy $c.database) ($s.database | default dict) -}}{{- $dbKey := $db.passwordKey | default "DB_PASSWORD" -}}{{- $migUser := $db.migrationUser | default $db.user -}}{{- $migKey := $db.migrationPasswordKey | default $dbKey -}}
 - {name: SPRING_PROFILES_ACTIVE, value: docker}
 - {name: JAVA_TOOL_OPTIONS, value: "-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"}
 {{- if $root.Values.metrics.enabled }}
@@ -58,9 +58,9 @@ capabilities: {drop: [ALL]}
   {{- include "cm.secretRef" (dict "root" $root "key" $dbKey) | nindent 2 }}
 - name: SPRING_FLYWAY_URL
   value: {{ printf "jdbc:postgresql://%s:%v/%s?%s" $db.host $db.port $db.name $db.jdbcParams | quote }}
-- {name: SPRING_FLYWAY_USER, value: {{ $db.user | quote }}}
+- {name: SPRING_FLYWAY_USER, value: {{ $migUser | quote }}}
 - name: SPRING_FLYWAY_PASSWORD
-  {{- include "cm.secretRef" (dict "root" $root "key" $dbKey) | nindent 2 }}
+  {{- include "cm.secretRef" (dict "root" $root "key" $migKey) | nindent 2 }}
 {{- end }}
 - {name: CM_PULSAR_SERVICE_URL, value: {{ $c.pulsar.url | quote }}}
 - {name: CM_SECURITY_ISSUER_BASE, value: {{ printf "%s/realms/" $c.keycloak.publicUrl | quote }}}

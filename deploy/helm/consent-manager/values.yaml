@@ -48,6 +48,10 @@ config:
     port: 5432
     name: consent_manager
     user: cm
+    # Least privilege (ADR-082): a login that runs a service's migrations (the schema owner), apart from the login its queries use
+    # (`user`, which then only reads and writes rows). Both default to `user`, as before. A service can set its own under `services.<name>.database`.
+    # migrationUser: cm
+    # migrationPasswordKey: MIGRATION_DB_PASSWORD
     # appended to every JDBC and R2DBC URL; the common chart's server has no TLS, a cloud's requires it
     # (values-<cloud>.yaml), verify-full with the cloud's CA in production
     jdbcParams: "sslmode=prefer"
