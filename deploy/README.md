@@ -32,6 +32,8 @@ deploy/
 │   ├── aws/    production/ (VPC, EKS, identities) + modules/datastores/ (RDS, ElastiCache, KMS, Secrets Manager, backups)
 │   ├── azure/  production/ (VNet, AKS, identities) + modules/datastores/ (Flexible Server, Managed Redis, Key Vault, backups)
 │   └── gcp/    production/ (VPC, GKE, identities) + modules/datastores/ (Cloud SQL, Memorystore, Secret Manager, backups)
+├── backup/                postgres-backup.sh (a daily logical dump with a manifest) and postgres-restore-drill.sh (proves a dump restores);
+│                          see docs/runbooks/backup-and-recovery.md
 └── helm/
     ├── common/                the shared servers, each switchable (enabled), and their init Job
     │   ├── values.yaml        a dev or test cluster: all five, with persistent volumes
