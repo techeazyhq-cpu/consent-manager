@@ -23,6 +23,8 @@
 //   - an outage with grace off is UNAVAILABLE; with grace on, the recent ALLOW is bridged by the token and says until when
 //   - the principal withdraws; the next check is a DENY, and an outage after it is never bridged
 //   - over HTTP, UNAVAILABLE is 503 with Retry-After
+//   - list mode (ADR-077): a second consent is allowed from its token and the fiduciary's signed status list with no live check; the
+//     list is fetched once for many checks; when the principal withdraws, the next list says so and the check is a DENY
 // Needs the keys file from setup-keys.mjs.
 //
 //   KEYS_FILE=/tmp/cm-keys.json node tests/security/e2e-pep-sidecar.mjs
@@ -30,7 +32,7 @@
 import { createServer } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { GW, call, dpSignIn, loadKeys } from './lib/cm1.mjs';
-import { ConsentClient, Sidecar, cachedJwks, verifyToken } from '../../sdk/pep-sidecar/src/sidecar.mjs';
+import { ConsentClient, Sidecar, cachedJwks, fetchStatusList, verifyToken } from '../../sdk/pep-sidecar/src/sidecar.mjs';
 import { handler } from '../../sdk/pep-sidecar/src/server.mjs';
 
 const KEYS = loadKeys(process.env.KEYS_FILE ?? (() => { throw new Error('Set KEYS_FILE to the file setup-keys.mjs wrote'); })());
@@ -96,6 +98,41 @@ try {
 } finally {
   server.close();
 }
+
+// ---- list mode (ADR-077)
+// a second principal: the same person cannot hold two consents to one purpose
+const dp2 = `sidecar-${randomBytes(3).toString('hex')}@sidecar.example.test`;
+const raised2 = (await call(KEYS.a, 'POST', '/api/cns-cmd/cns-reqs', { body: { extDpRefTyp: 'EMAIL', extDpRefVal: dp2, prpsCode: 'ORDER_UPDATES', prpsVer: KEYS.prpsVerA } })).json.id;
+const principal2 = await dpSignIn(dp2);
+await dpApi(principal2, 'POST', '/api/cns-cmd/dp-links', { extDpRefTyp: 'EMAIL', extDpRefVal: dp2 });
+const art2 = (await dpApi(principal2, 'POST', `/api/cns-cmd/cns-reqs/${raised2}/approve`)).json.id;
+outage = false;
+let listFetches = 0;
+let liveCalls = 0;
+const counting = async (url, ...rest) => {
+  if (String(url).includes('/status-lists/')) listFetches++;
+  if (String(url).includes('/verify')) liveCalls++;
+  return fetch(url, ...rest);
+};
+const listClient = new ConsentClient({ gateway: GW, apiKey: KEYS.a.apiKey, signingSecret: KEYS.a.signingSecret, fetchImpl: counting });
+let skewMs = 0; // the sidecar's clock, moved forward to make its held list expire without waiting a minute
+const listMode = new Sidecar({ client: listClient, jwks, mode: 'list', fetchList: fetchStatusList({ fetchImpl: counting }), listOrigin: new URL(GW).origin, now: () => Date.now() + skewMs });
+
+const tkn2 = await listClient.token(art2);
+const ref = verifyToken(tkn2, await jwks(), { cnsArtId: art2, purpose: 'ORDER_UPDATES' }).claims.status?.status_list;
+expect(Boolean(ref) && Number.isInteger(ref.idx) && ref.uri.includes('/api/cns-cmd/status-lists/'), 'the consent token names its place in the status list', `idx ${ref?.idx}`);
+
+const first = await listMode.check(art2, 'ORDER_UPDATES');
+for (let i = 0; i < 10; i++) await listMode.check(art2, 'ORDER_UPDATES');
+expect(first.decision === 'ALLOW' && first.basis === 'status-list', 'list mode allows it from the token and the list', JSON.stringify(first));
+expect(listFetches === 1 && liveCalls === 0, 'eleven checks, one list fetch and no live check', `${listFetches} fetches, ${liveCalls} live`);
+
+expect((await dpApi(principal2, 'POST', `/api/cns-cmd/cns-arts/${art2}/revoke`)).status === 200, 'the principal withdraws the second consent');
+// the platform keeps a built list for 10 s and the sidecar a fetched one until it expires (a minute): wait out the first, then move the sidecar clock past the held list
+await new Promise((r) => setTimeout(r, 11_000));
+skewMs = 52_000; // past the first list (60 s) but inside the new one, which was built 11 s later
+const gone = await listMode.check(art2, 'ORDER_UPDATES');
+expect(gone.decision === 'DENY', 'once the list is replaced the check is a DENY', JSON.stringify(gone));
 
 console.log(failed ? '\nSome checks failed.' : '\nAll checks passed.');
 process.exitCode = failed ? 1 : 0;

@@ -120,6 +120,8 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
       CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
+      # the address tokens name for their status list (ADR-077): the gateway as a fiduciary reaches it
+      CM_CNS_TKN_STATUS_LIST_BASE_URL: ${CM_PUBLIC_API_URL:-http://localhost:9000}
     volumes:
       - cns-tkn-keys:/var/lib/cm/keys # consent token and receipt signing keys, each its own set, kept across restarts (ADR-006, ADR-025)
     depends_on:

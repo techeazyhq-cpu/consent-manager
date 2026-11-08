@@ -30,6 +30,8 @@ In Kubernetes run it as a second container in the pod of the service that needs 
 | `PEP_CACHE_SECONDS` | 5 | how long a live answer is reused; this is how late the sidecar can be to a withdrawal |
 | `PEP_GRACE_SECONDS` | 0 (off) | see below |
 | `PEP_NO_GRACE_PURPOSES` | none | purposes that are never bridged, for example health or children's data |
+| `PEP_MODE` | `live` | `list` answers from the consent token and the fiduciary's signed status list instead of calling the Consent Manager on every check |
+| `PEP_STATUS_LIST_ORIGIN` | the origin of `CM_GATEWAY` | the only origin a token's status list may be fetched from |
 | `PEP_HOST`, `PEP_PORT` | `127.0.0.1`, 8484 | it answers whoever can reach it; keep it on the host or pod |
 
 ## What it guarantees, and what it does not
@@ -43,8 +45,13 @@ In Kubernetes run it as a second container in the pod of the service that needs 
   The answer says `"basis":"offline-token"` and `staleUntil`. A withdrawal made during that window is not seen until it
   ends: the stated cost of not stopping your processing for an outage. Tokens live about 15 minutes (ADR-027), so that is also
   the longest grace that can ever apply. A DENY ends grace for that consent, and purposes in `PEP_NO_GRACE_PURPOSES` never get it.
-- **It does not** replace the status list ADR-027 proposes for fully offline verification, hold any state beyond its
-  memory (a restart forgets what it had seen allowed, so grace starts empty), or authenticate its callers.
+- **List mode** (`PEP_MODE=list`, [ADR-077](../../docs/adr/adr-077-token-status-list.md)) is the fully offline path. It fetches the
+  consent token once, checks its signature against the published keys, and reads the token's bit in the fiduciary's signed status
+  list, which it fetches again only when the one it holds expires (a minute). A withdrawal is seen within that minute plus the 10
+  seconds the platform keeps a built list; a list past its expiry that cannot be replaced is `UNAVAILABLE`, never a yes. The answer
+  says `"basis":"status-list"` and `staleUntil`. The platform sees about one request a minute instead of one per check.
+- **It does not** hold any state beyond its memory (a restart forgets what it had seen allowed, so grace starts empty), or
+  authenticate its callers.
 
 ## Tests
 

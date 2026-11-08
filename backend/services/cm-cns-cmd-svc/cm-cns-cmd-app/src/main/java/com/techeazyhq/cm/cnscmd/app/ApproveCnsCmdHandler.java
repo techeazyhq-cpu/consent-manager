@@ -79,16 +79,18 @@ public class ApproveCnsCmdHandler implements CmdHandler<ApproveCnsReqCmd, CnsArt
                             cnsReq.id(), cnsReq.dfId(), cnsReq.dpRef(), cnsReq.prps(), grant.scp(), grant.valPrd());
 
                     // A short-lived token (ADR-027): the fiduciary refreshes it while the consent is valid.
-                    String cnsTkn = cnsTknIssuer.issue(cnsArt).token();
-                    cnsArt.attachSignedTkn(cnsTkn);
+                    return cnsTknIssuer.issueFor(cnsArt).flatMap(issued -> {
+                        String cnsTkn = issued.token();
+                        cnsArt.attachSignedTkn(cnsTkn);
 
-                    return cnsReqRepo.save(cnsReq)
-                            .then(cnsArtRepo.save(cnsArt))
-                            .flatMap(savedArt -> obxPort
-                                    .enqueue(CnsGrantedEvt.of(cnsReq.id(), savedArt.id(), cnsReq.dfId(), cnsReq.dpRef(),
-                                                    cnsTkn, grant),
-                                            "CnsArt", savedArt.id())
-                                    .thenReturn(savedArt));
+                        return cnsReqRepo.save(cnsReq)
+                                .then(cnsArtRepo.save(cnsArt))
+                                .flatMap(savedArt -> obxPort
+                                        .enqueue(CnsGrantedEvt.of(cnsReq.id(), savedArt.id(), cnsReq.dfId(), cnsReq.dpRef(),
+                                                        cnsTkn, grant),
+                                                "CnsArt", savedArt.id())
+                                        .thenReturn(savedArt));
+                    });
                 });
     }
 

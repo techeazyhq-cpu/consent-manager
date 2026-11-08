@@ -272,8 +272,26 @@ public class CnsCmdBeanConfig {
 
     @Bean
     public CnsTknIssuer cnsTknIssuer(CnsTknSigner cnsTknSigner,
-                                     @Value("${cm.cns-tkn.lifetime:PT15M}") java.time.Duration lifetime) {
-        return new CnsTknIssuer(cnsTknSigner, lifetime, java.time.Clock.systemUTC());
+                                     @Value("${cm.cns-tkn.lifetime:PT15M}") java.time.Duration lifetime,
+                                     com.techeazyhq.cm.cnscmd.dom.StatusSlotPort statusSlots,
+                                     @Value("${cm.cns-tkn.status-list-base-url:}") String statusListBaseUrl) {
+        return new CnsTknIssuer(cnsTknSigner, lifetime, java.time.Clock.systemUTC(), statusSlots, statusListBaseUrl);
+    }
+
+    /** Where each consent token's withdrawal can be seen without asking about it (ADR-077). */
+    @Bean
+    public com.techeazyhq.cm.cnscmd.dom.StatusSlotPort statusSlotPort(DatabaseClient db) {
+        return new com.techeazyhq.cm.cnscmd.infra.R2dbcStatusSlotAdapter(db);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.cnscmd.app.StatusLists statusLists(com.techeazyhq.cm.cnscmd.dom.StatusSlotPort statusSlots,
+                                                                CnsTknSigner cnsTknSigner,
+                                                                @Value("${cm.cns-tkn.status-list-base-url:}") String baseUrl,
+                                                                @Value("${cm.cns-tkn.status-list-ttl:PT60S}") java.time.Duration ttl,
+                                                                @Value("${cm.cns-tkn.status-list-cache:PT10S}") java.time.Duration cacheFor) {
+        return new com.techeazyhq.cm.cnscmd.app.StatusLists(statusSlots, cnsTknSigner, baseUrl, ttl, cacheFor,
+                java.time.Clock.systemUTC());
     }
 
     @Bean

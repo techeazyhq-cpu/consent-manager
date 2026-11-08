@@ -35,7 +35,21 @@ public record CnsTknClaims(
         String purposeCode,
         AccessType accessType,
         List<String> scope,
-        Instant exp) {
+        Instant exp,
+        StatusRef status) {
+
+    /** A token without a place in a status list (ADR-077). */
+    public CnsTknClaims(String consentArtefactId, String subDid, String fiduciaryId, String purposeCode,
+                        AccessType accessType, List<String> scope, Instant exp) {
+        this(consentArtefactId, subDid, fiduciaryId, purposeCode, accessType, scope, exp, null);
+    }
+
+    /**
+     * Where to see whether the consent was later withdrawn, as the IETF Token Status List does: the list's address and this
+     * token's index in it.
+     */
+    public record StatusRef(String uri, int idx) {
+    }
 
     public enum AccessType {
         ALLOW,

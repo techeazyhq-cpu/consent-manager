@@ -86,6 +86,10 @@ capabilities: {drop: [ALL]}
   {{- include "cm.secretRef" (dict "root" $root "key" "DFREG_SECRETS_KEY") | nindent 2 }}
 - {name: CM_KEYCLOAK_TOKENHOST, value: ""}
 {{- end }}
+{{- if eq $name "cm-cns-cmd-svc" }}
+# the address consent tokens name for their status list (ADR-077)
+- {name: CM_CNS_TKN_STATUS_LIST_BASE_URL, value: {{ printf "https://%s" $root.Values.ingress.apiHost | quote }}}
+{{- end }}
 {{- if eq $name "cm-ntf-svc" }}
 - {name: CM_NTF_PROVIDER, value: {{ $c.notificationService.provider | quote }}}
 - {name: NTF_SVC_BASE_URL, value: {{ $c.notificationService.baseUrl | quote }}}

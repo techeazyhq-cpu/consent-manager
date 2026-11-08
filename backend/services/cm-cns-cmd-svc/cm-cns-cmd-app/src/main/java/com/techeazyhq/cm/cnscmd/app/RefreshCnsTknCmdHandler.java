@@ -56,7 +56,7 @@ public class RefreshCnsTknCmdHandler {
                         return Mono.error(new DomRuleViolation(409, "cns-art-not-active",
                                 "CnsArt " + cnsArt.id() + " is " + status));
                     }
-                    return Mono.just(issuer.issue(cnsArt));
+                    return issuer.issueFor(cnsArt);
                 });
     }
 }

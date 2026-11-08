@@ -24,6 +24,7 @@
 // Zero dependencies; Node 20+.
 
 import { createPublicKey, verify as cryptoVerify } from 'node:crypto';
+import { inflateSync } from 'node:zlib';
 import { ConsentClient, Decision } from '../../ai-ingestion-guard/src/index.mjs';
 
 export { Decision };
@@ -65,6 +66,51 @@ export function verifyToken(token, jwks, { cnsArtId, purpose, fiduciaryId, now =
   return { ok: true, claims };
 }
 
+/**
+ * Checks a status list token (IETF Token Status List, ADR-077) offline: RS256 signature against the published keys, the
+ * `statuslist+jwt` type, issuer, that it is the list asked for, and that it has not expired.
+ * @returns {{ok: true, bits: Buffer, iat: number, exp: number} | {ok: false, reason: string}}
+ */
+export function verifyStatusList(jwt, jwks, { uri, now = Date.now() }) {
+  const parts = String(jwt ?? '').split('.');
+  if (parts.length !== 3) return { ok: false, reason: 'status-list-malformed' };
+  let header;
+  let claims;
+  try {
+    header = JSON.parse(b64url(parts[0]).toString('utf8'));
+    claims = JSON.parse(b64url(parts[1]).toString('utf8'));
+  } catch {
+    return { ok: false, reason: 'status-list-malformed' };
+  }
+  if (header.alg !== 'RS256' || header.typ !== 'statuslist+jwt') return { ok: false, reason: 'status-list-type' };
+  const jwk = (jwks?.keys ?? []).find((k) => k.kid === header.kid);
+  if (!jwk) return { ok: false, reason: 'status-list-key-unknown' };
+  let valid = false;
+  try {
+    valid = cryptoVerify('sha256', Buffer.from(`${parts[0]}.${parts[1]}`), createPublicKey({ key: jwk, format: 'jwk' }), b64url(parts[2]));
+  } catch {
+    valid = false;
+  }
+  if (!valid) return { ok: false, reason: 'status-list-signature' };
+  if (claims.iss !== 'cm-cns-cmd-svc' || claims.sub !== uri) return { ok: false, reason: 'status-list-other' };
+  if (typeof claims.exp !== 'number' || claims.exp * 1000 <= now) return { ok: false, reason: 'status-list-expired' };
+  const list = claims.status_list;
+  if (!list || list.bits !== 1 || typeof list.lst !== 'string') return { ok: false, reason: 'status-list-malformed' };
+  let bits;
+  try {
+    bits = inflateSync(b64url(list.lst), { maxOutputLength: 1 << 20 });
+  } catch {
+    return { ok: false, reason: 'status-list-malformed' };
+  }
+  return { ok: true, bits, iat: claims.iat, exp: claims.exp };
+}
+
+/** Bit `idx`, least significant first in each byte; an index outside the list is not an answer (null). */
+export function statusBit(bits, idx) {
+  if (!Number.isInteger(idx) || idx < 0 || Math.floor(idx / 8) >= bits.length) return null;
+  return (bits[Math.floor(idx / 8)] & (1 << (idx % 8))) !== 0;
+}
+
 export class Sidecar {
   /**
    * @param {object} o
@@ -74,13 +120,19 @@ export class Sidecar {
    * @param {number} [o.cacheSeconds=5]  how long a live ALLOW or DENY is reused
    * @param {number} [o.graceSeconds=0]  0 turns grace mode off; otherwise how long after a live ALLOW an unreachable
    *                                     Consent Manager may be bridged by the token alone. Never more than the token's own life.
+   * @param {'live'|'list'} [o.mode='live']  'live' asks the Consent Manager on every check (ADR-027's live check); 'list' answers from
+   *        the consent token and the fiduciary's signed status list (ADR-077), each fetched once and reused until it expires, so most
+   *        checks make no call and a withdrawal is seen as soon as the list the sidecar holds is replaced (its ttl, a minute)
+   * @param {Function} [o.fetchList]  async (uri) => the status list token as text (mode 'list')
+   * @param {string} [o.listOrigin]  the only origin a token's status address may name: a token must not send the sidecar elsewhere
    * @param {string[]} [o.noGracePurposes=[]]  purposes that are never bridged (health, children's data: ADR-027 says fail closed)
    */
-  constructor({ client, jwks, fiduciaryId, cacheSeconds = 5, graceSeconds = 0, noGracePurposes = [], now = () => Date.now(), onFault = (e) => console.error(`consent sidecar: ${e.message}`) }) {
-    Object.assign(this, { client, jwks, fiduciaryId, cacheSeconds, graceSeconds, noGracePurposes: new Set(noGracePurposes), now, onFault });
+  constructor({ client, jwks, fiduciaryId, cacheSeconds = 5, graceSeconds = 0, noGracePurposes = [], mode = 'live', fetchList, listOrigin, now = () => Date.now(), onFault = (e) => console.error(`consent sidecar: ${e.message}`) }) {
+    Object.assign(this, { client, jwks, fiduciaryId, cacheSeconds, graceSeconds, noGracePurposes: new Set(noGracePurposes), mode, fetchList, listOrigin, now, onFault });
+    this.lists = new Map();
     this.cache = new Map();
     this.lastAllowed = new Map();
-    this.stats = { live: 0, cached: 0, bridged: 0, unavailable: 0 };
+    this.stats = { live: 0, cached: 0, bridged: 0, listed: 0, unavailable: 0 };
   }
 
   /** @returns {Promise<{decision: string, basis?: string, reason?: string, staleUntil?: string, retryAfterSeconds?: number}>} */
@@ -92,6 +144,8 @@ export class Sidecar {
       this.stats.cached++;
       return { ...hit.answer, basis: 'cache' };
     }
+
+    if (this.mode === 'list') return this.#fromList(cnsArtId, purpose);
 
     let live;
     try {
@@ -117,6 +171,56 @@ export class Sidecar {
       return answer;
     }
     return this.#bridge(key, cnsArtId, purpose, live);
+  }
+
+  /**
+   * Answers from the consent token and the status list (ADR-077). The token is the platform's signed word that the consent was in
+   * force when it was issued, for this purpose and fiduciary; the list says whether it has ended since. Nothing is answered
+   * from a list that has expired: that is UNAVAILABLE, not a guess.
+   */
+  async #fromList(cnsArtId, purpose) {
+    const fault = (reason, retryAfterSeconds = 5) => {
+      this.stats.unavailable++;
+      return { decision: Decision.UNAVAILABLE, reason, retryAfterSeconds };
+    };
+    let token;
+    try {
+      token = await this.client.token(cnsArtId);
+    } catch (e) {
+      if (e.unavailable) return fault('consent-check-unavailable');
+      this.onFault(e);
+      return fault('sidecar-fault', 30);
+    }
+    if (token === null) return { decision: Decision.DENY, reason: 'consent-not-in-force', basis: 'live' };
+
+    let keys;
+    try {
+      keys = await this.jwks();
+    } catch {
+      return fault('consent-check-unavailable');
+    }
+    const checked = verifyToken(token, keys, { cnsArtId, purpose, fiduciaryId: this.fiduciaryId, now: this.now() });
+    if (!checked.ok) return { decision: Decision.DENY, reason: checked.reason, basis: 'token' };
+    const ref = checked.claims.status?.status_list;
+    if (!ref || typeof ref.uri !== 'string') return fault('token-without-status', 30);
+    if (this.listOrigin && new URL(ref.uri).origin !== this.listOrigin) return fault('status-list-foreign', 30);
+
+    let list = this.lists.get(ref.uri);
+    if (!list || list.exp * 1000 <= this.now()) {
+      try {
+        const jwt = await this.fetchList(ref.uri);
+        list = verifyStatusList(jwt, keys, { uri: ref.uri, now: this.now() });
+      } catch {
+        return fault('consent-check-unavailable');
+      }
+      if (!list.ok) return fault(list.reason, 30);
+      this.lists.set(ref.uri, list);
+    }
+    const ended = statusBit(list.bits, ref.idx);
+    if (ended === null) return fault('status-index-outside-list', 30);
+    this.stats.listed++;
+    if (ended) return { decision: Decision.DENY, reason: 'consent-ended', basis: 'status-list' };
+    return { decision: Decision.ALLOW, basis: 'status-list', staleUntil: new Date(Math.min(list.exp, checked.claims.exp) * 1000).toISOString() };
   }
 
   async #token(cnsArtId) {
@@ -177,6 +281,15 @@ export function cachedJwks({ gateway, fetchImpl = fetch, now = () => Date.now(),
     }
     if (!keys) throw new Error('the published keys could not be fetched');
     return keys;
+  };
+}
+
+/** The fiduciary's status list token, from the address a consent token names (the caller has already limited which). */
+export function fetchStatusList({ fetchImpl = fetch } = {}) {
+  return async (uri) => {
+    const res = await fetchImpl(uri, { headers: { Accept: 'application/statuslist+jwt' } });
+    if (!res.ok) throw new Error(`the status list answered ${res.status}`);
+    return res.text();
   };
 }
 
