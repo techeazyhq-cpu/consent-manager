@@ -51,7 +51,9 @@ None of these has been rehearsed end to end on a cloud. The restore drill below 
 **Not scheduled yet:** the chart does not run the dump as a CronJob, and nothing alerts when the daily dump or the drill did not
 run. Until that exists, whoever owns operations has to schedule `postgres-backup.sh` (a Kubernetes CronJob with an image that has
 the PostgreSQL client and the cloud's CLI, using the same identity as the backup bucket's policy) and watch its exit status. The
-alert rules `notifications.tf` mentions (`postgres-recovery.rules.yml`) do not exist yet either.
+alert rules `notifications.tf` mentions now exist ([`postgres-recovery.rules.yml`](../../infra/observability/prometheus/rules/postgres-recovery.rules.yml), ADR-070):
+set `BACKUP_METRICS_FILE` to a node_exporter textfile and they fire when no dump has succeeded for 36 hours, the last run failed,
+or no restore drill has passed for 93 days. They need that file scraped, which is still part of scheduling the job.
 
 ### Running them
 

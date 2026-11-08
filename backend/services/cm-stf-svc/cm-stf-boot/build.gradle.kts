@@ -37,6 +37,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-prometheus") // /actuator/prometheus, exposed only when CM_METRICS_EXPOSURE says so (ADR-070)
     implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:5.0.3")
 
     testImplementation(project(":cm-test-kit"))

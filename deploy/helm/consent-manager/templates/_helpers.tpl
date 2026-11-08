@@ -44,6 +44,12 @@ capabilities: {drop: [ALL]}
 {{- $c := $root.Values.config -}}{{- $db := $c.database -}}
 - {name: SPRING_PROFILES_ACTIVE, value: docker}
 - {name: JAVA_TOOL_OPTIONS, value: "-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"}
+{{- if $root.Values.metrics.enabled }}
+- {name: CM_METRICS_EXPOSURE, value: {{ ternary "health,info,gateway,prometheus" "health,info,prometheus" (eq $name "cm-gw") | quote }}}
+{{- if eq $name "cm-gw" }}
+- {name: CM_GW_MANAGEMENT_PORT, value: {{ $root.Values.metrics.gatewayPort | quote }}}
+{{- end }}
+{{- end }}
 {{- with $s.schema }}
 - name: SPRING_R2DBC_URL
   value: {{ printf "r2dbc:postgresql://%s:%v/%s?schema=%s&%s" $db.host $db.port $db.name . $db.r2dbcParams | quote }}

@@ -87,6 +87,13 @@ sandbox:
   # whose fiduciary realm the sandbox believes for taking sandbox keys (ADR-038)
   productionIssuerBase: https://id.example.com/realms/
 
+# Metrics for Prometheus (ADR-070). Off by default. On, every service exposes /actuator/prometheus on its own port and carries
+# the prometheus.io/* annotations; the gateway, the public edge, moves its whole actuator (health too, so its probes follow)
+# to gatewayPort, which the ingress does not route. Allow Prometheus to reach those ports in networkPolicy.
+metrics:
+  enabled: false
+  gatewayPort: 9091
+
 services:
   cm-gw:
     port: 9000

@@ -1,0 +1,41 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 30s
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  - job_name: cm-services
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - {targets: ["cm-df-reg-svc:8081"], labels: {service: cm-df-reg-svc}}
+      - {targets: ["cm-cns-cmd-svc:8082"], labels: {service: cm-cns-cmd-svc}}
+      - {targets: ["cm-cns-qry-svc:8083"], labels: {service: cm-cns-qry-svc}}
+      - {targets: ["cm-ntf-svc:8084"], labels: {service: cm-ntf-svc}}
+      - {targets: ["cm-bil-svc:8085"], labels: {service: cm-bil-svc}}
+      - {targets: ["cm-aud-svc:8086"], labels: {service: cm-aud-svc}}
+      - {targets: ["cm-stf-svc:8087"], labels: {service: cm-stf-svc}}
+      - {targets: ["cm-dsr-svc:8088"], labels: {service: cm-dsr-svc}}
+      # the gateway serves its actuator on a separate internal port (CM_GW_MANAGEMENT_PORT)
+      - {targets: ["cm-gw:9091"], labels: {service: cm-gw}}
+  - job_name: opa
+    metrics_path: /metrics
+    static_configs:
+      - {targets: ["opa:8181"], labels: {service: opa}}

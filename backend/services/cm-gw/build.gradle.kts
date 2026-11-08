@@ -30,6 +30,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
     implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:5.0.3")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-prometheus") // /actuator/prometheus, exposed only when CM_METRICS_EXPOSURE says so (ADR-070)
     implementation("com.fasterxml.jackson.core:jackson-databind")
 
     testImplementation("io.projectreactor:reactor-test")

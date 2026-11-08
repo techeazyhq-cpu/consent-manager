@@ -29,7 +29,7 @@
 #
 #   deploy/backup/postgres-restore-drill.sh [--exact] [manifest.json]    (default: the newest manifest in BACKUP_DIR)
 #
-# The same variables as postgres-backup.sh: PGHOST, PGPORT, PGUSER, PGPASSWORD, BACKUP_DIR, PG_EXEC. The role needs CREATEDB.
+# BACKUP_METRICS_FILE (a *.prom path) also writes <name>.drill.prom for Prometheus. The same variables as postgres-backup.sh: PGHOST, PGPORT, PGUSER, PGPASSWORD, BACKUP_DIR, PG_EXEC. The role needs CREATEDB.
 set -euo pipefail
 
 : "${BACKUP_DIR:=./backups}"
@@ -114,4 +114,14 @@ for i in $(seq 0 $((n - 1))); do
 done
 
 if [ "$fails" -eq 0 ]; then echo "Drill passed."; else echo "Drill FAILED: $fails problem(s)." >&2; fi
+if [ -n "${BACKUP_METRICS_FILE:-}" ]; then
+  # the drill's own file beside the backup's, so neither overwrites the other
+  drill_file="${BACKUP_METRICS_FILE%.prom}.drill.prom"
+  last="$(sed -n 's/^cm_restore_drill_last_success_timestamp_seconds \(.*\)$/\1/p' "$drill_file" 2> /dev/null || true)"
+  [ "$fails" -eq 0 ] && last="$(date +%s)"
+  {
+    echo "cm_restore_drill_last_run_success $([ "$fails" -eq 0 ] && echo 1 || echo 0)"
+    echo "cm_restore_drill_last_success_timestamp_seconds ${last:-0}"
+  } > "$drill_file.tmp" && mv "$drill_file.tmp" "$drill_file"
+fi
 exit $(( fails > 0 ? 1 : 0 ))

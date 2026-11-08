@@ -33,6 +33,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-redis-reactive")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("io.micrometer:micrometer-registry-prometheus") // /actuator/prometheus, exposed only when CM_METRICS_EXPOSURE says so (ADR-070)
     implementation("org.postgresql:r2dbc-postgresql:1.1.3.RELEASE")
     implementation("org.postgresql:postgresql:42.7.14")
     implementation("org.springframework.boot:spring-boot-starter-flyway")

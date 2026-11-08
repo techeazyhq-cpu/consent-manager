@@ -30,6 +30,7 @@
 #   BACKUP_DIR         where the dumps and the manifest go (default: ./backups)
 #   BACKUP_UPLOAD_CMD  a command run once per file with its path as the only argument, to send it off the machine,
 #                      for example: aws s3 cp --sse aws:kms --no-progress   (the path is appended). Optional.
+#   BACKUP_METRICS_FILE     a node_exporter textfile (*.prom) for Prometheus: last run ok, last success time (ADR-070)
 #   BACKUP_KEEP_LOCAL_DAYS  delete local dumps older than this many days after a good run (default: 7; 0 keeps all)
 #   PG_EXEC            a prefix that runs the PostgreSQL client tools somewhere else, e.g.
 #                      "docker exec -i -e PGPASSWORD=cm -e PGUSER=cm common-postgres-1" for the local stack, whose host has
@@ -116,6 +117,17 @@ fi
 
 if [ "$failed" = 0 ] && [ "$BACKUP_KEEP_LOCAL_DAYS" -gt 0 ]; then
   find "$BACKUP_DIR" -maxdepth 1 \( -name '*.dump' -o -name 'manifest-*.json' \) -mtime "+$BACKUP_KEEP_LOCAL_DAYS" -delete
+fi
+
+# For Prometheus (ADR-070): a node_exporter textfile, rewritten each run. A failed run keeps the last success's timestamp, so
+# the "no backup for 36 hours" alert counts from the last good one.
+if [ -n "${BACKUP_METRICS_FILE:-}" ]; then
+  last="$(sed -n 's/^cm_backup_last_success_timestamp_seconds \(.*\)$/\1/p' "$BACKUP_METRICS_FILE" 2> /dev/null || true)"
+  [ "$failed" = 0 ] && last="$(date +%s)"
+  {
+    echo "cm_backup_last_run_success $([ "$failed" = 0 ] && echo 1 || echo 0)"
+    echo "cm_backup_last_success_timestamp_seconds ${last:-0}"
+  } > "$BACKUP_METRICS_FILE.tmp" && mv "$BACKUP_METRICS_FILE.tmp" "$BACKUP_METRICS_FILE"
 fi
 
 echo "Manifest: $manifest"

@@ -1,0 +1,40 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# Alerts on the services (ADR-070). What to do for each: docs/runbooks/observability.md.
+groups:
+  - name: cm-services
+    rules:
+      - alert: ServiceDown
+        expr: up{job="cm-services"} == 0
+        for: 2m
+        labels: {severity: page}
+        annotations: {summary: "{{ $labels.service }} cannot be scraped for 2 minutes"}
+      - alert: HighServerErrorRate
+        expr: sum by (service) (rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / sum by (service) (rate(http_server_requests_seconds_count[5m])) > 0.05
+        for: 5m
+        labels: {severity: page}
+        annotations: {summary: "{{ $labels.service }}: more than 5% of requests are failing with 5xx"}
+      - alert: SlowRequests
+        expr: histogram_quantile(0.95, sum by (service, le) (rate(http_server_requests_seconds_bucket[5m]))) > 2
+        for: 10m
+        labels: {severity: ticket}
+        annotations: {summary: "{{ $labels.service }}: p95 latency above 2 s for 10 minutes"}
+      - alert: HeapNearlyFull
+        expr: sum by (service) (jvm_memory_used_bytes{area="heap"}) / sum by (service) (jvm_memory_max_bytes{area="heap"}) > 0.9
+        for: 10m
+        labels: {severity: ticket}
+        annotations: {summary: "{{ $labels.service }}: heap above 90% for 10 minutes (the container is memory-capped, ADR-052)"}

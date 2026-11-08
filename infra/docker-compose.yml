@@ -103,6 +103,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
+      CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
       CM_KEYCLOAK_ADMIN-USERNAME: admin
       CM_KEYCLOAK_ADMIN-PASSWORD: admin
 
@@ -118,6 +119,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
+      CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
     volumes:
       - cns-tkn-keys:/var/lib/cm/keys # consent token and receipt signing keys, each its own set, kept across restarts (ADR-006, ADR-025)
     depends_on:
@@ -138,6 +140,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
+      CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
 
   cm-ntf-svc:
     <<: *svc-limits
@@ -151,6 +154,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
+      CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
     # Written by notification-service/register-cm-client.mjs: switches delivery to notification-service
     # (cm.ntf.provider). Without it, cm-ntf-svc keeps using Mailpit and its in-memory catchers.
     env_file:
@@ -171,6 +175,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
+      CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
 
   cm-aud-svc:
     <<: *svc-limits
@@ -184,6 +189,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
+      CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
 
   cm-stf-svc:
     <<: *svc-limits
@@ -197,6 +203,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
+      CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
       CM_KEYCLOAK_ADMIN-USERNAME: admin
       CM_KEYCLOAK_ADMIN-PASSWORD: admin
 
@@ -212,6 +219,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
+      CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
       CM_KEYCLOAK_ADMIN-USERNAME: admin
       CM_KEYCLOAK_ADMIN-PASSWORD: admin
 
@@ -227,6 +235,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
+      CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
+      CM_GW_MANAGEMENT_PORT: ${CM_GW_MANAGEMENT_PORT:-}
     depends_on:
       - opa
       - cm-df-reg-svc
@@ -236,6 +246,46 @@ services:
       - cm-bil-svc
       - cm-stf-svc
       - cm-dsr-svc
+
+  # ---- Metrics and dashboards (ADR-070): `bash scripts/observability.sh up` ----
+  # Prometheus scrapes every service every 15 s and Grafana shows the dashboards in infra/observability/. Off by default: the
+  # services do not expose /actuator/prometheus unless CM_METRICS_EXPOSURE says so (the script sets that and restarts them).
+  # http://localhost:9090 (Prometheus), http://localhost:3001 (Grafana, anonymous viewer).
+  prometheus:
+    profiles: [observability]
+    image: prom/prometheus:v3.5.0
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=3d", "--storage.tsdb.retention.size=512MB"]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256m
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus:/etc/prometheus:ro
+      - prom-data:/prometheus
+
+  grafana:
+    profiles: [observability]
+    image: grafana/grafana:12.1.0
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 192m
+    ports:
+      - "3001:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
 
   # ---- The sandbox (ADR-034, ADR-037): `docker compose --profile sandbox up -d` ----
   # The same images as production with SPRING_PROFILES_ACTIVE=docker,sandbox: their own database (cm_sandbox), Keycloak
@@ -324,5 +374,6 @@ services:
       - "9100:9000"
 
 volumes:
+  prom-data:
   cns-tkn-keys:
   sbx-cns-tkn-keys:

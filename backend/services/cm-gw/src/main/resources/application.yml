@@ -135,14 +135,23 @@ resilience4j:
         timeout-duration: 120s
 
 management:
+  metrics:
+    distribution:
+      # buckets, for the dashboards' p95 and the SlowRequests alert (ADR-070)
+      percentiles-histogram:
+        http.server.requests: true
+  server:
+    # The gateway is the public edge, so its metrics must not share its port: with CM_GW_MANAGEMENT_PORT set, every actuator
+    # endpoint moves to that internal port (ADR-070). Unset, the actuator stays on the main port as before.
+    port: ${CM_GW_MANAGEMENT_PORT:}
   observations:
     enable:
       # Spring Security observes every filter, authentication and authorization of every request, and nothing reads
-      # them: no service exports metrics or traces. They were part of the 8% of df-reg's CPU spent on observations
+      # them: no service exports traces (ADR-070 adds metrics, off unless CM_METRICS_EXPOSURE says so). They were part of the 8% of df-reg's CPU spent on observations
       # (docs/security/vapt-and-performance.md). HTTP request metrics are kept.
       spring:
         security: false
   endpoints:
     web:
       exposure:
-        include: health,info,gateway
+        include: ${CM_METRICS_EXPOSURE:health,info,gateway}

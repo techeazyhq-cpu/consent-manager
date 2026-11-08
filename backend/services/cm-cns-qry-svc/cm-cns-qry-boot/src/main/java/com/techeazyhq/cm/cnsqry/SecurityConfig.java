@@ -47,7 +47,7 @@ public class SecurityConfig {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(ex -> ex
-                        .pathMatchers("/actuator/health", "/actuator/info", "/internal/**").permitAll()
+                        .pathMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus", "/internal/**").permitAll()
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.authenticationManagerResolver(
                         RealmTokens.resolver(issuerBase, jwksBase, realmPrefix)))
