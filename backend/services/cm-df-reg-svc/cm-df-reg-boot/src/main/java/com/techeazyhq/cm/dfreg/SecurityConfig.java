@@ -49,7 +49,7 @@ public class SecurityConfig {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(ex -> ex
-                        .pathMatchers("/actuator/health", "/actuator/info", "/internal/**").permitAll()
+                        .pathMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus", "/internal/**").permitAll()
                         // an organisation applying for itself has no account yet (ADR-065); the gateway limits who can reach these
                         .pathMatchers(HttpMethod.POST, "/api/df-reg/signup", "/api/df-reg/signup/verify").permitAll()
                         .pathMatchers(HttpMethod.POST, "/api/df-reg/dfs/*/reject").hasRole("CM_ADMIN")

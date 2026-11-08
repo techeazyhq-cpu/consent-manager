@@ -45,7 +45,7 @@ public class SecurityConfig {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(ex -> ex
-                        .pathMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .pathMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
                         .pathMatchers("/api/dsr/grievances/**", "/api/dsr/grievances").hasAnyRole("CM_ADMIN", "CM_OPERATOR")
                         // erasures (ADR-059): staff see them; only administrators restart a stuck one
                         .pathMatchers(org.springframework.http.HttpMethod.POST, "/api/dsr/erasures/**").hasRole("CM_ADMIN")

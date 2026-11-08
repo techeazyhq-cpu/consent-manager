@@ -27,6 +27,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
@@ -50,12 +51,21 @@ public class SecurityConfig {
             CorsConfigurationSource corsConfigurationSource,
             @Value("${cm.security.issuer-base:http://localhost:8080/realms/}") String issuerBase,
             @Value("${cm.security.jwks-base:http://localhost:8080/realms/}") String jwksBase,
-            @Value("${cm.security.realm-prefix:}") String realmPrefix) {
+            @Value("${cm.security.realm-prefix:}") String realmPrefix,
+            @Value("${CM_GW_MANAGEMENT_PORT:}") String managementPort) {
+        // Metrics (ADR-070) are read on the gateway's internal management port only, never on the public one.
+        ServerWebExchangeMatcher metrics = exchange -> {
+            var local = exchange.getRequest().getLocalAddress();
+            boolean onManagementPort = !managementPort.isBlank() && local != null && local.getPort() == Integer.parseInt(managementPort.trim());
+            return onManagementPort && "/actuator/prometheus".equals(exchange.getRequest().getPath().value())
+                    ? ServerWebExchangeMatcher.MatchResult.match() : ServerWebExchangeMatcher.MatchResult.notMatch();
+        };
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeExchange(ex -> ex
                         .pathMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .matchers(metrics).permitAll()
                         // The platform's public status (ADR-067): read when sign-in is what is broken. Staff post notices.
                         .pathMatchers(HttpMethod.GET, "/api/status").permitAll()
                         .pathMatchers(HttpMethod.POST, "/api/status/notices", "/api/status/notices/*/resolve").hasAnyRole(STAFF)

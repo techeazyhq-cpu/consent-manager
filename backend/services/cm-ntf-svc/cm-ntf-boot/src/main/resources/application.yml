@@ -102,14 +102,19 @@ resilience4j:
         timeout-duration: 3s
 
 management:
+  metrics:
+    distribution:
+      # buckets, for the dashboards' p95 and the SlowRequests alert (ADR-070)
+      percentiles-histogram:
+        http.server.requests: true
   observations:
     enable:
       # Spring Security observes every filter, authentication and authorization of every request, and nothing reads
-      # them: no service exports metrics or traces. They were part of the 8% of df-reg's CPU spent on observations
+      # them: no service exports traces (ADR-070 adds metrics, off unless CM_METRICS_EXPOSURE says so). They were part of the 8% of df-reg's CPU spent on observations
       # (docs/security/vapt-and-performance.md). HTTP request metrics are kept.
       spring:
         security: false
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: ${CM_METRICS_EXPOSURE:health,info}

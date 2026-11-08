@@ -1,0 +1,38 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# The self-hosted counterpart of notifications.tf's managed-database events (ADR-070, docs/runbooks/backup-and-recovery.md).
+# deploy/backup/postgres-backup.sh and postgres-restore-drill.sh write cm_backup_* and cm_restore_drill_* to a node_exporter
+# textfile (BACKUP_METRICS_FILE); these rules read them. Without that file the alerts stay silent, so a deployment that
+# schedules the backup must also point Prometheus at the file.
+groups:
+  - name: postgres-recovery
+    rules:
+      - alert: LogicalBackupMissing
+        expr: time() - cm_backup_last_success_timestamp_seconds > 129600
+        for: 15m
+        labels: {severity: page}
+        annotations: {summary: "No logical backup has succeeded for 36 hours (it is meant to run daily)"}
+      - alert: LogicalBackupFailed
+        expr: cm_backup_last_run_success == 0
+        for: 5m
+        labels: {severity: page}
+        annotations: {summary: "The last logical backup run failed"}
+      - alert: RestoreDrillOverdue
+        expr: time() - cm_restore_drill_last_success_timestamp_seconds > 8035200
+        for: 1h
+        labels: {severity: ticket}
+        annotations: {summary: "No restore drill has passed for 93 days (it is meant to run quarterly)"}

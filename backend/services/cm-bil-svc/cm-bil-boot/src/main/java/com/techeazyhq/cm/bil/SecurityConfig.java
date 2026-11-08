@@ -49,7 +49,7 @@ public class SecurityConfig {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(ex -> ex
-                        .pathMatchers("/actuator/health", "/actuator/info", "/internal/**").permitAll()
+                        .pathMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus", "/internal/**").permitAll()
                         .pathMatchers("/api/bil/me/**").authenticated()
                         .pathMatchers(HttpMethod.GET, "/api/bil/sub-plns").authenticated()
                         .pathMatchers(HttpMethod.GET, "/api/bil/**").hasAnyRole(STAFF)

@@ -37,6 +37,12 @@ spec:
     metadata:
       labels: {{- include "cm.selectorLabels" $ctx | nindent 8 }}
         app.kubernetes.io/part-of: consent-manager
+      {{- if $root.Values.metrics.enabled }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: {{ ternary $root.Values.metrics.gatewayPort $s.port (eq $name "cm-gw") | quote }}
+      {{- end }}
     spec:
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 45
@@ -56,19 +62,22 @@ spec:
           imagePullPolicy: {{ $root.Values.image.pullPolicy }}
           ports:
             - {name: http, containerPort: {{ $s.port }}}
+            {{- if and $root.Values.metrics.enabled (eq $name "cm-gw") }}
+            - {name: management, containerPort: {{ $root.Values.metrics.gatewayPort }}}
+            {{- end }}
           env:
             - {name: SERVER_PORT, value: {{ $s.port | quote }}}
             {{- include "cm.serviceEnv" (dict "root" $root "name" $name "settings" $s) | nindent 12 }}
           startupProbe:
-            httpGet: {path: /actuator/health, port: http}
+            httpGet: {path: /actuator/health, port: {{ if and $root.Values.metrics.enabled (eq $name "cm-gw") }}management{{ else }}http{{ end }}}
             periodSeconds: 5
             failureThreshold: 48
           livenessProbe:
-            httpGet: {path: /actuator/health, port: http}
+            httpGet: {path: /actuator/health, port: {{ if and $root.Values.metrics.enabled (eq $name "cm-gw") }}management{{ else }}http{{ end }}}
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
-            httpGet: {path: /actuator/health, port: http}
+            httpGet: {path: /actuator/health, port: {{ if and $root.Values.metrics.enabled (eq $name "cm-gw") }}management{{ else }}http{{ end }}}
             periodSeconds: 5
             failureThreshold: 3
           lifecycle:
