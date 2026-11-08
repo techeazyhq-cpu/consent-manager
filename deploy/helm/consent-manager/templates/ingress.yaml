@@ -22,6 +22,17 @@ metadata:
   name: {{ .Release.Name }}
   labels: {{- include "cm.labels" $ctx | nindent 4 }}
   annotations:
+    {{- with .Values.ingress.hardening }}
+    nginx.ingress.kubernetes.io/ssl-redirect: {{ .forceSslRedirect | quote }}
+    nginx.ingress.kubernetes.io/force-ssl-redirect: {{ .forceSslRedirect | quote }}
+    nginx.ingress.kubernetes.io/proxy-body-size: {{ .proxyBodySize | quote }}
+    {{- if .limitRps }}
+    nginx.ingress.kubernetes.io/limit-rps: {{ .limitRps | quote }}
+    {{- end }}
+    {{- if .limitConnections }}
+    nginx.ingress.kubernetes.io/limit-connections: {{ .limitConnections | quote }}
+    {{- end }}
+    {{- end }}
     {{- with .Values.ingress.tls.clusterIssuer }}
     cert-manager.io/cluster-issuer: {{ . }}
     {{- end }}

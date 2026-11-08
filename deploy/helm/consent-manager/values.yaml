@@ -189,6 +189,15 @@ ingress:
     enabled: true
     # a cert-manager ClusterIssuer, or leave empty and provide the secrets
     clusterIssuer: letsencrypt
+  # Hardening of the public edge (ADR-073), as ingress-nginx annotations. The TLS versions and ciphers are the controller's
+  # (its ConfigMap: ssl-protocols "TLSv1.2 TLSv1.3"), and HTTP/2 with ALPN is on by default there; see docs/runbooks/transport-security.md.
+  hardening:
+    forceSslRedirect: true
+    # the largest request the edge accepts; the biggest legitimate body is a fiduciary's bulk consent request
+    proxyBodySize: 2m
+    # a request-rate floor per client address, ahead of the gateway's own limits (ADR-065, the plan quotas). 0 turns a limit off.
+    limitRps: 50
+    limitConnections: 40
 
 # Creates the Keycloak database next to consent_manager where the cloud creates only one (AWS RDS). A pre-install hook.
 # Off by default: the common chart's init Job creates every database on a dev cluster.
@@ -197,8 +206,16 @@ databaseInit:
   image: postgres:16-alpine
   extraDatabases: [keycloak]
 
+# Encryption and identity between the pods (ADR-073). "none" leaves it to the network; "istio" or "linkerd" asks the mesh
+# you have installed to require mutual TLS: Istio gets a STRICT PeerAuthentication, Linkerd the injection annotation and a
+# policy that admits only meshed clients. The ingress controller must be in the mesh too, or the gateway refuses it.
+mesh:
+  provider: none
+
 networkPolicy:
   enabled: true
+  # Namespaces whose pods may scrape the metrics ports (ADR-070): the services' own ports and the gateway's management port.
+  metricsNamespaceLabels: {}
   # the ingress controller's namespace label, for traffic into the gateway and the web apps
   ingressNamespaceLabels: {kubernetes.io/metadata.name: ingress-nginx}
   # the shared servers' namespace (ADR-054); its Keycloak posts sign-in codes to cm-ntf-svc
