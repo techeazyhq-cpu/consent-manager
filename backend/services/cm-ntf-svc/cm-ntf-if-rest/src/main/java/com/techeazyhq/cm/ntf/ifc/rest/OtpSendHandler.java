@@ -48,6 +48,10 @@ public class OtpSendHandler {
                 .then(ServerResponse.ok().build())
                 // e.g. an invalid phone number: the caller has to ask the user again, retrying won't help
                 .onErrorResume(NtfDeliveryRejectedException.class, err ->
-                        ServerResponse.unprocessableEntity().bodyValue(Map.of("code", err.code())));
+                        ServerResponse.unprocessableEntity().bodyValue(Map.of("code", err.code())))
+                // the limit on what this service sends (ADR-080): the sign-in is told to wait, and says the same to the person
+                .onErrorResume(com.techeazyhq.cm.webkit.DomRuleViolation.class, err -> err.httpStatus() == 429
+                        ? ServerResponse.status(429).header("Retry-After", "600").bodyValue(Map.of("code", err.problemType()))
+                        : Mono.error(err));
     }
 }

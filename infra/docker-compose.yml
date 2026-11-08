@@ -157,6 +157,10 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
       CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
+      # The test kit signs in as the same few addresses all day, so this stack's limit on codes to one address is loose (ADR-080);
+      # the defaults (20 an hour, 40 a day) are what a deployment gets.
+      CM_NTF_OTP_LIMITS_DESTINATION_PER_HOUR: ${CM_NTF_OTP_PER_HOUR:-1000}
+      CM_NTF_OTP_LIMITS_DESTINATION_PER_DAY: ${CM_NTF_OTP_PER_DAY:-5000}
     # Written by notification-service/register-cm-client.mjs: switches delivery to notification-service
     # (cm.ntf.provider). Without it, cm-ntf-svc keeps using Mailpit and its in-memory catchers.
     env_file:

@@ -1205,6 +1205,19 @@
       ]
     },
     {
+      "code": "otp-send-limited",
+      "kind": "problem",
+      "status": 429,
+      "category": "rate-limit",
+      "title": "Too many sign-in codes sent",
+      "description": "The notification service has sent as many sign-in codes to this address or number, or by this channel, as it allows in the hour or day, whoever asked. The sign-in is told to wait.",
+      "action": "Wait and ask for a code again later; do not retry in a loop. If it is a real person, they can use the code already sent.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-ntf-svc"
+      ]
+    },
+    {
       "code": "owner-exists",
       "kind": "problem",
       "status": 409,
