@@ -124,12 +124,26 @@ public class OtpAuthenticatorFactory implements AuthenticatorFactory {
      */
     static final String EXEMPT_ADDRESSES = "exempt-addresses";
 
+    /**
+     * Server setting {@code spi-authenticator-cm-otp-authenticator-ntf-api-key} (environment
+     * {@code KC_SPI_AUTHENTICATOR_CM_OTP_AUTHENTICATOR_NTF_API_KEY}): the value of cm-ntf-svc's {@code cm.ntf.internal-api-key}, sent
+     * with every request to send a code (ADR-083). Server configuration, never realm data, because it is a secret and the realm
+     * exports are plain files in the repository.
+     */
+    static final String NTF_API_KEY = "ntf-api-key";
+
     @Override
     public void init(Config.Scope config) {
+        String ntfKey = config == null ? null : config.get(NTF_API_KEY);
         sender = new NtfOtpSender(HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(3))
-                .build(), Duration.ofSeconds(10));
+                .build(), Duration.ofSeconds(10), ntfKey);
+        if (ntfKey == null || ntfKey.isBlank()) {
+            org.jboss.logging.Logger.getLogger(OtpAuthenticatorFactory.class).warn(
+                    "[CM-OTP-NTF-KEY-MISSING] No key is set for cm-ntf-svc: codes are sent without one, which only works while "
+                            + "cm-ntf-svc does not ask for it. Set the ntf-api-key server setting in any deployment.");
+        }
         exemptFromSendLimits = OtpAbuseGuard.parseExempt(config == null ? null : config.get(EXEMPT_ADDRESSES));
         if (!exemptFromSendLimits.isEmpty()) {
             org.jboss.logging.Logger.getLogger(OtpAuthenticatorFactory.class).warnf(

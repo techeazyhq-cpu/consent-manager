@@ -161,6 +161,8 @@ services:
       # the defaults (20 an hour, 40 a day) are what a deployment gets.
       CM_NTF_OTP_LIMITS_DESTINATION_PER_HOUR: ${CM_NTF_OTP_PER_HOUR:-1000}
       CM_NTF_OTP_LIMITS_DESTINATION_PER_DAY: ${CM_NTF_OTP_PER_DAY:-5000}
+      # who may ask it to send a sign-in code (ADR-083); Keycloak (infra/common/compose.yml) sends the same value
+      CM_NTF_INTERNAL_API_KEY: ${CM_NTF_INTERNAL_API_KEY:-cm-local-ntf-internal-key}
     # Written by notification-service/register-cm-client.mjs: switches delivery to notification-service
     # (cm.ntf.provider). Without it, cm-ntf-svc keeps using Mailpit and its in-memory catchers.
     env_file:

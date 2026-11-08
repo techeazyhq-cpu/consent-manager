@@ -76,6 +76,9 @@ spec:
             - name: KC_DB_PASSWORD
               {{- include "common.secretRef" (dict "root" . "key" "KEYCLOAK_DB_PASSWORD") | nindent 14 }}
             # plain HTTP inside the cluster; TLS ends at the ingress, which forwards X-Forwarded-*
+            # the key cm-ntf-svc asks of whoever requests a sign-in code (ADR-083); optional so a cluster without it still starts
+            - name: KC_SPI_AUTHENTICATOR_CM_OTP_AUTHENTICATOR_NTF_API_KEY
+              {{- include "common.secretRef" (dict "root" . "key" "NTF_INTERNAL_API_KEY" "optional" true) | nindent 14 }}
             - {name: KC_HTTP_ENABLED, value: "true"}
             - {name: KC_PROXY_HEADERS, value: xforwarded}
             - {name: KC_HEALTH_ENABLED, value: "true"}
