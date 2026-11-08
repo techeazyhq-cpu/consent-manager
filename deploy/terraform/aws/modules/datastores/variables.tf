@@ -145,3 +145,20 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "dedicated_databases" {
+  description = <<-EOT
+    Services that get a PostgreSQL instance of their own (ADR-074), keyed by the service's name in the Helm chart, for example
+    cm-aud-svc. Each instance is Multi-AZ, encrypted, backed up and replicated like the shared one, in the same subnets and
+    behind the same security group. The chart is pointed at it with the `database:` block under that service
+    (the postgres_dedicated output has the address and the secret holding its password); the data is moved with
+    deploy/backup/split-schema.sh (docs/runbooks/database-per-service.md).
+  EOT
+  type = map(object({
+    db_name           = string
+    username          = string
+    instance_class    = optional(string)
+    allocated_storage = optional(number)
+  }))
+  default = {}
+}

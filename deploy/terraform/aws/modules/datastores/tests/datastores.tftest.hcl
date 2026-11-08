@@ -244,3 +244,41 @@ run "backup_failover_and_storage_events_reach_the_operators_topic" {
     error_message = "The operations topic must be encrypted."
   }
 }
+
+run "a_service_can_have_a_database_instance_of_its_own_with_the_same_protections" {
+  command = plan
+
+  variables {
+    dedicated_databases = {
+      "cm-aud-svc" = { db_name = "cm_aud", username = "cm_aud" }
+    }
+  }
+
+  assert {
+    condition     = length(aws_db_instance.dedicated) == 1 && aws_db_instance.dedicated["cm-aud-svc"].db_name == "cm_aud"
+    error_message = "A dedicated instance is created for each service named, with the database name asked for."
+  }
+  assert {
+    condition = (
+      aws_db_instance.dedicated["cm-aud-svc"].multi_az
+      && aws_db_instance.dedicated["cm-aud-svc"].storage_encrypted
+      && aws_db_instance.dedicated["cm-aud-svc"].deletion_protection
+      && !aws_db_instance.dedicated["cm-aud-svc"].publicly_accessible
+      && aws_db_instance.dedicated["cm-aud-svc"].backup_retention_period == 30
+    )
+    error_message = "A dedicated instance must be as protected as the shared one: Multi-AZ, encrypted, not public, deletion-protected, 30 days of backups."
+  }
+  assert {
+    condition     = aws_db_instance_automated_backups_replication.dedicated["cm-aud-svc"].retention_period == 30
+    error_message = "A dedicated instance's backups must be copied to the disaster recovery region too."
+  }
+}
+
+run "by_default_no_dedicated_instance_exists" {
+  command = plan
+
+  assert {
+    condition     = length(aws_db_instance.dedicated) == 0
+    error_message = "Nothing is created for a service until it is asked for."
+  }
+}

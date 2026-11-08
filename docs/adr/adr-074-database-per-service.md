@@ -33,13 +33,16 @@ reach across all of them.
 
 - **The data on the old server is not removed or frozen by the script.** Writes after the copy go to the old schema; the runbook
   stops the service first. A copy under live traffic would need logical replication, which is not here.
-- **Terraform still creates one database server.** Creating a server per service is a copy of the datastores module; it is
-  not written, so a separate server today is one a person creates.
-- **Backups, the restore drill and the retention job** (ADR-064) still assume one database. `BACKUP_DATABASES` lists the new
-  ones; the drill's schema-by-schema checks work per database, but the scheduling is not updated.
+- **Terraform creates the extra servers on AWS only.** `dedicated_databases` in the AWS datastores module (and the production
+  root, which also emits the service's `database:` block in `helm_values`) builds one Multi-AZ, encrypted instance per service
+  with the same backups and cross-region copy as the shared one, checked by plan tests. Azure and GCP have no equivalent yet.
+- **Backups of a separate server** are a run of their own: `BACKUP_MANIFEST_PREFIX` keeps each server's manifests apart so the
+  restore drill finds the right one. Scheduling those runs is still a job for whoever schedules the first (the CronJob is open in
+  the backup runbook), and the retention job (ADR-064) still assumes one database.
 - **The sandbox** and the local compose stack keep one database.
-- **Per-service roles with least privilege** (a login that can only touch its own schema) are a separate hardening; the split
-  makes them possible because a database holds one schema.
+- **Per-service roles with least privilege** are not done. A service runs its migrations and its queries as one login, so a
+  runtime login without DDL needs the services to migrate as a separate user: a change to each service. The split makes it
+  possible, because a database now holds one schema.
 
 ## Options considered
 

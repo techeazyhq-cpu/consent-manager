@@ -82,3 +82,17 @@ output "disaster_recovery_kms_key_arn" {
   description = "KMS key encrypting the replicated backups and logical dumps in the recovery region."
   value       = aws_kms_key.disaster_recovery.arn
 }
+
+output "postgres_dedicated" {
+  description = "Per service with its own instance (ADR-074): the address, port, database, user and the secret holding the owner's password, for that service's `database:` block in the Helm values."
+  value = {
+    for service, db in aws_db_instance.dedicated : service => {
+      host              = db.address
+      port              = db.port
+      name              = db.db_name
+      user              = db.username
+      password_secret   = db.master_user_secret[0].secret_arn
+      security_group_id = aws_security_group.postgres.id
+    }
+  }
+}

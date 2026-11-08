@@ -149,5 +149,6 @@ module "datastores" {
   database_subnet_ids       = module.vpc.database_subnets
   cache_subnet_ids          = module.vpc.elasticache_subnets
   client_security_group_ids = [module.eks.node_security_group_id]
+  dedicated_databases       = var.dedicated_databases
   tags                      = local.tags
 }
