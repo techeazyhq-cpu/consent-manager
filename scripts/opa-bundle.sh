@@ -54,7 +54,9 @@ opa() {
   if [ -n "${OPA_BIN:-}" ]; then
     "$OPA_BIN" "$@"
   else
-    MSYS_NO_PATHCONV=1 docker run --rm -v "$PWD:/repo:ro" -v "$PWD/$out:/out" ${EXTRA_MOUNTS:-} "$OPA_IMAGE" "$@"
+    # as the caller's own user: the image's user is another one, which cannot read a private key that is mode 600 and ours
+    # (openssl writes keys that way), nor write into a directory we made
+    MSYS_NO_PATHCONV=1 docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo:ro" -v "$PWD/$out:/out" ${EXTRA_MOUNTS:-} "$OPA_IMAGE" "$@"
   fi
 }
 # a path as opa sees it
