@@ -46,6 +46,8 @@ jobs:
         run: node scripts/error-dictionary.mjs --check
       - name: AI ingestion guard unit tests (ADR-069)
         run: node --test sdk/ai-ingestion-guard/test/*.test.mjs
+      - name: Consent sidecar unit tests (ADR-076)
+        run: node --test sdk/pep-sidecar/test/*.test.mjs
       - name: Email deliverability checker unit tests (ADR-071)
         run: node --test scripts/email-deliverability.test.mjs
       - name: Check and unit-test the OPA authorisation policies
