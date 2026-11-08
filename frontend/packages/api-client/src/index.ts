@@ -69,6 +69,7 @@ import type {
   PrpsContent,
   PrpsDefDto,
   InvoiceDto,
+  PartyDto,
   PlanPriceDto,
   ProcessorDto,
   ProcessorUseDto,
@@ -372,6 +373,22 @@ export function formatMinor(minor: number, currency: string, locale?: string): s
   } catch {
     return `${(minor / 100).toFixed(2)} ${currency}`;
   }
+}
+
+/**
+ * A party a notice names, in a sentence: "Courier Ltd: delivers your orders (India)". The role and the country are the
+ * fiduciary's own words and ISO code, so either may be missing; the name never is.
+ */
+export function partyLine(p: PartyDto, locale?: string): string {
+  let country = "";
+  if (p.country) {
+    try {
+      country = new Intl.DisplayNames(locale, { type: "region" }).of(p.country.toUpperCase()) ?? p.country;
+    } catch {
+      country = p.country;
+    }
+  }
+  return `${p.name}${p.role ? `: ${p.role}` : ""}${country ? ` (${country})` : ""}`;
 }
 
 const inv = (path: string) => `/api/bil${path}`;

@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ApiError,
+  partyLine,
   prps,
   type PrpsChange,
   type PrpsContent,
@@ -252,6 +253,17 @@ function VersionContent({ content }: { content: PrpsContent }) {
           <dt>Transfers</dt>
           <dd>{content.transfers.length ? content.transfers.join(", ") : "None"}</dd>
         </div>
+        {content.parties && content.parties.length ? (
+          <div>
+            <dt>What they do with it</dt>
+            <dd>
+              {content.parties.map((p) => (
+                <div key={p.name}>{partyLine(p)}</div>
+              ))}
+              <span className="cm-note">From your register of processors, as it was when this version was published.</span>
+            </dd>
+          </div>
+        ) : null}
         {content.flags.length ? (
           <div>
             <dt>Special processing</dt>

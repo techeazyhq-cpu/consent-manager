@@ -223,9 +223,13 @@ public class R2dbcPrpsDefRepoAdapter implements PrpsDefRepoPort {
     record NtcJson(String lang, String title, String text) {
     }
 
+    /** A version published before parties were described has none (ADR-081): the field is absent and reads as an empty list. */
+    record PartyJson(String name, String role, String country) {
+    }
+
     record ContentJson(String name, String description, List<DCatJson> dCats, List<String> recipients,
                        List<String> transfers, int retentionDays, int requestedValidityDays, int maxValidityDays,
-                       List<String> flags, List<NtcJson> notices) {
+                       List<String> flags, List<NtcJson> notices, List<PartyJson> parties) {
 
         static ContentJson of(PrpsVerContent c) {
             return new ContentJson(c.name(), c.description(),
@@ -233,7 +237,8 @@ public class R2dbcPrpsDefRepoAdapter implements PrpsDefRepoPort {
                             d.consequence())).toList(),
                     c.recipients(), c.transfers(), c.retentionDays(), c.requestedValidityDays(), c.maxValidityDays(),
                     c.flags().stream().map(Enum::name).sorted().toList(),
-                    c.notices().stream().map(n -> new NtcJson(n.lang(), n.title(), n.text())).toList());
+                    c.notices().stream().map(n -> new NtcJson(n.lang(), n.title(), n.text())).toList(),
+                    c.parties().stream().map(p -> new PartyJson(p.name(), p.role(), p.country())).toList());
         }
 
         PrpsVerContent toDomain() {
@@ -244,7 +249,9 @@ public class R2dbcPrpsDefRepoAdapter implements PrpsDefRepoPort {
                     recipients, transfers, retentionDays, requestedValidityDays, maxValidityDays,
                     flags == null ? Set.of() : Set.copyOf(flags.stream().map(PrpsFlag::valueOf).toList()),
                     notices == null ? List.of()
-                            : notices.stream().map(n -> new PrpsNtc(n.lang(), n.title(), n.text())).toList());
+                            : notices.stream().map(n -> new PrpsNtc(n.lang(), n.title(), n.text())).toList(),
+                    parties == null ? List.of()
+                            : parties.stream().map(p -> new com.techeazyhq.cm.cnscmd.dom.PrpsParty(p.name(), p.role(), p.country())).toList());
         }
     }
 

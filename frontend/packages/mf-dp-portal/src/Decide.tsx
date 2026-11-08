@@ -17,7 +17,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { cnsCmd, type CnsArtRdMdl, type CnsReqTermsDto } from "api-client";
+import { cnsCmd, partyLine, type CnsArtRdMdl, type CnsReqTermsDto } from "api-client";
 import { Button, friendlyError } from "ui-kit/src/index";
 import { choiceProblem, dateAfter, daysUntil, giveLabel } from "dp-kit";
 import { humanise } from "./labels";
@@ -112,6 +112,17 @@ export default function Decide({ portal, row }: { portal: Portal; row: CnsArtRdM
         {terms.recipients.length ? ` They share it with: ${terms.recipients.join(", ")}.` : ""}
         {terms.retentionDays ? ` They keep it for ${terms.retentionDays} days.` : ""}
       </p>
+
+      {terms.parties && terms.parties.length ? (
+        <>
+          <p className="cm-note">What the organisations that receive it do with it:</p>
+          <ul className="cm-note dp-parties">
+            {terms.parties.map((p) => (
+              <li key={p.name}>{partyLine(p)}</li>
+            ))}
+          </ul>
+        </>
+      ) : null}
 
       {problem && chosen.length > 0 ? <p className="dp-problem">{problem}</p> : null}
       <div className="dp-consent-actions">

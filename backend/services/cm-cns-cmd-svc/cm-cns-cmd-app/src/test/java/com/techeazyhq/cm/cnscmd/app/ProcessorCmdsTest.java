@@ -133,6 +133,39 @@ class ProcessorCmdsTest {
     }
 
     @Test
+    void publishingFreezesWhatTheRegisterSaysAboutEachNamedPartyAndLaterEditsDoNotReachIt() {
+        var courier = cmds.register("df-1", "Courier Ltd", "Delivers orders", "IN", "").block();
+        cmds.register("df-1", "Cloud Host", "Stores order data", "DE", "").block();
+        PrpsVerContent draft = new PrpsVerContent("Order updates", null, InMemoryPrpsDefs.orderUpdatesContent().dCats(),
+                List.of("courier ltd", "Somebody Unregistered Inc"), List.of("Cloud Host", "COURIER LTD"), 365, 180, 365, Set.of(),
+                InMemoryPrpsDefs.orderUpdatesContent().notices());
+        purposeCmds.create("df-1", "ORDER_UPDATES", draft).block();
+        assertEquals(List.of(), purposeCmds.get("df-1", "ORDER_UPDATES").block().draft().orElseThrow().content().parties(),
+                "a draft has no details yet");
+
+        var published = purposeCmds.publish("df-1", "ORDER_UPDATES").block().current().orElseThrow().content();
+
+        assertEquals(List.of(new com.techeazyhq.cm.cnscmd.dom.PrpsParty("courier ltd", "Delivers orders", "IN"),
+                new com.techeazyhq.cm.cnscmd.dom.PrpsParty("Cloud Host", "Stores order data", "DE")), published.parties(),
+                "the registered parties in the order they are named, once each, spelled as the version spells them; the unregistered one has none");
+
+        cmds.describe("df-1", courier.id(), "Something else entirely", "US", "").block();
+        var after = purposeCmds.get("df-1", "ORDER_UPDATES").block().current().orElseThrow().content();
+        assertEquals("Delivers orders", after.parties().get(0).role(), "a published version keeps what it was published with");
+    }
+
+    @Test
+    void aPartyIsDescribedByTheRegisterAsItIsWhenAVersionIsPublishedNotWhenItIsDrafted() {
+        var p = cmds.register("df-1", "Courier Ltd", "Old role", "IN", "").block();
+        purposeCmds.create("df-1", "ORDER_UPDATES", naming("Courier Ltd")).block();
+        cmds.describe("df-1", p.id(), "New role", "IN", "").block();
+
+        var published = purposeCmds.publish("df-1", "ORDER_UPDATES").block().current().orElseThrow().content();
+
+        assertEquals("New role", published.parties().get(0).role());
+    }
+
+    @Test
     void usesListsThePurposesThatNameAProcessor() {
         var p = cmds.register("df-1", "Courier Ltd", "", "", "").block();
         var unused = cmds.register("df-1", "Unused Co", "", "", "").block();

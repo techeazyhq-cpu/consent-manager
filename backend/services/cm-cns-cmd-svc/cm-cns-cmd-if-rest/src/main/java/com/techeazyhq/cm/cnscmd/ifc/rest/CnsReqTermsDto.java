@@ -36,7 +36,11 @@ import com.techeazyhq.cm.cnscmd.dom.PrpsVerContent;
 record CnsReqTermsDto(String cnsReqId, String prpsCode, Integer prpsVer, String name, String description,
                       List<DCatDto> dCats, int requestedValidityDays, int maxValidityDays, Integer retentionDays,
                       List<String> recipients, List<String> transfers, List<String> flags, String ntcLang,
-                      String ntcTitle, String ntcText, String ntcHash) {
+                      String ntcTitle, String ntcText, String ntcHash, List<PartyDto> parties) {
+
+    /** What the version says about a party it names, as the register described it when the version was published (ADR-081). */
+    record PartyDto(String name, String role, String country) {
+    }
 
     record DCatDto(String code, String dpv, String sensitivity, boolean necessary, String consequence) {
     }
@@ -63,6 +67,7 @@ record CnsReqTermsDto(String cnsReqId, String prpsCode, Integer prpsVer, String 
                 v == null ? null : v.retentionDays(),
                 v == null ? List.of() : v.recipients(), v == null ? List.of() : v.transfers(),
                 v == null ? List.of() : v.flags().stream().map(Enum::name).sorted().toList(),
-                ver == null ? null : ver.ntcLang(), req.ntcTitle(), req.ntcText(), ver == null ? null : ver.ntcHash());
+                ver == null ? null : ver.ntcLang(), req.ntcTitle(), req.ntcText(), ver == null ? null : ver.ntcHash(),
+                v == null ? List.of() : v.parties().stream().map(p -> new PartyDto(p.name(), p.role(), p.country())).toList());
     }
 }

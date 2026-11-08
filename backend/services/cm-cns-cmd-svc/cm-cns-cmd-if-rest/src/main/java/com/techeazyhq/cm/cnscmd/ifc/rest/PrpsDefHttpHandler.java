@@ -154,7 +154,11 @@ public class PrpsDefHttpHandler {
     /** What a purpose version says; {@code hash} on a notice is ignored on the way in. */
     record ContentDto(String name, String description, List<DCatDto> dCats, List<String> recipients,
                       List<String> transfers, Integer retentionDays, Integer requestedValidityDays,
-                      Integer maxValidityDays, List<String> flags, List<NtcDto> notices) {
+                      Integer maxValidityDays, List<String> flags, List<NtcDto> notices, List<PartyDto> parties) {
+
+        /** Read only: set when a version is published, from the register (ADR-081); ignored on the way in. */
+        record PartyDto(String name, String role, String country) {
+        }
 
         PrpsVerContent toDomain() {
             return new PrpsVerContent(name, blankToNull(description),
@@ -169,7 +173,8 @@ public class PrpsDefHttpHandler {
         static ContentDto of(PrpsVerContent c) {
             return new ContentDto(c.name(), c.description(), c.dCats().stream().map(DCatDto::of).toList(),
                     c.recipients(), c.transfers(), c.retentionDays(), c.requestedValidityDays(), c.maxValidityDays(),
-                    c.flags().stream().map(Enum::name).sorted().toList(), c.notices().stream().map(NtcDto::of).toList());
+                    c.flags().stream().map(Enum::name).sorted().toList(), c.notices().stream().map(NtcDto::of).toList(),
+                    c.parties().stream().map(p -> new PartyDto(p.name(), p.role(), p.country())).toList());
         }
     }
 
