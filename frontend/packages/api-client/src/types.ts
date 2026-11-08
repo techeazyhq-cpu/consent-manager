@@ -722,3 +722,17 @@ export interface LegalHoldDto {
   legalHoldReason: string | null;
   legalHoldAt: string | null;
 }
+
+/** Staff proposing to end a fiduciary's contract, or call that off, for a second member of staff to decide (ADR-064 D7). */
+export interface LeaveProposalDto {
+  id: string;
+  dfId: string;
+  kind: "START" | "CANCEL";
+  reason: string;
+  proposedBy: string;
+  proposedAt: string;
+  status: "PENDING" | "APPROVED" | "REJECTED" | "WITHDRAWN";
+  decidedBy: string | null;
+  decidedAt: string | null;
+  decisionNote: string | null;
+}

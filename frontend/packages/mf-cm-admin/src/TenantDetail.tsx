@@ -27,6 +27,7 @@ import {
   type CnsStats,
   type DfProfileRespDto,
   type DfSubStatusResult,
+  type LeaveProposalDto,
   type PlnChgReqDto,
   type SubPln,
 } from "api-client";
@@ -36,7 +37,7 @@ import { PendingRequest } from "./Billing";
 import DfLogo, { forgetLogo } from "./DfLogo";
 import { checkLogo } from "./logo";
 import { TENANT_TABS, tenantHref, type TenantTab } from "./routes";
-import { canResume, canSuspend, standingLine } from "./standing";
+import { canProposeCancel, canProposeEnd, canResume, canSuspend, mayDecide, standingLine } from "./standing";
 import { takeNotice, takeSecret } from "./secrets";
 import { freshToken, type Session } from "./session";
 
@@ -221,6 +222,7 @@ function Overview({
       ) : null}
 
       <Standing session={session} df={df} onChanged={onChanged} />
+      <EndContract session={session} df={df} onChanged={onChanged} />
 
       <Card>
         <dl className="cm-fields">
@@ -656,6 +658,125 @@ function Standing({ session, df, onChanged }: { session: Session; df: DfProfileR
             )}
           </div>
         ) : null}
+      </Card>
+    </>
+  );
+}
+
+/**
+ * Ending a tenant's contract takes two people (ADR-064 D7): one member of staff proposes with a reason, and a different
+ * administrator approves, and only then does the 30-day wind-down start. The same goes for calling one off.
+ */
+function EndContract({ session, df, onChanged }: { session: Session; df: DfProfileRespDto; onChanged: () => void }) {
+  const [pending, setPending] = useState<LeaveProposalDto | null | undefined>(undefined);
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = async () => {
+    try {
+      const list = await dfReg.leaveProposals(session.gwBase, await freshToken(session.auth), "PENDING", df.id);
+      setPending(list[0] ?? null);
+    } catch (err) {
+      setError(friendlyError(err));
+      setPending((prev) => prev ?? null);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [df.id, df.sts]);
+
+  const run = async (action: (token: string) => Promise<unknown>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await action(await freshToken(session.auth));
+      setReason("");
+      setNote("");
+      await load();
+      onChanged();
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const proposeEnd = canProposeEnd(df.sts);
+  const proposeCancel = canProposeCancel(df.sts);
+  if (pending === undefined || (!pending && !proposeEnd && !proposeCancel)) return null;
+  const me = session.auth.subject;
+
+  return (
+    <>
+      <h3 className="cm-section-title">Ending the contract</h3>
+      <Card style={{ marginBottom: 16 }}>
+        {error ? <ErrorBanner message={error} /> : null}
+        {pending ? (
+          <>
+            <p>
+              <Badge status="PENDING" /> {pending.kind === "START" ? "Proposal to end the contract" : "Proposal to call the departure off"}, made{" "}
+              {fmtDate(pending.proposedAt)}
+              {pending.proposedBy === me ? " by you" : ""}: {pending.reason}
+            </p>
+            {mayDecide(pending.proposedBy, me, session.auth.roles) ? (
+              <>
+                <Field label="Note if you reject it (optional)">
+                  <input value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} />
+                </Field>
+                <Button
+                  variant="danger"
+                  disabled={busy}
+                  onClick={() => {
+                    if (window.confirm(pending.kind === "START" ? `Approve ending ${df.name}'s contract? A 30-day wind-down starts and its team is told.` : "Approve calling the departure off?")) {
+                      run((t) => dfReg.approveProposal(session.gwBase, t, pending.id));
+                    }
+                  }}
+                >
+                  Approve
+                </Button>{" "}
+                <Button disabled={busy} onClick={() => run((t) => dfReg.rejectProposal(session.gwBase, t, pending.id, note.trim() || undefined))}>
+                  Reject
+                </Button>
+              </>
+            ) : pending.proposedBy === me ? (
+              <>
+                <p className="cm-note">A different administrator must decide this: ending a contract takes two people.</p>
+                <Button disabled={busy} onClick={() => run((t) => dfReg.withdrawProposal(session.gwBase, t, pending.id))}>
+                  Withdraw
+                </Button>
+              </>
+            ) : (
+              <p className="cm-note">Only an administrator can decide this.</p>
+            )}
+          </>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              run((t) =>
+                proposeEnd
+                  ? dfReg.proposeEndContract(session.gwBase, t, df.id, reason.trim())
+                  : dfReg.proposeCancelEnding(session.gwBase, t, df.id, reason.trim()),
+              );
+            }}
+          >
+            <p className="cm-note">
+              {proposeEnd
+                ? "Starts a 30-day wind-down, after which the tenant is closed. A second administrator must approve it."
+                : "Calls the departure off, whoever began it. A second administrator must approve it."}
+            </p>
+            <Field label="Reason (given to the tenant's team and kept in the audit trail)">
+              <input value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} />
+            </Field>
+            <Button type="submit" disabled={busy || !reason.trim()}>
+              {proposeEnd ? "Propose ending the contract" : "Propose calling the departure off"}
+            </Button>
+          </form>
+        )}
       </Card>
     </>
   );

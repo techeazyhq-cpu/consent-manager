@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-135 entries: 125 API problems, 9 operational log codes and 1 event.
+139 entries: 129 API problems, 9 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -100,6 +100,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `contact-not-verified` | 403 | Contact not verified | The sign-in did not verify an email address or number to claim requests with. | Sign in again with a code sent to your own address. | no | cns-cmd |
 | `contact-not-yours` | 403 | That is not your address | Requests can only be claimed for the address you signed in with. | Claim requests with your own address. | no | cns-cmd |
 | `dp-only` | 403 | For data principals only | Only a person has push devices. | Sign in as the person. | no | ntf |
+| `leave-proposal-same-person` | 403 | A second person must decide | The member of staff who proposed this cannot approve or reject it: ending a contract takes two people. | Ask another administrator to decide it. | no | df-reg |
 | `may-not-answer` | 403 | Not allowed to answer requests | Only an Owner, an Administrator or a Consent manager answers requests, and platform staff answer grievances. | Ask someone with that role. | no | dsr |
 | `may-not-request-plan` | 403 | Not allowed to ask for a plan change | Only an Owner or an Administrator of the fiduciary can ask for another plan, or withdraw the request. | Ask an Owner or Administrator. | no | bil |
 | `not-a-data-principal` | 403 | For data principals only | Only a person signed in to the DP portal or app can do this. | Sign in as the person concerned. | no | cns-cmd, dsr |
@@ -135,6 +136,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `dp-request-not-found` | 404 | Request not found | No request with that id is visible to the caller. | Check the id. | no | dsr |
 | `draft-not-found` | 404 | Draft not found | The purpose has no draft. | Draft a change first. | no | cns-cmd |
 | `erasure-not-found` | 404 | Erasure not found | No erasure with that id exists. | List the erasures and use an id from it. | no | dsr |
+| `leave-proposal-not-found` | 404 | Proposal not found | There is no such proposal. | Check the proposal id. | no | df-reg |
 | `member-not-found` | 404 | Team member not found | No member with that id belongs to this fiduciary. | List the team and use an id from it. | no | df-reg |
 | `plan-change-request-not-found` | 404 | Plan change request not found | No plan change request with that id is visible to the caller. | List the requests and use an id from the list. | no | bil |
 | `purpose-not-found` | 404 | Purpose not found | The fiduciary has no purpose with that code. | List the purposes and use a code from the list. | no | cns-cmd |
@@ -155,6 +157,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `dp-request-open` | 409 | Already asked | The person already has this request open for this consent. | Wait for the answer, or withdraw the open one. | no | dsr |
 | `erasure-running` | 409 | Account is already being closed | An erasure for this account is already under way. | Wait for it to finish. | no | dsr |
 | `last-owner` | 409 | A fiduciary must keep an Owner | The change would leave the fiduciary without an Owner, which is not allowed. | Make someone else an Owner first. | no | df-reg |
+| `leave-proposal-pending` | 409 | A proposal already waits | A proposal to end or keep this fiduciary's contract already waits for a second member of staff. | Approve, reject or withdraw the waiting proposal first. | no | df-reg |
 | `owner-exists` | 409 | The fiduciary already has an Owner | A fiduciary has one Owner, who manages its team. | Ask the Owner to add people. | no | df-reg |
 | `plan-change-request-pending` | 409 | A plan change is already waiting | The fiduciary already has a plan change request waiting for a decision. | Withdraw the waiting request to ask for another plan. | no | bil |
 | `purpose-exists` | 409 | Purpose already exists | A purpose with that code exists already. | Draft a new version of it instead of creating it again. | no | cns-cmd |
@@ -186,6 +189,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `dp-request-closed` | 409 | Request already closed | The request was already answered, refused or withdrawn. | Read its current state. | no | dsr |
 | `erasure-not-stuck` | 409 | Erasure is not stuck | Only a stuck erasure can be retried. | Read its state first. | no | dsr |
 | `leave-cancel-used` | 409 | Departure already cancelled once | A departure can be called off once, and this fiduciary has already used that. | The wind-down continues. Contact the consent manager's support if this is a mistake. | no | df-reg |
+| `leave-proposal-decided` | 409 | Proposal already decided | The proposal was already approved, rejected or withdrawn. | Nothing more to do; propose again if it is still wanted. | no | df-reg |
 | `no-draft` | 409 | No draft to publish | The purpose has no draft, so there is nothing to publish. | Draft a change first. | no | cns-cmd |
 | `plan-change-request-decided` | 409 | Plan change already decided | The request was already approved, declined or withdrawn. | Read its current state; nothing more to do. | no | bil |
 | `purpose-not-published` | 409 | Purpose not published yet | The purpose has no published version to ask consent for. | Publish the purpose first. | no | cns-cmd |

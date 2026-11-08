@@ -56,6 +56,7 @@ import com.techeazyhq.cm.dfreg.infra.KeycloakDfMemberDirectoryAdapter;
 import com.techeazyhq.cm.audkit.AuditTrail;
 import com.techeazyhq.cm.dfreg.app.DfApiKeyHandler;
 import com.techeazyhq.cm.dfreg.app.DfClosureHandler;
+import com.techeazyhq.cm.dfreg.app.DfEndContractHandler;
 import com.techeazyhq.cm.dfreg.app.DfLeavingHandler;
 import com.techeazyhq.cm.dfreg.app.DfRetentionHandler;
 import com.techeazyhq.cm.dfreg.app.DfSuspensionHandler;
@@ -309,6 +310,17 @@ public class DfRegBeanConfig {
     @Bean
     public DfRetentionJob dfRetentionJob(DfRetentionHandler retention) {
         return new DfRetentionJob(retention);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.dfreg.infra.R2dbcLeaveProposalAdapter leaveProposalAdapter(DatabaseClient db) {
+        return new com.techeazyhq.cm.dfreg.infra.R2dbcLeaveProposalAdapter(db);
+    }
+
+    @Bean
+    public DfEndContractHandler dfEndContractHandler(com.techeazyhq.cm.dfreg.infra.R2dbcLeaveProposalAdapter proposals,
+                                                     DfRepoPort dfRepo, DfLeavingHandler leaving, AuditTrail audit) {
+        return new DfEndContractHandler(proposals, dfRepo, leaving, audit, java.time.Clock.systemUTC());
     }
 
     @Bean

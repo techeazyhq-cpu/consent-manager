@@ -45,3 +45,12 @@ export function standingLine(df: {
       return "Active";
   }
 }
+
+/** Staff may propose ending a contract that is active or suspended, and calling off one that is leaving (ADR-064 D7). */
+export const canProposeEnd = (sts: DfSts) => sts === "ACTIVE" || sts === "SUSPENDED";
+export const canProposeCancel = (sts: DfSts) => sts === "LEAVING";
+
+/** Who may decide a proposal: an administrator who is not the person who proposed it. */
+export function mayDecide(proposedBy: string, me: string, roles: string[]): boolean {
+  return roles.includes("CM_ADMIN") && proposedBy !== me;
+}

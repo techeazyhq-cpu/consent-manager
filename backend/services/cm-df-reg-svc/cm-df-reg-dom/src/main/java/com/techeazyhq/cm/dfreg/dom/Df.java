@@ -220,6 +220,21 @@ public final class Df extends Agg<String> {
         this.leaveCancellations++;
     }
 
+    /**
+     * Staff calling a departure off after the two-person approval of ADR-064 §6. It does not depend on the Owner's one
+     * cancellation, and does not use it up.
+     */
+    public void cancelLeavingByStaff() {
+        if (sts != DfSts.LEAVING) {
+            throw new IllegalStateException("Only a DF that is leaving can have its departure cancelled, not one in status " + sts);
+        }
+        this.sts = leavingFrom == null ? DfSts.ACTIVE : leavingFrom;
+        this.leavingFrom = null;
+        this.leavingAt = null;
+        this.leavesAt = null;
+        this.leavingBy = null;
+    }
+
     /** The one cancellation has been used. */
     public static final class CancelUsedException extends IllegalStateException {
         CancelUsedException() {

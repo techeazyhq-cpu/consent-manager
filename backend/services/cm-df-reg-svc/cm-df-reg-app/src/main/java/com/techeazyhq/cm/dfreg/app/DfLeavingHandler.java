@@ -114,6 +114,46 @@ public class DfLeavingHandler {
         });
     }
 
+    /** Starts a departure that two members of staff agreed (ADR-064 D7); the Owner and team are told. */
+    @Transactional
+    public Mono<Df> startByStaff(String dfId, String proposedBy, String approvedBy, String reason) {
+        return dfs.findById(dfId).switchIfEmpty(Mono.error(new DomRuleViolation(404, "df-not-found", "No DF " + dfId))).flatMap(df -> {
+            try {
+                df.startLeaving(proposedBy, clock.instant(), windDownDays);
+            } catch (IllegalStateException e) {
+                return Mono.<Df>error(new DomRuleViolation(409, "df-cannot-leave", e.getMessage()));
+            }
+            return dfs.save(df).flatMap(saved -> audit.record("tenant.leaving", saved.id(), saved.id(),
+                            AuditTrail.details("closesOn", DAY.format(saved.leavesAt()), "windDownDays", String.valueOf(windDownDays),
+                                    "initiatedBy", "platform staff", "proposedBy", proposedBy, "approvedBy", approvedBy, "reason", reason))
+                    .then(tell(saved, "leaving " + saved.leavesAt().toEpochMilli(),
+                            "Consent Manager is ending its agreement with " + saved.name(),
+                            "Consent Manager has ended its agreement with " + saved.name() + ". A wind-down of " + windDownDays
+                                    + " days has begun and ends on " + DAY.format(saved.leavesAt()) + ". Until then no new consent "
+                                    + "requests are accepted and API keys stop working; your records stay readable.\n\nReason given: "
+                                    + reason + "\n\nIf you think this is a mistake, contact the platform before " + DAY.format(saved.leavesAt()) + "."))
+                    .thenReturn(saved));
+        });
+    }
+
+    /** Calls a departure off after two members of staff agreed; it does not use the Owner's one cancellation. */
+    @Transactional
+    public Mono<Df> cancelByStaff(String dfId, String proposedBy, String approvedBy, String reason) {
+        return dfs.findById(dfId).switchIfEmpty(Mono.error(new DomRuleViolation(404, "df-not-found", "No DF " + dfId))).flatMap(df -> {
+            try {
+                df.cancelLeavingByStaff();
+            } catch (IllegalStateException e) {
+                return Mono.<Df>error(new DomRuleViolation(409, "df-not-leaving", e.getMessage()));
+            }
+            return dfs.save(df).flatMap(saved -> audit.record("tenant.leaving-cancelled", saved.id(), saved.id(),
+                            AuditTrail.details("initiatedBy", "platform staff", "proposedBy", proposedBy, "approvedBy", approvedBy, "reason", reason))
+                    .then(tell(saved, "leaving-cancelled " + clock.instant().toEpochMilli(),
+                            saved.name() + " is staying with Consent Manager",
+                            "The ending of the agreement with " + saved.name() + " was called off. The fiduciary is back as it was before."))
+                    .thenReturn(saved));
+        });
+    }
+
     /** Tells every member of the team. Best effort: the change is made whether or not the mail goes. */
     private Mono<Void> tell(Df df, String ref, String subject, String body) {
         return members.list(df.id())

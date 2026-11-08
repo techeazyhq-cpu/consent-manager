@@ -142,7 +142,14 @@ id; its old records are not reattached. The registration numbers are kept, so st
    the organisation is suspended, leaving or closed. CM Admin's tenant page has a *Standing* card (suspend with a reason,
    resume, place or release a legal hold) and the dashboard filters by the new standings. The
    [offboarding runbook](../runbooks/offboarding.md) covers each state, the two failure log codes and the checks.
-6. The export, and staff-initiated ending with two-person approval: not yet.
+6. **Staff ending a contract** (done): a member of staff (operator or administrator) proposes with a reason
+   (`POST /api/df-reg/dfs/{id}/end-contract`); a *different* administrator approves or rejects it
+   (`POST /api/df-reg/leave-proposals/{id}/approve|reject`), and only then does the wind-down start. The proposer can
+   withdraw. One proposal waits per fiduciary (a unique index), and the database refuses a decision by the proposer. Calling a
+   departure off by staff (`.../cancel-end-contract`) takes the same two people, and does not depend on or use the Owner's
+   one cancellation. The team is emailed with the reason, and every step is audited with who proposed and who approved. In CM
+   Admin it is the *Ending the contract* card on the tenant page.
+7. The one-file export of a leaving tenant's own data: not yet.
 
 ## What the owner needs to decide
 
