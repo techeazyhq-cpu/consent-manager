@@ -1,0 +1,13 @@
+{
+  "name": "@techeazyhq/cm-pep-sidecar",
+  "version": "0.1.0",
+  "description": "A consent enforcement point a fiduciary runs next to its own services: one local call answers ALLOW, DENY or UNAVAILABLE",
+  "license": "Apache-2.0",
+  "author": "Vasantha Kumar <vasantha.kumar@hotmail.com>",
+  "type": "module",
+  "main": "src/sidecar.mjs",
+  "bin": { "cm-pep-sidecar": "src/server.mjs" },
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node src/server.mjs", "test": "node --test test/*.test.mjs" },
+  "private": true
+}
