@@ -29,6 +29,8 @@ Never expose the gateway's management port (9091) through the ingress: it carrie
 | `ServiceDown` | `kubectl get pods` / `docker ps`; the service's log; whether the database or Pulsar is the cause. The status page shows the same |
 | `HighServerErrorRate` | the dashboard's *5xx per second* to find the service; its log for the exception; a recent deploy |
 | `SlowRequests` | the service's p95 against its CPU and heap panels; `cm-cns-qry-svc` is the usual one on a laptop (vapt-and-performance.md) |
+| `CircuitBreakerOpen` | a dependency is failing: the breaker's name says which (`cns-cmd`, `df-reg`, `keycloak-admin`, ...); look at that service first. The breaker closes by itself once calls succeed |
+| `DatabasePoolExhausted` | every database connection of that service is in use and requests wait; look for a slow query or a stuck transaction before raising the pool size |
 | `HeapNearlyFull` | the container is memory-capped (ADR-052); raise the limit or look for a leak before the OOM restart |
 | `LogicalBackupMissing`, `LogicalBackupFailed` | [backup-and-recovery.md](backup-and-recovery.md): run `postgres-backup.sh` by hand and read its error |
 | `RestoreDrillOverdue` | run `postgres-restore-drill.sh`; a drill that was never run is a backup that was never tried |
