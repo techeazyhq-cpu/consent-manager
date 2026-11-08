@@ -554,6 +554,25 @@ export interface PrpsVer {
 }
 
 /** A purpose with every version, oldest first; requests are made from `currentVer`. */
+/** A processor in a fiduciary's register (ADR-075). */
+export interface ProcessorDto {
+  id: string;
+  name: string;
+  role: string;
+  country: string;
+  contactEmail: string;
+  status: "ACTIVE" | "RETIRED";
+  createdAt: string;
+  retiredAt?: string | null;
+}
+
+/** Where a processor is named: a purpose's current version or draft. */
+export interface ProcessorUseDto {
+  purpose: string;
+  version: number;
+  status: string;
+}
+
 export interface PrpsDefDto {
   id: string;
   code: string;

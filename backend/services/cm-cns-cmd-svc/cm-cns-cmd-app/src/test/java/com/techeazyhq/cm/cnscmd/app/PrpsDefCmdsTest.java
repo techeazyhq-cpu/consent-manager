@@ -49,7 +49,7 @@ class PrpsDefCmdsTest {
     private final List<String> audited = new ArrayList<>();
     private final AuditTrail audit = (action, dfId, target, details) ->
             Mono.fromRunnable(() -> audited.add(action + " " + target + " " + details));
-    private final PrpsDefCmds cmds = new PrpsDefCmds(repo, audit, Clock.fixed(InMemoryPrpsDefs.T0, ZoneOffset.UTC));
+    private final PrpsDefCmds cmds = new PrpsDefCmds(repo, new InMemoryProcessors(), audit, Clock.fixed(InMemoryPrpsDefs.T0, ZoneOffset.UTC));
     private final PrpsResolver resolver = new PrpsResolver(repo);
 
     private static PrpsVerContent withPhone() {

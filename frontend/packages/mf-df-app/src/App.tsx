@@ -25,6 +25,7 @@ import { useConsole } from "./console";
 import { BatchDetail, Batches, SendToMany } from "./Batches";
 import Agreements from "./Agreements";
 import ApiKeys from "./ApiKeys";
+import Processors from "./Processors";
 import Webhooks from "./Webhooks";
 import DevDocs from "./DevDocs";
 import Audit from "./Audit";
@@ -65,6 +66,7 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
   const items: NavItem[] = [
     { key: "dashboard", href: "#/dashboard", label: "Dashboard", section: "Consent", icon: Icons.dashboard },
     { key: "purposes", href: "#/purposes", label: "Purposes", section: "Consent", icon: Icons.list },
+    { key: "processors", href: "#/processors", label: "Processors", section: "Consent", icon: Icons.list },
     ...(raisesRequests(role)
       ? [
           { key: "raise", href: "#/raise", label: "Raise a request", section: "Consent", icon: Icons.send },
@@ -142,6 +144,7 @@ export default function DfConsoleApp({ auth, dfId, role, gwBase }: Props) {
       {route.page === "batches" ? <Batches console={c} /> : null}
       {route.page === "batch" ? <BatchDetail key={route.id} console={c} id={route.id} /> : null}
       {route.page === "purposes" ? <Purposes console={c} /> : null}
+      {route.page === "processors" ? <Processors console={c} /> : null}
       {route.page === "purpose" ? <PurposeDetail key={route.prpsCode} console={c} prpsCode={route.prpsCode} /> : null}
       {route.page === "purpose-edit" ? (
         <PurposeEditor key={route.prpsCode ?? "new"} console={c} prpsCode={route.prpsCode} />

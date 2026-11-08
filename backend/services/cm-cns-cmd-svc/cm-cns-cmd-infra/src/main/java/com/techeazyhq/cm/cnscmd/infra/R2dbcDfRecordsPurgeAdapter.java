@@ -92,6 +92,7 @@ public class R2dbcDfRecordsPurgeAdapter implements DfRecordsPurgePort {
                 .then(db.sql("delete from cns_cmd.cns_req_batch where df_id = :dfId").bind("dfId", dfId).fetch().rowsUpdated())
                 .then(db.sql("delete from cns_cmd.whk_delivery where df_id = :dfId").bind("dfId", dfId).fetch().rowsUpdated())
                 .then(db.sql("delete from cns_cmd.whk_endpoint where df_id = :dfId").bind("dfId", dfId).fetch().rowsUpdated())
+                .then(db.sql("delete from cns_cmd.processor where df_id = :dfId").bind("dfId", dfId).fetch().rowsUpdated())
                 .then(db.sql("delete from cns_cmd.prps_ver where prps_def_id in (select id from cns_cmd.prps_def where df_id = :dfId)")
                         .bind("dfId", dfId).fetch().rowsUpdated())
                 .then(db.sql("delete from cns_cmd.prps_def where df_id = :dfId").bind("dfId", dfId).fetch().rowsUpdated())

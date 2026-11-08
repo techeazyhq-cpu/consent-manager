@@ -68,6 +68,8 @@ import type {
   PrpsChange,
   PrpsContent,
   PrpsDefDto,
+  ProcessorDto,
+  ProcessorUseDto,
   PrpsSummaryDto,
   SubPln,
   UsageRespDto,
@@ -359,6 +361,24 @@ export const prps = {
     request<PrpsChange>(base, `/api/cns-cmd/prps-defs/${encodeURIComponent(code)}/draft/change`, token),
   publish: (base: string, token: string, code: string) =>
     request<PrpsDefDto>(base, `/api/cns-cmd/prps-defs/${encodeURIComponent(code)}/publish`, token, { method: "POST" }),
+};
+
+const proc = (path: string) => `/api/cns-cmd/processors${path}`;
+
+/** A fiduciary's register of processors, which purposes name in their recipients and transfers (ADR-075). */
+export const processors = {
+  list: (base: string, token: string) => request<ProcessorDto[]>(base, proc(""), token),
+  create: (base: string, token: string, p: { name: string; role?: string; country?: string; contactEmail?: string }) =>
+    request<ProcessorDto>(base, proc(""), token, { method: "POST", body: JSON.stringify(p) }),
+  /** Changes the role, country or contact; the name stays. */
+  update: (base: string, token: string, id: string, p: { role?: string; country?: string; contactEmail?: string }) =>
+    request<ProcessorDto>(base, proc(`/${encodeURIComponent(id)}`), token, { method: "PUT", body: JSON.stringify(p) }),
+  uses: (base: string, token: string, id: string) =>
+    request<ProcessorUseDto[]>(base, proc(`/${encodeURIComponent(id)}/uses`), token),
+  retire: (base: string, token: string, id: string) =>
+    request<ProcessorDto>(base, proc(`/${encodeURIComponent(id)}/retire`), token, { method: "POST" }),
+  reinstate: (base: string, token: string, id: string) =>
+    request<ProcessorDto>(base, proc(`/${encodeURIComponent(id)}/reinstate`), token, { method: "POST" }),
 };
 
 /** Batches of consent requests (ADR-036): one template, many people, from JSON or a CSV/Excel upload. */

@@ -75,6 +75,7 @@ public class CnsCmdRouterConfig {
                                                          SubmitCnsReqBatchHandler submitBatchHandler,
                                                          CnsReqBatchQueries batchQueries,
                                                          PrpsDefCmds prpsDefCmds,
+                                                         com.techeazyhq.cm.cnscmd.app.ProcessorCmds processorCmds,
                                                          CnsReqTerms cnsReqTerms,
                                                          ChangeCnsArtCmds changeCnsArtCmds,
                                                          CnsRecords cnsRecords,
@@ -91,6 +92,7 @@ public class CnsCmdRouterConfig {
         DfExportHttpHandler dfExport = new DfExportHttpHandler(cnsRecords);
         CnsReqBatchHttpHandler batches = new CnsReqBatchHttpHandler(submitBatchHandler, batchQueries);
         PrpsDefHttpHandler purposes = new PrpsDefHttpHandler(prpsDefCmds);
+        ProcessorHttpHandler processors = new ProcessorHttpHandler(processorCmds);
         CnsRecHttpHandler recs = new CnsRecHttpHandler(cnsRecords);
         WebhookHttpHandler whk = new WebhookHttpHandler(webhooks);
 
@@ -103,6 +105,13 @@ public class CnsCmdRouterConfig {
                 .DELETE("/api/cns-cmd/prps-defs/{code}/draft", purposes::discardDraft)
                 .GET("/api/cns-cmd/prps-defs/{code}/draft/change", purposes::draftChange)
                 .POST("/api/cns-cmd/prps-defs/{code}/publish", purposes::publish)
+                // the fiduciary's register of processors (ADR-075)
+                .GET("/api/cns-cmd/processors", processors::list)
+                .POST("/api/cns-cmd/processors", processors::register)
+                .PUT("/api/cns-cmd/processors/{id}", processors::describe)
+                .GET("/api/cns-cmd/processors/{id}/uses", processors::uses)
+                .POST("/api/cns-cmd/processors/{id}/retire", processors::retire)
+                .POST("/api/cns-cmd/processors/{id}/reinstate", processors::reinstate)
                 // fiduciary webhooks (ADR-047)
                 .GET("/api/cns-cmd/webhooks/types", whk::types)
                 .GET("/api/cns-cmd/webhooks/endpoints", whk::list)

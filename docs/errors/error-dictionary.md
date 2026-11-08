@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-146 entries: 136 API problems, 9 operational log codes and 1 event.
+150 entries: 140 API problems, 9 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -65,6 +65,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `invalid-parameter` | 400 | Parameter not valid | A query parameter has the wrong form. The detail names it. | Correct the parameter. | no | cns-cmd |
 | `invalid-period` | 400 | Month not valid | A month is written like 2026-11. | Use that form. | no | bil |
 | `invalid-plan-change-request` | 400 | Plan change request not valid | The request names no plan, the plan the fiduciary already has, or a note that is too long. | Choose a different plan and keep the note short. | no | bil |
+| `invalid-processor` | 400 | Processor is not valid | The name, role, country or contact of the processor is missing or malformed. | Give a name of up to 200 characters, a role of up to 500, a two-letter ISO country code and an email address for the contact. | no | cns-cmd |
 | `invalid-purpose` | 400 | Purpose not valid | The purpose or its content was refused. The detail names what is wrong. | Correct what the detail names. | no | cns-cmd |
 | `invalid-request` | 400 | Request not valid | The request is missing something it needs, or a value is not valid. The detail says which. | Correct the request as the detail says. | no | cns-cmd, df-reg |
 | `invalid-right` | 400 | Right not recognised | The right asked for is not one of access, correction, erasure, grievance or nomination. | Use one of the listed rights. | no | dsr |
@@ -140,6 +141,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `leave-proposal-not-found` | 404 | Proposal not found | There is no such proposal. | Check the proposal id. | no | df-reg |
 | `member-not-found` | 404 | Team member not found | No member with that id belongs to this fiduciary. | List the team and use an id from it. | no | df-reg |
 | `plan-change-request-not-found` | 404 | Plan change request not found | No plan change request with that id is visible to the caller. | List the requests and use an id from the list. | no | bil |
+| `processor-not-found` | 404 | Processor not found | There is no such processor in the fiduciary's register. | List the register and use one of its ids. | no | cns-cmd |
 | `purpose-not-found` | 404 | Purpose not found | The fiduciary has no purpose with that code. | List the purposes and use a code from the list. | no | cns-cmd |
 | `purpose-version-not-found` | 404 | Purpose version not found | The purpose has no version with that number. | Use a version from the purpose's published versions. | no | cns-cmd |
 | `push-dvc-not-found` | 404 | Device not found | The person has no such device. | List the devices and use an id from it. | no | ntf |
@@ -162,6 +164,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `leave-proposal-pending` | 409 | A proposal already waits | A proposal to end or keep this fiduciary's contract already waits for a second member of staff. | Approve, reject or withdraw the waiting proposal first. | no | df-reg |
 | `owner-exists` | 409 | The fiduciary already has an Owner | A fiduciary has one Owner, who manages its team. | Ask the Owner to add people. | no | df-reg |
 | `plan-change-request-pending` | 409 | A plan change is already waiting | The fiduciary already has a plan change request waiting for a decision. | Withdraw the waiting request to ask for another plan. | no | bil |
+| `processor-exists` | 409 | Processor already registered | A processor with that name is already in the fiduciary's register (names are compared ignoring case). | Use the existing entry, or choose a different name. | no | cns-cmd |
 | `purpose-exists` | 409 | Purpose already exists | A purpose with that code exists already. | Draft a new version of it instead of creating it again. | no | cns-cmd |
 | `purpose-version-superseded` | 409 | Purpose version replaced | A newer version of the purpose has been published since, so a request cannot name this one. | Ask for the current version. | no | cns-cmd |
 | `request-replayed` | 409 | Request already used | The nonce of this signed request was used before, so it was refused as a replay. | Sign every request, retries included, with a new nonce. | no | df-reg |
@@ -198,6 +201,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `leave-proposal-decided` | 409 | Proposal already decided | The proposal was already approved, rejected or withdrawn. | Nothing more to do; propose again if it is still wanted. | no | df-reg |
 | `no-draft` | 409 | No draft to publish | The purpose has no draft, so there is nothing to publish. | Draft a change first. | no | cns-cmd |
 | `plan-change-request-decided` | 409 | Plan change already decided | The request was already approved, declined or withdrawn. | Read its current state; nothing more to do. | no | bil |
+| `processor-retired` | 409 | Processor is retired | A purpose draft or publication names a processor that has been retired from the register. | Remove it from the recipients and transfers, or reinstate the processor. | no | cns-cmd |
 | `purpose-not-published` | 409 | Purpose not published yet | The purpose has no published version to ask consent for. | Publish the purpose first. | no | cns-cmd |
 | `webhook-paused` | 409 | Webhook endpoint paused | The endpoint is paused, so it cannot be sent a test. | Resume the endpoint first. | no | cns-cmd |
 
