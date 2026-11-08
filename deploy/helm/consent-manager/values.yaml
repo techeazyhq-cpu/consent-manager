@@ -94,6 +94,11 @@ metrics:
   enabled: false
   gatewayPort: 9091
 
+# A service can have a database server of its own (ADR-074): add a `database:` block to it under `services`, with any of host,
+# port, name, user, jdbcParams, r2dbcParams, and passwordKey (the key in the secret holding that server's password, default
+# DB_PASSWORD). What it leaves out comes from config.database. For example:
+#   cm-aud-svc:
+#     database: {host: aud-db.example.com, name: cm_aud, user: cm_aud, passwordKey: AUD_DB_PASSWORD}
 services:
   cm-gw:
     port: 9000

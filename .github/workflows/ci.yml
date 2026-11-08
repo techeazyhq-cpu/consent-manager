@@ -151,6 +151,15 @@ jobs:
           done
           helm template cm consent-manager -f consent-manager/values-gcp.yaml -f consent-manager/values-sandbox.yaml \
             | docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas
+      - name: A service can be given a database of its own, and only that service (ADR-074)
+        run: |
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          helm template cm consent-manager -f consent-manager/values-aws.yaml \
+            --set services.cm-aud-svc.database.host=aud-db.example.com --set services.cm-aud-svc.database.name=cm_aud \
+            --set services.cm-aud-svc.database.passwordKey=AUD_DB_PASSWORD > /tmp/split.yaml
+          grep -q 'postgresql://aud-db.example.com:5432/cm_aud?schema=aud' /tmp/split.yaml
+          grep -q 'key: AUD_DB_PASSWORD' /tmp/split.yaml
+          test "$(grep -c 'aud-db.example.com' /tmp/split.yaml)" -eq 2   # its R2DBC and Flyway URLs, no other service's
       - name: The chart renders with a mesh, metrics and a scraper allowed (ADR-070, ADR-073)
         run: |
           helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
