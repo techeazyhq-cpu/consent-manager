@@ -60,12 +60,39 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [052](adr-052-resource-limits-for-the-local-stack.md) | CPU and memory limits for the local stack | Accepted |
 | [053](adr-053-common-servers-for-both-applications.md) | One common set of servers for consent-manager and notification-service | Accepted |
 | [054](adr-054-common-namespace-on-kubernetes.md) | The common namespace on Kubernetes: one chart for the shared servers, the apps in their own namespaces | Accepted |
+| [055](adr-055-read-model-cache.md) | A Redis cache in front of the consent read model | Accepted |
+| [056](adr-056-spring-boot-4.md) | Spring Boot 4, with the services' JSON kept on Jackson 2 | Accepted |
 | [057](adr-057-an-undecided-consent-check-is-503-not-deny.md) | A consent check that can't be made is a 503, not a deny | Accepted |
 | [058](adr-058-principal-requests-relayed-and-grievances.md) | Principal requests relayed to fiduciaries, and grievances about the platform | Accepted |
 | [059](adr-059-closing-an-account-erasure-saga.md) | Closing an account: the erasure saga across five services, with the consent records kept | Accepted |
 | [060](adr-060-usage-threshold-alerts.md) | Usage-threshold alerts: a sweep, one alert per month and threshold, emailed by df-reg through ntf | Accepted |
 | [061](adr-061-sign-in-code-abuse-limits.md) | Limits on sign-in codes across sign-ins: codes per address, per network, and wrong guesses per address | Accepted |
 | [062](adr-062-error-dictionary.md) | One error dictionary used by every service: a code, a title, what to do, and a check in CI | Accepted |
+| [063](adr-063-df-terms-and-dpa-acceptance.md) | A fiduciary's acceptance of the consent manager's terms and data processing agreement | Accepted |
+| [064](adr-064-fiduciary-offboarding.md) | A fiduciary leaves: offboarding and retention | Accepted |
+| [065](adr-065-self-service-signup.md) | Organisations apply for themselves | Accepted |
+| [066](adr-066-notification-preferences.md) | How a principal hears of new consent requests | Accepted |
+| [067](adr-067-public-status-page.md) | A public status page, measured by the gateway | Accepted |
+| [068](adr-068-signed-policy-bundles.md) | The authorisation policy ships as a signed, versioned bundle | Accepted |
+| [069](adr-069-ai-ingestion-guard.md) | A consent guard for AI ingestion pipelines | Accepted |
+| [070](adr-070-metrics-and-dashboards.md) | Metrics, dashboards and alerts | Accepted |
+| [071](adr-071-email-deliverability-check.md) | Checking the sending domain's email authentication | Accepted |
+| [072](adr-072-release-pipeline.md) | A release pipeline that publishes signed images and the chart | Accepted |
+| [073](adr-073-transport-hardening.md) | Hardening the edge and the traffic between pods | Accepted |
+| [074](adr-074-database-per-service.md) | Moving a service to a database of its own | Accepted |
+| [075](adr-075-processor-registry.md) | A fiduciary's register of processors | Accepted |
+| [076](adr-076-fiduciary-consent-sidecar.md) | A consent sidecar a fiduciary runs next to its services | Accepted |
+| [077](adr-077-token-status-list.md) | A signed status list for consent tokens | Accepted |
+| [078](adr-078-insights-comparison-time-zones-export.md) | The dashboard compares with the period before, cuts days in a time zone, and exports | Accepted |
+| [079](adr-079-invoicing.md) | Monthly invoices, proration and credit notes | Accepted |
+| [080](adr-080-otp-send-limit-in-the-notification-service.md) | The notification service limits the sign-in codes it sends | Accepted |
+| [081](adr-081-processor-details-in-the-notice.md) | What a version says about the parties it names | Accepted |
+| [082](adr-082-least-privilege-database-logins.md) | A database login for each service that can only touch its own schema | Accepted |
+| [083](adr-083-key-for-requesting-a-sign-in-code.md) | A key to ask the notification service for a sign-in code | Accepted |
+| [084](adr-084-billing-ends-when-a-fiduciary-closes.md) | Billing ends when a fiduciary closes | Accepted |
+| [085](adr-085-database-connections-verify-the-server.md) | Database connections that check who answers | Accepted |
+| [086](adr-086-release-bill-of-materials-and-provenance.md) | A bill of materials and provenance for every released image | Accepted |
+| [087](adr-087-datastore-metrics-and-alert-routing.md) | Metrics from the datastores, and somewhere for alerts to go | Accepted |
 
 ## Writing one
 
