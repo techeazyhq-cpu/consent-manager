@@ -60,6 +60,7 @@ import com.techeazyhq.cm.dfreg.app.DfEndContractHandler;
 import com.techeazyhq.cm.dfreg.app.DfExportHandler;
 import com.techeazyhq.cm.dfreg.app.DfLeavingHandler;
 import com.techeazyhq.cm.dfreg.app.DfRetentionHandler;
+import com.techeazyhq.cm.dfreg.app.DfSignupHandler;
 import com.techeazyhq.cm.dfreg.app.DfSuspensionHandler;
 import com.techeazyhq.cm.dfreg.app.DfTermsHandler;
 import com.techeazyhq.cm.dfreg.dom.TermsDoc;
@@ -335,6 +336,29 @@ public class DfRegBeanConfig {
                                            R2dbcDfTermsAdapter terms, com.techeazyhq.cm.dfreg.dom.DataExportPort data,
                                            AuditTrail audit) {
         return new DfExportHandler(dfRepo, members, keys, terms, data, audit, java.time.Clock.systemUTC());
+    }
+
+    @Bean
+    public com.techeazyhq.cm.dfreg.infra.R2dbcDfSignupAdapter dfSignupAdapter(DatabaseClient db) {
+        return new com.techeazyhq.cm.dfreg.infra.R2dbcDfSignupAdapter(db);
+    }
+
+    /** Self-service sign-up (ADR-065): the limits are per address a day and per day for the whole platform. */
+    @Bean
+    public DfSignupHandler dfSignupHandler(com.techeazyhq.cm.dfreg.infra.R2dbcDfSignupAdapter signups, DfRepoPort dfRepo,
+            com.techeazyhq.cm.dfreg.dom.EmailPort email, AuditTrail audit,
+            @Value("${cm.dfreg.signup.console-url:http://localhost:5175}") String consoleUrl,
+            @Value("${cm.dfreg.signup.per-address-per-day:3}") int perAddress,
+            @Value("${cm.dfreg.signup.per-day:200}") int perDay,
+            @Value("${cm.dfreg.signup.ttl-hours:24}") long ttlHours,
+            @Value("${cm.dfreg.usage-alerts.platform-emails:}") java.util.List<String> staffEmails) {
+        return new DfSignupHandler(signups, dfRepo, email, audit, java.time.Clock.systemUTC(), consoleUrl, perAddress, perDay,
+                java.time.Duration.ofHours(ttlHours), staffEmails.stream().map(String::trim).filter(s -> !s.isEmpty()).toList());
+    }
+
+    @Bean
+    public DfSignupCleanupJob dfSignupCleanupJob(DfSignupHandler signups) {
+        return new DfSignupCleanupJob(signups);
     }
 
     @Bean

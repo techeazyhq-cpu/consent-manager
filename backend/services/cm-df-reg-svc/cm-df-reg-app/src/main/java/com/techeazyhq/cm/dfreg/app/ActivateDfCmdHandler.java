@@ -63,6 +63,11 @@ public class ActivateDfCmdHandler implements CmdHandler<ActivateDfCmd, Df> {
     public Mono<Df> handle(ActivateDfCmd cmd) {
         return dfRepo.findById(cmd.dfId())
                 .switchIfEmpty(Mono.error(new DomRuleViolation(404, "df-not-found", "No DF " + cmd.dfId())))
+                // only an application waiting for activation is activated: checked before the client is provisioned, which
+                // would otherwise replace the secret of one already active
+                .flatMap(df -> df.sts() == com.techeazyhq.cm.dfreg.dom.DfSts.PENDING ? Mono.just(df)
+                        : Mono.<Df>error(new DomRuleViolation(409, "df-cannot-activate",
+                                "Only an application waiting for activation can be activated, not one in status " + df.sts())))
                 .flatMap(df -> provisionPort.provisionClientSecret(df.id())
                         .doOnNext(df::activate)
                         // Mono.defer, not a bare dfRepo.save(df) call: the adapter reads df's

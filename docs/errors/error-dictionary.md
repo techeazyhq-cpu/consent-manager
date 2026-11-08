@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-140 entries: 130 API problems, 9 operational log codes and 1 event.
+145 entries: 135 API problems, 9 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -77,6 +77,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `not-a-test-contact` | 400 | Not a test contact | In the sandbox, requests can only go to contacts reserved for testing. | Use a test contact from the developer docs. | no | cns-cmd |
 | `payload-too-large` | 413 | Request body too large | The request body is larger than the gateway accepts. | Send a smaller body, or split it. | no | gw |
 | `push-token-invalid` | 400 | Push token not valid | The device token is missing or not valid. | Register the device again. | no | ntf |
+| `signup-invalid-token` | 400 | Confirmation link not valid | The link to confirm an application's contact address is not valid, has expired or was already used. | Apply again to get a new link. | no | df-reg |
 | `terms-document-unknown` | 400 | Unknown document | The document named to accept is not one of the consent manager documents: terms or dpa. | Name terms or dpa. | no | df-reg |
 | `unknown-sub-pln` | 400 | Unknown plan | There is no plan with that name. | List the plans and use one of their names. | no | bil, df-reg |
 | `unsupported-list` | 415 | List type not supported | The file is not JSON, CSV or Excel. | Send the list as JSON, CSV or .xlsx. | no | cns-cmd |
@@ -154,6 +155,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `account-exists` | 409 | An account with that email already exists | The email address already belongs to an account, so a second cannot be created. | Use a different address, or sign in with the existing account. | no | df-reg, stf |
 | `cannot-change-admin` | 409 | Administrators are managed elsewhere | Platform administrators are managed in Keycloak, not through this service. | Change them in Keycloak. | no | stf |
 | `cannot-change-self` | 409 | You cannot change your own role | People cannot change or remove their own account here. | Ask another Owner or Administrator. | no | df-reg, stf |
+| `df-already-registered` | 409 | Organisation already registered | An organisation is already registered with this contact address. | Sign in to the DF Console, or contact the platform. | no | df-reg |
 | `dp-request-open` | 409 | Already asked | The person already has this request open for this consent. | Wait for the answer, or withdraw the open one. | no | dsr |
 | `erasure-running` | 409 | Account is already being closed | An erasure for this account is already under way. | Wait for it to finish. | no | dsr |
 | `last-owner` | 409 | A fiduciary must keep an Owner | The change would leave the fiduciary without an Owner, which is not allowed. | Make someone else an Owner first. | no | df-reg |
@@ -178,7 +180,9 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `cns-req-not-pending` | 409 | Consent request already decided | The request was already given, refused or withdrawn. | Read its current state; raise a new request if needed. | no | cns-cmd |
 | `delivery-pending` | 409 | Delivery still being tried | The delivery has not finished, so it cannot be replayed yet. | Wait until it is delivered or failed. | no | cns-cmd |
 | `df-activation-required` | 409 | Activate the fiduciary first | Its team can only be managed once the fiduciary has been activated. | Activate the fiduciary, then try again. | no | df-reg |
+| `df-cannot-activate` | 409 | Fiduciary cannot be activated | Only an application waiting for activation can be activated: this one is already active, or was suspended, closed or rejected. | Check the fiduciary's status. | no | df-reg |
 | `df-cannot-leave` | 409 | Fiduciary cannot leave now | Only an active or suspended fiduciary can ask to leave; this one is pending, already leaving or closed. | Check the fiduciary's status. | no | df-reg |
+| `df-cannot-reject` | 409 | Application cannot be rejected | Only an application still waiting for activation can be rejected. | Check the fiduciary's status. | no | df-reg |
 | `df-cannot-suspend` | 409 | Fiduciary cannot be suspended | Only an active fiduciary can be suspended; this one is pending or already suspended. | Check the fiduciary's status. | no | df-reg |
 | `df-leaving` | 403 | Fiduciary is leaving | The fiduciary this API key belongs to has asked to leave the platform. Nothing new is accepted during the wind-down; its records stay readable until it closes. | An Owner can cancel the departure once before the wind-down ends, in the DF Console. | no | df-reg |
 | `df-no-legal-hold` | 409 | No legal hold to release | The fiduciary is not under a legal hold. | Check the fiduciary's status. | no | df-reg |
@@ -209,6 +213,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | Code | Status | Title | What it means | What to do | Retry | Raised by |
 |---|---|---|---|---|---|---|
 | `rate-limit-exceeded` | 429 | Too many requests a second | The fiduciary's plan allows only so many requests a second, and this call went over it. | Wait for the Retry-After interval and slow down, or ask for a plan with a higher rate. | yes | gw |
+| `signup-rate-limited` | 429 | Too many sign-up requests | Too many applications were made from this address or for this contact address, or sign-up is busy today. | Try again later; a person is held to three applications a day for one contact address. | yes | df-reg, gw |
 
 ### Dependency
 

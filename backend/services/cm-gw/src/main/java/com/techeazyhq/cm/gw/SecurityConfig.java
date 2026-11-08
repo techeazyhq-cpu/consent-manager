@@ -56,6 +56,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeExchange(ex -> ex
                         .pathMatchers("/actuator/health", "/actuator/info").permitAll()
+                        // An organisation applying for itself has no account yet (ADR-065); SignupRateLimitGlobalFilter limits each client.
+                        .pathMatchers(HttpMethod.POST, "/api/df-reg/signup", "/api/df-reg/signup/verify").permitAll()
                         // Consent token public keys (ADR-006), for fiduciaries verifying tokens themselves.
                         .pathMatchers(HttpMethod.GET, "/api/cns-cmd/.well-known/jwks.json",
                                 "/api/cns-cmd/.well-known/receipt-jwks.json").permitAll()

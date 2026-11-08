@@ -45,8 +45,10 @@ import type {
   ApiKeyDto,
   DfStandingDto,
   LeaveProposalDto,
+  DfRejectedDto,
   LeaveStatusDto,
   LegalHoldDto,
+  SignupApplicationDto,
   TermsAcceptanceDto,
   TermsStatusDto,
   AudActivityRow,
@@ -156,6 +158,9 @@ export const dfReg = {
     }),
   activate: (base: string, token: string, id: string) =>
     request<DfRespDto>(base, `/api/df-reg/dfs/${id}/activate`, token, { method: "POST" }),
+  /** An administrator declining an application that is still waiting; the applicant is emailed the reason (ADR-065). */
+  reject: (base: string, token: string, id: string, reason: string) =>
+    request<DfRejectedDto>(base, `/api/df-reg/dfs/${id}/reject`, token, { method: "POST", body: JSON.stringify({ reason }) }),
   /** Platform staff stopping an active fiduciary, with the reason the team is given (ADR-064). */
   suspend: (base: string, token: string, id: string, reason: string) =>
     request<DfStandingDto>(base, `/api/df-reg/dfs/${id}/suspend`, token, { method: "POST", body: JSON.stringify({ reason }) }),
@@ -188,6 +193,20 @@ export const dfReg = {
       method: "POST",
       body: JSON.stringify({ ...body, role: "OWNER" }),
     }),
+};
+
+/** Calls that need no sign-in: an organisation applying for itself (ADR-065). */
+async function publicPost<T>(baseUrl: string, path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${baseUrl}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
+  return (await res.json()) as T;
+}
+
+export const signup = {
+  /** Mails a link to the contact address; answers the same whether or not the address is already registered. */
+  apply: (base: string, application: SignupApplicationDto) => publicPost<{ message: string }>(base, "/api/df-reg/signup", application),
+  /** Confirms the contact address with the link's id and token. */
+  verify: (base: string, id: string, token: string) => publicPost<{ status: string }>(base, "/api/df-reg/signup/verify", { id, token }),
 };
 
 /** The consent manager's terms of service and data processing agreement, for the signed-in member's fiduciary (ADR-063). */

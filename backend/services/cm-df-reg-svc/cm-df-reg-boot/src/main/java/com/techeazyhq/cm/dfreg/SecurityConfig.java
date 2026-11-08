@@ -50,6 +50,9 @@ public class SecurityConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(ex -> ex
                         .pathMatchers("/actuator/health", "/actuator/info", "/internal/**").permitAll()
+                        // an organisation applying for itself has no account yet (ADR-065); the gateway limits who can reach these
+                        .pathMatchers(HttpMethod.POST, "/api/df-reg/signup", "/api/df-reg/signup/verify").permitAll()
+                        .pathMatchers(HttpMethod.POST, "/api/df-reg/dfs/*/reject").hasRole("CM_ADMIN")
                         .pathMatchers(HttpMethod.GET, "/api/df-reg/dfs", "/api/df-reg/dfs/*/profile").hasAnyRole(STAFF)
                         .pathMatchers(HttpMethod.POST, "/api/df-reg/dfs", "/api/df-reg/dfs/*/activate",
                                 "/api/df-reg/dfs/*/members").hasAnyRole(STAFF)

@@ -26,5 +26,7 @@ public enum DfSts {
     /** The fiduciary is leaving (ADR-064): a wind-down runs, nothing new is accepted, and closing follows. */
     LEAVING,
     /** The wind-down ended (ADR-064): its access is gone and its profile erased; the consent records stay. Final. */
-    CLOSED
+    CLOSED,
+    /** Staff declined a self-service application (ADR-065); final. */
+    REJECTED
 }

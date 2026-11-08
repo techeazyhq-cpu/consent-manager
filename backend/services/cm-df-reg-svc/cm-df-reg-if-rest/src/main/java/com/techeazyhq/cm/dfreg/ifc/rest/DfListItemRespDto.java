@@ -30,10 +30,11 @@ import com.techeazyhq.cm.dfreg.dom.DfSts;
 public record DfListItemRespDto(String id, String name, String contactEmail, DfSts sts, Instant registeredAt,
                                 String legalName, String industry, String subPlnName,
                                 Instant suspendedAt, String suspensionReason, Instant leavesAt,
-                                Instant closedAt, String legalHoldReason, Instant purgedAt) {
+                                Instant closedAt, String legalHoldReason, Instant purgedAt,
+                                Instant signedUpAt, String rejectionReason) {
 
     public static DfListItemRespDto of(Df df) {
         return new DfListItemRespDto(df.id(), df.name(), df.contactEmail(), df.sts(), df.registeredAt(),
-                df.prfl().legalName(), df.prfl().industry(), df.subPlnName(), df.suspendedAt(), df.suspensionReason(), df.leavesAt(), df.closedAt(), df.legalHoldReason(), df.purgedAt());
+                df.prfl().legalName(), df.prfl().industry(), df.subPlnName(), df.suspendedAt(), df.suspensionReason(), df.leavesAt(), df.closedAt(), df.legalHoldReason(), df.purgedAt(), df.signedUpAt(), df.rejectionReason());
     }
 }

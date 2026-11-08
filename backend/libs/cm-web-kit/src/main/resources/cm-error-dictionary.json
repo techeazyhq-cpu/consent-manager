@@ -1872,6 +1872,72 @@
       "raisedBy": [
         "cm-df-reg-svc"
       ]
+    },
+    {
+      "code": "signup-rate-limited",
+      "kind": "problem",
+      "status": 429,
+      "category": "rate-limit",
+      "title": "Too many sign-up requests",
+      "description": "Too many applications were made from this address or for this contact address, or sign-up is busy today.",
+      "action": "Try again later; a person is held to three applications a day for one contact address.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-df-reg-svc",
+        "cm-gw"
+      ]
+    },
+    {
+      "code": "signup-invalid-token",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "Confirmation link not valid",
+      "description": "The link to confirm an application's contact address is not valid, has expired or was already used.",
+      "action": "Apply again to get a new link.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "df-already-registered",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "Organisation already registered",
+      "description": "An organisation is already registered with this contact address.",
+      "action": "Sign in to the DF Console, or contact the platform.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "df-cannot-reject",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Application cannot be rejected",
+      "description": "Only an application still waiting for activation can be rejected.",
+      "action": "Check the fiduciary's status.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
+      "code": "df-cannot-activate",
+      "kind": "problem",
+      "status": 409,
+      "category": "state",
+      "title": "Fiduciary cannot be activated",
+      "description": "Only an application waiting for activation can be activated: this one is already active, or was suspended, closed or rejected.",
+      "action": "Check the fiduciary's status.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
     }
   ]
 }
