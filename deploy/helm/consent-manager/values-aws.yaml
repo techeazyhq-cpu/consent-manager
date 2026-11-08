@@ -19,7 +19,8 @@ ingress:
   className: nginx
 config:
   database:
-    # terraform output postgres_endpoint; the RDS CA bundle is mounted with extraEnv/volumes in a hardened setup
+    # terraform output postgres_endpoint. `require` encrypts but does not check who answers: for production set tls (ADR-085):
+    #   tls: {mode: verify-full, caConfigMap: rds-ca}   # a ConfigMap holding https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
     host: REPLACE_WITH_RDS_ENDPOINT
     jdbcParams: "sslmode=require"
     r2dbcParams: "sslMode=require"

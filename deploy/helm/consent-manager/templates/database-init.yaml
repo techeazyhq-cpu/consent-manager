@@ -43,7 +43,10 @@ spec:
             - {name: PGPORT, value: {{ $db.port | quote }}}
             - {name: PGUSER, value: {{ $db.user | quote }}}
             - {name: PGDATABASE, value: {{ $db.name | quote }}}
-            - {name: PGSSLMODE, value: require}
+            - {name: PGSSLMODE, value: {{ ($db.tls | default dict).mode | default "require" | quote }}}
+            {{- if ($db.tls | default dict).caConfigMap }}
+            - {name: PGSSLROOTCERT, value: {{ include "cm.dbCaPath" . | quote }}}
+            {{- end }}
             - name: PGPASSWORD
               {{- include "cm.secretRef" (dict "root" . "key" "MIGRATION_DB_PASSWORD") | nindent 14 }}
           command: ["/bin/sh", "-ec"]
@@ -54,4 +57,16 @@ spec:
               {{- end }}
           resources: {requests: {cpu: 50m, memory: 32Mi}, limits: {memory: 64Mi}}
           securityContext: {{- include "cm.containerSecurityContext" . | nindent 12 }}
+          {{- if ($db.tls | default dict).caConfigMap }}
+          volumeMounts:
+            - {name: db-ca, mountPath: /etc/db-ca, readOnly: true}
+          {{- end }}
+      {{- if ($db.tls | default dict).caConfigMap }}
+      volumes:
+        - name: db-ca
+          configMap:
+            name: {{ $db.tls.caConfigMap }}
+            items:
+              - {key: {{ $db.tls.caKey | default "ca-bundle.pem" }}, path: ca-bundle.pem}
+      {{- end }}
 {{- end }}

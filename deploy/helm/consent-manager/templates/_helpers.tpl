@@ -38,6 +38,25 @@ readOnlyRootFilesystem: true
 capabilities: {drop: [ALL]}
 {{- end -}}
 
+{{/* Where the database server's CA bundle is mounted when config.database.tls.caConfigMap is set (ADR-085). */}}
+{{- define "cm.dbCaPath" -}}/etc/db-ca/ca-bundle.pem{{- end -}}
+
+{{/* The JDBC connection parameters: config.database.tls when it has a mode, else jdbcParams as written. */}}
+{{- define "cm.jdbcParams" -}}
+{{- $tls := .tls | default dict -}}
+{{- if $tls.mode -}}
+sslmode={{ $tls.mode }}{{ if $tls.caConfigMap }}&sslrootcert={{ include "cm.dbCaPath" . }}{{ end }}
+{{- else -}}{{ .jdbcParams }}{{- end -}}
+{{- end -}}
+
+{{/* The same for R2DBC, whose mode names are upper case and with underscores. */}}
+{{- define "cm.r2dbcParams" -}}
+{{- $tls := .tls | default dict -}}
+{{- if $tls.mode -}}
+sslMode={{ $tls.mode | upper | replace "-" "_" }}{{ if $tls.caConfigMap }}&sslRootCert={{ include "cm.dbCaPath" . }}{{ end }}
+{{- else -}}{{ .r2dbcParams }}{{- end -}}
+{{- end -}}
+
 {{/* Environment for one service: its "docker" profile, then the datastores, identity and secrets it uses. */}}
 {{- define "cm.serviceEnv" -}}
 {{- $root := .root -}}{{- $name := .name -}}{{- $s := .settings -}}
@@ -52,12 +71,12 @@ capabilities: {drop: [ALL]}
 {{- end }}
 {{- with $s.schema }}
 - name: SPRING_R2DBC_URL
-  value: {{ printf "r2dbc:postgresql://%s:%v/%s?schema=%s&%s" $db.host $db.port $db.name . $db.r2dbcParams | quote }}
+  value: {{ printf "r2dbc:postgresql://%s:%v/%s?schema=%s&%s" $db.host $db.port $db.name . (include "cm.r2dbcParams" $db) | quote }}
 - {name: SPRING_R2DBC_USERNAME, value: {{ $db.user | quote }}}
 - name: SPRING_R2DBC_PASSWORD
   {{- include "cm.secretRef" (dict "root" $root "key" $dbKey) | nindent 2 }}
 - name: SPRING_FLYWAY_URL
-  value: {{ printf "jdbc:postgresql://%s:%v/%s?%s" $db.host $db.port $db.name $db.jdbcParams | quote }}
+  value: {{ printf "jdbc:postgresql://%s:%v/%s?%s" $db.host $db.port $db.name (include "cm.jdbcParams" $db) | quote }}
 - {name: SPRING_FLYWAY_USER, value: {{ $migUser | quote }}}
 - name: SPRING_FLYWAY_PASSWORD
   {{- include "cm.secretRef" (dict "root" $root "key" $migKey) | nindent 2 }}

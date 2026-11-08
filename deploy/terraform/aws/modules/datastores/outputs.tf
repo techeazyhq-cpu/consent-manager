@@ -25,9 +25,9 @@ output "postgres_port" {
 }
 
 output "postgres_jdbc_url" {
-  description = "config.database.url for the Helm chart; mount the RDS CA bundle at the sslrootcert path."
+  description = "The connection string with verify-full, for reference. The chart builds its own from config.database.tls (mode verify-full, caConfigMap: a ConfigMap holding Amazon's RDS CA bundle, mounted at /etc/db-ca/ca-bundle.pem): ADR-085."
   value = format(
-    "jdbc:postgresql://%s:%d/consent_manager?sslmode=verify-full&sslrootcert=/etc/rds/global-bundle.pem",
+    "jdbc:postgresql://%s:%d/consent_manager?sslmode=verify-full&sslrootcert=/etc/db-ca/ca-bundle.pem",
     aws_db_instance.postgres.address,
     aws_db_instance.postgres.port,
   )
