@@ -48,7 +48,7 @@ expect((a.headers.get('content-disposition') ?? '').includes('consent-manager-ex
 const b = a.json;
 expect(b['@type'] === 'cm:FiduciaryExport' && b.fiduciary.id === KEYS.dfA, 'it is the organisation\'s own', b.fiduciary?.name);
 expect(Array.isArray(b.team) && b.team.some((m) => m.email === 'batch-owner@example.test' && m.role === 'OWNER'), 'with its team', `${b.team?.length} member(s)`);
-expect(b.apiKeys.length > 0 && b.apiKeys.every((k) => k.keyPrefix && !('keyHash' in k) && !('apiKey' in k)), 'its API keys by prefix only', `${b.apiKeys.length} key(s)`);
+expect(b.apiKeys.length > 0 && b.apiKeys.every((k) => k.keyPrefix && !('keyHash' in k) && !('apiKey' in k)), 'its API keys by prefix only');  // no detail: a key list is sensitive, even a count of it
 expect(b.purposes.some((p) => p.code === 'ORDER_UPDATES' && p.versions.length > 0), 'its purposes with their versions', `${b.purposes.length} purpose(s)`);
 expect(b.consents.count > 0 && b.consents.items.every((i) => i.record && Array.isArray(i.receipts)), 'its consent records with receipts', `${b.consents.count} record(s), truncated ${b.consents.truncated}`);
 expect(b.audit.count > 0 && b.audit.items.every((e) => e.entryHash), 'its audit entries', `${b.audit.count} entries, truncated ${b.audit.truncated}`);
