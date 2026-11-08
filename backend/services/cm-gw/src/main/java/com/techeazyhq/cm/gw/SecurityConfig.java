@@ -56,6 +56,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .authorizeExchange(ex -> ex
                         .pathMatchers("/actuator/health", "/actuator/info").permitAll()
+                        // The platform's public status (ADR-067): read when sign-in is what is broken. Staff post notices.
+                        .pathMatchers(HttpMethod.GET, "/api/status").permitAll()
+                        .pathMatchers(HttpMethod.POST, "/api/status/notices", "/api/status/notices/*/resolve").hasAnyRole(STAFF)
                         // An organisation applying for itself has no account yet (ADR-065); SignupRateLimitGlobalFilter limits each client.
                         .pathMatchers(HttpMethod.POST, "/api/df-reg/signup", "/api/df-reg/signup/verify").permitAll()
                         // Consent token public keys (ADR-006), for fiduciaries verifying tokens themselves.

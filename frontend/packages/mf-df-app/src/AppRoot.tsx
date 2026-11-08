@@ -22,6 +22,7 @@ import { ErrorBanner, Spinner, WrongAccountNotice } from "ui-kit/src/index";
 import { memberRoleOf } from "./roles";
 import DfConsoleApp from "./App";
 import Signup from "./Signup";
+import StatusPage from "./StatusPage";
 import { parseSignupRoute } from "./signupRoute";
 
 const KC_BASE = import.meta.env.VITE_KC_BASE_URL ?? "http://localhost:8080";
@@ -38,6 +39,8 @@ export default function AppRoot() {
   // an organisation applying for itself has no account to sign in with (ADR-065)
   const signupRoute = parseSignupRoute(window.location.hash);
   if (signupRoute) return <Signup route={signupRoute} gwBase={GW_BASE} />;
+  // the status page needs no sign-in: it is read when sign-in is what is broken (ADR-067)
+  if (window.location.hash.replace(/^#\/?/, "").split(/[/?]/)[0] === "status") return <StatusPage gwBase={GW_BASE} />;
   return <SignedInConsole />;
 }
 
