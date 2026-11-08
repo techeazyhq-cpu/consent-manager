@@ -70,6 +70,8 @@ public class BilRouterConfig {
                 .POST("/api/bil/invoices/{id}/paid", invoices::paid)
                 .POST("/api/bil/invoices/{id}/credit-note", invoices::creditNote)
                 .PUT("/api/bil/dfs/{id}/billing-end", invoices::endBilling)
+                // a fiduciary closing (ADR-084): df-reg ends its billing, on the private network
+                .PUT("/internal/dfs/{id}/billing-end", invoices::endBilling)
                 .GET("/api/bil/me/subscription", account::mySubscription)
                 .GET("/api/bil/me/usage-alerts", account::myAlerts)
                 .GET("/api/bil/usage-alerts", account::alerts)

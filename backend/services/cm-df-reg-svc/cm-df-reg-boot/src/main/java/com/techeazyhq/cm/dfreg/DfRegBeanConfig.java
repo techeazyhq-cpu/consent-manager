@@ -283,10 +283,17 @@ public class DfRegBeanConfig {
     }
 
     @Bean
+    public com.techeazyhq.cm.dfreg.dom.BillingClosurePort billingClosurePort(WebClient.Builder builder,
+            @Value("${cm.service-urls.bil}") String bilBaseUrl) {
+        return new com.techeazyhq.cm.dfreg.infra.WebClientBillingClosureAdapter(builder, bilBaseUrl);
+    }
+
+    @Bean
     public DfClosureHandler dfClosureHandler(DfRepoPort dfRepo, com.techeazyhq.cm.dfreg.dom.ConsentsClosurePort consents,
+                                             com.techeazyhq.cm.dfreg.dom.BillingClosurePort billing,
                                              R2dbcDfApiKeyAdapter keys, DfMemberDirectoryPort members,
                                              com.techeazyhq.cm.dfreg.dom.DfLogoRepoPort logos, AuditTrail audit) {
-        return new DfClosureHandler(dfRepo, consents, keys, members, logos, audit, java.time.Clock.systemUTC());
+        return new DfClosureHandler(dfRepo, consents, billing, keys, members, logos, audit, java.time.Clock.systemUTC());
     }
 
     @Bean

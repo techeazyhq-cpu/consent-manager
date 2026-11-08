@@ -34,7 +34,7 @@ not exist yet; this ADR covers what does not.
 7. **No payment gateway:** staff mark an invoice paid with a reference. A fiduciary reads and prints its invoices in the console
    (Billing page); staff see everyone's, can download the accounting CSV for a month, and set prices.
 8. **Billing can be ended** for a fiduciary (`PUT /api/bil/dfs/{id}/billing-end`): its open stretch is closed, so months after that
-   are not invoiced. Staff use it when a contract ends; closing a fiduciary (ADR-064) does not call it yet.
+   are not invoiced. Closing a fiduciary calls it ([ADR-084](adr-084-billing-ends-when-a-fiduciary-closes.md)); staff can also use it by hand.
 
 ## Not yet / limits
 
@@ -42,7 +42,7 @@ not exist yet; this ADR covers what does not.
 - **One currency and one tax rate for the platform.** Tax by the fiduciary's country (GST, VAT, reverse charge) and invoicing a
   fiduciary in its own currency need a country on the tenant and a rates table.
 - **No tax registration number, address or PDF** on the invoice: the printable page is HTML a person prints from a browser.
-- **Closing a fiduciary does not end its billing** (decision 8): without a staff action it keeps being invoiced.
+- ~~**Closing a fiduciary does not end its billing**~~ It does now (ADR-084). A fiduciary that is only suspended, or leaving, is still billed.
 - **The history before this change is approximate** (decision 2), so the first invoices of a fiduciary that changed plans earlier
   charge its present plan for the whole time.
 - **Prices apply as they are when the invoice is issued,** not as they were during the month. Change a price before the first of

@@ -23,8 +23,9 @@ Billing, Invoices, pick the month, *Issue this month's invoices*. It reports how
 
 ## When a contract ends
 
-Closing a fiduciary does not stop its invoices yet. Call `PUT /api/bil/dfs/{id}/billing-end` (administrators), or the months after
-it will be invoiced. Check *Billing, Invoices* for the month after to be sure.
+Closing a fiduciary ends its billing by itself (ADR-084): the closing pass tells Billing, and no month after it is invoiced. A
+fiduciary that is *leaving* (the wind-down, up to 30 days) is still billed until it closes; to stop billing sooner call
+`PUT /api/bil/dfs/{id}/billing-end` (administrators). The month it closes in is invoiced for the days it was on its plan.
 
 ## If the run fails
 

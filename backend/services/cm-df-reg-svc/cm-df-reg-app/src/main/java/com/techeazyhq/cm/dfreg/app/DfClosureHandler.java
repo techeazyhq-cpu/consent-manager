@@ -25,6 +25,7 @@ import java.time.Instant;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.techeazyhq.cm.audkit.AuditTrail;
+import com.techeazyhq.cm.dfreg.dom.BillingClosurePort;
 import com.techeazyhq.cm.dfreg.dom.ConsentsClosurePort;
 import com.techeazyhq.cm.dfreg.dom.Df;
 import com.techeazyhq.cm.dfreg.dom.DfApiKeyRepoPort;
@@ -53,16 +54,18 @@ public class DfClosureHandler {
 
     private final DfRepoPort dfs;
     private final ConsentsClosurePort consents;
+    private final BillingClosurePort billing;
     private final DfApiKeyRepoPort keys;
     private final DfMemberDirectoryPort members;
     private final DfLogoRepoPort logos;
     private final AuditTrail audit;
     private final Clock clock;
 
-    public DfClosureHandler(DfRepoPort dfs, ConsentsClosurePort consents, DfApiKeyRepoPort keys,
+    public DfClosureHandler(DfRepoPort dfs, ConsentsClosurePort consents, BillingClosurePort billing, DfApiKeyRepoPort keys,
                             DfMemberDirectoryPort members, DfLogoRepoPort logos, AuditTrail audit, Clock clock) {
         this.dfs = dfs;
         this.consents = consents;
+        this.billing = billing;
         this.keys = keys;
         this.members = members;
         this.logos = logos;
@@ -78,7 +81,8 @@ public class DfClosureHandler {
     }
 
     public Mono<Summary> cleanUp(String dfId) {
-        return consents.closeConsents(dfId).flatMap(ended -> revokeKeys(dfId)
+        // billing stops with the consents (ADR-084): a fiduciary that has closed is invoiced for no month after it
+        return consents.closeConsents(dfId).flatMap(ended -> billing.endBilling(dfId).then(revokeKeys(dfId))
                 .flatMap(revoked -> removeMembers(dfId)
                         .flatMap(removed -> logos.deleteByDfId(dfId)
                                 .thenReturn(new Summary(ended.revoked(), ended.declined(), ended.contactsErased(), revoked, removed)))));

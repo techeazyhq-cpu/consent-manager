@@ -134,7 +134,17 @@ class DfClosureHandlerTest {
 
     private final InMemoryKeys keys = new InMemoryKeys();
 
-    private final DfClosureHandler handler = new DfClosureHandler(repo, consents, keys, members, logos,
+    private boolean billingDown;
+
+    private final com.techeazyhq.cm.dfreg.dom.BillingClosurePort billing = dfId -> {
+        if (billingDown) {
+            return Mono.error(new IllegalStateException("billing is down"));
+        }
+        calls.add("billing " + dfId);
+        return Mono.empty();
+    };
+
+    private final DfClosureHandler handler = new DfClosureHandler(repo, consents, billing, keys, members, logos,
             (action, dfId, target, details) -> {
                 audited.add(action + " " + details);
                 return Mono.empty();
@@ -146,6 +156,20 @@ class DfClosureHandlerTest {
                 null, sts, NOW.minusSeconds(100_000), "secret", NOW.minusSeconds(90_000), null, null, DfSts.ACTIVE,
                 NOW.minusSeconds(50_000), leavesAt, "owner-1", 0, null);
         dfs.put(id, df);
+    }
+
+    @Test
+    void ifBillingCannotBeToldTheClosingIsTriedAgainAndNothingIsMarkedClosed() {
+        df("df-1", DfSts.LEAVING, NOW);
+        billingDown = true;
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> handler.cleanUp("df-1").block());
+        assertEquals(DfSts.LEAVING, dfs.get("df-1").sts());
+        assertTrue(!calls.contains("logo df-1"), "nothing after billing was done");
+
+        billingDown = false;
+        handler.cleanUp("df-1").block();
+        assertTrue(calls.contains("billing df-1"));
     }
 
     @Test
@@ -172,6 +196,7 @@ class DfClosureHandlerTest {
         assertTrue(calls.contains("consents df-1"));
         assertTrue(calls.contains("remove owner@acme.example") && calls.contains("remove dev@acme.example"));
         assertTrue(calls.contains("logo df-1"));
+        assertTrue(calls.contains("billing df-1"), "billing stops with the consents");
         assertTrue(team.isEmpty());
         assertEquals(0, keys.liveFor("df-1"));
         assertEquals(1, keys.liveFor("df-2"), "another fiduciary's keys are untouched");
