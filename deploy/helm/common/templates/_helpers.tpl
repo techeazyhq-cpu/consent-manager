@@ -15,7 +15,7 @@ app.kubernetes.io/instance: {{ .root.Release.Name }}
 {{- end -}}
 
 {{- define "common.secretRef" -}}
-valueFrom: {secretKeyRef: {name: {{ .root.Values.secrets.existingSecret }}, key: {{ .key }}}}
+valueFrom: {secretKeyRef: {name: {{ .root.Values.secrets.existingSecret }}, key: {{ .key }}{{ if .optional }}, optional: true{{ end }}}}
 {{- end -}}
 
 {{- define "common.podSecurityContext" -}}

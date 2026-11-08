@@ -45,20 +45,30 @@ public class NtfOtpSender {
 
     private final HttpClient http;
     private final Duration timeout;
+    private final String internalKey;
 
     public NtfOtpSender(HttpClient http, Duration timeout) {
+        this(http, timeout, null);
+    }
+
+    /** {@code internalKey}: what cm-ntf-svc's {@code cm.ntf.internal-api-key} is set to, sent as {@code X-Internal-Key} (ADR-083); none if blank. */
+    public NtfOtpSender(HttpClient http, Duration timeout, String internalKey) {
         this.http = http;
         this.timeout = timeout;
+        this.internalKey = internalKey == null || internalKey.isBlank() ? null : internalKey;
     }
 
     public Outcome send(String ntfBaseUrl, OtpIdentifier to, String code) {
         String body = "{\"channel\":\"" + to.channel() + "\",\"destination\":\"" + to.value() + "\",\"code\":\"" + code + "\"}";
         try {
-            HttpRequest request = HttpRequest.newBuilder(URI.create(ntfBaseUrl.replaceAll("/+$", "") + "/internal/otp/send"))
+            HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(ntfBaseUrl.replaceAll("/+$", "") + "/internal/otp/send"))
                     .timeout(timeout)
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .build();
+                    .POST(HttpRequest.BodyPublishers.ofString(body));
+            if (internalKey != null) {
+                builder.header("X-Internal-Key", internalKey);
+            }
+            HttpRequest request = builder.build();
             int status = http.send(request, HttpResponse.BodyHandlers.discarding()).statusCode();
             if (status >= 200 && status < 300) {
                 return Outcome.SENT;

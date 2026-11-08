@@ -41,6 +41,7 @@ caller, a second sign-in provider, or a Keycloak that was restarted mid-attack c
   detection and CAPTCHA** remain as ADR-061 left them: decide from what the `cm_otp_rate_limited` events show.
 - **No alert on refusals yet:** the refusal is logged by the sign-in as a failed send, but there is no metric on `otp-send-limited`.
   A counter for it is a small next step with the metrics of ADR-070.
+- **Who may ask** is decided separately: [ADR-083](adr-083-key-for-requesting-a-sign-in-code.md) puts a key on the endpoint.
 - **Not per-caller:** the ledger does not know which service asked, only who it was for.
 
 ## Options considered

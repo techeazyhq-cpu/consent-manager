@@ -40,6 +40,7 @@ class NtfOtpSenderTest {
 
     private final NtfOtpSender sender = new NtfOtpSender(HttpClient.newHttpClient(), Duration.ofSeconds(5));
     private final List<String> bodies = new CopyOnWriteArrayList<>();
+    private final List<String> keys = new CopyOnWriteArrayList<>();
     private final AtomicInteger status = new AtomicInteger(200);
     private HttpServer ntf;
 
@@ -48,6 +49,7 @@ class NtfOtpSenderTest {
         ntf = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0);
         ntf.createContext("/internal/otp/send", exchange -> {
             bodies.add(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            keys.add(String.valueOf(exchange.getRequestHeaders().getFirst("X-Internal-Key")));
             exchange.sendResponseHeaders(status.get(), -1);
             exchange.close();
         });
@@ -69,6 +71,17 @@ class NtfOtpSenderTest {
 
         assertEquals(NtfOtpSender.Outcome.SENT, sender.send(baseUrl(), phone, "042137"));
         assertEquals("{\"channel\":\"SMS\",\"destination\":\"+919876543210\",\"code\":\"042137\"}", bodies.get(0));
+    }
+
+    @Test
+    void sendsTheServiceKeyWhenOneIsSetAndNoneWhenNot() {
+        OtpIdentifier email = OtpIdentifier.parse("ann@example.com").orElseThrow();
+
+        new NtfOtpSender(HttpClient.newHttpClient(), Duration.ofSeconds(5), "the-key").send(baseUrl(), email, "123456");
+        new NtfOtpSender(HttpClient.newHttpClient(), Duration.ofSeconds(5), "  ").send(baseUrl(), email, "123456");
+        sender.send(baseUrl(), email, "123456");
+
+        assertEquals(List.of("the-key", "null", "null"), keys);
     }
 
     @Test

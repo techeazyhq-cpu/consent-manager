@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-159 entries: 148 API problems, 10 operational log codes and 1 event.
+162 entries: 149 API problems, 12 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -91,6 +91,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | Code | Status | Title | What it means | What to do | Retry | Raised by |
 |---|---|---|---|---|---|---|
 | `api-key-invalid` | 401 | API key not accepted | The API key is missing, unknown, malformed or revoked, or its signature could not be checked. The reasons are not told apart on purpose. | Check the key, and that it was copied whole. Issue a new key in the DF Console if it was revoked. | no | df-reg, gw |
+| `internal-key-invalid` | 401 | The service key is missing or wrong | A request to send a sign-in code did not carry the key cm-ntf-svc asks for, or carried a different one. | Set the same value as cm-ntf-svc's cm.ntf.internal-api-key in Keycloak's ntf-api-key server setting. | no | ntf |
 | `signature-expired` | 401 | Request signature out of date | The signed timestamp is more than five minutes from the server's clock. | Sign each request when it is sent, and keep the caller's clock correct. | no | df-reg |
 | `signature-invalid` | 401 | Request signature does not match | The signature did not match the request as received: its method, path, query, body or secret differ from what was signed. | Sign exactly the bytes sent, with the key's signing secret, and check the header formats. | no | df-reg |
 | `signature-required` | 401 | Request signature required | This API key requires signed requests, and the signature headers were missing or incomplete. | Send X-Signature-Timestamp, X-Signature-Nonce and X-Signature, signed as in the developer docs. | no | df-reg |
@@ -257,7 +258,9 @@ Written as `[CODE]` at the start of a WARN or ERROR message, for alerts and runb
 | `CM-ERRDICT-UNLISTED` | ERROR | Problem missing from the error dictionary | A service answered a problem whose code is not in the error dictionary, so it got a title made from its name. CI should have refused it. | Add the code to cm-error-dictionary.json and run node scripts/error-dictionary.mjs --write. | aud, bil, cns-cmd, cns-qry, df-reg, dsr, gw, ntf, stf |
 | `CM-INTERNAL-ERROR` | ERROR | Unexpected error ended a request | An exception nobody planned for ended a request. The caller was answered with internal-error and the correlation id; the exception and its stack trace are in this log message. | Find the log line by the correlation id the caller quotes, and fix the cause. A burst of them is an incident. | aud, bil, cns-cmd, cns-qry, df-reg, dsr, gw, ntf, stf |
 | `CM-INVOICE-RUN-FAILED` | WARN | Invoice run failed | The monthly invoice run for last month failed part way. Invoices already issued stay; it is tried again every hour. | If it repeats, check the billing database and the plan prices, then run the month by hand from the admin console. | bil |
+| `CM-NTF-INTERNAL-OPEN` | WARN | Sign-in codes can be requested by anything on the network | cm-ntf-svc has no internal API key, so any caller that can reach it can ask it to send sign-in codes. Logged at start-up. | Set cm.ntf.internal-api-key (NTF_INTERNAL_API_KEY in the chart's secret) and the same value in Keycloak. | ntf |
 | `CM-OTP-LIMITS-EXEMPT` | WARN | Sign-in code limit lifted for some addresses | Keycloak started with addresses exempt from the limit on sign-in codes sent to one address (ADR-061). That is for the local stack, where a test kit signs in as the same accounts many times an hour. | In production this is a misconfiguration: remove spi-authenticator-cm-otp-authenticator-exempt-addresses from Keycloak's settings and restart it. | idn-otp-spi |
+| `CM-OTP-NTF-KEY-MISSING` | WARN | Keycloak sends no key to cm-ntf-svc | The sign-in step has no ntf-api-key server setting, so it asks cm-ntf-svc to send codes without a key. That works only while cm-ntf-svc does not ask for one. Logged at start-up. | Set the ntf-api-key server setting (KC_SPI_AUTHENTICATOR_CM_OTP_AUTHENTICATOR_NTF_API_KEY) to the value of cm-ntf-svc's internal API key. | idn-otp-spi |
 | `CM-OUTBOX-RELAY-FAILED` | WARN | Outbox relay pass failed | The service could not publish waiting events to Pulsar in one pass. They stay in the outbox and are sent on the next pass. | If it repeats, check that Pulsar is reachable and the service's database is healthy; events are not lost. | bil, dsr, df-reg, cns-cmd |
 | `CM-USAGE-ALERT-FAILED` | WARN | Usage alert check failed | The usage alert sweep could not check one fiduciary, or the whole pass failed. It is tried again every minute. | If it repeats, check Redis and the billing database. | bil |
 

@@ -99,6 +99,9 @@ capabilities: {drop: [ALL]}
 {{- if eq $name "cm-ntf-svc" }}
 - {name: CM_NTF_PROVIDER, value: {{ $c.notificationService.provider | quote }}}
 - {name: NTF_SVC_BASE_URL, value: {{ $c.notificationService.baseUrl | quote }}}
+# who may ask this service to send a sign-in code (ADR-083): the same value is Keycloak's NTF_API_KEY server setting
+- name: CM_NTF_INTERNAL_API_KEY
+  {{- include "cm.secretRef" (dict "root" $root "key" "NTF_INTERNAL_API_KEY" "optional" true) | nindent 2 }}
 - {name: SPRING_MAIL_HOST, value: {{ $c.mail.host | quote }}}
 - {name: SPRING_MAIL_PORT, value: {{ $c.mail.port | quote }}}
 # the key that hashes the addresses of principals who chose how they hear of requests (ADR-066): required, never a default

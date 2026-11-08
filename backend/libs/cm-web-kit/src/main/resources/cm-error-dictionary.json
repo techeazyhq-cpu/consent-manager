@@ -593,6 +593,19 @@
       ]
     },
     {
+      "code": "internal-key-invalid",
+      "kind": "problem",
+      "status": 401,
+      "category": "authentication",
+      "title": "The service key is missing or wrong",
+      "description": "A request to send a sign-in code did not carry the key cm-ntf-svc asks for, or carried a different one.",
+      "action": "Set the same value as cm-ntf-svc's cm.ntf.internal-api-key in Keycloak's ntf-api-key server setting.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-ntf-svc"
+      ]
+    },
+    {
       "code": "invalid-answer",
       "kind": "problem",
       "status": 400,
@@ -1723,6 +1736,32 @@
       "retryable": true,
       "raisedBy": [
         "cm-bil-svc"
+      ]
+    },
+    {
+      "code": "CM-NTF-INTERNAL-OPEN",
+      "kind": "log",
+      "level": "WARN",
+      "category": "operations",
+      "title": "Sign-in codes can be requested by anything on the network",
+      "description": "cm-ntf-svc has no internal API key, so any caller that can reach it can ask it to send sign-in codes. Logged at start-up.",
+      "action": "Set cm.ntf.internal-api-key (NTF_INTERNAL_API_KEY in the chart's secret) and the same value in Keycloak.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-ntf-svc"
+      ]
+    },
+    {
+      "code": "CM-OTP-NTF-KEY-MISSING",
+      "kind": "log",
+      "level": "WARN",
+      "category": "operations",
+      "title": "Keycloak sends no key to cm-ntf-svc",
+      "description": "The sign-in step has no ntf-api-key server setting, so it asks cm-ntf-svc to send codes without a key. That works only while cm-ntf-svc does not ask for one. Logged at start-up.",
+      "action": "Set the ntf-api-key server setting (KC_SPI_AUTHENTICATOR_CM_OTP_AUTHENTICATOR_NTF_API_KEY) to the value of cm-ntf-svc's internal API key.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-idn-otp-spi"
       ]
     },
     {
