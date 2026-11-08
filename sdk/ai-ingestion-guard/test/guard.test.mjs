@@ -243,6 +243,15 @@ test('a refused key is an error to fix, not a decision about the person', async 
   await assert.rejects(clientWith(tokenAnd(() => response(401, {}))).client.verify('a', 'P'), /refused this key/);
 });
 
+test('trailing slashes on the gateway address are ignored, however many', async () => {
+  const sent = [];
+  const client = new ConsentClient({ gateway: `http://gw${'/'.repeat(50_000)}`, apiKey: 'k', signingSecret: 's', fetchImpl: async (url) => { sent.push(String(url)); return response(409, {}); } });
+
+  await client.verify('a', 'P');
+
+  assert.equal(sent[0], 'http://gw/api/cns-cmd/cns-arts/a/token');
+});
+
 test('a client needs its three settings', () => {
   assert.throws(() => new ConsentClient({ gateway: 'http://gw' }), /needed/);
 });

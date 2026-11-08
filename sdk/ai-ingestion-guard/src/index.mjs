@@ -37,6 +37,13 @@ export function signRequest(secret, method, path, query, body, now = Date.now())
   return { 'X-Signature-Timestamp': ts, 'X-Signature-Nonce': nonce, 'X-Signature': createHmac('sha256', secret).update(text).digest('hex') };
 }
 
+/** The address without trailing slashes: a loop, not a regular expression, which can run slowly on a long run of them. */
+function trimTrailingSlashes(url) {
+  let end = url.length;
+  while (end > 0 && url[end - 1] === '/') end--;
+  return url.slice(0, end);
+}
+
 /** What a check says. ALLOW means use the data; DENY means do not; UNAVAILABLE means it could not be checked, which is not a no. */
 export const Decision = Object.freeze({ ALLOW: 'ALLOW', DENY: 'DENY', UNAVAILABLE: 'UNAVAILABLE' });
 
@@ -48,7 +55,7 @@ export const Decision = Object.freeze({ ALLOW: 'ALLOW', DENY: 'DENY', UNAVAILABL
 export class ConsentClient {
   constructor({ gateway, apiKey, signingSecret, fetchImpl = fetch, now = () => Date.now() }) {
     if (!gateway || !apiKey || !signingSecret) throw new Error('gateway, apiKey and signingSecret are needed');
-    Object.assign(this, { gateway: gateway.replace(/\/+$/, ''), apiKey, signingSecret, fetchImpl, now });
+    Object.assign(this, { gateway: trimTrailingSlashes(gateway), apiKey, signingSecret, fetchImpl, now });
     this.tokens = new Map();
   }
 
