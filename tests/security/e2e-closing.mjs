@@ -125,6 +125,11 @@ try {
 }
 expect(!signedIn, 'its team can no longer sign in (the accounts are deleted)');
 
+// billing stopped with the consents (ADR-084): its plan stretch has an end, so no later month is invoiced
+const billed = execFileSync('docker', ['exec', '-e', 'PGPASSWORD=cm', 'common-postgres-1', 'psql', '-U', 'cm', '-d', 'consent_manager', '-At', '-c',
+  `select count(*) filter (where to_at is null), count(*) from bil.plan_hst where df_id = '${df.id}'`], { stdio: 'pipe' }).toString().trim();
+expect(billed.startsWith('0|') && !billed.endsWith('|0'), 'its billing has ended (no open plan stretch left)', billed);
+
 const resumeClosed = await api(staff, 'POST', `/api/df-reg/dfs/${df.id}/resume`);
 expect(resumeClosed.status === 409, 'a closed fiduciary cannot be resumed', `${resumeClosed.status}`);
 
