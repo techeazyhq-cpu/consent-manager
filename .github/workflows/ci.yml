@@ -191,7 +191,7 @@ jobs:
           if [ "${{ github.event_name }}" = "push" ] && [ -n "$OPA_SIGNING_KEY_PEM" ]; then
             umask 077
             printf '%s\n' "$OPA_SIGNING_KEY_PEM" > "$RUNNER_TEMP/opa-signing-key.pem"
-            OPA_SIGNING_KEY="$RUNNER_TEMP/opa-signing-key.pem" scripts/opa-bundle.sh --out dist/opa
+            OPA_SIGNING_KEY="$RUNNER_TEMP/opa-signing-key.pem" bash scripts/opa-bundle.sh --out dist/opa
             rm -f "$RUNNER_TEMP/opa-signing-key.pem"
           else
             echo "::notice::Building an unsigned bundle: signing happens on main, with OPA_BUNDLE_SIGNING_KEY set"

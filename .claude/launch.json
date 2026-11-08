@@ -4,26 +4,98 @@
     {
       "name": "cm-dp-portal",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--dir", "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-dp-portal", "run", "preview"],
+      "runtimeArgs": [
+        "--dir",
+        "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-dp-portal",
+        "run",
+        "preview"
+      ],
       "port": 5174
     },
     {
       "name": "cm-dp-portal-dev",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--dir", "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-dp-portal", "run", "dev"],
+      "runtimeArgs": [
+        "--dir",
+        "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-dp-portal",
+        "run",
+        "dev"
+      ],
       "port": 5174
     },
     {
       "name": "cm-df-app",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--dir", "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-df-app", "run", "preview"],
+      "runtimeArgs": [
+        "--dir",
+        "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-df-app",
+        "run",
+        "preview"
+      ],
+      "port": 5175
+    },
+    {
+      "name": "cm-df-app-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-df-app",
+        "run",
+        "dev"
+      ],
       "port": 5175
     },
     {
       "name": "cm-cm-admin",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--dir", "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-cm-admin", "run", "preview"],
+      "runtimeArgs": [
+        "--dir",
+        "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-cm-admin",
+        "run",
+        "preview"
+      ],
       "port": 5176
+    },
+    {
+      "name": "cm-cm-admin-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/packages/mf-cm-admin",
+        "run",
+        "dev"
+      ],
+      "port": 5176
+    },
+    {
+      "name": "pr6-df-app-dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "C:/Vasanth/workspace/TechEazyHQ/consent-manager/.claude/worktrees/pr6/frontend/packages/mf-df-app",
+        "run",
+        "dev"
+      ],
+      "port": 5175
+    },
+    {
+      "name": "dp-mobile-web",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "C:/Vasanth/workspace/TechEazyHQ/consent-manager/frontend/apps/dp-mobile",
+        "exec",
+        "expo",
+        "start",
+        "--web",
+        "--port",
+        "19006"
+      ],
+      "port": 19006,
+      "env": {
+        "CI": "1"
+      },
+      "autoPort": false
     }
   ]
 }
