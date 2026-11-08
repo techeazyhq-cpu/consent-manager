@@ -73,9 +73,11 @@ try {
   expect((await api(admin, 'POST', '/api/bil/invoices/run?month=soon')).json?.code === 'invalid-month', 'a bad month is refused');
 
   // the fiduciary's history starts now: stand its stretch back to the start of last month, so the month has something to bill
-  const { execSync } = await import('node:child_process');
+  // the id came back from an API, so it is checked to be a UUID, and the command is run without a shell, with the statement as one argument
+  if (!/^[0-9a-f-]{36}$/.test(df.id)) throw new Error('the new fiduciary id is not a UUID');
+  const { execFileSync } = await import('node:child_process');
   const sql = `update bil.plan_hst set from_at = '${prevMonth.toISOString()}' where df_id = '${df.id}' and to_at is null`;
-  execSync(`docker exec -e PGPASSWORD=cm common-postgres-1 psql -U cm -d consent_manager -c "${sql}"`, { stdio: 'pipe' });
+  execFileSync('docker', ['exec', '-e', 'PGPASSWORD=cm', 'common-postgres-1', 'psql', '-U', 'cm', '-d', 'consent_manager', '-c', sql], { stdio: 'pipe' });
 
   const run = await api(admin, 'POST', `/api/bil/invoices/run?month=${month}`);
   const mine = (run.json ?? []).find((i) => i.fiduciaryId === df.id);
