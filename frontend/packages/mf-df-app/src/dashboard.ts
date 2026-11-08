@@ -42,6 +42,19 @@ export function decidedRate(o: Pick<InsightOutcomes, "given" | "refused">): numb
   return decided === 0 ? null : Math.round((100 * o.given) / decided);
 }
 
+/**
+ * How a figure moved against the window just before, in a few words: "up 20% on the 30 days before", "down 3", "same as the
+ * 30 days before", or "nothing in the 30 days before" when there is nothing to compare with. Undefined when no comparison is shown.
+ */
+export function changeNote(now: number, before: number | undefined, days: number): string | undefined {
+  if (before === undefined) return undefined;
+  const window = `${days} days before`;
+  if (before === 0) return now === 0 ? `same as the ${window}` : `none in the ${window}`;
+  if (now === before) return `same as the ${window}`;
+  const pct = Math.round((100 * Math.abs(now - before)) / before);
+  return `${now > before ? "up" : "down"} ${pct}% on the ${window}`;
+}
+
 /** A share in whole percent, or null when there is nothing to share out. */
 export const share = (part: number, of: number): number | null => (of === 0 ? null : Math.round((100 * part) / of));
 

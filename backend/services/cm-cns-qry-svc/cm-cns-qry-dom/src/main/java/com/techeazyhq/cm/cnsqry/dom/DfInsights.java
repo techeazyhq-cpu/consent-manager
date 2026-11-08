@@ -20,6 +20,7 @@ package com.techeazyhq.cm.cnsqry.dom;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -36,9 +37,20 @@ import java.util.Map;
  * @param purposes  the same outcomes, purpose by purpose, most raised first
  * @param days      every day of the window (UTC): raised that day, and given or refused that day
  * @param changes   withdrawals, narrowings, renewals and lapses in the window, of any consent
+ * @param zone      the time zone the days are cut in (an IANA name; UTC unless the caller asked for one)
+ * @param previous  the same figures for the window of equal length just before this one, when asked for
  */
 public record DfInsights(Instant from, Instant to, Outcomes outcomes, Decisions decisions, List<Purpose> purposes,
-                         List<Day> days, Changes changes) {
+                         List<Day> days, Changes changes, String zone, Previous previous) {
+
+    /** The window just before, for comparison: the totals, not the day-by-day or purpose-by-purpose detail. */
+    public record Previous(Instant from, Instant to, Outcomes outcomes, Decisions decisions, Changes changes) {
+    }
+
+    /** The same figures with the previous window's beside them. */
+    public DfInsights withPrevious(Previous p) {
+        return new DfInsights(from, to, outcomes, decisions, purposes, days, changes, zone, p);
+    }
 
     /** Outcomes of requests: given, refused, still awaiting, or never reached the person. */
     public record Outcomes(long raised, long given, long refused, long awaiting, long notNotified) {
@@ -71,6 +83,12 @@ public record DfInsights(Instant from, Instant to, Outcomes outcomes, Decisions 
     /** Assembles the parts the read model gives, totalling the purposes and filling days with nothing in them. */
     public static DfInsights of(Instant from, Instant to, List<Purpose> purposes, Decisions decisions, List<Day> dayRows,
                                 Changes changes) {
+        return of(from, to, purposes, decisions, dayRows, changes, ZoneOffset.UTC);
+    }
+
+    /** As above, with the days cut in {@code zone}. */
+    public static DfInsights of(Instant from, Instant to, List<Purpose> purposes, Decisions decisions, List<Day> dayRows,
+                                Changes changes, ZoneId zone) {
         Outcomes total = new Outcomes(0, 0, 0, 0, 0);
         for (Purpose p : purposes) {
             total = total.plus(p.outcomes());
@@ -80,13 +98,13 @@ public record DfInsights(Instant from, Instant to, Outcomes outcomes, Decisions 
             byDate.put(d.date(), d);
         }
         List<Day> days = new ArrayList<>();
-        LocalDate last = to.atZone(ZoneOffset.UTC).toLocalDate();
-        for (LocalDate d = from.atZone(ZoneOffset.UTC).toLocalDate(); !d.isAfter(last); d = d.plusDays(1)) {
+        LocalDate last = to.atZone(zone).toLocalDate();
+        for (LocalDate d = from.atZone(zone).toLocalDate(); !d.isAfter(last); d = d.plusDays(1)) {
             days.add(byDate.getOrDefault(d, new Day(d, 0, 0, 0)));
         }
         List<Purpose> sorted = purposes.stream()
                 .sorted((a, b) -> Long.compare(b.outcomes().raised(), a.outcomes().raised()))
                 .toList();
-        return new DfInsights(from, to, total, decisions, sorted, days, changes);
+        return new DfInsights(from, to, total, decisions, sorted, days, changes, zone.equals(ZoneOffset.UTC) ? "UTC" : zone.getId(), null);
     }
 }

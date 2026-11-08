@@ -42,17 +42,50 @@ public class DfInsightsHandler {
     }
 
     public Mono<ServerResponse> insights(ServerRequest request) {
-        int days;
-        try {
-            days = request.queryParam("days").map(Integer::parseInt).orElse(DfInsightsQryHandler.DEFAULT_DAYS);
-        } catch (NumberFormatException e) {
+        Query q = Query.of(request);
+        if (q == null) {
             return ServerResponse.badRequest().build();
         }
         return request.principal().cast(JwtAuthenticationToken.class)
                 .map(token -> AuthCtx.from((Jwt) token.getPrincipal()))
                 .filter(AuthCtx::isDf)
-                .flatMap(ctx -> insights.handle(ctx.dfId(), days))
+                .flatMap(ctx -> insights.handle(ctx.dfId(), q.days(), q.zone(), q.compare()))
                 .flatMap(result -> ServerResponse.ok().bodyValue(result))
                 .switchIfEmpty(Mono.defer(() -> ServerResponse.status(HttpStatus.FORBIDDEN).build()));
+    }
+
+    /**
+     * {@code GET /api/cns-qry/insights/export?days=30&tz=Asia/Kolkata&view=days|purposes}: the same figures as a CSV file, the
+     * day-by-day series or the purposes (ADR-078).
+     */
+    public Mono<ServerResponse> export(ServerRequest request) {
+        Query q = Query.of(request);
+        String view = request.queryParam("view").orElse("days");
+        if (q == null || !(view.equals("days") || view.equals("purposes"))) {
+            return ServerResponse.badRequest().build();
+        }
+        return request.principal().cast(JwtAuthenticationToken.class)
+                .map(token -> AuthCtx.from((Jwt) token.getPrincipal()))
+                .filter(AuthCtx::isDf)
+                .flatMap(ctx -> insights.handle(ctx.dfId(), q.days(), q.zone(), false))
+                .flatMap(result -> ServerResponse.ok()
+                        .contentType(new org.springframework.http.MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
+                        .header("Content-Disposition", "attachment; filename=\"consent-insights-" + view + ".csv\"")
+                        .bodyValue(view.equals("days") ? InsightsCsv.days(result) : InsightsCsv.purposes(result)))
+                .switchIfEmpty(Mono.defer(() -> ServerResponse.status(HttpStatus.FORBIDDEN).build()));
+    }
+
+    /** The window, time zone and comparison a request asks for; null when any of them is not valid. */
+    record Query(int days, java.time.ZoneId zone, boolean compare) {
+        static Query of(ServerRequest request) {
+            try {
+                int days = request.queryParam("days").map(Integer::parseInt).orElse(DfInsightsQryHandler.DEFAULT_DAYS);
+                java.time.ZoneId zone = request.queryParam("tz").map(java.time.ZoneId::of).orElse(java.time.ZoneOffset.UTC);
+                boolean compare = request.queryParam("compare").map(Boolean::parseBoolean).orElse(false);
+                return new Query(days, zone, compare);
+            } catch (NumberFormatException | java.time.DateTimeException e) {
+                return null;
+            }
+        }
     }
 }

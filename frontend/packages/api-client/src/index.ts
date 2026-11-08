@@ -535,8 +535,21 @@ export const apiKeys = {
 
 /** The DF Console dashboard (ADR-049): outcomes and times to decide over the last {@code days}. */
 export const insights = {
-  get: (base: string, token: string, days: number) =>
-    request<DfInsightsDto>(base, `/api/cns-qry/insights?days=${days}`, token),
+  /** `tz` cuts the days in an IANA time zone (UTC when left out); `compare` adds the window just before (ADR-078). */
+  get: (base: string, token: string, days: number, opts: { tz?: string; compare?: boolean } = {}) => {
+    const q = new URLSearchParams({ days: String(days) });
+    if (opts.tz) q.set("tz", opts.tz);
+    if (opts.compare) q.set("compare", "true");
+    return request<DfInsightsDto>(base, `/api/cns-qry/insights?${q}`, token);
+  },
+  /** The day-by-day series or the purposes as a CSV file. */
+  exportCsv: async (base: string, token: string, days: number, view: "days" | "purposes", tz?: string) => {
+    const q = new URLSearchParams({ days: String(days), view });
+    if (tz) q.set("tz", tz);
+    const res = await fetch(`${base}/api/cns-qry/insights/export?${q}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));
+    return res.blob();
+  },
 };
 
 const whk = (path: string) => `/api/cns-cmd/webhooks${path}`;

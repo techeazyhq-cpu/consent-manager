@@ -50,6 +50,7 @@ public class CnsQryRouterConfig {
                 .GET("/api/cns-qry/admin/dfs/{dfId}/stats", adminHandler::stats)
                 .GET("/api/cns-qry/admin/dfs/{dfId}/cns-reqs", adminHandler::requests)
                 .GET("/api/cns-qry/insights", insights::insights)
+                .GET("/api/cns-qry/insights/export", insights::export)
                 .GET("/api/cns-qry/cns-arts", handler::listCnsArts)
                 .GET("/api/cns-qry/cns-arts/{id}", handler::getCnsArt)
                 .GET("/api/cns-qry/cns-arts/{id}/history", handler::getCnsHst)

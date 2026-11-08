@@ -19,6 +19,7 @@
 package com.techeazyhq.cm.cnsqry.dom;
 
 import java.time.Instant;
+import java.time.ZoneId;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -32,8 +33,8 @@ public interface DfInsightsPort {
     /** Time to decide over every request raised in the window and decided. */
     Mono<DfInsights.Decisions> decisions(String dfId, Instant from, Instant to);
 
-    /** Days with something in them (UTC): requests raised, and those raised in the window given or refused. */
-    Flux<DfInsights.Day> byDay(String dfId, Instant from, Instant to);
+    /** Days with something in them, cut in {@code zone}: requests raised, and those raised in the window given or refused. */
+    Flux<DfInsights.Day> byDay(String dfId, Instant from, Instant to, ZoneId zone);
 
     /** Changes people made in the window to any of the fiduciary's consents. */
     Mono<DfInsights.Changes> changes(String dfId, Instant from, Instant to);

@@ -43,6 +43,7 @@ class DfInsightsQryHandlerTest {
     private static final Instant NOW = Instant.parse("2026-10-20T10:00:00Z");
 
     private final List<String> asked = new ArrayList<>();
+    private final List<java.time.ZoneId> zones = new ArrayList<>();
     private final DfInsightsPort port = new DfInsightsPort() {
         @Override
         public Flux<DfInsights.Purpose> byPurpose(String dfId, Instant from, Instant to) {
@@ -58,7 +59,8 @@ class DfInsightsQryHandlerTest {
         }
 
         @Override
-        public Flux<DfInsights.Day> byDay(String dfId, Instant from, Instant to) {
+        public Flux<DfInsights.Day> byDay(String dfId, Instant from, Instant to, java.time.ZoneId zone) {
+            zones.add(zone);
             return Flux.just(new DfInsights.Day(LocalDate.parse("2026-10-19"), 4, 2, 1));
         }
 
@@ -89,6 +91,38 @@ class DfInsightsQryHandlerTest {
         assertEquals(LocalDate.parse("2026-10-20"), days.get(7).date());
         assertEquals(4, days.get(6).raised());
         assertEquals(0, days.get(5).raised());
+    }
+
+    @Test
+    void withoutComparisonThereIsNoPreviousWindowAndNothingExtraIsAsked() {
+        DfInsights insights = handler.handle("df-1", 7, ZoneOffset.UTC, false).block();
+
+        assertNull(insights.previous());
+        assertEquals(List.of("df-1 7"), asked);
+        assertEquals("UTC", insights.zone());
+    }
+
+    @Test
+    void comparisonAddsTheTotalsOfTheWindowJustBefore() {
+        DfInsights insights = handler.handle("df-1", 7, ZoneOffset.UTC, true).block();
+
+        DfInsights.Previous before = insights.previous();
+        assertEquals(Instant.parse("2026-10-06T10:00:00Z"), before.from());
+        assertEquals(Instant.parse("2026-10-13T10:00:00Z"), before.to(), "it ends where the current window begins");
+        assertEquals(insights.from(), before.to());
+        assertEquals(new DfInsights.Outcomes(7, 4, 1, 1, 1), before.outcomes());
+        assertEquals(List.of("df-1 7", "df-1 7"), asked, "both windows are 7 days");
+    }
+
+    @Test
+    void daysAreCutInTheZoneAskedFor() {
+        DfInsights insights = handler.handle("df-1", 1, java.time.ZoneId.of("Asia/Kolkata"), false).block();
+
+        assertEquals("Asia/Kolkata", insights.zone());
+        // 19 Oct 10:00 UTC to 20 Oct 10:00 UTC is 15:30 to 15:30 in India: still two dates
+        assertEquals(List.of(LocalDate.parse("2026-10-19"), LocalDate.parse("2026-10-20")),
+                insights.days().stream().map(DfInsights.Day::date).toList());
+        assertEquals(java.time.ZoneId.of("Asia/Kolkata"), zones.get(0));
     }
 
     @Test
