@@ -39,8 +39,7 @@ caller, a second sign-in provider, or a Keycloak that was restarted mid-attack c
   restart"; the guess counts live where the code is checked, not here.
 - **Telling the account's owner** that codes were requested or refused for their address, **device fingerprinting, anomaly
   detection and CAPTCHA** remain as ADR-061 left them: decide from what the `cm_otp_rate_limited` events show.
-- **No alert on refusals yet:** the refusal is logged by the sign-in as a failed send, but there is no metric on `otp-send-limited`.
-  A counter for it is a small next step with the metrics of ADR-070.
+- ~~**No alert on refusals yet.**~~ Counted and alerted on: [ADR-089](adr-089-sign-in-code-refusal-metrics.md).
 - **Who may ask** is decided separately: [ADR-083](adr-083-key-for-requesting-a-sign-in-code.md) puts a key on the endpoint.
 - **Not per-caller:** the ledger does not know which service asked, only who it was for.
 

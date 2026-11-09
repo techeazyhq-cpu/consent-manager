@@ -35,6 +35,8 @@ Never expose the gateway's management port (9091) through the ingress: it carrie
 | `DatabaseConnectionsNearlyAll` | the pools of all services add up to most of `max_connections` (ADR-052): find which database holds them (the dashboard breaks them down) before raising the maximum |
 | `RedisDown`, `RedisMemoryNearlyFull` | rate limits, the status page and usage counters live in Redis; the services fail open (ADR-016), so a Redis outage is quiet and must be seen here |
 | `PulsarDown` | events are not moving between services: consents recorded in one are not reaching the others; the outbox keeps them until it is back |
+| `SignInCodesRefusedByTheLimit` | the notification service refused more than 20 sign-in codes in an hour (ADR-080): someone is asking for codes in bulk, or real traffic exceeds `cm.ntf.otp-limits.*`; look at the sign-in events (`cm_otp_rate_limited`) and the ledger's table for which destinations, then block the source or raise the limit |
+| `SignInCodeRequestsWithoutTheKey` | a request to send a code came without the service key (ADR-083): if people cannot sign in, Keycloak's `ntf-api-key` is not the service's `internal-api-key`; if sign-in works, something else is calling the endpoint: find it in the network and the service log |
 | `HeapNearlyFull` | the container is memory-capped (ADR-052); raise the limit or look for a leak before the OOM restart |
 | `LogicalBackupMissing`, `LogicalBackupFailed` | [backup-and-recovery.md](backup-and-recovery.md): run `postgres-backup.sh` by hand and read its error |
 | `RestoreDrillOverdue` | run `postgres-restore-drill.sh`; a drill that was never run is a backup that was never tried |

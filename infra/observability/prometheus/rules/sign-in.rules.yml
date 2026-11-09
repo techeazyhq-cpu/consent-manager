@@ -1,0 +1,29 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# Sign-in codes the notification service refused to send (ADR-089; the limit is ADR-080, the key ADR-083). The counts carry no address,
+# number or code.
+groups:
+  - name: sign-in
+    rules:
+      - alert: SignInCodesRefusedByTheLimit
+        expr: increase(cm_ntf_otp_send_refused_total{reason="limited"}[1h]) > 20
+        labels: {severity: ticket}
+        annotations: {summary: "More than 20 sign-in codes were refused in an hour by the notification service's send limit: someone is asking for codes in bulk, or the limit is too tight for the traffic"}
+      - alert: SignInCodeRequestsWithoutTheKey
+        expr: increase(cm_ntf_otp_send_refused_total{reason="key"}[10m]) > 0
+        labels: {severity: page}
+        annotations: {summary: "Requests to send a sign-in code arrived without the service key: Keycloak's key is wrong (people cannot sign in) or something else on the network is asking"}
