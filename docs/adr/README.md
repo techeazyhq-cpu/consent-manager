@@ -101,6 +101,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [093](adr-093-traces-in-tempo.md) | Traces in Tempo, off until asked for | Accepted |
 | [094](adr-094-scheduled-deliverability-check.md) | A weekly run of the deliverability check | Accepted |
 | [095](adr-095-azure-dedicated-database-servers.md) | A PostgreSQL server of its own per service on Azure | Accepted |
+| [096](adr-096-gcp-dedicated-database-instances.md) | A Cloud SQL instance of its own per service on GCP, and Azure's extra servers watched | Accepted |
 
 ## Writing one
 

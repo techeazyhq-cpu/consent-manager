@@ -8,7 +8,7 @@
   server per service is Terraform: add the service to `dedicated_databases` (for example
   `{"cm-aud-svc" = {db_name = "cm_aud", username = "cm_aud"}}`), apply, and copy the `postgres_dedicated` output into the
   release's values; the owner's password is in the RDS-managed secret it names, to be copied into the application secret as
-  `CM_AUD_SVC_DB_PASSWORD`. Azure is the same (`dedicated_databases`, then the `postgres_dedicated` output; the password is the key vault secret it names, `cm-aud-svc-db-password`, [ADR-095](../adr/adr-095-azure-dedicated-database-servers.md)). GCP: create the server by hand.
+  `CM_AUD_SVC_DB_PASSWORD`. Azure is the same (`dedicated_databases`, then the `postgres_dedicated` output; the password is the key vault secret it names, `cm-aud-svc-db-password`, [ADR-095](../adr/adr-095-azure-dedicated-database-servers.md)). GCP is the same too (`postgres_dedicated` has the entry `<name>-cm-aud-svc-db-password` and the instance's own CA, `server_ca`, which goes into the `db-ca-bundle` ConfigMap next to the shared one's, [ADR-096](../adr/adr-096-gcp-dedicated-database-instances.md)).
 - You have a recent backup ([backup-and-recovery.md](backup-and-recovery.md)) and a quiet hour.
 - The new login's password is in the release's secret under a key of its own (`CM_AUD_SVC_DB_PASSWORD`).
 

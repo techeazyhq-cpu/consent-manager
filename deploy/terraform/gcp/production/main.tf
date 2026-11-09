@@ -256,5 +256,6 @@ module "datastores" {
   network_id                         = google_compute_network.environment.id
   private_services_access_dependency = google_service_networking_connection.private_services.id
   alert_email_addresses              = var.alert_email_addresses
+  dedicated_databases                = var.dedicated_databases
   labels                             = local.labels
 }

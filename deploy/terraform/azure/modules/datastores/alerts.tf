@@ -35,16 +35,41 @@ resource "azurerm_monitor_action_group" "operations" {
   tags = var.tags
 }
 
-resource "azurerm_monitor_metric_alert" "postgres" {
-  for_each = {
+locals {
+  postgres_alert_kinds = {
     storage_nearly_full = { metric = "storage_percent", aggregation = "Average", operator = "GreaterThan", threshold = 85 }
     server_down         = { metric = "is_db_alive", aggregation = "Minimum", operator = "LessThan", threshold = 1 }
   }
 
-  name                = "${var.name}-postgres-${replace(each.key, "_", "-")}"
+  # every server: the shared one and each dedicated one (ADR-095)
+  postgres_servers = merge(
+    { "postgres" = azurerm_postgresql_flexible_server.postgres.id },
+    { for service, server in azurerm_postgresql_flexible_server.dedicated : service => server.id },
+  )
+  postgres_alerts = {
+    for pair in setproduct(keys(local.postgres_servers), keys(local.postgres_alert_kinds)) :
+    "${pair[0]}/${pair[1]}" => merge(local.postgres_alert_kinds[pair[1]], { server = pair[0], kind = pair[1] })
+  }
+}
+
+# the alerts of the shared server were keyed by their kind alone; they now carry the server too, without being recreated
+moved {
+  from = azurerm_monitor_metric_alert.postgres["storage_nearly_full"]
+  to   = azurerm_monitor_metric_alert.postgres["postgres/storage_nearly_full"]
+}
+
+moved {
+  from = azurerm_monitor_metric_alert.postgres["server_down"]
+  to   = azurerm_monitor_metric_alert.postgres["postgres/server_down"]
+}
+
+resource "azurerm_monitor_metric_alert" "postgres" {
+  for_each = local.postgres_alerts
+
+  name                = "${var.name}-${each.value.server == "postgres" ? "postgres" : "postgres-${each.value.server}"}-${replace(each.value.kind, "_", "-")}"
   resource_group_name = var.resource_group_name
-  scopes              = [azurerm_postgresql_flexible_server.postgres.id]
-  severity            = each.key == "server_down" ? 0 : 2
+  scopes              = [local.postgres_servers[each.value.server]]
+  severity            = each.value.kind == "server_down" ? 0 : 2
   frequency           = "PT1M"
   window_size         = "PT5M"
 
@@ -67,7 +92,7 @@ resource "azurerm_monitor_activity_log_alert" "resource_health" {
   name                = "${var.name}-datastore-health"
   resource_group_name = var.resource_group_name
   location            = "global"
-  scopes              = [azurerm_postgresql_flexible_server.postgres.id, azurerm_managed_redis.redis.id]
+  scopes              = concat(values(local.postgres_servers), [azurerm_managed_redis.redis.id])
   description         = "Azure reports the database or the cache unavailable or degraded."
 
   criteria {

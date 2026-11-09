@@ -30,9 +30,8 @@ against deletion and geo-backed-up, and a hand-made one is whatever the person r
 
 - **Not applied to a real subscription.** The plan was checked against a mocked provider only; a real apply could reveal a quota, a
   delegated-subnet size (one subnet holds every server) or a naming limit the mock does not.
-- **No metric alerts or health alert for the extra servers:** the storage and server-down alerts of the shared server (`alerts.tf`) are
-  not extended to them yet, so a dedicated server is not watched by Azure Monitor until they are.
+- ~~**No metric alerts or health alert for the extra servers.**~~ Done in [ADR-096](adr-096-gcp-dedicated-database-instances.md).
 - **Private DNS zone and subnet are shared,** so the servers are separated by their own login, not by network.
-- **GCP still has none.** Cloud SQL would need the same module work.
+- ~~**GCP still has none.**~~ It has now ([ADR-096](adr-096-gcp-dedicated-database-instances.md)).
 - **The owner is still one login per server** (ADR-082's per-schema owners are separate), and the data is still moved by the runbook's
   copy, not under live traffic.

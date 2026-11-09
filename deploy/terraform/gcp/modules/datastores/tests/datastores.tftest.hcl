@@ -198,3 +198,51 @@ run "the_recovery_region_must_differ_from_the_primary" {
 
   expect_failures = [var.disaster_recovery_region]
 }
+
+run "a_service_can_have_an_instance_of_its_own" {
+  command = plan
+
+  variables {
+    dedicated_databases = {
+      "cm-aud-svc" = { db_name = "cm_aud", username = "cm_aud" }
+    }
+  }
+
+  assert {
+    condition     = length(google_sql_database_instance.dedicated) == 1 && google_sql_database.dedicated["cm-aud-svc"].name == "cm_aud"
+    error_message = "A dedicated instance is created for each service named, with the database name asked for."
+  }
+  assert {
+    condition = (
+      google_sql_database_instance.dedicated["cm-aud-svc"].settings[0].availability_type == "REGIONAL"
+      && google_sql_database_instance.dedicated["cm-aud-svc"].deletion_protection
+      && !google_sql_database_instance.dedicated["cm-aud-svc"].settings[0].ip_configuration[0].ipv4_enabled
+      && google_sql_database_instance.dedicated["cm-aud-svc"].settings[0].ip_configuration[0].ssl_mode == "ENCRYPTED_ONLY"
+    )
+    error_message = "A dedicated instance must be as protected as the shared one: regional, private, TLS only, deletion-protected."
+  }
+  assert {
+    condition = (
+      google_sql_database_instance.dedicated["cm-aud-svc"].settings[0].backup_configuration[0].point_in_time_recovery_enabled
+      && google_sql_database_instance.dedicated["cm-aud-svc"].settings[0].backup_configuration[0].location == "europe-west4"
+    )
+    error_message = "A dedicated instance needs point-in-time recovery and its backups in the recovery region."
+  }
+  assert {
+    condition     = length(google_sql_database_instance.dedicated["cm-aud-svc"].settings[0].database_flags) == 8
+    error_message = "A dedicated instance carries the same eight database flags as the shared one."
+  }
+  assert {
+    condition     = length(google_secret_manager_secret.dedicated_owner_password) == 1 && length(google_sql_user.dedicated_owner) == 1
+    error_message = "A dedicated instance has its own owner login and its own Secret Manager entry."
+  }
+}
+
+run "by_default_no_dedicated_instance_exists" {
+  command = plan
+
+  assert {
+    condition     = length(google_sql_database_instance.dedicated) == 0
+    error_message = "Nothing is created for a service until it is asked for."
+  }
+}

@@ -90,3 +90,20 @@ variable "labels" {
   type        = map(string)
   default     = {}
 }
+
+variable "dedicated_databases" {
+  description = <<-EOT
+    Services that get a Cloud SQL instance of their own (ADR-074, ADR-096), keyed by the service's name in the Helm chart, for example
+    cm-aud-svc. Each is regional, private, encrypted in transit, backed up to the recovery region with point-in-time recovery and
+    protected against deletion like the shared one. The chart is pointed at it with the `database:` block under that service (the
+    postgres_dedicated output has the address, the Secret Manager entry holding its password and the CA that signs it); the data is
+    moved with deploy/backup/split-schema.sh (docs/runbooks/database-per-service.md).
+  EOT
+  type = map(object({
+    db_name      = string
+    username     = string
+    tier         = optional(string)
+    disk_size_gb = optional(number)
+  }))
+  default = {}
+}
