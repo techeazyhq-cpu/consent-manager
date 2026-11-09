@@ -161,6 +161,20 @@ jobs:
           test "$(grep -c 'sslmode=verify-full&sslrootcert=/etc/db-ca/ca-bundle.pem' /tmp/tls.yaml)" -eq 7   # the migration connection of each service
           test "$(grep -c 'sslMode=VERIFY_FULL&sslRootCert=/etc/db-ca/ca-bundle.pem' /tmp/tls.yaml)" -eq 7   # and its queries
           test "$(grep -c 'name: rds-ca' /tmp/tls.yaml)" -eq 8   # mounted in the seven services and in the database-init job
+      - name: The chart can make the per-service logins and use them with one switch (ADR-090)
+        run: |
+          # the script the hook runs is the one in deploy/database
+          diff deploy/database/create-runtime-roles.sh deploy/helm/consent-manager/files/database/create-runtime-roles.sh
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          helm template cm consent-manager -f consent-manager/values-aws.yaml --set config.database.leastPrivilege.enabled=true > /tmp/lp1.yaml
+          docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas -kubernetes-version 1.30.0 < /tmp/lp1.yaml
+          test "$(grep -c 'SPRING_R2DBC_USERNAME, value: "cm_[a-z_]*_app"' /tmp/lp1.yaml)" -eq 7   # every service queries as its own login
+          test "$(grep -c 'SPRING_FLYWAY_USER, value: "cm"' /tmp/lp1.yaml)" -eq 7   # and migrates as the owner
+          grep -q 'args: \["aud","bil","cns_cmd","cns_qry","df_reg","dsr","ntf"\]' /tmp/lp1.yaml   # the hook makes a login for each schema
+          # off, nothing changes: no hook, every service on the one login
+          helm template cm consent-manager -f consent-manager/values-aws.yaml > /tmp/lp0.yaml
+          test "$(grep -c 'name: cm-database-roles$' /tmp/lp0.yaml)" -eq 0
+          test "$(grep -c 'name: cm-database-roles$' /tmp/lp1.yaml)" -eq 1   # the job
       - name: A service can query as a login of its own and migrate as the owner (ADR-082)
         run: |
           helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }

@@ -14,7 +14,23 @@ Check: `docker exec -e PGPASSWORD=cm common-postgres-1 psql -U cm -d consent_man
 shows `cm_<schema>_app` for each service and `cm` only for the migrations. If the gateway then answers "API key could not be checked", it
 holds the old container addresses: restart it.
 
-## Moving a deployment to it
+## Moving a deployment to it with the chart (one switch)
+
+Put each login's password in the release's secret as `RUNTIME_DB_PASSWORD_DF_REG`, `..._CNS_CMD`, `..._CNS_QRY`, `..._NTF`, `..._BIL`,
+`..._AUD` and `..._DSR`, then set:
+
+```yaml
+config:
+  database:
+    leastPrivilege: {enabled: true}
+```
+
+and install or upgrade. Every service queries as `cm_<schema>_app` and migrates as the owner, and a Job after the release makes the
+logins (waiting for the schemas on a first install). The Job's log says each schema it did; if it says a schema does not exist, that
+service has not started yet or its migrations failed: look at that service first. A service on a server of its own (ADR-074) sets its
+own `database:` block and keeps the manual way below.
+
+## Moving a deployment to it by hand
 
 The logins can be granted rights on a schema only once the schema exists, and a login needs the default privileges in place before the
 next migration creates a table, so the order matters.

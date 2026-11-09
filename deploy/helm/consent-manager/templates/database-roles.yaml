@@ -1,0 +1,97 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+{{- if (.Values.config.database.leastPrivilege | default dict).enabled }}
+{{- $ctx := dict "root" . "name" "database-roles" }}
+{{- $db := .Values.config.database }}
+{{- $schemas := list }}
+{{- range $name, $s := .Values.services }}{{- if $s.schema }}{{- $schemas = append $schemas $s.schema }}{{- end }}{{- end }}
+{{/* Makes each service a login that can only touch its own schema (ADR-082, ADR-090), after install and upgrade. It waits for the
+     schemas, which the services' own first migrations create, so one `helm install` is enough. The owner's password is the one the
+     migrations use; the logins' passwords are secret keys RUNTIME_DB_PASSWORD_<SCHEMA>. */}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-database-roles-script
+  labels: {{- include "cm.labels" $ctx | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+data:
+  create-runtime-roles.sh: |
+{{ .Files.Get "files/database/create-runtime-roles.sh" | indent 4 }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-database-roles
+  labels: {{- include "cm.labels" $ctx | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels: {{- include "cm.selectorLabels" $ctx | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext: {{- include "cm.podSecurityContext" (dict "uid" 999) | nindent 8 }}
+      containers:
+        - name: database-roles
+          image: {{ .Values.databaseRoles.image }}
+          command: ["/bin/bash", "/scripts/create-runtime-roles.sh"]
+          args: {{ $schemas | toJson }}
+          env:
+            - {name: PGHOST, value: {{ $db.host | quote }}}
+            - {name: PGPORT, value: {{ $db.port | quote }}}
+            - {name: PGUSER, value: {{ $db.migrationUser | default $db.user | quote }}}
+            - {name: DB_NAME, value: {{ $db.name | quote }}}
+            - {name: WAIT_FOR_SCHEMAS_SECONDS, value: {{ $db.leastPrivilege.waitForSchemasSeconds | default 900 | quote }}}
+            - {name: PGSSLMODE, value: {{ ($db.tls | default dict).mode | default "require" | quote }}}
+            {{- if ($db.tls | default dict).caConfigMap }}
+            - {name: PGSSLROOTCERT, value: {{ include "cm.dbCaPath" . | quote }}}
+            {{- end }}
+            - name: PGPASSWORD
+              {{- include "cm.secretRef" (dict "root" . "key" ($db.migrationPasswordKey | default $db.passwordKey | default "DB_PASSWORD")) | nindent 14 }}
+            {{- range $schemas }}
+            - name: RUNTIME_PASSWORD_{{ . | upper }}
+              {{- include "cm.secretRef" (dict "root" $ "key" (printf "RUNTIME_DB_PASSWORD_%s" (. | upper))) | nindent 14 }}
+            {{- end }}
+          resources: {requests: {cpu: 50m, memory: 64Mi}, limits: {memory: 128Mi}}
+          securityContext: {{- include "cm.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            - {name: script, mountPath: /scripts, readOnly: true}
+            - {name: tmp, mountPath: /tmp}
+            {{- if ($db.tls | default dict).caConfigMap }}
+            - {name: db-ca, mountPath: /etc/db-ca, readOnly: true}
+            {{- end }}
+      volumes:
+        - name: script
+          configMap: {name: {{ .Release.Name }}-database-roles-script, defaultMode: 0555}
+        - name: tmp
+          emptyDir: {sizeLimit: 16Mi}
+        {{- if ($db.tls | default dict).caConfigMap }}
+        - name: db-ca
+          configMap:
+            name: {{ $db.tls.caConfigMap }}
+            items:
+              - {key: {{ $db.tls.caKey | default "ca-bundle.pem" }}, path: ca-bundle.pem}
+        {{- end }}
+{{- end }}

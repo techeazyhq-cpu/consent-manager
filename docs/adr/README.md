@@ -95,6 +95,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [087](adr-087-datastore-metrics-and-alert-routing.md) | Metrics from the datastores, and somewhere for alerts to go | Accepted |
 | [088](adr-088-calendar-months-on-the-dashboard.md) | Calendar months on the dashboard | Accepted |
 | [089](adr-089-sign-in-code-refusal-metrics.md) | Counting the sign-in codes that are refused | Accepted |
+| [090](adr-090-least-privilege-in-one-switch.md) | Least-privilege database logins from one Helm switch | Accepted |
 
 ## Writing one
 

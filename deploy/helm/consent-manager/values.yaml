@@ -52,6 +52,12 @@ config:
     # (`user`, which then only reads and writes rows). Both default to `user`, as before. A service can set its own under `services.<name>.database`.
     # migrationUser: cm
     # migrationPasswordKey: MIGRATION_DB_PASSWORD
+    # Least privilege in one switch (ADR-082, ADR-090): each service queries as cm_<schema>_app (password key RUNTIME_DB_PASSWORD_<SCHEMA> in
+    # the secret) and migrates as the owner (`user`, or migrationUser), and a hook after install and upgrade creates those logins, waiting
+    # for each schema to exist, which a first install does by itself. A service that sets its own `database.user` keeps it.
+    leastPrivilege:
+      enabled: false
+      waitForSchemasSeconds: 900
     # TLS to the server that proves it is the right one (ADR-085). mode: require | verify-ca | verify-full (the last is the one to use);
     # caConfigMap: a ConfigMap with the server's certificate authority bundle (Amazon RDS's, Azure's, Cloud SQL's), mounted into every
     # pod that uses the database, key caKey. With a mode set it replaces jdbcParams and r2dbcParams below.
@@ -222,6 +228,10 @@ ingress:
 
 # Creates the Keycloak database next to consent_manager where the cloud creates only one (AWS RDS). A pre-install hook.
 # Off by default: the common chart's init Job creates every database on a dev cluster.
+# The hook that creates the per-service logins when config.database.leastPrivilege is on (needs bash, so not the alpine image above).
+databaseRoles:
+  image: postgres:16
+
 databaseInit:
   enabled: false
   image: postgres:16-alpine
