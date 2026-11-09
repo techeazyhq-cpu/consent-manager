@@ -165,6 +165,16 @@ jobs:
           test "$(grep -c 'sslmode=verify-full&sslrootcert=/etc/db-ca/ca-bundle.pem' /tmp/tls.yaml)" -eq 7   # the migration connection of each service
           test "$(grep -c 'sslMode=VERIFY_FULL&sslRootCert=/etc/db-ca/ca-bundle.pem' /tmp/tls.yaml)" -eq 7   # and its queries
           test "$(grep -c 'name: rds-ca' /tmp/tls.yaml)" -eq 8   # mounted in the seven services and in the database-init job
+      - name: The chart passes the invoice payment terms and reminder steps (ADR-105)
+        run: |
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          helm template cm consent-manager > /tmp/dun.yaml
+          grep -q 'CM_BIL_PAYMENT_TERMS_DAYS, value: "14"' /tmp/dun.yaml
+          grep -q 'CM_BIL_REMINDER_DAYS, value: "3,10,20"' /tmp/dun.yaml
+          helm template cm consent-manager --set config.billing.paymentTermsDays=30 --set 'config.billing.reminderDays={7,14}' > /tmp/dun2.yaml
+          grep -q 'CM_BIL_PAYMENT_TERMS_DAYS, value: "30"' /tmp/dun2.yaml
+          grep -q 'CM_BIL_REMINDER_DAYS, value: "7,14"' /tmp/dun2.yaml
+          helm template cm consent-manager --set config.billing.remindersEnabled=false | grep -q 'CM_BIL_REMINDER_DAYS, value: ""'   # off
       - name: Every cloud requires the sign-in service key, the base values do not (ADR-103)
         run: |
           helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }

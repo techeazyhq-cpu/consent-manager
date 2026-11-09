@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-164 entries: 150 API problems, 13 operational log codes and 1 event.
+165 entries: 150 API problems, 14 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -258,6 +258,7 @@ Written as `[CODE]` at the start of a WARN or ERROR message, for alerts and runb
 | `CM-ERASURE-STUCK` | ERROR | Account erasure stuck | An account erasure gave up on a step after eight attempts and stopped. Part of the person's data is erased and part is not. | Find the cause for the step named in the message and retry it in CM Admin; see docs/runbooks/erasure.md. | dsr |
 | `CM-ERRDICT-UNLISTED` | ERROR | Problem missing from the error dictionary | A service answered a problem whose code is not in the error dictionary, so it got a title made from its name. CI should have refused it. | Add the code to cm-error-dictionary.json and run node scripts/error-dictionary.mjs --write. | aud, bil, cns-cmd, cns-qry, df-reg, dsr, gw, ntf, stf |
 | `CM-INTERNAL-ERROR` | ERROR | Unexpected error ended a request | An exception nobody planned for ended a request. The caller was answered with internal-error and the correlation id; the exception and its stack trace are in this log message. | Find the log line by the correlation id the caller quotes, and fix the cause. A burst of them is an incident. | aud, bil, cns-cmd, cns-qry, df-reg, dsr, gw, ntf, stf |
+| `CM-INVOICE-REMINDER-FAILED` | WARN | An invoice reminder could not be raised | The invoice reminder sweep could not raise the reminder for one overdue invoice, or the whole pass failed. It is tried again every hour, and a reminder step is recorded only once it has been raised. | If it repeats, check the billing database and the outbox relay. A fiduciary is not told about an overdue invoice until it clears. | bil |
 | `CM-INVOICE-RUN-FAILED` | WARN | Invoice run failed | The monthly invoice run for last month failed part way. Invoices already issued stay; it is tried again every hour. | If it repeats, check the billing database and the plan prices, then run the month by hand from the admin console. | bil |
 | `CM-NTF-INTERNAL-OPEN` | WARN | Sign-in codes can be requested by anything on the network | cm-ntf-svc has no internal API key, so any caller that can reach it can ask it to send sign-in codes. Logged at start-up. | Set cm.ntf.internal-api-key (NTF_INTERNAL_API_KEY in the chart's secret) and the same value in Keycloak. | ntf |
 | `CM-NTF-INTERNAL-ROTATING` | WARN | The previous sign-in service key is still accepted | cm-ntf-svc has cm.ntf.internal-api-key-previous set, so requests to send a sign-in code are accepted with either the current key or the old one. Logged at start-up; meant only for the time it takes to change the key (ADR-101). | Once cm.ntf.internal.key.previous.used has stopped rising, remove NTF_INTERNAL_API_KEY_PREVIOUS from the secret and restart the service. | ntf |

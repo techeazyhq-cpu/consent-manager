@@ -78,6 +78,11 @@ config:
     currency: INR
     taxLabel: Tax
     taxBps: 0
+    # An invoice falls due this many days after it is issued, and an unpaid one is reminded about by email at each of reminderDays
+    # after that (ADR-105). Only the latest step reached is sent, once. remindersEnabled: false stops them.
+    paymentTermsDays: 14
+    remindersEnabled: true
+    reminderDays: [3, 10, 20]
   redis:
     host: redis.common.svc.cluster.local
     # The certificate authority the cache server's certificate chains to, when it is not one the JVM trusts (Memorystore's own CA):

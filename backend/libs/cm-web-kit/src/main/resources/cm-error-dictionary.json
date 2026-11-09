@@ -1807,6 +1807,19 @@
       ]
     },
     {
+      "code": "CM-INVOICE-REMINDER-FAILED",
+      "kind": "log",
+      "level": "WARN",
+      "category": "operations",
+      "title": "An invoice reminder could not be raised",
+      "description": "The invoice reminder sweep could not raise the reminder for one overdue invoice, or the whole pass failed. It is tried again every hour, and a reminder step is recorded only once it has been raised.",
+      "action": "If it repeats, check the billing database and the outbox relay. A fiduciary is not told about an overdue invoice until it clears.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-bil-svc"
+      ]
+    },
+    {
       "code": "CM-USAGE-ALERT-FAILED",
       "kind": "log",
       "level": "WARN",

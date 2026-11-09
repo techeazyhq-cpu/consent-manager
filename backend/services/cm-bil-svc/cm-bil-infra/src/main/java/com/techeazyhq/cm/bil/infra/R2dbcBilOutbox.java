@@ -37,6 +37,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techeazyhq.cm.audkit.PlatformActionEvt;
+import com.techeazyhq.cm.bil.dom.InvoiceReminderEvt;
+import com.techeazyhq.cm.bil.dom.InvoiceReminderEvtPort;
 import com.techeazyhq.cm.bil.dom.UsgAlertEvtPort;
 import com.techeazyhq.cm.bil.dom.UsgThresholdEvt;
 import com.techeazyhq.cm.evtkit.PulsarTopics;
@@ -47,15 +49,17 @@ import reactor.core.publisher.Mono;
 /**
  * Billing's outbox (ADR-004, ADR-040, ADR-060): an event is written in the same transaction as the change it describes,
  * and a relay publishes what's waiting. Two kinds, each to its own topic: an audited action to
- * {@code evt-platform-action}, where the audit ledger reads it, and a usage threshold to {@code evt-usg-threshold},
- * where cm-df-reg-svc reads it.
+ * {@code evt-platform-action}, where the audit ledger reads it, a usage threshold to {@code evt-usg-threshold}, and an
+ * invoice reminder (ADR-105) to {@code evt-invoice-reminder}, where cm-df-reg-svc reads them.
  */
-public class R2dbcBilOutbox implements UsgAlertEvtPort {
+public class R2dbcBilOutbox implements UsgAlertEvtPort, InvoiceReminderEvtPort {
 
     private static final Logger LOG = LoggerFactory.getLogger(R2dbcBilOutbox.class);
     static final String TOPIC_NAME = "platform-action";
     static final String USG_THRESHOLD_TOPIC = "usg-threshold";
     static final String USG_THRESHOLD_TYPE = "UsgThresholdEvt";
+    static final String INVOICE_REMINDER_TOPIC = "invoice-reminder";
+    static final String INVOICE_REMINDER_TYPE = "InvoiceReminderEvt";
 
     private final DatabaseClient db;
     private final ObjectMapper objectMapper;
@@ -78,6 +82,11 @@ public class R2dbcBilOutbox implements UsgAlertEvtPort {
     public Mono<Void> thresholdReached(UsgThresholdEvt evt) {
         return insert(evt.evtId(), "UsgAlert", evt.dfId() + "/" + evt.period() + "/" + evt.threshold(),
                 USG_THRESHOLD_TYPE, evt, evt.occurredAt());
+    }
+
+    @Override
+    public Mono<Void> reminderDue(InvoiceReminderEvt evt) {
+        return insert(evt.evtId(), "InvoiceReminder", evt.invoiceId() + "/" + evt.stepDays(), INVOICE_REMINDER_TYPE, evt, evt.occurredAt());
     }
 
     private Mono<Void> insert(UUID evtId, String aggType, String aggId, String evtType, Object body, Instant at) {
@@ -124,7 +133,11 @@ public class R2dbcBilOutbox implements UsgAlertEvtPort {
     }
 
     private Mono<Void> publishAndMark(Row row) {
-        String topic = PulsarTopics.evt("bil", USG_THRESHOLD_TYPE.equals(row.evtType()) ? USG_THRESHOLD_TOPIC : TOPIC_NAME);
+        String topic = PulsarTopics.evt("bil", switch (row.evtType()) {
+            case USG_THRESHOLD_TYPE -> USG_THRESHOLD_TOPIC;
+            case INVOICE_REMINDER_TYPE -> INVOICE_REMINDER_TOPIC;
+            default -> TOPIC_NAME;
+        });
         return senders.computeIfAbsent(topic, t -> pulsar.messageSender(Schema.STRING).topic(t).cache(senderCache)
                         .maxInflight(100).build())
                 .sendOne(MessageSpec.of(row.payloadJson()))

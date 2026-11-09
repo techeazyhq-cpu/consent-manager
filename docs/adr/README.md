@@ -110,6 +110,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [102](adr-102-quarters-and-year-to-date.md) | Calendar quarters and the year to date on the dashboard | Accepted |
 | [103](adr-103-internal-key-required-in-the-cloud.md) | The sign-in service key is required in the cloud values | Accepted |
 | [104](adr-104-purposes-beside-the-window-before.md) | Purposes beside the window before on the dashboard | Accepted |
+| [105](adr-105-invoice-reminders.md) | Reminders for unpaid invoices | Accepted |
 
 ## Writing one
 
