@@ -59,6 +59,15 @@ cm:
   pulsar:
     service-url: pulsar://localhost:6650
   aud:
+    # Unusual activity (ADR-112): the last complete hour of each fiduciary against its own last baseline-days, once it has min-history-hours
+    # of history; found when it reaches min-count in the hour and threshold spreads above the usual.
+    anomaly:
+      enabled: true
+      interval-ms: 600000
+      baseline-days: 14
+      min-history-hours: 48
+      min-count: 20
+      threshold: 6.0
     # Checkpoints of the ledger, timestamped by an external RFC 3161 authority (ADR-015).
     anchoring:
       enabled: ${CM_AUD_ANCHORING_ENABLED:true}

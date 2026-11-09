@@ -30,6 +30,7 @@ export type Route =
   | { page: "security" }
   | { page: "billing"; tab: BillingTab }
   | { page: "audit" }
+  | { page: "anomalies" }
   | { page: "grievances" }
   | { page: "erasures" }
   | { page: "status" }
@@ -43,6 +44,7 @@ export function parseRoute(hash: string): Route {
     case "staff":
     case "security":
     case "audit":
+    case "anomalies":
     case "grievances":
     case "erasures":
     case "status":

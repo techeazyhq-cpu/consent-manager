@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-173 entries: 157 API problems, 15 operational log codes and 1 event.
+176 entries: 158 API problems, 17 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -71,7 +71,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `invalid-price` | 400 | The price is not valid | A monthly price is a whole number of minor units from 0 up to a thousand million. | Send monthlyMinor as a non-negative whole number. | no | bil |
 | `invalid-processor` | 400 | Processor is not valid | The name, role, country or contact of the processor is missing or malformed. | Give a name of up to 200 characters, a role of up to 500, a two-letter ISO country code and an email address for the contact. | no | cns-cmd |
 | `invalid-purpose` | 400 | Purpose not valid | The purpose or its content was refused. The detail names what is wrong. | Correct what the detail names. | no | cns-cmd |
-| `invalid-request` | 400 | Request not valid | The request is missing something it needs, or a value is not valid. The detail says which. | Correct the request as the detail says. | no | cns-cmd, df-reg |
+| `invalid-request` | 400 | Request not valid | The request is missing something it needs, or a value is not valid. The detail says which. | Correct the request as the detail says. | no | aud, cns-cmd, df-reg |
 | `invalid-right` | 400 | Right not recognised | The right asked for is not one of access, correction, erasure, grievance or nomination. | Use one of the listed rights. | no | dsr |
 | `invalid-sts` | 400 | Status not recognised | The status filter is not one of the values this list has. | Use one of the listed values. | no | bil, dsr |
 | `invalid-webhook` | 400 | Webhook endpoint not valid | The endpoint's address, its message types or the request body was refused. The detail says why. | Correct the endpoint as the detail says. | no | cns-cmd |
@@ -132,6 +132,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | Code | Status | Title | What it means | What to do | Retry | Raised by |
 |---|---|---|---|---|---|---|
 | `ai-drafting-disabled` | 404 | Drafting with a model is not switched on | The platform has no drafting model set up (cm.cnscmd.ai-drafting.enabled is off), so a purpose cannot be drafted from a description. | Write the purpose by hand, or ask whoever runs the platform to set up a model (ADR-111). | no | cns-cmd |
+| `anomaly-not-found` | 404 | No open finding with that id | There is no finding of unusual activity with that id, or it was already acknowledged. | Reload the Anomalies page and acknowledge a finding that is still open. | no | aud |
 | `api-key-not-found` | 404 | API key not found | No API key with that id belongs to this fiduciary. | List the fiduciary's keys and use an id from that list. | no | df-reg |
 | `aud-not-checkpointed` | 404 | Entry not anchored yet | The entry is not part of a timestamped checkpoint yet, so it has no proof. | Try again after the next checkpoint. | no | aud |
 | `batch-not-found` | 404 | Batch not found | No batch with that id belongs to this fiduciary. | List the batches and use an id from it. | no | cns-cmd |
@@ -259,6 +260,8 @@ Written as `[CODE]` at the start of a WARN or ERROR message, for alerts and runb
 
 | Code | Level | Title | What it means | What to do | Raised by |
 |---|---|---|---|---|---|
+| `CM-ANOMALY-FOUND` | WARN | Unusual activity found | A fiduciary's activity in the last hour was far above its own usual, for example a surge of consent requests or API keys. | Open the Anomalies page in CM Admin, look at the fiduciary and the signal, and acknowledge the finding once it is understood; see docs/runbooks/anomaly-detection.md. | aud |
+| `CM-ANOMALY-RUN-FAILED` | WARN | Look for unusual activity failed | The periodic look for unusual activity could not read the ledger or keep its findings. It is tried again at the next interval. | No action unless it repeats; then check the audit service's database connection. | aud |
 | `CM-DF-CLOSING-FAILED` | WARN | Closing a fiduciary failed | A fiduciary whose wind-down has ended could not be closed: a step failed, such as ending its consents or removing its team. It stays LEAVING and is tried again on the next pass; every step can be repeated. | Read the log line for the failing step, fix the cause (often cm-cns-cmd-svc or Keycloak unreachable) and it closes on the next pass. | df-reg |
 | `CM-DF-PURGE-FAILED` | WARN | Retention purge of a fiduciary failed | Deleting a closed fiduciary's records past their retention failed: one of cm-cns-cmd-svc, cm-cns-qry-svc or cm-aud-svc could not be reached or refused. Nothing partly deleted is lost; every call can be repeated. | Read the log line for the failing service, fix the cause and the next hourly pass retries. | df-reg |
 | `CM-ERASURE-STEP-FAILED` | WARN | Account erasure step failed | One attempt at an erasure step failed. It is tried again every two minutes until it gives up. | No action unless CM-ERASURE-STUCK follows; check the named step's service if it repeats. | dsr |

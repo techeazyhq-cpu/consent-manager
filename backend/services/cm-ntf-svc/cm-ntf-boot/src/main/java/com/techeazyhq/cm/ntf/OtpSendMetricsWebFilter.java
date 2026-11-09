@@ -30,7 +30,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import reactor.core.publisher.Mono;
 
 /**
- * Counts the requests to send a sign-in code that this service refuses (ADR-089): {@code cm.ntf.otp.send.refused} with
+ * Counts the requests to send a sign-in code that this service accepts ({@code cm.ntf.otp.send.accepted}, ADR-112) and those it refuses (ADR-089): {@code cm.ntf.otp.send.refused} with
  * {@code reason=limited} for a refusal by the send limit (ADR-080, 429) and {@code reason=key} for a request without the service key
  * (ADR-083, 401). A refusal says nothing in a log that anyone reads; a count can be alerted on, and carries no address, number or code.
  * It wraps the key check, so a request refused there is counted too.
@@ -39,6 +39,8 @@ import reactor.core.publisher.Mono;
 public class OtpSendMetricsWebFilter implements WebFilter, Ordered {
 
     static final String METRIC = "cm.ntf.otp.send.refused";
+    /** Codes this service sent, for the sign-in surge alert (ADR-112): a count, with no address, number or code. */
+    static final String ACCEPTED = "cm.ntf.otp.send.accepted";
 
     private final MeterRegistry registry;
 
@@ -47,6 +49,7 @@ public class OtpSendMetricsWebFilter implements WebFilter, Ordered {
         // both exist from the start, at zero, so "nothing refused" is a number and an alert on a rise has something to rise from
         registry.counter(METRIC, "reason", "limited");
         registry.counter(METRIC, "reason", "key");
+        registry.counter(ACCEPTED);
     }
 
     @Override
@@ -58,6 +61,8 @@ public class OtpSendMetricsWebFilter implements WebFilter, Ordered {
                     registry.counter(METRIC, "reason", "limited").increment();
                 } else if (status != null && status.value() == 401) {
                     registry.counter(METRIC, "reason", "key").increment();
+                } else if (status != null && status.is2xxSuccessful()) {
+                    registry.counter(ACCEPTED).increment();
                 }
                 return Mono.empty();
             });

@@ -89,6 +89,16 @@ config:
     timeoutSeconds: 120
     perHour: 20        # drafts per fiduciary per hour
     maxConcurrent: 2   # asked of the model at once, per pod
+  # Unusual activity (ADR-112): the audit service compares each fiduciary's last complete hour of consent requests, withdrawals, denials, API keys,
+  # webhooks and principal requests with its own last baselineDays, once it has minHistoryHours of history. A finding needs minCount events in the
+  # hour and `threshold` spreads above the usual (about 6 is rare by chance); raise either to see fewer, lower to see more. Findings are on the
+  # Anomalies page of CM Admin, and the UnusualFiduciaryActivity alert fires on each new one.
+  anomalyDetection:
+    enabled: true
+    baselineDays: 14
+    minHistoryHours: 48
+    minCount: 20
+    threshold: 6
   # Invoices (ADR-079): one currency for the platform (ISO 4217), and one tax rate in basis points (1800 is 18%) shown as its own line.
   billing:
     currency: INR

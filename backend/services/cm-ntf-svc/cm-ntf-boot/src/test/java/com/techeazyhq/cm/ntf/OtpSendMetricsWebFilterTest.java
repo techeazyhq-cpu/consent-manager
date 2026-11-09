@@ -38,6 +38,10 @@ class OtpSendMetricsWebFilterTest {
         return registry.counter(OtpSendMetricsWebFilter.METRIC, "reason", reason).count();
     }
 
+    private double accepted() {
+        return registry.counter(OtpSendMetricsWebFilter.ACCEPTED).count();
+    }
+
     private void request(String method, String path, HttpStatus answer) {
         MockServerWebExchange exchange = MockServerWebExchange.from(
                 MockServerHttpRequest.method(org.springframework.http.HttpMethod.valueOf(method), path).build());
@@ -51,7 +55,8 @@ class OtpSendMetricsWebFilterTest {
     void bothCountersExistAtZeroFromTheStart() {
         assertEquals(0, count("limited"));
         assertEquals(0, count("key"));
-        assertEquals(2, registry.getMeters().size());
+        assertEquals(0, accepted());
+        assertEquals(3, registry.getMeters().size());
     }
 
     @Test
@@ -65,7 +70,19 @@ class OtpSendMetricsWebFilterTest {
     }
 
     @Test
-    void aSentCodeAndAnythingElseIsNotCounted() {
+    void aSentCodeIsCountedAsAcceptedAndNotAsARefusal() {
+        request("POST", "/internal/otp/send", HttpStatus.OK);
+        request("POST", "/internal/otp/send", HttpStatus.OK);
+        request("POST", "/internal/otp/send", HttpStatus.UNPROCESSABLE_ENTITY);
+        request("POST", "/api/ntf/push-devices", HttpStatus.OK);
+
+        assertEquals(2, accepted());
+        assertEquals(0, count("limited"));
+        assertEquals(0, count("key"));
+    }
+
+    @Test
+    void aSentCodeAndAnythingElseIsNotCountedAsARefusal() {
         request("POST", "/internal/otp/send", HttpStatus.OK);
         request("POST", "/internal/otp/send", HttpStatus.UNPROCESSABLE_ENTITY);
         request("POST", "/api/ntf/push-devices", HttpStatus.TOO_MANY_REQUESTS);

@@ -911,3 +911,20 @@ export interface StatusReportDto {
   components: StatusComponentDto[];
   notices: StatusNoticeDto[];
 }
+
+/** An hour in which a fiduciary had far more activity of one kind than its own usual (ADR-112): ids, a signal name, a time and numbers. */
+export interface AnomalyDto {
+  id: string;
+  dfId: string;
+  /** consent-requests, consent-withdrawals, consent-denials, api-keys-issued, webhooks-created or principal-requests */
+  signal: string;
+  windowStart: string;
+  observed: number;
+  expected: number;
+  /** How far above the usual, in spreads (see ADR-112). */
+  score: number;
+  detectedAt: string;
+  status: "OPEN" | "ACKNOWLEDGED";
+  acknowledgedBy: string | null;
+  acknowledgedAt: string | null;
+}

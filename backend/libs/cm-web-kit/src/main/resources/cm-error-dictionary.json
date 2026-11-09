@@ -122,6 +122,19 @@
       ]
     },
     {
+      "code": "anomaly-not-found",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "No open finding with that id",
+      "description": "There is no finding of unusual activity with that id, or it was already acknowledged.",
+      "action": "Reload the Anomalies page and acknowledge a finding that is still open.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-aud-svc"
+      ]
+    },
+    {
       "code": "batch-not-found",
       "kind": "problem",
       "status": 404,
@@ -914,6 +927,7 @@
       "action": "Correct the request as the detail says.",
       "retryable": false,
       "raisedBy": [
+        "cm-aud-svc",
         "cm-cns-cmd-svc",
         "cm-df-reg-svc"
       ]
@@ -1801,6 +1815,32 @@
       "retryable": false,
       "raisedBy": [
         "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "CM-ANOMALY-FOUND",
+      "kind": "log",
+      "level": "WARN",
+      "category": "operations",
+      "title": "Unusual activity found",
+      "description": "A fiduciary's activity in the last hour was far above its own usual, for example a surge of consent requests or API keys.",
+      "action": "Open the Anomalies page in CM Admin, look at the fiduciary and the signal, and acknowledge the finding once it is understood; see docs/runbooks/anomaly-detection.md.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-aud-svc"
+      ]
+    },
+    {
+      "code": "CM-ANOMALY-RUN-FAILED",
+      "kind": "log",
+      "level": "WARN",
+      "category": "operations",
+      "title": "Look for unusual activity failed",
+      "description": "The periodic look for unusual activity could not read the ledger or keep its findings. It is tried again at the next interval.",
+      "action": "No action unless it repeats; then check the audit service's database connection.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-aud-svc"
       ]
     },
     {

@@ -63,6 +63,7 @@ import type {
   PlnChgReqSts,
   ExtDpRefTyp,
   ProblemDetail,
+  AnomalyDto,
   PushDvcRespDto,
   PushPltf,
   PrpsAiStatusDto,
@@ -778,4 +779,12 @@ export const ERASURE_STEP_LABELS: Record<DpErasureStep, string> = {
   AUDIT: "Erasing audit details",
   REQUESTS: "Withdrawing requests and erasing their words",
   IDENTITY: "Deleting the account",
+};
+
+/** Unusual activity the audit service found in the ledger (ADR-112), for platform administrators. */
+export const anomalies = {
+  list: (base: string, token: string, status: "OPEN" | "ACKNOWLEDGED" | "ALL" = "OPEN") =>
+    request<AnomalyDto[]>(base, `/api/aud/anomalies?status=${status}`, token),
+  acknowledge: (base: string, token: string, id: string) =>
+    request<void>(base, `/api/aud/anomalies/${encodeURIComponent(id)}/acknowledge`, token, { method: "POST" }),
 };

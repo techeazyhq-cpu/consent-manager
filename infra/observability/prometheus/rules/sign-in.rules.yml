@@ -27,3 +27,12 @@ groups:
         expr: increase(cm_ntf_otp_send_refused_total{reason="key"}[10m]) > 0
         labels: {severity: page}
         annotations: {summary: "Requests to send a sign-in code arrived without the service key: Keycloak's key is wrong (people cannot sign in) or something else on the network is asking"}
+      # Unusual sign-in traffic (ADR-112): codes sent in the last hour far above the day before, whatever the limits allowed. A count, so no
+      # address, number or code is in it. The floor keeps a quiet platform's first few sign-ins from looking like a surge.
+      - alert: SignInCodeSurge
+        expr: |
+          increase(cm_ntf_otp_send_accepted_total[1h]) > 50
+            and
+          increase(cm_ntf_otp_send_accepted_total[1h]) > 6 * (increase(cm_ntf_otp_send_accepted_total[1d] offset 1h) / 24)
+        labels: {severity: ticket}
+        annotations: {summary: "Sign-in codes sent in the last hour are more than six times the hourly average of the day before: a campaign to sign in in bulk, a bot, or a real event such as a launch; see docs/runbooks/anomaly-detection.md"}
