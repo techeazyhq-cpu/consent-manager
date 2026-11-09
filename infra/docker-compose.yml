@@ -124,6 +124,12 @@ services:
       CM_TRACING_SAMPLING: ${CM_TRACING_SAMPLING:-0}
       # the address tokens name for their status list (ADR-077): the gateway as a fiduciary reaches it
       CM_CNS_TKN_STATUS_LIST_BASE_URL: ${CM_PUBLIC_API_URL:-http://localhost:9000}
+      # drafting a purpose with a model you run yourself (ADR-111): off unless CM_AI_DRAFTING_ENABLED=true; Ollama on this laptop by default
+      CM_CNSCMD_AI_DRAFTING_ENABLED: ${CM_AI_DRAFTING_ENABLED:-false}
+      CM_CNSCMD_AI_DRAFTING_ENDPOINT: ${CM_AI_DRAFTING_ENDPOINT:-http://host.docker.internal:11434}
+      CM_CNSCMD_AI_DRAFTING_MODEL: ${CM_AI_DRAFTING_MODEL:-llama3.2:3b}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - cns-tkn-keys:/var/lib/cm/keys # consent token and receipt signing keys, each its own set, kept across restarts (ADR-006, ADR-025)
     depends_on:

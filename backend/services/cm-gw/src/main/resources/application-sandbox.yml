@@ -38,6 +38,13 @@ spring:
               uri: http://cm-sbx-df-reg-svc:8081
               predicates:
                 - Path=/api/df-reg/**
+            # A purpose drafted by the operator's own model takes longer than the 10 s of an ordinary call (ADR-111), so it has its own
+            # route, and with it its own circuit breaker and time limit: a slow model neither opens the circuit for the rest of cns-cmd nor
+            # is cut at 10 s.
+            - id: cns-cmd-draft-assist
+              uri: http://cm-sbx-cns-cmd-svc:8082
+              predicates:
+                - Path=/api/cns-cmd/prps-defs/draft-assist
             - id: cns-cmd
               uri: http://cm-sbx-cns-cmd-svc:8082
               predicates:

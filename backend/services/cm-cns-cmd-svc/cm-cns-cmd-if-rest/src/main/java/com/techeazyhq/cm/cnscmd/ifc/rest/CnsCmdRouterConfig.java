@@ -85,7 +85,8 @@ public class CnsCmdRouterConfig {
                                                          RcptSignerPort rcptSigner,
                                                          Webhooks webhooks,
                                                          com.techeazyhq.cm.cnscmd.app.CloseDfConsentsHandler closeDfConsents,
-                                                         com.techeazyhq.cm.cnscmd.app.PurgeDfRecordsHandler purgeDfRecords) {
+                                                         com.techeazyhq.cm.cnscmd.app.PurgeDfRecordsHandler purgeDfRecords,
+                                                         com.techeazyhq.cm.cnscmd.app.PrpsDraftAssist prpsDraftAssist) {
         CnsReqHandler cnsReqHandler = new CnsReqHandler(createHandler, approveHandler, denyHandler, cnsReqTerms);
         CnsArtHandler cnsArtHandler = new CnsArtHandler(revokeHandler, refreshTknHandler, liveStatusHandler,
                 changeCnsArtCmds);
@@ -95,6 +96,7 @@ public class CnsCmdRouterConfig {
         DfExportHttpHandler dfExport = new DfExportHttpHandler(cnsRecords);
         CnsReqBatchHttpHandler batches = new CnsReqBatchHttpHandler(submitBatchHandler, batchQueries);
         PrpsDefHttpHandler purposes = new PrpsDefHttpHandler(prpsDefCmds);
+        PrpsDraftAssistHandler draftAssist = new PrpsDraftAssistHandler(prpsDraftAssist);
         ProcessorHttpHandler processors = new ProcessorHttpHandler(processorCmds);
         StatusListHttpHandler statusListHandler = new StatusListHttpHandler(statusLists);
         CnsRecHttpHandler recs = new CnsRecHttpHandler(cnsRecords);
@@ -102,6 +104,9 @@ public class CnsCmdRouterConfig {
 
         return RouterFunctions.route()
                 // purposes and their versions (ADR-031): what requests may ask for
+                // a purpose drafted from a description by the operator's own model, never saved (ADR-111)
+                .GET("/api/cns-cmd/prps-defs/draft-assist/status", draftAssist::status)
+                .POST("/api/cns-cmd/prps-defs/draft-assist", draftAssist::draft)
                 .GET("/api/cns-cmd/prps-defs", purposes::list)
                 .POST("/api/cns-cmd/prps-defs", purposes::create)
                 .GET("/api/cns-cmd/prps-defs/{code}", purposes::get)

@@ -175,6 +175,32 @@ public class CnsCmdBeanConfig {
         return new R2dbcPrpsDefRepoAdapter(db, objectMapper);
     }
 
+    /**
+     * The model that drafts purposes (ADR-111): off unless cm.cnscmd.ai-drafting.enabled, and then an OpenAI-compatible endpoint the operator runs
+     * (Ollama, vLLM, llama.cpp). The key, when the endpoint wants one, is a secret and is never logged.
+     */
+    @Bean
+    public com.techeazyhq.cm.cnscmd.dom.DraftingModelPort draftingModel(WebClient.Builder builder,
+            @Value("${cm.cnscmd.ai-drafting.enabled:false}") boolean enabled,
+            @Value("${cm.cnscmd.ai-drafting.endpoint:http://localhost:11434}") String endpoint,
+            @Value("${cm.cnscmd.ai-drafting.model:llama3.2:3b}") String model,
+            @Value("${cm.cnscmd.ai-drafting.api-key:}") String apiKey,
+            @Value("${cm.cnscmd.ai-drafting.timeout-seconds:100}") int timeoutSeconds,
+            @Value("${cm.cnscmd.ai-drafting.max-tokens:1500}") int maxTokens) {
+        return enabled
+                ? new com.techeazyhq.cm.cnscmd.infra.OpenAiCompatibleDraftingModel(builder, endpoint, model, apiKey, java.time.Duration.ofSeconds(timeoutSeconds), maxTokens)
+                : new com.techeazyhq.cm.cnscmd.infra.NoDraftingModel();
+    }
+
+    @Bean
+    public com.techeazyhq.cm.cnscmd.app.PrpsDraftAssist prpsDraftAssist(com.techeazyhq.cm.cnscmd.dom.DraftingModelPort model, AuditTrail audit,
+            ObjectMapper objectMapper,
+            @Value("${cm.cnscmd.ai-drafting.max-input-chars:2000}") int maxInput,
+            @Value("${cm.cnscmd.ai-drafting.per-hour:20}") int perHour,
+            @Value("${cm.cnscmd.ai-drafting.max-concurrent:2}") int maxConcurrent) {
+        return new com.techeazyhq.cm.cnscmd.app.PrpsDraftAssist(model, audit, objectMapper, java.time.Clock.systemUTC(), maxInput, perHour, maxConcurrent);
+    }
+
     @Bean
     public PrpsDefCmds prpsDefCmds(PrpsDefRepoPort prpsDefRepo,
                                    com.techeazyhq.cm.cnscmd.dom.ProcessorRepoPort processorRepo, AuditTrail audit) {

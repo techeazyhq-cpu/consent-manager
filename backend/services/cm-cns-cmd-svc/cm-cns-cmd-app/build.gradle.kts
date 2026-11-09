@@ -33,6 +33,7 @@ dependencies {
     // keeps this a narrow addition.
     compileOnly("org.springframework:spring-tx:7.0.10")
     compileOnly("org.springframework:spring-context:7.0.10") // @Scheduled on CnsExpirySweepJob
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.3") // the model's JSON reply (ADR-111)
     implementation("org.slf4j:slf4j-api:2.0.20")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
