@@ -36,7 +36,7 @@ needs no change to any service.
 
 ## Not yet / limits
 
-- **Not automated in Helm.** The roles must exist before a release switches to them, and the schemas must exist before the roles
+- ~~**Not automated in Helm.**~~ Done: [ADR-090](adr-090-least-privilege-in-one-switch.md), one switch and a hook. As it was written: The roles must exist before a release switches to them, and the schemas must exist before the roles
   are granted (the first migrations create them). The runbook gives the order: install as the owner, run the script, upgrade with
   the split. A hook that does it is the next step.
 - **The owner is still the shared `cm`** in the default configuration and in the local stack. Giving each schema its own owner

@@ -28,6 +28,8 @@
 #   DB_NAME             the database (default: consent_manager)
 #   OWNER_ROLE          the role that owns the tables and runs the migrations (default: PGUSER)
 #   RUNTIME_PASSWORD_<SCHEMA>   the password for that schema's login, one variable each (RUNTIME_PASSWORD_AUD ...): required, never printed
+#   WAIT_FOR_SCHEMAS_SECONDS    how long to wait for a schema that does not exist yet (the first migrations create it), polling every 5 s
+#                       (default 0: a missing schema stops the script with exit code 3). The Helm hook sets it (ADR-090).
 #
 # Safe to run again: it creates what is missing, sets the password, and grants what the schema has now; the default privileges it sets
 # cover every table a later migration creates. Nothing is revoked from anyone else and nothing is dropped.
@@ -35,6 +37,7 @@ set -euo pipefail
 
 : "${DB_NAME:=consent_manager}"
 : "${PG_EXEC:=}"
+: "${WAIT_FOR_SCHEMAS_SECONDS:=0}"
 OWNER_ROLE="${OWNER_ROLE:-${PGUSER:-cm}}"
 schemas=("$@")
 [ ${#schemas[@]} -gt 0 ] || schemas=(df_reg cns_cmd cns_qry ntf bil aud dsr)
@@ -50,6 +53,17 @@ for schema in "${schemas[@]}"; do
   [ -n "$password" ] || { echo "Set $var to the password of the $schema login" >&2; exit 2; }
   case "$password" in *\'*|*\\*) echo "$var must not contain a quote or a backslash" >&2; exit 2 ;; esac
   role="cm_${schema}_app"
+
+  # the schema is created by the service's first migration; on a first install it may not be there yet
+  waited=0
+  until [ "$(psql_run -X -At -d "$DB_NAME" -c "select count(*) from information_schema.schemata where schema_name = '${schema}'")" = "1" ]; do
+    if [ "$waited" -ge "$WAIT_FOR_SCHEMAS_SECONDS" ]; then
+      echo "The schema ${schema} does not exist in ${DB_NAME} (waited ${waited} s): its service has not run its migrations yet" >&2
+      exit 3
+    fi
+    sleep 5
+    waited=$((waited + 5))
+  done
 
   echo "Schema $schema: login $role ..."
   # the password is part of the statement, so it travels on standard input, never on a command line

@@ -61,6 +61,9 @@ sslMode={{ $tls.mode | upper | replace "-" "_" }}{{ if $tls.caConfigMap }}&sslRo
 {{- define "cm.serviceEnv" -}}
 {{- $root := .root -}}{{- $name := .name -}}{{- $s := .settings -}}
 {{- $c := $root.Values.config -}}{{- $db := mergeOverwrite (deepCopy $c.database) ($s.database | default dict) -}}{{- $dbKey := $db.passwordKey | default "DB_PASSWORD" -}}{{- $migUser := $db.migrationUser | default $db.user -}}{{- $migKey := $db.migrationPasswordKey | default $dbKey -}}
+{{- /* least privilege (ADR-090): the query login is the schema's own, unless this service names one itself */ -}}
+{{- $lp := false -}}{{- if and (($c.database.leastPrivilege | default dict).enabled) $s.schema (not (hasKey ($s.database | default dict) "user")) -}}{{- $lp = true -}}{{- end -}}
+{{- $runUser := ternary (printf "cm_%s_app" ($s.schema | default "")) $db.user $lp -}}{{- $runKey := ternary (printf "RUNTIME_DB_PASSWORD_%s" ($s.schema | default "" | upper)) $dbKey $lp -}}
 - {name: SPRING_PROFILES_ACTIVE, value: docker}
 - {name: JAVA_TOOL_OPTIONS, value: "-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"}
 {{- if $root.Values.metrics.enabled }}
@@ -72,9 +75,9 @@ sslMode={{ $tls.mode | upper | replace "-" "_" }}{{ if $tls.caConfigMap }}&sslRo
 {{- with $s.schema }}
 - name: SPRING_R2DBC_URL
   value: {{ printf "r2dbc:postgresql://%s:%v/%s?schema=%s&%s" $db.host $db.port $db.name . (include "cm.r2dbcParams" $db) | quote }}
-- {name: SPRING_R2DBC_USERNAME, value: {{ $db.user | quote }}}
+- {name: SPRING_R2DBC_USERNAME, value: {{ $runUser | quote }}}
 - name: SPRING_R2DBC_PASSWORD
-  {{- include "cm.secretRef" (dict "root" $root "key" $dbKey) | nindent 2 }}
+  {{- include "cm.secretRef" (dict "root" $root "key" $runKey) | nindent 2 }}
 - name: SPRING_FLYWAY_URL
   value: {{ printf "jdbc:postgresql://%s:%v/%s?%s" $db.host $db.port $db.name (include "cm.jdbcParams" $db) | quote }}
 - {name: SPRING_FLYWAY_USER, value: {{ $migUser | quote }}}
