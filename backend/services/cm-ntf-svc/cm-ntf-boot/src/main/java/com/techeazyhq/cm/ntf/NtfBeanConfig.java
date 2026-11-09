@@ -18,6 +18,7 @@
 
 package com.techeazyhq.cm.ntf;
 
+import com.techeazyhq.cm.evtkit.PulsarClients;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.reactive.client.adapter.AdaptedReactivePulsarClientFactory;
 import org.apache.pulsar.reactive.client.api.ReactivePulsarClient;
@@ -233,7 +234,7 @@ public class NtfBeanConfig {
     @Bean(destroyMethod = "close")
     public PulsarClient pulsarClient(@Value("${cm.pulsar.service-url:pulsar://localhost:6650}") String serviceUrl)
             throws org.apache.pulsar.client.api.PulsarClientException {
-        return PulsarClient.builder().serviceUrl(serviceUrl).build();
+        return PulsarClients.create(serviceUrl);
     }
 
     @Bean

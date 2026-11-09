@@ -104,6 +104,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [096](adr-096-gcp-dedicated-database-instances.md) | A Cloud SQL instance of its own per service on GCP, and Azure's extra servers watched | Accepted |
 | [097](adr-097-scheduled-logical-backup.md) | The logical backup runs on a schedule, in the chart | Accepted |
 | [098](adr-098-redis-trusts-its-own-ca.md) | The services trust the cache server's own CA | Accepted |
+| [099](adr-099-pulsar-tls-and-token.md) | Pulsar over TLS, with a token when the broker asks for one | Accepted |
 
 ## Writing one
 

@@ -18,6 +18,7 @@
 
 package com.techeazyhq.cm.stf;
 
+import com.techeazyhq.cm.evtkit.PulsarClients;
 import org.springframework.beans.factory.annotation.Value;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
@@ -83,7 +84,7 @@ public class StfBeanConfig {
     @Bean(destroyMethod = "close")
     public PulsarClient pulsarClient(@Value("${cm.pulsar.service-url:pulsar://localhost:6650}") String serviceUrl)
             throws PulsarClientException {
-        return PulsarClient.builder().serviceUrl(serviceUrl).build();
+        return PulsarClients.create(serviceUrl);
     }
 
     @Bean

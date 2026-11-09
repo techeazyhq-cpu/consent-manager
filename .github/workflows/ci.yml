@@ -165,7 +165,17 @@ jobs:
           test "$(grep -c 'sslmode=verify-full&sslrootcert=/etc/db-ca/ca-bundle.pem' /tmp/tls.yaml)" -eq 7   # the migration connection of each service
           test "$(grep -c 'sslMode=VERIFY_FULL&sslRootCert=/etc/db-ca/ca-bundle.pem' /tmp/tls.yaml)" -eq 7   # and its queries
           test "$(grep -c 'name: rds-ca' /tmp/tls.yaml)" -eq 8   # mounted in the seven services and in the database-init job
-      - name: The services can trust the cache server's own CA (ADR-098)
+      - name: The services can reach a broker over TLS with a token (ADR-099)
+        run: |
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          helm template cm consent-manager -f consent-manager/values-aws.yaml --set config.pulsar.url=pulsar+ssl://broker:6651 \
+            --set config.pulsar.tls.caConfigMap=pulsar-ca --set config.pulsar.tokenFromSecret=true > /tmp/pt.yaml
+          docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas -kubernetes-version 1.30.0 < /tmp/pt.yaml
+          test "$(grep -c 'CM_PULSAR_TLS_TRUST_CERTS_FILE' /tmp/pt.yaml)" -eq 9
+          test "$(grep -c 'name: CM_PULSAR_AUTH_TOKEN' /tmp/pt.yaml)" -eq 9
+          test "$(grep -c 'name: pulsar-ca, mountPath: /etc/pulsar-ca' /tmp/pt.yaml)" -eq 9
+          test "$(helm template cm consent-manager -f consent-manager/values-aws.yaml | grep -c 'pulsar-ca\|PULSAR_AUTH\|PULSAR_TLS')" -eq 0   # off unless asked for
+      - name: The services can trust the cache server' + "'" + 's own CA (ADR-098)
         run: |
           helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
           helm template cm consent-manager -f consent-manager/values-gcp.yaml --set config.redis.tls.caConfigMap=redis-ca > /tmp/rc.yaml

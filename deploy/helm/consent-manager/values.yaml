@@ -85,6 +85,9 @@ config:
     passwordFromSecret: false
   pulsar:
     url: pulsar://pulsar.common.svc.cluster.local:6650
+    # TLS to the broker (ADR-099): a pulsar+ssl:// url and the CA bundle its certificate chains to, tls: {caConfigMap: pulsar-ca}; and a
+    # token, when the broker needs one, from the secret key PULSAR_AUTH_TOKEN (tokenFromSecret: true). Both off by default.
+    tokenFromSecret: false
   keycloak:
     # what browsers and tokens use (the issuer); services fetch keys from internalUrl
     publicUrl: https://id.example.com

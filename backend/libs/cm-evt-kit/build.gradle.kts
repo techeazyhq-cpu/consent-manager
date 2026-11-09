@@ -25,9 +25,11 @@ dependencies {
     api("com.fasterxml.jackson.core:jackson-databind:2.22.3")
     // the erasure saga's step consumer (ADR-059)
     api("org.apache.pulsar:pulsar-client-reactive-api:0.5.2")
+    api("org.apache.pulsar:pulsar-client-api:3.3.9")
     implementation("org.slf4j:slf4j-api:2.0.20")
 
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
+    testImplementation("org.apache.pulsar:pulsar-client:3.3.9")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

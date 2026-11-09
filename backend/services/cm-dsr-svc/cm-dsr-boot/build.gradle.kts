@@ -27,6 +27,7 @@ dependencies {
     implementation(project(":cm-dsr-infra"))
     implementation(project(":cm-dsr-if-rest"))
     implementation(project(":cm-web-kit"))
+    implementation(project(":cm-evt-kit")) // the Pulsar client (ADR-099)
     implementation(project(":cm-sec-kit"))
     implementation(project(":cm-aud-kit"))
     implementation(project(":cm-kc-kit")) // deletes the principal's account at the end of an erasure (ADR-059)

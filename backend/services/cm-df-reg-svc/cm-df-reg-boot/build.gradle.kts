@@ -29,6 +29,7 @@ dependencies {
     implementation(project(":cm-web-kit"))
     implementation(project(":cm-res-kit"))
     implementation(project(":cm-kc-kit"))
+    implementation(project(":cm-evt-kit")) // the Pulsar client (ADR-099)
     implementation(project(":cm-sec-kit"))
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")
