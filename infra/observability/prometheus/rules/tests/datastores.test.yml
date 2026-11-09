@@ -1,0 +1,57 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+
+# Unit tests for datastores.rules.yml (ADR-092): `promtool test rules` with these series.
+rule_files:
+  - ../datastores.rules.yml
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+      # a session idle in a transaction for 3 minutes and growing: fires after 5 minutes of that
+      - series: 'pg_stat_activity_max_tx_duration{state="idle in transaction",datname="consent_manager"}'
+        values: '0 0 180+60x14'
+      # a short statement never fires
+      - series: 'pg_stat_activity_max_tx_duration{state="active",datname="consent_manager"}'
+        values: '5+0x16'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: DatabaseTransactionIdleOpen
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: DatabaseTransactionIdleOpen
+        exp_alerts:
+          - exp_labels: {severity: ticket}
+            exp_annotations:
+              summary: "A database session has sat in a transaction doing nothing for more than 2 minutes: it holds its locks and a pool connection (ADR-092)"
+      - eval_time: 12m
+        alertname: DatabaseTransactionRunningLong
+        exp_alerts: []
+  - interval: 1m
+    input_series:
+      - series: 'pg_stat_activity_max_tx_duration{state="active",datname="consent_manager"}'
+        values: '0 0 700+60x14'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: DatabaseTransactionRunningLong
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: DatabaseTransactionRunningLong
+        exp_alerts:
+          - exp_labels: {severity: ticket}
+            exp_annotations:
+              summary: "A database statement has been running for more than 10 minutes: a slow query, a lock wait, or a migration (ADR-092)"

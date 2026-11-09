@@ -28,6 +28,16 @@ groups:
         for: 5m
         labels: {severity: ticket}
         annotations: {summary: "PostgreSQL has more than 80% of its connections open: the pools of the services add up (ADR-052)"}
+      - alert: DatabaseTransactionIdleOpen
+        expr: max(pg_stat_activity_max_tx_duration{state=~"idle in transaction.*"}) > 120
+        for: 5m
+        labels: {severity: ticket}
+        annotations: {summary: "A database session has sat in a transaction doing nothing for more than 2 minutes: it holds its locks and a pool connection (ADR-092)"}
+      - alert: DatabaseTransactionRunningLong
+        expr: max(pg_stat_activity_max_tx_duration{state="active"}) > 600
+        for: 5m
+        labels: {severity: ticket}
+        annotations: {summary: "A database statement has been running for more than 10 minutes: a slow query, a lock wait, or a migration (ADR-092)"}
       - alert: RedisDown
         expr: redis_up == 0
         for: 2m

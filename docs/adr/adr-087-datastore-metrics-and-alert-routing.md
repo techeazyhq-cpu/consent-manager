@@ -36,7 +36,7 @@ nowhere to go: nobody is told by an alert that only a person looking at the Prom
   rule files load unchanged where the same metric names are available, and the provider's alarms in Terraform (ADR-042) cover the rest.
 - **Pulsar backlog and consumer lag are not alerted on yet,** because what a normal backlog is depends on the topic; the metrics are
   scraped, so a panel or rule can be added once a normal level is known.
-- **Postgres lock waits, long transactions and replication** are not covered; the exporter has them and they are not wired.
+- **Postgres lock waits and replication** are not covered; the exporter has them and they are not wired. Long and idle-in-transaction sessions are ([ADR-092](adr-092-database-transaction-alerts.md)).
 - **Logs and traces (Loki, Tempo)** are still not here.
 
 ## Options considered

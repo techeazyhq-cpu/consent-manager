@@ -97,6 +97,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [089](adr-089-sign-in-code-refusal-metrics.md) | Counting the sign-in codes that are refused | Accepted |
 | [090](adr-090-least-privilege-in-one-switch.md) | Least-privilege database logins from one Helm switch | Accepted |
 | [091](adr-091-logs-in-loki.md) | Logs in Loki, next to the metrics | Accepted |
+| [092](adr-092-database-transaction-alerts.md) | Alerts on long and idle-in-transaction database sessions | Accepted |
 
 ## Writing one
 
