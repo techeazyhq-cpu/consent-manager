@@ -94,3 +94,14 @@ variable "namespace" {
   type        = string
   default     = "consent-manager"
 }
+
+variable "dedicated_databases" {
+  description = "Services that get a PostgreSQL server of their own (ADR-074, ADR-095), keyed by the service's name in the Helm chart. See modules/datastores."
+  type = map(object({
+    db_name    = string
+    username   = string
+    sku_name   = optional(string)
+    storage_mb = optional(number)
+  }))
+  default = {}
+}

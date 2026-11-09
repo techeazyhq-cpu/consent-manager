@@ -131,3 +131,25 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "dedicated_databases" {
+  description = <<-EOT
+    Services that get a PostgreSQL Flexible Server of their own (ADR-074, ADR-095), keyed by the service's name in the Helm chart, for
+    example cm-aud-svc. Each is zone-redundant, private, backed up with geo-redundancy and locked against deletion like the shared one,
+    in the same delegated subnet. The chart is pointed at it with the `database:` block under that service (the postgres_dedicated
+    output has the address and the vault secret holding its password); the data is moved with deploy/backup/split-schema.sh
+    (docs/runbooks/database-per-service.md).
+  EOT
+  type = map(object({
+    db_name    = string
+    username   = string
+    sku_name   = optional(string)
+    storage_mb = optional(number)
+  }))
+  default = {}
+
+  validation {
+    condition     = alltrue([for d in values(var.dedicated_databases) : d.sku_name == null || !startswith(d.sku_name, "B_")])
+    error_message = "Burstable SKUs do not support high availability."
+  }
+}
