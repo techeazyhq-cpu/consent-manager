@@ -116,6 +116,14 @@ metrics:
   enabled: false
   gatewayPort: 9091
 
+# Traces (ADR-093): every service makes spans and passes the trace on in its calls; none is sampled (so nothing is sent) unless this is on.
+# `sampling` is the share of requests traced (0 to 1), `endpoint` the OTLP/HTTP traces URL of a collector or Tempo, for example
+# http://tempo.observability:4318/v1/traces. A trace holds the route, status and timings, never a body.
+tracing:
+  enabled: false
+  sampling: 0.1
+  endpoint: ""
+
 # A service can have a database server of its own (ADR-074): add a `database:` block to it under `services`, with any of host,
 # port, name, user, jdbcParams, r2dbcParams, and passwordKey (the key in the secret holding that server's password, default
 # DB_PASSWORD). What it leaves out comes from config.database. For example:

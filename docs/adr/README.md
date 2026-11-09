@@ -98,6 +98,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [090](adr-090-least-privilege-in-one-switch.md) | Least-privilege database logins from one Helm switch | Accepted |
 | [091](adr-091-logs-in-loki.md) | Logs in Loki, next to the metrics | Accepted |
 | [092](adr-092-database-transaction-alerts.md) | Alerts on long and idle-in-transaction database sessions | Accepted |
+| [093](adr-093-traces-in-tempo.md) | Traces in Tempo, off until asked for | Accepted |
 
 ## Writing one
 

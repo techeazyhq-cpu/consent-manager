@@ -197,6 +197,13 @@ jobs:
           grep -q 'postgresql://aud-db.example.com:5432/cm_aud?schema=aud' /tmp/split.yaml
           grep -q 'key: AUD_DB_PASSWORD' /tmp/split.yaml
           test "$(grep -c 'aud-db.example.com' /tmp/split.yaml)" -eq 2   # its R2DBC and Flyway URLs, no other service's
+      - name: The chart passes traces on only when asked, and needs an endpoint for them (ADR-093)
+        run: |
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          test "$(helm template cm consent-manager -f consent-manager/values-aws.yaml | grep -c CM_TRACING)" -eq 0
+          helm template cm consent-manager -f consent-manager/values-aws.yaml --set tracing.enabled=true --set tracing.endpoint=http://tempo:4318/v1/traces > /tmp/tr.yaml
+          test "$(grep -c 'name: CM_TRACING_SAMPLING' /tmp/tr.yaml)" -eq 9
+          if helm template cm consent-manager -f consent-manager/values-aws.yaml --set tracing.enabled=true > /dev/null 2>&1; then echo "rendered without an endpoint"; exit 1; fi
       - name: The chart renders with a mesh, metrics and a scraper allowed (ADR-070, ADR-073)
         run: |
           helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
