@@ -20,7 +20,7 @@ import { useEffect, useState } from "react";
 import { insights, type CnsLcySts, type DfInsightsDto } from "api-client";
 import { ErrorBanner, Spinner, friendlyError, humanise } from "ui-kit/src/index";
 import type { Console } from "./console";
-import { PERIODS, changeNote, decidedRate, fmtDay, fmtDuration, niceMax, share } from "./dashboard";
+import { PERIODS, changeNote, comparisonSpan, decidedRate, fmtDay, fmtDuration, monthWindows, niceMax, sameWindow, share, type Window } from "./dashboard";
 import { purposeHref } from "./routes";
 import { freshToken } from "./token";
 
@@ -185,7 +185,10 @@ function roundTop(x: number, top: number, w: number, h: number, r: number): stri
  * decide, decisions by day, each purpose's outcomes, and the changes people made to consents they had given.
  */
 export function Insights({ console: c, onFilter }: { console: Console; onFilter: (sts?: CnsLcySts[]) => void }) {
-  const [days, setDays] = useState(30);
+  const [win, setWin] = useState<Window>({ kind: "days", days: 30 });
+  const days = win.kind === "days" ? win.days : 30; // the span the figures cover is the month's own; this is only for a file's name and the plain window
+  const month = win.kind === "month" ? win.month : undefined;
+  const span = comparisonSpan(win);
   const [compare, setCompare] = useState(false);
   // days are cut in the viewer's own time zone unless they ask for UTC (ADR-078)
   const local = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -195,11 +198,11 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
 
   const download = async (view: "days" | "purposes") => {
     try {
-      const blob = await insights.exportCsv(c.gwBase, await freshToken(c.auth), days, view, tz);
+      const blob = await insights.exportCsv(c.gwBase, await freshToken(c.auth), days, view, tz, month);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `consent-insights-${view}-${days}d.csv`;
+      a.download = `consent-insights-${view}-${month ?? `${days}d`}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -212,7 +215,7 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
     setError(null);
     (async () => {
       try {
-        const d = await insights.get(c.gwBase, await freshToken(c.auth), days, { tz, compare });
+        const d = await insights.get(c.gwBase, await freshToken(c.auth), days, { tz, compare, month });
         if (live) setData(d);
       } catch (err) {
         if (live) setError(friendlyError(err));
@@ -221,7 +224,7 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
     return () => {
       live = false;
     };
-  }, [c.auth, c.gwBase, days, tz, compare]);
+  }, [c.auth, c.gwBase, days, month, tz, compare]);
 
   const o = data?.outcomes;
   const rate = o ? decidedRate(o) : null;
@@ -229,18 +232,18 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
   return (
     <>
       <div className="cm-toolbar df-periods" role="group" aria-label="Period">
-        {PERIODS.map((p) => (
+        {[...PERIODS.map((p) => ({ window: { kind: "days", days: p.days } as Window, label: p.label })), ...monthWindows()].map((p) => (
           <button
-            key={p.days}
-            className={`cm-btn${p.days === days ? " cm-btn-primary" : ""}`}
-            aria-pressed={p.days === days}
-            onClick={() => setDays(p.days)}
+            key={p.label}
+            className={`cm-btn${sameWindow(p.window, win) ? " cm-btn-primary" : ""}`}
+            aria-pressed={sameWindow(p.window, win)}
+            onClick={() => setWin(p.window)}
           >
             {p.label}
           </button>
         ))}
         <label className="cm-note" style={{ marginLeft: "auto" }}>
-          <input type="checkbox" checked={compare} onChange={(e) => setCompare(e.target.checked)} /> Compare with the {days} days before
+          <input type="checkbox" checked={compare} onChange={(e) => setCompare(e.target.checked)} /> Compare with the {span}
         </label>
         <select aria-label="Time zone" value={tz} onChange={(e) => setTz(e.target.value)}>
           <option value={local}>Days in {local}</option>
@@ -253,26 +256,30 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
           Download purposes (CSV)
         </button>
       </div>
-      <p className="cm-note">Requests raised in the last {PERIODS.find((p) => p.days === days)?.label}</p>
+      <p className="cm-note">
+        {win.kind === "month"
+          ? `Requests raised in ${new Date(`${win.month}-01T00:00:00Z`).toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" })}`
+          : `Requests raised in the last ${PERIODS.find((p) => p.days === win.days)?.label}`}
+      </p>
       {error ? <ErrorBanner message={error} /> : null}
       {!data || !o ? (
-        error ? null : <Spinner label="Working out the figures…" />
+        error ? null : <Spinner label="Working out the figuresâ€¦" />
       ) : (
         <>
           <div className="cm-summary">
-            <Stat value={String(o.raised)} label="Raised" note={changeNote(o.raised, data.previous?.outcomes.raised, days)} />
+            <Stat value={String(o.raised)} label="Raised" note={changeNote(o.raised, data.previous?.outcomes.raised, span)} />
             <Stat
               value={String(o.given)}
               label="Given"
-              note={[rate != null ? `${rate}% of those who decided` : undefined, changeNote(o.given, data.previous?.outcomes.given, days)]
+              note={[rate != null ? `${rate}% of those who decided` : undefined, changeNote(o.given, data.previous?.outcomes.given, span)]
                 .filter(Boolean)
-                .join(" � ") || undefined}
+                .join(" · ") || undefined}
               onClick={() => onFilter(["ISSUED", "REVOKED", "EXPIRED"])}
             />
             <Stat
               value={String(o.refused)}
               label="Refused"
-              note={changeNote(o.refused, data.previous?.outcomes.refused, days)}
+              note={changeNote(o.refused, data.previous?.outcomes.refused, span)}
               onClick={() => onFilter(["DENIED"])}
             />
             <Stat
@@ -289,7 +296,7 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
             <Stat value={fmtDuration(data.decisions.medianSeconds)} label="Median" note="from request to decision" />
             <Stat value={fmtDuration(data.decisions.p90Seconds)} label="9 in 10 decided within" />
             <Stat
-              value={data.decisions.decided ? `${share(data.decisions.withinADay, data.decisions.decided)}%` : "—"}
+              value={data.decisions.decided ? `${share(data.decisions.withinADay, data.decisions.decided)}%` : "â€”"}
               label="Decided within a day"
               note={`${data.decisions.decided} decided`}
             />
@@ -299,7 +306,7 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
 
           <h3 className="cm-section-title">After consent was given</h3>
           <div className="cm-summary">
-            <Stat value={String(data.changes.withdrawn)} label="Withdrawn" note={changeNote(data.changes.withdrawn, data.previous?.changes.withdrawn, days)} />
+            <Stat value={String(data.changes.withdrawn)} label="Withdrawn" note={changeNote(data.changes.withdrawn, data.previous?.changes.withdrawn, span)} />
             <Stat value={String(data.changes.narrowed)} label="Narrowed or shortened" />
             <Stat value={String(data.changes.renewed)} label="Renewed" />
             <Stat value={String(data.changes.lapsed)} label="Lapsed" />
@@ -334,7 +341,7 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
                           <td>{p.outcomes.given}</td>
                           <td>{p.outcomes.refused}</td>
                           <td>{p.outcomes.awaiting}</td>
-                          <td>{r == null ? "—" : `${r}%`}</td>
+                          <td>{r == null ? "â€”" : `${r}%`}</td>
                           <td>{fmtDuration(p.medianSeconds)}</td>
                         </tr>
                       );

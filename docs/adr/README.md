@@ -93,6 +93,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [085](adr-085-database-connections-verify-the-server.md) | Database connections that check who answers | Accepted |
 | [086](adr-086-release-bill-of-materials-and-provenance.md) | A bill of materials and provenance for every released image | Accepted |
 | [087](adr-087-datastore-metrics-and-alert-routing.md) | Metrics from the datastores, and somewhere for alerts to go | Accepted |
+| [088](adr-088-calendar-months-on-the-dashboard.md) | Calendar months on the dashboard | Accepted |
 
 ## Writing one
 

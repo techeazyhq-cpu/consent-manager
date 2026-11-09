@@ -46,6 +46,11 @@ public class DfInsightsQryHandler {
         this.clock = clock;
     }
 
+    /** The read model this answers from (for tests that want another clock over the same data). */
+    public DfInsightsPort port() {
+        return port;
+    }
+
     public Mono<DfInsights> handle(String dfId, int days) {
         return handle(dfId, days, ZoneOffset.UTC, false);
     }
@@ -58,18 +63,49 @@ public class DfInsightsQryHandler {
         int window = Math.min(Math.max(days, 1), MAX_DAYS);
         Instant to = clock.instant();
         Instant from = to.minus(Duration.ofDays(window));
+        return figures(dfId, from, to, from.minus(Duration.ofDays(window)), from, zone, compare);
+    }
+
+    /** How far back a calendar month may be asked for. */
+    public static final int MAX_MONTHS_BACK = 24;
+
+    /**
+     * The figures for one calendar month in {@code zone} (ADR-088): all of a month that has ended, and the month so far for this one.
+     * With {@code compare}, the month before: the whole of it when this month has ended, and only the same number of days from its
+     * start when this month is still going, so "this month" is never set against a month with more days in it.
+     *
+     * @throws IllegalArgumentException for a month in the future, or further back than {@link #MAX_MONTHS_BACK}
+     */
+    public Mono<DfInsights> handleMonth(String dfId, java.time.YearMonth month, ZoneId zone, boolean compare) {
+        java.time.YearMonth thisMonth = java.time.YearMonth.from(clock.instant().atZone(zone));
+        if (month.isAfter(thisMonth) || month.isBefore(thisMonth.minusMonths(MAX_MONTHS_BACK))) {
+            throw new IllegalArgumentException("the month is from the last " + MAX_MONTHS_BACK + " months up to this one");
+        }
+        Instant from = month.atDay(1).atStartOfDay(zone).toInstant();
+        Instant end = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant();
+        Instant to = end.isAfter(clock.instant()) ? clock.instant() : end;
+        Instant beforeFrom = month.minusMonths(1).atDay(1).atStartOfDay(zone).toInstant();
+        // a month that has ended is set against all of the one before; one still going, against the same stretch of its start
+        Instant beforeTo = end.isAfter(clock.instant()) ? beforeFrom.plus(Duration.between(from, to)) : from;
+        if (beforeTo.isAfter(from)) {
+            beforeTo = from; // the month before ends where this one begins, however long this one has run
+        }
+        return figures(dfId, from, to, beforeFrom, beforeTo, zone, compare);
+    }
+
+    private Mono<DfInsights> figures(String dfId, Instant from, Instant to, Instant before, Instant beforeTo, ZoneId zone,
+                                     boolean compare) {
         Mono<DfInsights> current = Mono.zip(port.byPurpose(dfId, from, to).collectList(), port.decisions(dfId, from, to),
                         port.byDay(dfId, from, to, zone).collectList(), port.changes(dfId, from, to))
                 .map(t -> DfInsights.of(from, to, t.getT1(), t.getT2(), t.getT3(), t.getT4(), zone));
         if (!compare) {
             return current;
         }
-        Instant before = from.minus(Duration.ofDays(window));
-        Mono<DfInsights.Previous> previous = Mono.zip(port.byPurpose(dfId, before, from).collectList(),
-                        port.decisions(dfId, before, from), port.changes(dfId, before, from))
+        Mono<DfInsights.Previous> previous = Mono.zip(port.byPurpose(dfId, before, beforeTo).collectList(),
+                        port.decisions(dfId, before, beforeTo), port.changes(dfId, before, beforeTo))
                 .map(t -> {
-                    DfInsights totals = DfInsights.of(before, from, t.getT1(), t.getT2(), java.util.List.of(), t.getT3(), zone);
-                    return new DfInsights.Previous(before, from, totals.outcomes(), t.getT2(), t.getT3());
+                    DfInsights totals = DfInsights.of(before, beforeTo, t.getT1(), t.getT2(), java.util.List.of(), t.getT3(), zone);
+                    return new DfInsights.Previous(before, beforeTo, totals.outcomes(), t.getT2(), t.getT3());
                 });
         return Mono.zip(current, previous).map(t -> t.getT1().withPrevious(t.getT2()));
     }

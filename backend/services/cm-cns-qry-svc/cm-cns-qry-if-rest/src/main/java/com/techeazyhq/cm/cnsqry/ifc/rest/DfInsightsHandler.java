@@ -49,8 +49,10 @@ public class DfInsightsHandler {
         return request.principal().cast(JwtAuthenticationToken.class)
                 .map(token -> AuthCtx.from((Jwt) token.getPrincipal()))
                 .filter(AuthCtx::isDf)
-                .flatMap(ctx -> insights.handle(ctx.dfId(), q.days(), q.zone(), q.compare()))
+                .flatMap(ctx -> q.run(insights, ctx.dfId(), q.compare()))
                 .flatMap(result -> ServerResponse.ok().bodyValue(result))
+                // a month out of range is the caller's mistake, like a bad zone
+                .onErrorResume(IllegalArgumentException.class, e -> ServerResponse.badRequest().build())
                 .switchIfEmpty(Mono.defer(() -> ServerResponse.status(HttpStatus.FORBIDDEN).build()));
     }
 
@@ -67,25 +69,37 @@ public class DfInsightsHandler {
         return request.principal().cast(JwtAuthenticationToken.class)
                 .map(token -> AuthCtx.from((Jwt) token.getPrincipal()))
                 .filter(AuthCtx::isDf)
-                .flatMap(ctx -> insights.handle(ctx.dfId(), q.days(), q.zone(), false))
+                .flatMap(ctx -> q.run(insights, ctx.dfId(), false))
                 .flatMap(result -> ServerResponse.ok()
                         .contentType(new org.springframework.http.MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
                         .header("Content-Disposition", "attachment; filename=\"consent-insights-" + view + ".csv\"")
                         .bodyValue(view.equals("days") ? InsightsCsv.days(result) : InsightsCsv.purposes(result)))
+                .onErrorResume(IllegalArgumentException.class, e -> ServerResponse.badRequest().build())
                 .switchIfEmpty(Mono.defer(() -> ServerResponse.status(HttpStatus.FORBIDDEN).build()));
     }
 
-    /** The window, time zone and comparison a request asks for; null when any of them is not valid. */
-    record Query(int days, java.time.ZoneId zone, boolean compare) {
+    /**
+     * The window, time zone and comparison a request asks for; null when any of them is not valid. {@code month} (yyyy-MM, ADR-088)
+     * asks for a calendar month in the zone and takes the place of {@code days}.
+     */
+    record Query(int days, java.time.YearMonth month, java.time.ZoneId zone, boolean compare) {
         static Query of(ServerRequest request) {
             try {
                 int days = request.queryParam("days").map(Integer::parseInt).orElse(DfInsightsQryHandler.DEFAULT_DAYS);
+                java.time.YearMonth month = request.queryParam("month").map(java.time.YearMonth::parse).orElse(null);
                 java.time.ZoneId zone = request.queryParam("tz").map(java.time.ZoneId::of).orElse(java.time.ZoneOffset.UTC);
                 boolean compare = request.queryParam("compare").map(Boolean::parseBoolean).orElse(false);
-                return new Query(days, zone, compare);
+                return new Query(days, month, zone, compare);
             } catch (NumberFormatException | java.time.DateTimeException e) {
                 return null;
             }
+        }
+
+        Mono<com.techeazyhq.cm.cnsqry.dom.DfInsights> run(DfInsightsQryHandler insights, String dfId, boolean withComparison) {
+            if (month == null) {
+                return insights.handle(dfId, days, zone, withComparison);
+            }
+            return insights.handleMonth(dfId, month, zone, withComparison);
         }
     }
 }

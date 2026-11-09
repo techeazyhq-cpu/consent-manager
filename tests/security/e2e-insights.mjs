@@ -62,5 +62,29 @@ const purposes = await get(owner, '/api/cns-qry/insights/export?days=7&view=purp
 expect(purposes.status === 200 && purposes.text.startsWith('purpose,raised,given,refused,awaiting,not_notified,median_seconds_to_decide\n'), 'the purposes export has its own header');
 expect((await get(owner, '/api/cns-qry/insights/export?days=7&view=everything')).status === 400, 'an unknown view is refused');
 
+// ---- calendar months (ADR-088)
+const ym = (back) => {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+};
+const ms = (iso) => Date.parse(iso);
+const thisM = JSON.parse((await get(owner, `/api/cns-qry/insights?month=${ym(0)}&compare=true`)).text);
+expect(ms(thisM.from) === ms(`${ym(0)}-01T00:00:00Z`) && ms(thisM.to) > ms(thisM.from) && ms(thisM.previous.from) === ms(`${ym(1)}-01T00:00:00Z`), 'this month runs from its first day to now, and is set against the month before', `${thisM.from} .. ${thisM.to}`);
+expect(ms(thisM.previous.to) - ms(thisM.previous.from) === Math.min(ms(thisM.to) - ms(thisM.from), ms(thisM.from) - ms(thisM.previous.from)), 'against the same stretch of that month\'s start, never more than the month');
+
+const lastM = JSON.parse((await get(owner, `/api/cns-qry/insights?month=${ym(1)}&compare=true&tz=Asia/Kolkata`)).text);
+expect(lastM.zone === 'Asia/Kolkata' && ms(lastM.previous.to) === ms(lastM.from), 'a month that has ended is set against all of the one before it, in the zone asked for', `${lastM.from} .. ${lastM.to}`);
+expect(ms(lastM.from) === ms(`${ym(1)}-01T00:00:00Z`) - 5.5 * 3600_000, 'its first day begins at midnight in India, 5 h 30 min before midnight UTC');
+expect(ms(lastM.to) === ms(`${ym(0)}-01T00:00:00Z`) - 5.5 * 3600_000, 'and it ends where the next month begins there');
+
+expect((await get(owner, `/api/cns-qry/insights?month=${ym(-1)}`)).status === 400, 'a month in the future is refused');
+expect((await get(owner, `/api/cns-qry/insights?month=${ym(30)}`)).status === 400, 'and one more than 24 months back');
+expect((await get(owner, '/api/cns-qry/insights?month=october')).status === 400, 'and one that is not yyyy-MM');
+const monthCsv = await get(owner, `/api/cns-qry/insights/export?month=${ym(1)}&view=days`);
+const monthRows = monthCsv.text.trim().split('\n');
+expect(monthCsv.status === 200 && monthRows.length - 1 >= 28, 'the CSV of a month has a row for each of its days', `${monthRows.length - 1} rows`);
+expect((await get(owner, `/api/cns-qry/insights/export?month=${ym(-1)}&view=days`)).status === 400, 'and a month in the future is refused there too');
+
 console.log(failed ? '\nSome checks failed.' : '\nAll checks passed.');
 process.exitCode = failed ? 1 : 0;

@@ -125,6 +125,82 @@ class DfInsightsQryHandlerTest {
         assertEquals(java.time.ZoneId.of("Asia/Kolkata"), zones.get(0));
     }
 
+    private final List<String> windows = new ArrayList<>();
+
+    private DfInsightsQryHandler recording() {
+        DfInsightsPort recordingPort = new DfInsightsPort() {
+            @Override
+            public Flux<DfInsights.Purpose> byPurpose(String dfId, Instant from, Instant to) {
+                windows.add(from + " .. " + to);
+                return Flux.empty();
+            }
+
+            @Override
+            public Mono<DfInsights.Decisions> decisions(String dfId, Instant from, Instant to) {
+                return Mono.just(new DfInsights.Decisions(0, null, null, 0));
+            }
+
+            @Override
+            public Flux<DfInsights.Day> byDay(String dfId, Instant from, Instant to, java.time.ZoneId zone) {
+                return Flux.empty();
+            }
+
+            @Override
+            public Mono<DfInsights.Changes> changes(String dfId, Instant from, Instant to) {
+                return Mono.just(new DfInsights.Changes(0, 0, 0, 0));
+            }
+        };
+        return new DfInsightsQryHandler(recordingPort, Clock.fixed(NOW, ZoneOffset.UTC));
+    }
+
+    @Test
+    void thisMonthSoFarIsComparedWithTheSameNumberOfDaysAtTheStartOfLastMonth() {
+        // 20 Oct 10:00 UTC: the month has run 19 days 10 hours
+        DfInsights insights = recording().handleMonth("df-1", java.time.YearMonth.of(2026, 10), ZoneOffset.UTC, true).block();
+
+        assertEquals(Instant.parse("2026-10-01T00:00:00Z"), insights.from());
+        assertEquals(NOW, insights.to(), "a month still going ends now");
+        assertEquals(Instant.parse("2026-09-01T00:00:00Z"), insights.previous().from());
+        assertEquals(Instant.parse("2026-09-20T10:00:00Z"), insights.previous().to(), "the same 19 days 10 hours of September");
+    }
+
+    @Test
+    void aMonthThatHasEndedIsComparedWithTheWholeMonthBefore() {
+        DfInsights insights = recording().handleMonth("df-1", java.time.YearMonth.of(2026, 9), ZoneOffset.UTC, true).block();
+
+        assertEquals(Instant.parse("2026-09-01T00:00:00Z"), insights.from());
+        assertEquals(Instant.parse("2026-10-01T00:00:00Z"), insights.to());
+        assertEquals(Instant.parse("2026-08-01T00:00:00Z"), insights.previous().from());
+        assertEquals(Instant.parse("2026-09-01T00:00:00Z"), insights.previous().to(), "all of August, which is also 31 days against 30");
+    }
+
+    @Test
+    void theMonthBeforeNeverRunsIntoTheMonthAsked() {
+        // late in a long month the elapsed time is longer than the month before it: February is cut where March begins
+        DfInsightsQryHandler late = new DfInsightsQryHandler(recording().port(), Clock.fixed(Instant.parse("2026-03-31T12:00:00Z"), ZoneOffset.UTC));
+        DfInsights insights = late.handleMonth("df-1", java.time.YearMonth.of(2026, 3), ZoneOffset.UTC, true).block();
+
+        assertEquals(Instant.parse("2026-03-01T00:00:00Z"), insights.previous().to());
+    }
+
+    @Test
+    void monthsAreCutInTheZoneAskedFor() {
+        java.time.ZoneId india = java.time.ZoneId.of("Asia/Kolkata");
+        DfInsights insights = recording().handleMonth("df-1", java.time.YearMonth.of(2026, 9), india, false).block();
+
+        assertEquals(Instant.parse("2026-08-31T18:30:00Z"), insights.from(), "1 September in India begins 5 hours 30 minutes earlier in UTC");
+        assertEquals(Instant.parse("2026-09-30T18:30:00Z"), insights.to());
+    }
+
+    @Test
+    void aMonthInTheFutureOrTooFarBackIsRefused() {
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> recording().handleMonth("df-1", java.time.YearMonth.of(2026, 11), ZoneOffset.UTC, false));
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> recording().handleMonth("df-1", java.time.YearMonth.of(2024, 9), ZoneOffset.UTC, false));
+        recording().handleMonth("df-1", java.time.YearMonth.of(2024, 10), ZoneOffset.UTC, false).block();
+    }
+
     @Test
     void theWindowIsOneDayToAYear() {
         handler.handle("df-1", 0).block();
