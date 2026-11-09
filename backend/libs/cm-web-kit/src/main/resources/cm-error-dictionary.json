@@ -1218,6 +1218,19 @@
       ]
     },
     {
+      "code": "billing-unavailable",
+      "kind": "problem",
+      "status": 503,
+      "category": "dependency",
+      "title": "Billing could not be reached",
+      "description": "A fiduciary's departure could not be called off because Billing, which must bill it again, did not answer in time. Nothing was changed: the fiduciary is still leaving, and the one cancellation is not used up.",
+      "action": "Try again in a moment. If it keeps failing, platform staff check cm-bil-svc.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-df-reg-svc"
+      ]
+    },
+    {
       "code": "otp-send-invalid",
       "kind": "problem",
       "status": 400,
@@ -1775,6 +1788,19 @@
       "retryable": false,
       "raisedBy": [
         "cm-ntf-svc"
+      ]
+    },
+    {
+      "code": "CM-LEAVING-BILLING-FAILED",
+      "kind": "log",
+      "level": "WARN",
+      "category": "operations",
+      "title": "Billing could not be told that a fiduciary is leaving",
+      "description": "A fiduciary began to leave, and cm-df-reg-svc could not reach cm-bil-svc to end its billing for the wind-down. The departure went ahead; billing is ended again when the fiduciary closes (ADR-084), so the cost is that it stays billed until then.",
+      "action": "Check cm-bil-svc. To stop billing now, call PUT /api/bil/dfs/{id}/billing-end as an administrator (ADR-109).",
+      "retryable": false,
+      "raisedBy": [
+        "cm-df-reg-svc"
       ]
     },
     {

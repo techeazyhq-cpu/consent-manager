@@ -39,9 +39,18 @@ stops them.** Nothing is sent for a credit note, or for an invoice of nothing. A
 
 ## When a contract ends
 
-Closing a fiduciary ends its billing by itself (ADR-084): the closing pass tells Billing, and no month after it is invoiced. A
-fiduciary that is *leaving* (the wind-down, up to 30 days) is still billed until it closes; to stop billing sooner call
-`PUT /api/bil/dfs/{id}/billing-end` (administrators). The month it closes in is invoiced for the days it was on its plan.
+Billing ends when a fiduciary *starts leaving* ([ADR-109](../adr/adr-109-billing-ends-when-a-fiduciary-starts-leaving.md)), whether the
+Owner asked or two members of staff ended the contract: it can use nothing during the wind-down (up to 30 days), so it is not billed for it.
+The month it starts leaving in is invoiced for the days before. If the departure is **called off**, billing begins again from that
+moment, on the plan it has; the days between are not billed. A **suspended** fiduciary is still billed (a suspension is a hold).
+Closing ends billing too (ADR-084), as a second line.
+
+- If the log says `CM-LEAVING-BILLING-FAILED`, Billing could not be reached when the departure began: the departure went ahead and is still
+  billed until it closes. End it by hand with `PUT /api/bil/dfs/{id}/billing-end` (administrators).
+- If someone cannot call a departure off and sees "Billing could not be reached" (`billing-unavailable`), nothing has changed and
+  the one cancellation is not used up: check cm-bil-svc and they can try again. To bill a fiduciary again by hand:
+  `PUT /api/bil/dfs/{id}/billing-resume` (administrators).
+- Staff changing a leaving fiduciary's plan or its subscription's status re-opens its billing from that moment; end it again by hand.
 
 ## If the run fails
 

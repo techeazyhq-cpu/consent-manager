@@ -42,7 +42,7 @@ not exist yet; this ADR covers what does not.
 - **One currency and one tax rate for the platform.** Tax by the fiduciary's country (GST, VAT, reverse charge) and invoicing a
   fiduciary in its own currency need a country on the tenant and a rates table.
 - **No tax registration number, address or PDF** on the invoice: the printable page is HTML a person prints from a browser.
-- ~~**Closing a fiduciary does not end its billing**~~ It does now (ADR-084). A fiduciary that is only suspended, or leaving, is still billed.
+- ~~**Closing a fiduciary does not end its billing**~~ It does now (ADR-084), and so does starting to leave (ADR-109). A fiduciary that is only suspended is still billed.
 - **The history before this change is approximate** (decision 2), so the first invoices of a fiduciary that changed plans earlier
   charge its present plan for the whole time.
 - **Prices apply as they are when the invoice is issued,** not as they were during the month. Change a price before the first of

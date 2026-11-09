@@ -22,6 +22,7 @@
 //   - the Owner must type the organisation's name; a wrong name starts nothing
 //   - leaving begins a 30-day wind-down, shown to the team, and the team is emailed
 //   - during it the API key is refused with df-leaving and no new key can be issued, but the team can still read
+//   - billing ends when the departure begins and begins again when it is cancelled (ADR-109)
 //   - cancelling restores everything; a second departure cannot be cancelled
 // The throwaway fiduciary is left leaving (closing comes with the next piece), named "Leaving Test …".
 //
@@ -45,6 +46,25 @@ const api = async (token, method, path, body) => {
 const staff = (await (await fetch(`${KC}/realms/cm-staff/protocol/openid-connect/token`, { method: 'POST',
   body: new URLSearchParams({ grant_type: 'password', client_id: 'cm-cm-admin', username: 'admin@cm.local', password: 'admin' }) })).json()).access_token;
 
+// billing's plan stretches for a fiduciary, read from the database (the only place they are visible): {open, total}
+const stretches = async (id) => {
+  if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error('not an id');
+  const { execFileSync } = await import('node:child_process');
+  const sql = `select count(*) filter (where to_at is null) || ',' || count(*) from bil.plan_hst where df_id = '${id}'`;
+  const out = execFileSync('docker', ['exec', '-e', 'PGPASSWORD=cm', 'common-postgres-1', 'psql', '-U', 'cm', '-d', 'consent_manager', '-At', '-c', sql], { stdio: 'pipe' }).toString().trim();
+  const [open, total] = out.split(',').map(Number);
+  return { open, total };
+};
+const stretchesBecome = async (id, want) => {
+  let got;
+  for (let i = 0; i < 20; i++) {
+    got = await stretches(id);
+    if (got.open === want.open && got.total === want.total) break;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  return got;
+};
+
 const tag = randomBytes(4).toString('hex');
 const name = `Leaving Test ${tag}`;
 const contact = `leaving-${tag}@leaving.example.test`;
@@ -57,6 +77,9 @@ const key = { apiKey: issued.apiKey, signingSecret: issued.signingSecret };
 const LIST = '/api/cns-cmd/prps-defs';
 expect((await call(key, 'GET', LIST)).status === 200, 'the new fiduciary\'s key works');
 
+const billed = await stretchesBecome(df.id, { open: 1, total: 1 });
+expect(billed.open === 1 && billed.total === 1, 'an active fiduciary is billed: one open plan stretch', JSON.stringify(billed));
+
 const wrong = await api(owner, 'POST', '/api/df-reg/me/leave', { organisationName: 'Some Other Ltd' });
 expect(wrong.status === 400 && wrong.json.code === 'invalid-request', 'a wrong name starts nothing', `${wrong.status} ${wrong.json?.code}`);
 expect((await api(owner, 'GET', '/api/df-reg/me/leave')).json.sts === 'ACTIVE', 'still active');
@@ -65,6 +88,8 @@ const left = await api(owner, 'POST', '/api/df-reg/me/leave', { organisationName
 const days = Math.round((Date.parse(left.json?.leavesAt) - Date.parse(left.json?.leavingAt)) / 86_400_000);
 expect(left.status === 200 && left.json.sts === 'LEAVING' && days === 30 && left.json.canCancel, 'the Owner leaves; a 30-day wind-down begins', `${left.status} ${left.json?.sts}, ${days} days`);
 expect((await api(owner, 'POST', '/api/df-reg/me/leave', { organisationName: name })).status === 409, 'leaving twice is refused');
+const notBilled = await stretchesBecome(df.id, { open: 0, total: 1 });
+expect(notBilled.open === 0 && notBilled.total === 1, 'billing ended when the departure began: no open plan stretch', JSON.stringify(notBilled));
 
 const gone = await call(key, 'GET', LIST);
 expect(gone.status === 403 && gone.json?.code === 'df-leaving', 'its API key is refused with df-leaving', `${gone.status} ${gone.json?.code}`);
@@ -85,10 +110,14 @@ expect(mail > 0, 'the team was emailed', `${mail} message(s)`);
 const back = await api(owner, 'POST', '/api/df-reg/me/leave/cancel');
 expect(back.status === 200 && back.json.sts === 'ACTIVE' && !back.json.leavesAt, 'the Owner cancels; it is active again', `${back.status} ${back.json?.sts}`);
 expect((await call(key, 'GET', LIST)).status === 200, 'the same key works again');
+const rebilled = await stretchesBecome(df.id, { open: 1, total: 2 });
+expect(rebilled.open === 1 && rebilled.total === 2, 'billing began again when it was cancelled: a new open stretch, the days between unbilled', JSON.stringify(rebilled));
 expect((await api(owner, 'POST', '/api/df-reg/me/leave/cancel')).json?.code === 'df-not-leaving', 'nothing left to cancel');
 
 const again = await api(owner, 'POST', '/api/df-reg/me/leave', { organisationName: name });
 expect(again.status === 200 && again.json.canCancel === false, 'leaving again: this time it cannot be cancelled', `canCancel ${again.json?.canCancel}`);
+const notBilledAgain = await stretchesBecome(df.id, { open: 0, total: 2 });
+expect(notBilledAgain.open === 0 && notBilledAgain.total === 2, 'and billing ends again', JSON.stringify(notBilledAgain));
 const used = await api(owner, 'POST', '/api/df-reg/me/leave/cancel');
 expect(used.status === 409 && used.json.code === 'leave-cancel-used', 'the second cancel is refused', `${used.status} ${used.json?.code}`);
 const staffLeave = await api(staff, 'POST', '/api/df-reg/me/leave', { organisationName: name });

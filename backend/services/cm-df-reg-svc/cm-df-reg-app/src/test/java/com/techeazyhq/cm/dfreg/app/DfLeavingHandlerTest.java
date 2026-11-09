@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -104,7 +105,32 @@ class DfLeavingHandlerTest {
         }
     };
 
-    private final DfLeavingHandler handler = new DfLeavingHandler(repo, team,
+    private final List<String> billingCalls = new ArrayList<>();
+    private boolean billingEndFails;
+    private boolean billingResumeFails;
+    private boolean billingNeverAnswers;
+
+    private final com.techeazyhq.cm.dfreg.dom.BillingClosurePort billing = new com.techeazyhq.cm.dfreg.dom.BillingClosurePort() {
+        @Override
+        public Mono<Void> endBilling(String dfId) {
+            if (billingNeverAnswers) {
+                return Mono.never();
+            }
+            return billingEndFails ? Mono.error(new IllegalStateException("billing is down"))
+                    : Mono.fromRunnable(() -> billingCalls.add("end " + dfId));
+        }
+
+        @Override
+        public Mono<Void> resumeBilling(String dfId) {
+            if (billingNeverAnswers) {
+                return Mono.never();
+            }
+            return billingResumeFails ? Mono.error(new IllegalStateException("billing is down"))
+                    : Mono.fromRunnable(() -> billingCalls.add("resume " + dfId));
+        }
+    };
+
+    private final DfLeavingHandler handler = new DfLeavingHandler(repo, team, billing,
             (to, subject, body, ref) -> mailFails ? Mono.error(new IllegalStateException("mail down")) : Mono.fromRunnable(() -> mailed.add(to + ": " + subject)),
             (action, dfId, target, details) -> {
                 audited.add(action + " " + details);
@@ -139,6 +165,86 @@ class DfLeavingHandlerTest {
         assertTrue(audited.get(0).startsWith("tenant.leaving"));
         assertEquals(2, mailed.size(), "the whole team is told");
         assertTrue(mailed.get(0).startsWith("owner@acme.example"));
+    }
+
+    @Test
+    void billingEndsWhenTheDepartureBeginsAndTheRestOfTheStartIsUnchanged() {
+        df(DfSts.ACTIVE);
+
+        Df leaving = handler.leave(owner(), "Acme Ltd").block();
+
+        assertEquals(List.of("end " + DF), billingCalls, "Billing is told once, for this fiduciary");
+        assertEquals(DfSts.LEAVING, leaving.sts());
+        assertEquals(2, mailed.size());
+    }
+
+    @Test
+    void aBillingFailureDoesNotStopThePersonLeaving() {
+        df(DfSts.ACTIVE);
+        billingEndFails = true;
+
+        Df leaving = handler.leave(owner(), "Acme Ltd").block();
+
+        assertEquals(DfSts.LEAVING, leaving.sts(), "the departure begins whether or not Billing is reachable");
+        assertEquals(DfSts.LEAVING, dfs.get(DF).sts());
+        assertEquals(2, mailed.size(), "and the team is still told");
+        assertTrue(audited.get(0).startsWith("tenant.leaving"));
+    }
+
+    @Test
+    void aWrongNameDoesNotTouchBilling() {
+        df(DfSts.ACTIVE);
+
+        refused(400, "invalid-request", () -> handler.leave(owner(), "Acme").block());
+
+        assertTrue(billingCalls.isEmpty());
+    }
+
+    @Test
+    void cancellingTheDepartureBillsTheFiduciaryAgain() {
+        df(DfSts.ACTIVE);
+        handler.leave(owner(), "Acme Ltd").block();
+
+        handler.cancel(owner()).block();
+
+        assertEquals(List.of("end " + DF, "resume " + DF), billingCalls);
+    }
+
+    @Test
+    void ifBillingCannotResumeTheCancellationFailsForTheCaller() {
+        df(DfSts.ACTIVE);
+        handler.leave(owner(), "Acme Ltd").block();
+        billingResumeFails = true;
+
+        // the caller gets a problem it can retry; in the service the request is one transaction, so the cancellation is not kept
+        refused(503, "billing-unavailable", () -> handler.cancel(owner()).block());
+        assertEquals(List.of("end " + DF), billingCalls, "no resume was recorded");
+    }
+
+    @Test
+    void aBillingThatNeverAnswersDoesNotHoldUpTheDeparture() {
+        df(DfSts.ACTIVE);
+        billingNeverAnswers = true;
+        long started = System.nanoTime();
+
+        Df leaving = handler.leave(owner(), "Acme Ltd").block(Duration.ofSeconds(9));
+
+        long seconds = Duration.ofNanos(System.nanoTime() - started).toSeconds();
+        assertEquals(DfSts.LEAVING, leaving.sts(), "the departure begins");
+        assertTrue(seconds < 6, "after waiting only the short wait for Billing, not the gateway's 10 seconds: " + seconds);
+        assertEquals(2, mailed.size());
+    }
+
+    @Test
+    void aBillingThatNeverAnswersFailsTheCancellationCleanlyAndInTime() {
+        df(DfSts.ACTIVE);
+        handler.leave(owner(), "Acme Ltd").block();
+        billingNeverAnswers = true;
+
+        long started = System.nanoTime();
+        refused(503, "billing-unavailable", () -> handler.cancel(owner()).block(Duration.ofSeconds(9)));
+
+        assertTrue(Duration.ofNanos(System.nanoTime() - started).toSeconds() < 8, "inside the gateway's 10 seconds");
     }
 
     @Test

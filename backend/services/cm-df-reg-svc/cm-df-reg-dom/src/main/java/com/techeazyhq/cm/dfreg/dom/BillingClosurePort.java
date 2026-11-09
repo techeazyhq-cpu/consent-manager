@@ -20,9 +20,15 @@ package com.techeazyhq.cm.dfreg.dom;
 
 import reactor.core.publisher.Mono;
 
-/** Tells Billing that a fiduciary has closed, so it is invoiced for no month after it (ADR-079, ADR-084). */
+/**
+ * Tells Billing that a fiduciary has closed, so it is invoiced for no month after it (ADR-079, ADR-084), or that it has begun to leave
+ * (it can use nothing, so it is not billed for the wind-down) and, if that is called off, that it is billed again (ADR-109).
+ */
 public interface BillingClosurePort {
 
     /** Ends the fiduciary's billing from now. Running it again changes nothing, so a closing pass that is repeated is safe. */
     Mono<Void> endBilling(String dfId);
+
+    /** Bills the fiduciary again from now, on the plan it has: a departure was called off (ADR-109). Safe to repeat. */
+    Mono<Void> resumeBilling(String dfId);
 }

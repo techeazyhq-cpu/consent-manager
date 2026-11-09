@@ -136,12 +136,20 @@ class DfClosureHandlerTest {
 
     private boolean billingDown;
 
-    private final com.techeazyhq.cm.dfreg.dom.BillingClosurePort billing = dfId -> {
-        if (billingDown) {
-            return Mono.error(new IllegalStateException("billing is down"));
+    private final com.techeazyhq.cm.dfreg.dom.BillingClosurePort billing = new com.techeazyhq.cm.dfreg.dom.BillingClosurePort() {
+        @Override
+        public Mono<Void> endBilling(String dfId) {
+            if (billingDown) {
+                return Mono.error(new IllegalStateException("billing is down"));
+            }
+            calls.add("billing " + dfId);
+            return Mono.empty();
         }
-        calls.add("billing " + dfId);
-        return Mono.empty();
+
+        @Override
+        public Mono<Void> resumeBilling(String dfId) {
+            return Mono.empty();
+        }
     };
 
     private final DfClosureHandler handler = new DfClosureHandler(repo, consents, billing, keys, members, logos,

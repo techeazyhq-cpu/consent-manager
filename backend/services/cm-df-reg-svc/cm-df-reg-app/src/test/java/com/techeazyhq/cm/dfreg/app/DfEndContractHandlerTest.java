@@ -133,7 +133,21 @@ class DfEndContractHandlerTest {
         return Mono.empty();
     };
 
-    private final DfLeavingHandler leaving = new DfLeavingHandler(dfRepo, team,
+    private final List<String> billingCalls = new ArrayList<>();
+
+    private final com.techeazyhq.cm.dfreg.dom.BillingClosurePort billing = new com.techeazyhq.cm.dfreg.dom.BillingClosurePort() {
+        @Override
+        public Mono<Void> endBilling(String dfId) {
+            return Mono.fromRunnable(() -> billingCalls.add("end " + dfId));
+        }
+
+        @Override
+        public Mono<Void> resumeBilling(String dfId) {
+            return Mono.fromRunnable(() -> billingCalls.add("resume " + dfId));
+        }
+    };
+
+    private final DfLeavingHandler leaving = new DfLeavingHandler(dfRepo, team, billing,
             (to, subject, body, ref) -> Mono.fromRunnable(() -> mailed.add(to + ": " + subject)), audit,
             Clock.fixed(NOW, ZoneOffset.UTC), 30);
 
@@ -182,6 +196,29 @@ class DfEndContractHandlerTest {
         assertEquals(1, mailed.size(), "the team is told");
         assertTrue(audited.stream().anyMatch(a -> a.startsWith("tenant.leaving") && a.contains("approvedBy=bob") && a.contains("proposedBy=alice")));
         assertTrue(audited.stream().anyMatch(a -> a.startsWith("tenant.end-contract-approved")));
+    }
+
+    @Test
+    void billingEndsOnlyWhenTheSecondPersonApprovesTheDeparture() {
+        df(DfSts.ACTIVE);
+        LeaveProposal p = handler.propose("alice", DF, LeaveProposal.Kind.START, "Contract ended").block();
+        assertTrue(billingCalls.isEmpty(), "a proposal changes nothing, Billing included");
+
+        handler.approve("bob", p.id()).block();
+
+        assertEquals(List.of("end " + DF), billingCalls);
+    }
+
+    @Test
+    void aStaffCancellationBillsTheFiduciaryAgain() {
+        df(DfSts.ACTIVE);
+        LeaveProposal start = handler.propose("alice", DF, LeaveProposal.Kind.START, "Contract ended").block();
+        handler.approve("bob", start.id()).block();
+        LeaveProposal cancel = handler.propose("alice", DF, LeaveProposal.Kind.CANCEL, "Settled").block();
+
+        handler.approve("bob", cancel.id()).block();
+
+        assertEquals(List.of("end " + DF, "resume " + DF), billingCalls);
     }
 
     @Test

@@ -20,6 +20,7 @@
 package com.techeazyhq.cm.dfreg.app;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -27,6 +28,7 @@ import java.util.Locale;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.techeazyhq.cm.audkit.AuditTrail;
+import com.techeazyhq.cm.dfreg.dom.BillingClosurePort;
 import com.techeazyhq.cm.dfreg.dom.Df;
 import com.techeazyhq.cm.dfreg.dom.DfMember;
 import com.techeazyhq.cm.dfreg.dom.DfMemberDirectoryPort;
@@ -43,23 +45,35 @@ import reactor.core.publisher.Mono;
  * (30 days by default); nothing new is accepted during it, exactly as when suspended, and closing follows when it ends.
  * The Owner confirms by typing the organisation's name. The whole team is emailed, and each step is in the audit ledger.
  * Staff ending a contract needs a second staff member's approval and is not here yet.
+ *
+ * <p>Billing follows the wind-down (ADR-109): it ends when the departure begins (the fiduciary can use nothing, so it is not billed for it),
+ * and begins again if the departure is called off.
  */
 public class DfLeavingHandler {
 
     private static final System.Logger LOG = System.getLogger(DfLeavingHandler.class.getName());
+    /**
+     * How long Billing is waited for (ADR-109). The request is the gateway's, which gives up at 10 seconds, and a Billing that does not
+     * answer must not take the whole request with it: the departure is the person's to make, so ending billing is waited for briefly,
+     * and calling a departure off, which must not leave the fiduciary unbilled, a little longer, then fails cleanly.
+     */
+    static final Duration END_BILLING_WAIT = Duration.ofSeconds(3);
+    static final Duration RESUME_BILLING_WAIT = Duration.ofSeconds(5);
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH).withZone(ZoneOffset.UTC);
 
     private final DfRepoPort dfs;
     private final DfMemberDirectoryPort members;
+    private final BillingClosurePort billing;
     private final EmailPort email;
     private final AuditTrail audit;
     private final Clock clock;
     private final int windDownDays;
 
-    public DfLeavingHandler(DfRepoPort dfs, DfMemberDirectoryPort members, EmailPort email, AuditTrail audit, Clock clock,
-                            int windDownDays) {
+    public DfLeavingHandler(DfRepoPort dfs, DfMemberDirectoryPort members, BillingClosurePort billing, EmailPort email, AuditTrail audit,
+                            Clock clock, int windDownDays) {
         this.dfs = dfs;
         this.members = members;
+        this.billing = billing;
         this.email = email;
         this.audit = audit;
         this.clock = clock;
@@ -85,6 +99,7 @@ public class DfLeavingHandler {
             }
             return dfs.save(df).flatMap(saved -> audit.record("tenant.leaving", saved.id(), saved.id(),
                             AuditTrail.details("closesOn", DAY.format(saved.leavesAt()), "windDownDays", String.valueOf(windDownDays)))
+                    .then(stopBilling(saved))
                     .then(tell(saved, "leaving " + saved.leavesAt().toEpochMilli(),
                             saved.name() + " is leaving Consent Manager",
                             saved.name() + " has asked to leave Consent Manager. A wind-down of " + windDownDays
@@ -106,6 +121,7 @@ public class DfLeavingHandler {
                 return Mono.<Df>error(new DomRuleViolation(409, "df-not-leaving", e.getMessage()));
             }
             return dfs.save(df).flatMap(saved -> audit.record("tenant.leaving-cancelled", saved.id(), saved.id())
+                    .then(resumeBilling(saved))
                     .then(tell(saved, "leaving-cancelled " + clock.instant().toEpochMilli(),
                             saved.name() + " is staying with Consent Manager",
                             "The departure of " + saved.name() + " was called off. The fiduciary is back as it was before. "
@@ -126,6 +142,7 @@ public class DfLeavingHandler {
             return dfs.save(df).flatMap(saved -> audit.record("tenant.leaving", saved.id(), saved.id(),
                             AuditTrail.details("closesOn", DAY.format(saved.leavesAt()), "windDownDays", String.valueOf(windDownDays),
                                     "initiatedBy", "platform staff", "proposedBy", proposedBy, "approvedBy", approvedBy, "reason", reason))
+                    .then(stopBilling(saved))
                     .then(tell(saved, "leaving " + saved.leavesAt().toEpochMilli(),
                             "Consent Manager is ending its agreement with " + saved.name(),
                             "Consent Manager has ended its agreement with " + saved.name() + ". A wind-down of " + windDownDays
@@ -147,11 +164,40 @@ public class DfLeavingHandler {
             }
             return dfs.save(df).flatMap(saved -> audit.record("tenant.leaving-cancelled", saved.id(), saved.id(),
                             AuditTrail.details("initiatedBy", "platform staff", "proposedBy", proposedBy, "approvedBy", approvedBy, "reason", reason))
+                    .then(resumeBilling(saved))
                     .then(tell(saved, "leaving-cancelled " + clock.instant().toEpochMilli(),
                             saved.name() + " is staying with Consent Manager",
                             "The ending of the agreement with " + saved.name() + " was called off. The fiduciary is back as it was before."))
                     .thenReturn(saved));
         });
+    }
+
+    /**
+     * Ends the fiduciary's billing when its departure begins (ADR-109). Best effort: if Billing cannot be reached the departure still
+     * begins, and the closing that ends the wind-down ends billing too (ADR-084), so the worst case is the billing it had before.
+     * Ending twice changes nothing.
+     */
+    private Mono<Void> stopBilling(Df df) {
+        return billing.endBilling(df.id()).timeout(END_BILLING_WAIT).onErrorResume(e -> {
+            LOG.log(System.Logger.Level.WARNING, "[CM-LEAVING-BILLING-FAILED] Billing could not be told that DF {0} is leaving; it is told "
+                    + "again when it closes: {1}", df.id(), e.getMessage());
+            return Mono.empty();
+        });
+    }
+
+    /**
+     * Bills the fiduciary again when its departure is called off (ADR-109). Not best effort: a fiduciary that comes back unbilled would
+     * go unnoticed, so if Billing cannot be reached or is slow the cancellation fails, with a problem the person can retry, and (being one
+     * transaction) is not kept.
+     */
+    private Mono<Void> resumeBilling(Df df) {
+        return billing.resumeBilling(df.id()).timeout(RESUME_BILLING_WAIT)
+                .onErrorMap(e -> !(e instanceof DomRuleViolation), e -> {
+                    LOG.log(System.Logger.Level.WARNING, "Billing could not resume for DF {0}, so its departure was not called off: {1}",
+                            df.id(), e.getMessage());
+                    return new DomRuleViolation(503, "billing-unavailable",
+                            "Billing could not be reached, so the departure was not called off. Nothing has changed; try again shortly");
+                });
     }
 
     /** Tells every member of the team. Best effort: the change is made whether or not the mail goes. */
