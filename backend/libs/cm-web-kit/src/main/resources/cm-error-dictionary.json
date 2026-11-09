@@ -1218,6 +1218,19 @@
       ]
     },
     {
+      "code": "otp-send-invalid",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "A sign-in code request is missing something",
+      "description": "The request to send a sign-in code had no body, or no channel, destination or code. It comes from Keycloak's sign-in step, which always sends all three, so a request like this is something else calling the endpoint or a mistake in a change.",
+      "action": "Send a channel, a destination and the code. If Keycloak sent it, look at the sign-in step's version against the notification service's.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-ntf-svc"
+      ]
+    },
+    {
       "code": "otp-send-limited",
       "kind": "problem",
       "status": 429,

@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-163 entries: 149 API problems, 13 operational log codes and 1 event.
+164 entries: 150 API problems, 13 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -79,6 +79,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `malformed-request` | 400 | Request could not be read | The body, a parameter or a header could not be understood: for example JSON that does not parse, or a value of the wrong type. | Check the request against the API description. | no | aud, bil, cns-cmd, cns-qry, df-reg, dsr, gw, ntf, stf |
 | `no-valid-recipients` | 400 | No valid recipients | None of the rows in the list was a usable email address or number. | Check the list, and that its contact column is named. | no | cns-cmd |
 | `not-a-test-contact` | 400 | Not a test contact | In the sandbox, requests can only go to contacts reserved for testing. | Use a test contact from the developer docs. | no | cns-cmd |
+| `otp-send-invalid` | 400 | A sign-in code request is missing something | The request to send a sign-in code had no body, or no channel, destination or code. It comes from Keycloak's sign-in step, which always sends all three, so a request like this is something else calling the endpoint or a mistake in a change. | Send a channel, a destination and the code. If Keycloak sent it, look at the sign-in step's version against the notification service's. | no | ntf |
 | `payload-too-large` | 413 | Request body too large | The request body is larger than the gateway accepts. | Send a smaller body, or split it. | no | gw |
 | `push-token-invalid` | 400 | Push token not valid | The device token is missing or not valid. | Register the device again. | no | ntf |
 | `signup-invalid-token` | 400 | Confirmation link not valid | The link to confirm an application's contact address is not valid, has expired or was already used. | Apply again to get a new link. | no | df-reg |

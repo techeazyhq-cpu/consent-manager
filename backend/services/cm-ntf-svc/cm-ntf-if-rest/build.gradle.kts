@@ -26,6 +26,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux:4.0.9")
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server:4.0.9")
 
+    testImplementation("org.springframework.boot:spring-boot-starter-test:4.0.9")
+    testImplementation("io.projectreactor:reactor-test:3.8.8")
     testImplementation(platform("org.junit:junit-bom:5.14.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
