@@ -18,6 +18,9 @@
 {{- $ctx := dict "root" . "name" "keycloak" }}
 {{- $k := .Values.keycloak }}
 {{- $db := $k.database }}
+{{- $dbTls := $db.tls | default dict }}
+{{/* the JDBC options: the TLS block (mode, and the CA the server's certificate must chain to) when it is set, else the plain params (ADR-100) */}}
+{{- $dbParams := ternary (printf "sslmode=%s%s" $dbTls.mode (ternary "&sslrootcert=/etc/db-ca/ca-bundle.pem" "" (ne ($dbTls.caConfigMap | default "") ""))) ($db.params | default "") (ne ($dbTls.mode | default "") "") }}
 {{/* Keycloak on its own database, importing the realms (ADR-035, ADR-037) with the cm-idn providers. The realms send
      sign-in codes to cm-ntf-svc in the consent-manager namespace (keycloak.otp). */}}
 apiVersion: apps/v1
@@ -71,7 +74,7 @@ spec:
               {{- include "common.secretRef" (dict "root" . "key" "KEYCLOAK_ADMIN_PASSWORD") | nindent 14 }}
             - {name: KC_DB, value: postgres}
             - name: KC_DB_URL
-              value: {{ printf "jdbc:postgresql://%s:%v/%s%s" $db.host $db.port $db.name (ternary (printf "?%s" $db.params) "" (ne $db.params "")) | quote }}
+              value: {{ printf "jdbc:postgresql://%s:%v/%s%s" $db.host $db.port $db.name (ternary (printf "?%s" $dbParams) "" (ne $dbParams "")) | quote }}
             - {name: KC_DB_USERNAME, value: {{ $db.user | quote }}}
             - name: KC_DB_PASSWORD
               {{- include "common.secretRef" (dict "root" . "key" "KEYCLOAK_DB_PASSWORD") | nindent 14 }}
@@ -113,7 +116,18 @@ spec:
             {{- if $k.providersConfigMap }}
             - {name: providers, mountPath: /opt/keycloak/providers, readOnly: true}
             {{- end }}
+            {{- if $dbTls.caConfigMap }}
+            - {name: db-ca, mountPath: /etc/db-ca, readOnly: true}
+            {{- end }}
       volumes:
+        {{- if $dbTls.caConfigMap }}
+        # the database server's certificate authority, so Keycloak talks to that server and no other (ADR-100)
+        - name: db-ca
+          configMap:
+            name: {{ $dbTls.caConfigMap }}
+            items:
+              - {key: {{ $dbTls.caKey | default "ca-bundle.pem" }}, path: ca-bundle.pem}
+        {{- end }}
         - name: realms-src
           configMap: {name: {{ $k.realmsConfigMap }}}
         - name: import

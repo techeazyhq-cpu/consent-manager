@@ -165,6 +165,17 @@ jobs:
           test "$(grep -c 'sslmode=verify-full&sslrootcert=/etc/db-ca/ca-bundle.pem' /tmp/tls.yaml)" -eq 7   # the migration connection of each service
           test "$(grep -c 'sslMode=VERIFY_FULL&sslRootCert=/etc/db-ca/ca-bundle.pem' /tmp/tls.yaml)" -eq 7   # and its queries
           test "$(grep -c 'name: rds-ca' /tmp/tls.yaml)" -eq 8   # mounted in the seven services and in the database-init job
+      - name: Keycloak can verify its database server (ADR-100)
+        run: |
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          helm template c common --set keycloak.database.tls.mode=verify-full --set keycloak.database.tls.caConfigMap=rds-ca > /tmp/kc.yaml
+          docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas -kubernetes-version 1.30.0 < /tmp/kc.yaml
+          grep -q 'keycloak?sslmode=verify-full&sslrootcert=/etc/db-ca/ca-bundle.pem' /tmp/kc.yaml
+          test "$(grep -c 'name: rds-ca' /tmp/kc.yaml)" -eq 1   # the bundle is mounted
+          # unset, the URL has no options and there is no mount
+          helm template c common > /tmp/kc0.yaml
+          grep -q '"jdbc:postgresql://postgres:5432/keycloak"' /tmp/kc0.yaml
+          test "$(grep -c 'db-ca' /tmp/kc0.yaml)" -eq 0
       - name: The services can reach a broker over TLS with a token (ADR-099)
         run: |
           helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
