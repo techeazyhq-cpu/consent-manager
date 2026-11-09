@@ -39,8 +39,8 @@ needs no change to any service.
 - ~~**Not automated in Helm.**~~ Done: [ADR-090](adr-090-least-privilege-in-one-switch.md), one switch and a hook. As it was written: The roles must exist before a release switches to them, and the schemas must exist before the roles
   are granted (the first migrations create them). The runbook gives the order: install as the owner, run the script, upgrade with
   the split. A hook that does it is the next step.
-- **The owner is still the shared `cm`** in the default configuration and in the local stack. Giving each schema its own owner
-  is the same change again, one level up.
+- ~~**The owner is still the shared `cm`**~~ Not any more, if asked for: each schema can have an owner of its own
+  ([ADR-110](adr-110-an-owner-per-schema.md)); the default configuration and the local `up` still use the shared one.
 - **A compromised service can still do what the service does** with its own rows, and the audit ledger's own protections
   (append-only, hash chain: ADR-040) are what stop it rewriting that. This limits the blast radius to one schema.
 - **Passwords are per schema, not rotated for you.** Rotating one is running the script with a new value, then updating the

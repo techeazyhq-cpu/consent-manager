@@ -63,6 +63,7 @@ spec:
             - {name: PGPORT, value: {{ $db.port | quote }}}
             - {name: PGUSER, value: {{ $db.migrationUser | default $db.user | quote }}}
             - {name: DB_NAME, value: {{ $db.name | quote }}}
+            - {name: PER_SCHEMA_OWNERS, value: {{ ternary "1" "0" (($db.leastPrivilege | default dict).perSchemaOwners | default false) | quote }}}
             - {name: WAIT_FOR_SCHEMAS_SECONDS, value: {{ $db.leastPrivilege.waitForSchemasSeconds | default 900 | quote }}}
             - {name: PGSSLMODE, value: {{ ($db.tls | default dict).mode | default "require" | quote }}}
             {{- if ($db.tls | default dict).caConfigMap }}

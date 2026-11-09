@@ -1,0 +1,50 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+# Each service migrating as an owner of its own schema, not the shared one (ADR-110), on top of connecting as its own login (ADR-082):
+#
+#   bash scripts/least-privilege.sh up-owners       (makes the owners and the logins, then recreates the services with both)
+#
+# Passwords are for this laptop's database only.
+
+services:
+  cm-df-reg-svc:
+    environment:
+      SPRING_FLYWAY_USER: cm_df_reg_owner
+      SPRING_FLYWAY_PASSWORD: ${OWNER_PASSWORD_DF_REG:-cm-dev-df-reg-owner}
+  cm-cns-cmd-svc:
+    environment:
+      SPRING_FLYWAY_USER: cm_cns_cmd_owner
+      SPRING_FLYWAY_PASSWORD: ${OWNER_PASSWORD_CNS_CMD:-cm-dev-cns-cmd-owner}
+  cm-cns-qry-svc:
+    environment:
+      SPRING_FLYWAY_USER: cm_cns_qry_owner
+      SPRING_FLYWAY_PASSWORD: ${OWNER_PASSWORD_CNS_QRY:-cm-dev-cns-qry-owner}
+  cm-ntf-svc:
+    environment:
+      SPRING_FLYWAY_USER: cm_ntf_owner
+      SPRING_FLYWAY_PASSWORD: ${OWNER_PASSWORD_NTF:-cm-dev-ntf-owner}
+  cm-bil-svc:
+    environment:
+      SPRING_FLYWAY_USER: cm_bil_owner
+      SPRING_FLYWAY_PASSWORD: ${OWNER_PASSWORD_BIL:-cm-dev-bil-owner}
+  cm-aud-svc:
+    environment:
+      SPRING_FLYWAY_USER: cm_aud_owner
+      SPRING_FLYWAY_PASSWORD: ${OWNER_PASSWORD_AUD:-cm-dev-aud-owner}
+  cm-dsr-svc:
+    environment:
+      SPRING_FLYWAY_USER: cm_dsr_owner
+      SPRING_FLYWAY_PASSWORD: ${OWNER_PASSWORD_DSR:-cm-dev-dsr-owner}

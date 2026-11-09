@@ -27,6 +27,8 @@
 #   PG_EXEC             a prefix that runs psql somewhere else, e.g. "docker exec -i -e PGPASSWORD=cm common-postgres-1" (psql runs as the PGUSER passed in)
 #   DB_NAME             the database (default: consent_manager)
 #   OWNER_ROLE          the role that owns the tables and runs the migrations (default: PGUSER)
+#   PER_SCHEMA_OWNERS   1 when each schema has an owner of its own, cm_<schema>_owner (ADR-110, create-schema-owners.sh): the default
+#                       privileges then follow that owner instead of OWNER_ROLE (default 0)
 #   RUNTIME_PASSWORD_<SCHEMA>   the password for that schema's login, one variable each (RUNTIME_PASSWORD_AUD ...): required, never printed
 #   WAIT_FOR_SCHEMAS_SECONDS    how long to wait for a schema that does not exist yet (the first migrations create it), polling every 5 s
 #                       (default 0: a missing schema stops the script with exit code 3). The Helm hook sets it (ADR-090).
@@ -38,6 +40,7 @@ set -euo pipefail
 : "${DB_NAME:=consent_manager}"
 : "${PG_EXEC:=}"
 : "${WAIT_FOR_SCHEMAS_SECONDS:=0}"
+: "${PER_SCHEMA_OWNERS:=0}"
 OWNER_ROLE="${OWNER_ROLE:-${PGUSER:-cm}}"
 schemas=("$@")
 [ ${#schemas[@]} -gt 0 ] || schemas=(df_reg cns_cmd cns_qry ntf bil aud dsr)
@@ -53,6 +56,9 @@ for schema in "${schemas[@]}"; do
   [ -n "$password" ] || { echo "Set $var to the password of the $schema login" >&2; exit 2; }
   case "$password" in *\'*|*\\*) echo "$var must not contain a quote or a backslash" >&2; exit 2 ;; esac
   role="cm_${schema}_app"
+  # whose migrations create the tables: the one owner, or this schema's own (ADR-110)
+  owner_role="$OWNER_ROLE"
+  if [ "$PER_SCHEMA_OWNERS" = "1" ]; then owner_role="cm_${schema}_owner"; fi
 
   # the schema is created by the service's first migration; on a first install it may not be there yet
   waited=0
@@ -81,8 +87,8 @@ grant usage on schema ${schema} to ${role};
 grant select, insert, update, delete on all tables in schema ${schema} to ${role};
 grant usage, select on all sequences in schema ${schema} to ${role};
 -- tables and sequences a later migration creates
-alter default privileges for role ${OWNER_ROLE} in schema ${schema} grant select, insert, update, delete on tables to ${role};
-alter default privileges for role ${OWNER_ROLE} in schema ${schema} grant usage, select on sequences to ${role};
+alter default privileges for role ${owner_role} in schema ${schema} grant select, insert, update, delete on tables to ${role};
+alter default privileges for role ${owner_role} in schema ${schema} grant usage, select on sequences to ${role};
 -- the migration history is the owner's business
 revoke all on ${schema}.flyway_schema_history from ${role};
 SQL

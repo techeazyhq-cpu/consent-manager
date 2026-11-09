@@ -235,6 +235,24 @@ jobs:
           done
           # a destination and a provider are needed
           if helm template cm consent-manager -f consent-manager/values-aws.yaml --set logicalBackup.enabled=true > /dev/null 2>&1; then echo "rendered without a provider"; exit 1; fi
+      - name: Each schema can have an owner of its own, made before the services migrate (ADR-110)
+        run: |
+          # the scripts the hooks run are the ones in deploy/database
+          diff deploy/database/create-schema-owners.sh deploy/helm/consent-manager/files/database/create-schema-owners.sh
+          diff deploy/database/create-runtime-roles.sh deploy/helm/consent-manager/files/database/create-runtime-roles.sh
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          helm template cm consent-manager -f consent-manager/values-aws.yaml --set config.database.leastPrivilege.enabled=true \
+            --set config.database.leastPrivilege.perSchemaOwners=true > /tmp/po.yaml
+          docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas -kubernetes-version 1.30.0 < /tmp/po.yaml
+          test "$(grep -c 'SPRING_FLYWAY_USER, value: "cm_[a-z_]*_owner"' /tmp/po.yaml)" -eq 7   # every service migrates as its own owner
+          test "$(grep -c 'SPRING_R2DBC_USERNAME, value: "cm_[a-z_]*_app"' /tmp/po.yaml)" -eq 7   # and queries as its own login
+          grep -q 'args: \["aud","bil","cns_cmd","cns_qry","df_reg","dsr","ntf"\]' /tmp/po.yaml
+          grep -q 'name: PER_SCHEMA_OWNERS, value: "1"' /tmp/po.yaml   # the logins follow the owners
+          test "$(grep -c 'name: cm-database-owners$' /tmp/po.yaml)" -eq 1
+          # without the switch: no owners hook, the shared owner, and the logins as before
+          helm template cm consent-manager -f consent-manager/values-aws.yaml --set config.database.leastPrivilege.enabled=true > /tmp/po0.yaml
+          test "$(grep -c 'name: cm-database-owners$' /tmp/po0.yaml)" -eq 0
+          test "$(grep -c 'SPRING_FLYWAY_USER, value: "cm"' /tmp/po0.yaml)" -eq 7
       - name: The chart can make the per-service logins and use them with one switch (ADR-090)
         run: |
           # the script the hook runs is the one in deploy/database
