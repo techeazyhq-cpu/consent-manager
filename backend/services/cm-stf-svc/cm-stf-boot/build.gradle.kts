@@ -26,6 +26,7 @@ dependencies {
     implementation(project(":cm-stf-app"))
     implementation(project(":cm-stf-infra"))
     implementation(project(":cm-stf-if-rest"))
+    implementation(project(":cm-evt-kit")) // the Pulsar client (ADR-099)
     implementation(project(":cm-sec-kit"))
     implementation(project(":cm-web-kit"))
     implementation(project(":cm-res-kit"))

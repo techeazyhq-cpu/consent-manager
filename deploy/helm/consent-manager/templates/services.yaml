@@ -21,6 +21,7 @@
 {{- $dbm := mergeOverwrite (deepCopy $root.Values.config.database) ($s.database | default dict) }}
 {{- $dbCa := and $s.schema ($dbm.tls | default dict).caConfigMap }}
 {{- $redisCa := and $s.redis (($root.Values.config.redis.tls | default dict).caConfigMap) }}
+{{- $pulsarCa := ($root.Values.config.pulsar.tls | default dict).caConfigMap }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -101,6 +102,9 @@ spec:
             {{- if $redisCa }}
             - {name: redis-ca, mountPath: /etc/redis-ca, readOnly: true}
             {{- end }}
+            {{- if $pulsarCa }}
+            - {name: pulsar-ca, mountPath: /etc/pulsar-ca, readOnly: true}
+            {{- end }}
             {{- if $s.consentTokenKeys }}
             - {name: cns-tkn-keys, mountPath: /var/lib/cm/keys, readOnly: true}
             {{- end }}
@@ -114,6 +118,14 @@ spec:
             name: {{ $dbm.tls.caConfigMap }}
             items:
               - {key: {{ $dbm.tls.caKey | default "ca-bundle.pem" }}, path: ca-bundle.pem}
+        {{- end }}
+        {{- if $pulsarCa }}
+        # the broker's certificate authority (ADR-099), for a pulsar+ssl:// URL
+        - name: pulsar-ca
+          configMap:
+            name: {{ $root.Values.config.pulsar.tls.caConfigMap }}
+            items:
+              - {key: {{ $root.Values.config.pulsar.tls.caKey | default "ca-bundle.pem" }}, path: ca-bundle.pem}
         {{- end }}
         {{- if $redisCa }}
         # the cache server's certificate authority (ADR-098): Memorystore signs with a CA of its own, which no JVM trusts by default

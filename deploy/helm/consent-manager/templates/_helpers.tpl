@@ -89,6 +89,13 @@ sslMode={{ $tls.mode | upper | replace "-" "_" }}{{ if $tls.caConfigMap }}&sslRo
   {{- include "cm.secretRef" (dict "root" $root "key" $migKey) | nindent 2 }}
 {{- end }}
 - {name: CM_PULSAR_SERVICE_URL, value: {{ $c.pulsar.url | quote }}}
+{{- if ($c.pulsar.tls | default dict).caConfigMap }}
+- {name: CM_PULSAR_TLS_TRUST_CERTS_FILE, value: "/etc/pulsar-ca/ca-bundle.pem"}
+{{- end }}
+{{- if $c.pulsar.tokenFromSecret }}
+- name: CM_PULSAR_AUTH_TOKEN
+  {{- include "cm.secretRef" (dict "root" $root "key" "PULSAR_AUTH_TOKEN") | nindent 2 }}
+{{- end }}
 - {name: CM_SECURITY_ISSUER_BASE, value: {{ printf "%s/realms/" $c.keycloak.publicUrl | quote }}}
 - {name: CM_SECURITY_JWKS_BASE, value: {{ printf "%s/realms/" $c.keycloak.internalUrl | quote }}}
 {{- if $s.redis }}

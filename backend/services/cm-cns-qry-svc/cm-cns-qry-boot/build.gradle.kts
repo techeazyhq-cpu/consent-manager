@@ -26,6 +26,7 @@ dependencies {
     implementation(project(":cm-cns-qry-app"))
     implementation(project(":cm-cns-qry-infra"))
     implementation(project(":cm-cns-qry-if-rest"))
+    implementation(project(":cm-evt-kit")) // the Pulsar client (ADR-099)
     implementation(project(":cm-sec-kit"))
 
     implementation("org.springframework.boot:spring-boot-starter-webflux")

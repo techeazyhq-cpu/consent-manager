@@ -21,6 +21,7 @@ package com.techeazyhq.cm.dsr;
 import java.time.Clock;
 import java.time.Duration;
 
+import com.techeazyhq.cm.evtkit.PulsarClients;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.reactive.client.adapter.AdaptedReactivePulsarClientFactory;
@@ -121,7 +122,7 @@ public class DsrBeanConfig {
     @Bean(destroyMethod = "close")
     public PulsarClient pulsarClient(@Value("${cm.pulsar.service-url:pulsar://localhost:6650}") String serviceUrl)
             throws PulsarClientException {
-        return PulsarClient.builder().serviceUrl(serviceUrl).build();
+        return PulsarClients.create(serviceUrl);
     }
 
     @Bean

@@ -27,6 +27,7 @@ dependencies {
     implementation(project(":cm-bil-infra"))
     implementation(project(":cm-bil-if-rest"))
     implementation(project(":cm-web-kit"))
+    implementation(project(":cm-evt-kit")) // the Pulsar client (ADR-099)
     implementation(project(":cm-sec-kit"))
     implementation(project(":cm-aud-kit"))
 
