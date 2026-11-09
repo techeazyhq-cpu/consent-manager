@@ -202,6 +202,88 @@ class DfInsightsQryHandlerTest {
     }
 
     @Test
+    void thisQuarterSoFarIsComparedWithTheSameStretchAtTheStartOfTheLastOne() {
+        // 20 Oct 10:00 UTC: Q4 has run 19 days 10 hours
+        DfInsights insights = recording().handleQuarter("df-1", 2026, 4, ZoneOffset.UTC, true).block();
+
+        assertEquals(Instant.parse("2026-10-01T00:00:00Z"), insights.from());
+        assertEquals(NOW, insights.to(), "a quarter still going ends now");
+        assertEquals(Instant.parse("2026-07-01T00:00:00Z"), insights.previous().from());
+        assertEquals(Instant.parse("2026-07-20T10:00:00Z"), insights.previous().to());
+    }
+
+    @Test
+    void aQuarterThatHasEndedIsComparedWithTheWholeQuarterBefore() {
+        DfInsights insights = recording().handleQuarter("df-1", 2026, 3, ZoneOffset.UTC, true).block();
+
+        assertEquals(Instant.parse("2026-07-01T00:00:00Z"), insights.from());
+        assertEquals(Instant.parse("2026-10-01T00:00:00Z"), insights.to());
+        assertEquals(Instant.parse("2026-04-01T00:00:00Z"), insights.previous().from());
+        assertEquals(Instant.parse("2026-07-01T00:00:00Z"), insights.previous().to());
+    }
+
+    @Test
+    void aQuarterBeforeTheNewYearComparesWithTheLastQuarterOfTheYearBefore() {
+        DfInsights insights = recording().handleQuarter("df-1", 2026, 1, ZoneOffset.UTC, true).block();
+
+        assertEquals(Instant.parse("2025-10-01T00:00:00Z"), insights.previous().from());
+        assertEquals(Instant.parse("2026-01-01T00:00:00Z"), insights.previous().to());
+    }
+
+    @Test
+    void quartersAreCutInTheZoneAskedFor() {
+        java.time.ZoneId india = java.time.ZoneId.of("Asia/Kolkata");
+        DfInsights insights = recording().handleQuarter("df-1", 2026, 3, india, false).block();
+
+        assertEquals(Instant.parse("2026-06-30T18:30:00Z"), insights.from());
+        assertEquals(Instant.parse("2026-09-30T18:30:00Z"), insights.to());
+    }
+
+    @Test
+    void aQuarterThatIsNotOneToFourInTheFutureOrTooFarBackIsRefused() {
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> recording().handleQuarter("df-1", 2026, 5, ZoneOffset.UTC, false));
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> recording().handleQuarter("df-1", 2026, 0, ZoneOffset.UTC, false));
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> recording().handleQuarter("df-1", 2027, 1, ZoneOffset.UTC, false));
+        // eight quarters back from Q4 2026 is Q4 2024; Q3 2024 is one too far
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> recording().handleQuarter("df-1", 2024, 3, ZoneOffset.UTC, false));
+        recording().handleQuarter("df-1", 2024, 4, ZoneOffset.UTC, false).block();
+    }
+
+    @Test
+    void theYearSoFarIsComparedWithTheSameStretchOfTheYearBefore() {
+        // 20 Oct 10:00 UTC is 292 days 10 hours into 2026
+        DfInsights insights = recording().handleYear("df-1", 2026, ZoneOffset.UTC, true).block();
+
+        assertEquals(Instant.parse("2026-01-01T00:00:00Z"), insights.from());
+        assertEquals(NOW, insights.to());
+        assertEquals(Instant.parse("2025-01-01T00:00:00Z"), insights.previous().from());
+        assertEquals(Instant.parse("2025-10-20T10:00:00Z"), insights.previous().to(), "the same 292 days 10 hours of 2025");
+    }
+
+    @Test
+    void aYearThatHasEndedIsComparedWithTheWholeYearBefore() {
+        DfInsights insights = recording().handleYear("df-1", 2025, ZoneOffset.UTC, true).block();
+
+        assertEquals(Instant.parse("2025-01-01T00:00:00Z"), insights.from());
+        assertEquals(Instant.parse("2026-01-01T00:00:00Z"), insights.to());
+        assertEquals(Instant.parse("2024-01-01T00:00:00Z"), insights.previous().from());
+        assertEquals(Instant.parse("2025-01-01T00:00:00Z"), insights.previous().to());
+    }
+
+    @Test
+    void aYearInTheFutureOrTooFarBackIsRefused() {
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> recording().handleYear("df-1", 2027, ZoneOffset.UTC, false));
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+                () -> recording().handleYear("df-1", 2023, ZoneOffset.UTC, false));
+        recording().handleYear("df-1", 2024, ZoneOffset.UTC, false).block();
+    }
+
+    @Test
     void theWindowIsOneDayToAYear() {
         handler.handle("df-1", 0).block();
         handler.handle("df-1", 10_000).block();

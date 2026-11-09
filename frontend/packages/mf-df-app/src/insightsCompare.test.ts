@@ -17,7 +17,18 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { changeNote, comparisonSpan, monthWindows, monthsAgo, sameWindow } from "./dashboard";
+import {
+  calendarOf,
+  calendarTitle,
+  changeNote,
+  comparisonSpan,
+  monthWindows,
+  monthsAgo,
+  quarterAndYearWindows,
+  quartersAgo,
+  sameWindow,
+  yearsAgo,
+} from "./dashboard";
 
 describe("changeNote", () => {
   it("says nothing when no comparison is shown", () => {
@@ -33,5 +44,69 @@ describe("changeNote", () => {
   it("does not divide by nothing", () => {
     expect(changeNote(4, 0, 30)).toBe("none in the 30 days before");
     expect(changeNote(0, 0, 30)).toBe("same as the 30 days before");
+  });
+});
+
+// 20 October 2026, in the middle of the fourth quarter
+const NOW = new Date(Date.UTC(2026, 9, 20, 10, 0, 0));
+
+describe("calendar months, quarters and years (ADR-088, ADR-102)", () => {
+  it("counts months back across the new year", () => {
+    expect(monthsAgo(0, NOW)).toBe("2026-10");
+    expect(monthsAgo(1, NOW)).toBe("2026-09");
+    expect(monthsAgo(10, NOW)).toBe("2025-12");
+  });
+
+  it("counts quarters back across the new year", () => {
+    expect(quartersAgo(0, NOW)).toBe("2026-Q4");
+    expect(quartersAgo(1, NOW)).toBe("2026-Q3");
+    expect(quartersAgo(3, NOW)).toBe("2026-Q1");
+    expect(quartersAgo(4, NOW)).toBe("2025-Q4");
+    expect(quartersAgo(0, new Date(Date.UTC(2026, 0, 1)))).toBe("2026-Q1");
+    expect(quartersAgo(0, new Date(Date.UTC(2026, 2, 31)))).toBe("2026-Q1");
+    expect(quartersAgo(0, new Date(Date.UTC(2026, 3, 1)))).toBe("2026-Q2");
+  });
+
+  it("counts years back", () => {
+    expect(yearsAgo(0, NOW)).toBe("2026");
+    expect(yearsAgo(2, NOW)).toBe("2024");
+  });
+
+  it("offers this quarter and the year to date", () => {
+    expect(quarterAndYearWindows(NOW)).toEqual([
+      { window: { kind: "quarter", quarter: "2026-Q4" }, label: "This quarter" },
+      { window: { kind: "year", year: "2026" }, label: "Year to date" },
+    ]);
+    expect(monthWindows(NOW).map((w) => w.label)).toEqual(["This month", "Last month"]);
+  });
+
+  it("tells windows apart by kind and by what they ask for", () => {
+    expect(sameWindow({ kind: "days", days: 30 }, { kind: "days", days: 30 })).toBe(true);
+    expect(sameWindow({ kind: "days", days: 30 }, { kind: "days", days: 7 })).toBe(false);
+    expect(sameWindow({ kind: "quarter", quarter: "2026-Q4" }, { kind: "quarter", quarter: "2026-Q4" })).toBe(true);
+    expect(sameWindow({ kind: "quarter", quarter: "2026-Q4" }, { kind: "quarter", quarter: "2026-Q3" })).toBe(false);
+    // a year and a month can never be the same window, whatever their text
+    expect(sameWindow({ kind: "year", year: "2026" }, { kind: "month", month: "2026" })).toBe(false);
+  });
+
+  it("words the comparison by what is still going", () => {
+    expect(comparisonSpan({ kind: "days", days: 30 }, NOW)).toBe("30 days before");
+    expect(comparisonSpan({ kind: "month", month: "2026-10" }, NOW)).toBe("same days of last month");
+    expect(comparisonSpan({ kind: "month", month: "2026-09" }, NOW)).toBe("month before");
+    expect(comparisonSpan({ kind: "quarter", quarter: "2026-Q4" }, NOW)).toBe("same days of last quarter");
+    expect(comparisonSpan({ kind: "quarter", quarter: "2026-Q3" }, NOW)).toBe("quarter before");
+    expect(comparisonSpan({ kind: "year", year: "2026" }, NOW)).toBe("same days of last year");
+    expect(comparisonSpan({ kind: "year", year: "2025" }, NOW)).toBe("year before");
+  });
+
+  it("gives the API the one thing a window asks for, and a title in words", () => {
+    expect(calendarOf({ kind: "days", days: 30 })).toEqual({});
+    expect(calendarOf({ kind: "month", month: "2026-09" })).toEqual({ month: "2026-09" });
+    expect(calendarOf({ kind: "quarter", quarter: "2026-Q3" })).toEqual({ quarter: "2026-Q3" });
+    expect(calendarOf({ kind: "year", year: "2026" })).toEqual({ year: "2026" });
+    expect(calendarTitle({ kind: "days", days: 30 }, NOW)).toBeNull();
+    expect(calendarTitle({ kind: "quarter", quarter: "2026-Q3" }, NOW)).toBe("Q3 2026");
+    expect(calendarTitle({ kind: "year", year: "2026" }, NOW)).toBe("2026 so far");
+    expect(calendarTitle({ kind: "year", year: "2025" }, NOW)).toBe("2025");
   });
 });

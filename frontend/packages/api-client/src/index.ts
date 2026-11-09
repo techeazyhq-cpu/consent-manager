@@ -599,18 +599,29 @@ export const apiKeys = {
 /** The DF Console dashboard (ADR-049): outcomes and times to decide over the last {@code days}. */
 export const insights = {
   /** `tz` cuts the days in an IANA time zone (UTC when left out); `compare` adds the window just before (ADR-078). */
-  get: (base: string, token: string, days: number, opts: { tz?: string; compare?: boolean; month?: string } = {}) => {
+  get: (base: string, token: string, days: number, opts: { tz?: string; compare?: boolean; month?: string; quarter?: string; year?: string } = {}) => {
     const q = new URLSearchParams({ days: String(days) });
-    // a calendar month (yyyy-MM, ADR-088) takes the place of the number of days
+    // a calendar month (yyyy-MM, ADR-088), quarter (yyyy-Qn) or year (yyyy) (ADR-102) takes the place of the number of days
     if (opts.month) q.set("month", opts.month);
+    if (opts.quarter) q.set("quarter", opts.quarter);
+    if (opts.year) q.set("year", opts.year);
     if (opts.tz) q.set("tz", opts.tz);
     if (opts.compare) q.set("compare", "true");
     return request<DfInsightsDto>(base, `/api/cns-qry/insights?${q}`, token);
   },
   /** The day-by-day series or the purposes as a CSV file. */
-  exportCsv: async (base: string, token: string, days: number, view: "days" | "purposes", tz?: string, month?: string) => {
+  exportCsv: async (
+    base: string,
+    token: string,
+    days: number,
+    view: "days" | "purposes",
+    tz?: string,
+    period: { month?: string; quarter?: string; year?: string } = {},
+  ) => {
     const q = new URLSearchParams({ days: String(days), view });
-    if (month) q.set("month", month);
+    if (period.month) q.set("month", period.month);
+    if (period.quarter) q.set("quarter", period.quarter);
+    if (period.year) q.set("year", period.year);
     if (tz) q.set("tz", tz);
     const res = await fetch(`${base}/api/cns-qry/insights/export?${q}`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) throw new ApiError(res.status, await res.json().catch(() => null));

@@ -79,23 +79,49 @@ public class DfInsightsHandler {
     }
 
     /**
-     * The window, time zone and comparison a request asks for; null when any of them is not valid. {@code month} (yyyy-MM, ADR-088)
-     * asks for a calendar month in the zone and takes the place of {@code days}.
+     * The window, time zone and comparison a request asks for; null when any of them is not valid. {@code month} (yyyy-MM, ADR-088),
+     * {@code quarter} (yyyy-Qn) or {@code year} (yyyy) (ADR-102) asks for a calendar month, quarter or year in the zone and takes the
+     * place of {@code days}; asking for more than one of them is not valid.
      */
-    record Query(int days, java.time.YearMonth month, java.time.ZoneId zone, boolean compare) {
+    record Query(int days, java.time.YearMonth month, int[] quarter, Integer year, java.time.ZoneId zone, boolean compare) {
         static Query of(ServerRequest request) {
             try {
                 int days = request.queryParam("days").map(Integer::parseInt).orElse(DfInsightsQryHandler.DEFAULT_DAYS);
                 java.time.YearMonth month = request.queryParam("month").map(java.time.YearMonth::parse).orElse(null);
+                int[] quarter = request.queryParam("quarter").map(Query::parseQuarter).orElse(null);
+                Integer year = request.queryParam("year").map(y -> {
+                    if (!y.matches("\\d{4}")) {
+                        throw new java.time.DateTimeException("not a year");
+                    }
+                    return Integer.valueOf(y);
+                }).orElse(null);
+                if ((month != null ? 1 : 0) + (quarter != null ? 1 : 0) + (year != null ? 1 : 0) > 1) {
+                    return null;
+                }
                 java.time.ZoneId zone = request.queryParam("tz").map(java.time.ZoneId::of).orElse(java.time.ZoneOffset.UTC);
                 boolean compare = request.queryParam("compare").map(Boolean::parseBoolean).orElse(false);
-                return new Query(days, month, zone, compare);
+                return new Query(days, month, quarter, year, zone, compare);
             } catch (NumberFormatException | java.time.DateTimeException e) {
                 return null;
             }
         }
 
+        /** {@code yyyy-Qn}, such as 2026-Q3, as {year, quarter}. */
+        private static int[] parseQuarter(String text) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{4})-Q([1-4])").matcher(text);
+            if (!m.matches()) {
+                throw new java.time.DateTimeException("not a quarter");
+            }
+            return new int[] {Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2))};
+        }
+
         Mono<com.techeazyhq.cm.cnsqry.dom.DfInsights> run(DfInsightsQryHandler insights, String dfId, boolean withComparison) {
+            if (quarter != null) {
+                return insights.handleQuarter(dfId, quarter[0], quarter[1], zone, withComparison);
+            }
+            if (year != null) {
+                return insights.handleYear(dfId, year, zone, withComparison);
+            }
             if (month == null) {
                 return insights.handle(dfId, days, zone, withComparison);
             }

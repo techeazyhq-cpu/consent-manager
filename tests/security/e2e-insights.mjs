@@ -86,5 +86,32 @@ const monthRows = monthCsv.text.trim().split('\n');
 expect(monthCsv.status === 200 && monthRows.length - 1 >= 28, 'the CSV of a month has a row for each of its days', `${monthRows.length - 1} rows`);
 expect((await get(owner, `/api/cns-qry/insights/export?month=${ym(-1)}&view=days`)).status === 400, 'and a month in the future is refused there too');
 
+// ---- calendar quarters and years (ADR-102)
+const now = new Date();
+const qIndex = now.getUTCFullYear() * 4 + Math.floor(now.getUTCMonth() / 3);
+const qText = (back) => `${Math.floor((qIndex - back) / 4)}-Q${((qIndex - back) % 4) + 1}`;
+const qStart = (back) => Date.UTC(Math.floor((qIndex - back) / 4), ((qIndex - back) % 4) * 3, 1);
+const thisQ = JSON.parse((await get(owner, `/api/cns-qry/insights?quarter=${qText(0)}&compare=true`)).text);
+expect(ms(thisQ.from) === qStart(0) && ms(thisQ.to) > ms(thisQ.from) && ms(thisQ.previous.from) === qStart(1), 'this quarter runs from its first day to now, and is set against the quarter before', `${thisQ.from} .. ${thisQ.to}`);
+expect(ms(thisQ.previous.to) - ms(thisQ.previous.from) === Math.min(ms(thisQ.to) - ms(thisQ.from), ms(thisQ.from) - ms(thisQ.previous.from)), 'against the same stretch of that quarter\'s start, never more than the quarter');
+const lastQ = JSON.parse((await get(owner, `/api/cns-qry/insights?quarter=${qText(1)}&compare=true&tz=Asia/Kolkata`)).text);
+expect(ms(lastQ.from) === qStart(1) - 5.5 * 3600_000 && ms(lastQ.to) === qStart(0) - 5.5 * 3600_000, 'a quarter that has ended is cut at midnight in the zone asked for', `${lastQ.from} .. ${lastQ.to}`);
+expect(ms(lastQ.previous.to) === ms(lastQ.from) && ms(lastQ.previous.from) === qStart(2) - 5.5 * 3600_000, 'and is set against all of the quarter before it');
+const yr = now.getUTCFullYear();
+const thisY = JSON.parse((await get(owner, `/api/cns-qry/insights?year=${yr}&compare=true`)).text);
+expect(ms(thisY.from) === Date.UTC(yr, 0, 1) && ms(thisY.to) > ms(thisY.from) && ms(thisY.previous.from) === Date.UTC(yr - 1, 0, 1), 'the year so far runs from 1 January to now, and is set against the year before');
+expect(ms(thisY.previous.to) - ms(thisY.previous.from) === ms(thisY.to) - ms(thisY.from), 'against the same stretch of its start');
+const lastY = JSON.parse((await get(owner, `/api/cns-qry/insights?year=${yr - 1}&compare=true`)).text);
+expect(ms(lastY.from) === Date.UTC(yr - 1, 0, 1) && ms(lastY.to) === Date.UTC(yr, 0, 1) && ms(lastY.previous.to) === ms(lastY.from), 'a year that has ended is all of it, against all of the year before');
+expect((await get(owner, `/api/cns-qry/insights?quarter=${qText(-1)}`)).status === 400, 'a quarter in the future is refused');
+expect((await get(owner, `/api/cns-qry/insights?quarter=${qText(9)}`)).status === 400, 'and one more than 8 quarters back');
+expect((await get(owner, '/api/cns-qry/insights?quarter=2026-Q5')).status === 400, 'and one that is not yyyy-Qn');
+expect((await get(owner, `/api/cns-qry/insights?year=${yr + 1}`)).status === 400, 'a year in the future is refused');
+expect((await get(owner, `/api/cns-qry/insights?year=${yr - 3}`)).status === 400, 'and one more than 2 years back');
+expect((await get(owner, '/api/cns-qry/insights?year=26')).status === 400, 'and one that is not four digits');
+expect((await get(owner, `/api/cns-qry/insights?month=${ym(0)}&year=${yr}`)).status === 400, 'asking for a month and a year at once is refused');
+const qCsv = await get(owner, `/api/cns-qry/insights/export?quarter=${qText(1)}&view=days`);
+expect(qCsv.status === 200 && qCsv.text.trim().split('\n').length - 1 >= 89, 'the CSV of a quarter has a row for each of its days', `${qCsv.text.trim().split('\n').length - 1} rows`);
+
 console.log(failed ? '\nSome checks failed.' : '\nAll checks passed.');
 process.exitCode = failed ? 1 : 0;
