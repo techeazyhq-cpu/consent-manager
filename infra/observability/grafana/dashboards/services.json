@@ -446,6 +446,28 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Sign-in codes refused, per hour",
+      "gridPos": {
+        "x": 0,
+        "y": 60,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum by (reason) (increase(cm_ntf_otp_send_refused_total[1h]))",
+          "legendFormat": "{{reason}}",
+          "refId": "A"
+        }
+      ]
     }
   ]
 }
