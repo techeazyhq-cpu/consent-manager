@@ -1752,6 +1752,19 @@
       ]
     },
     {
+      "code": "CM-NTF-INTERNAL-ROTATING",
+      "kind": "log",
+      "level": "WARN",
+      "category": "operations",
+      "title": "The previous sign-in service key is still accepted",
+      "description": "cm-ntf-svc has cm.ntf.internal-api-key-previous set, so requests to send a sign-in code are accepted with either the current key or the old one. Logged at start-up; meant only for the time it takes to change the key (ADR-101).",
+      "action": "Once cm.ntf.internal.key.previous.used has stopped rising, remove NTF_INTERNAL_API_KEY_PREVIOUS from the secret and restart the service.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-ntf-svc"
+      ]
+    },
+    {
       "code": "CM-OTP-NTF-KEY-MISSING",
       "kind": "log",
       "level": "WARN",

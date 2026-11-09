@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.http.server.reactive.MockServerHttpRequest;
@@ -35,6 +36,7 @@ import reactor.core.publisher.Mono;
 class InternalKeyWebFilterTest {
 
     private final AtomicInteger reached = new AtomicInteger();
+    private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
     private HttpStatus post(InternalKeyWebFilter filter, String path, String key) {
         MockServerHttpRequest.BodyBuilder b = MockServerHttpRequest.post(path);
@@ -51,7 +53,7 @@ class InternalKeyWebFilterTest {
 
     @Test
     void withAKeySetOnlyARequestCarryingItReachesTheHandler() {
-        InternalKeyWebFilter filter = new InternalKeyWebFilter("s3cret-value");
+        InternalKeyWebFilter filter = new InternalKeyWebFilter("s3cret-value", "", registry);
 
         assertNull(post(filter, "/internal/otp/send", "s3cret-value"));
         assertEquals(1, reached.get());
@@ -64,7 +66,7 @@ class InternalKeyWebFilterTest {
 
     @Test
     void theRefusalIsAProblemThatGivesNothingAway() {
-        InternalKeyWebFilter filter = new InternalKeyWebFilter("s3cret-value");
+        InternalKeyWebFilter filter = new InternalKeyWebFilter("s3cret-value", "", registry);
         MockServerWebExchange exchange = MockServerWebExchange.from(MockServerHttpRequest.post("/internal/otp/send").build());
 
         filter.filter(exchange, ex -> Mono.empty()).block();
@@ -77,7 +79,7 @@ class InternalKeyWebFilterTest {
 
     @Test
     void otherPathsAndMethodsAreNotItsBusiness() {
-        InternalKeyWebFilter filter = new InternalKeyWebFilter("s3cret-value");
+        InternalKeyWebFilter filter = new InternalKeyWebFilter("s3cret-value", "", registry);
 
         assertNull(post(filter, "/internal/other", null));
         assertNull(post(filter, "/api/ntf/push-devices", null));
@@ -88,7 +90,38 @@ class InternalKeyWebFilterTest {
 
     @Test
     void withNoKeySetTheEndpointIsOpenAsBefore() {
-        assertNull(post(new InternalKeyWebFilter(""), "/internal/otp/send", null));
-        assertNull(post(new InternalKeyWebFilter(null), "/internal/otp/send", null));
+        assertNull(post(new InternalKeyWebFilter("", "", registry), "/internal/otp/send", null));
+        assertNull(post(new InternalKeyWebFilter(null, null, registry), "/internal/otp/send", null));
+    }
+
+    @Test
+    void duringARotationBothTheNewAndThePreviousKeyAreAccepted() {
+        InternalKeyWebFilter filter = new InternalKeyWebFilter("new-key", "old-key", registry);
+
+        assertNull(post(filter, "/internal/otp/send", "new-key"));
+        assertNull(post(filter, "/internal/otp/send", "old-key"));
+        assertEquals(HttpStatus.UNAUTHORIZED, post(filter, "/internal/otp/send", "older-key"));
+        assertEquals(HttpStatus.UNAUTHORIZED, post(filter, "/internal/otp/send", null));
+        assertEquals(2, reached.get());
+    }
+
+    @Test
+    void thePreviousKeyIsCountedSoItCanBeRemovedWhenNothingSendsItAnyMore() {
+        InternalKeyWebFilter filter = new InternalKeyWebFilter("new-key", "old-key", registry);
+        assertEquals(0, registry.counter(InternalKeyWebFilter.PREVIOUS_USED_METRIC).count());
+
+        post(filter, "/internal/otp/send", "new-key");
+        assertEquals(0, registry.counter(InternalKeyWebFilter.PREVIOUS_USED_METRIC).count(), "the new key is not counted");
+        post(filter, "/internal/otp/send", "old-key");
+        post(filter, "/internal/otp/send", "old-key");
+        assertEquals(2, registry.counter(InternalKeyWebFilter.PREVIOUS_USED_METRIC).count());
+    }
+
+    @Test
+    void aPreviousKeyWithoutAKeyOpensNothingAndOnceRemovedTheOldKeyIsRefused() {
+        // no current key: open as before, the previous means nothing
+        assertNull(post(new InternalKeyWebFilter("", "old-key", registry), "/internal/otp/send", null));
+        // rotation over: previous removed, the old key is refused
+        assertEquals(HttpStatus.UNAUTHORIZED, post(new InternalKeyWebFilter("new-key", "", registry), "/internal/otp/send", "old-key"));
     }
 }

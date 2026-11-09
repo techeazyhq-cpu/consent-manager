@@ -21,6 +21,7 @@ package com.techeazyhq.cm.ntf;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,6 +44,10 @@ import reactor.core.publisher.Mono;
  * address it is given, and was open to anything on the private network. When {@code cm.ntf.internal-api-key} is set, a request
  * must carry the same value in {@code X-Internal-Key}, which Keycloak's sign-in step sends; any other is refused with 401 before
  * it reaches a handler or counts against a limit. Unset, the endpoint is open as before, and a warning at start-up says so.
+ *
+ * <p>A key is changed without a gap (ADR-101): while {@code cm.ntf.internal-api-key-previous} is also set, a request carrying either is
+ * accepted, and each one that carries the previous is counted in {@code cm.ntf.internal.key.previous.used}, so the operator can see
+ * when nothing sends it any more and it can be removed.
  */
 @Component
 public class InternalKeyWebFilter implements WebFilter, Ordered {
@@ -51,10 +56,24 @@ public class InternalKeyWebFilter implements WebFilter, Ordered {
     static final String PATH = "/internal/otp/send";
     private static final Logger LOG = LoggerFactory.getLogger(InternalKeyWebFilter.class);
 
-    private final byte[] key;
+    static final String PREVIOUS_USED_METRIC = "cm.ntf.internal.key.previous.used";
 
-    public InternalKeyWebFilter(@Value("${cm.ntf.internal-api-key:}") String key) {
+    private final byte[] key;
+    private final byte[] previous;
+    private final MeterRegistry registry;
+
+    public InternalKeyWebFilter(@Value("${cm.ntf.internal-api-key:}") String key,
+                                @Value("${cm.ntf.internal-api-key-previous:}") String previous,
+                                MeterRegistry registry) {
         this.key = key == null || key.isBlank() ? null : key.getBytes(StandardCharsets.UTF_8);
+        this.previous = previous == null || previous.isBlank() ? null : previous.getBytes(StandardCharsets.UTF_8);
+        this.registry = registry;
+        // exists from the start, at zero, so "nobody uses the previous key" is a number
+        registry.counter(PREVIOUS_USED_METRIC);
+        if (this.key != null && this.previous != null) {
+            LOG.warn("[CM-NTF-INTERNAL-ROTATING] cm.ntf.internal-api-key-previous is set: the old key is still accepted. Remove it once "
+                    + "{} stops rising.", PREVIOUS_USED_METRIC);
+        }
         if (this.key == null) {
             LOG.warn("[CM-NTF-INTERNAL-OPEN] cm.ntf.internal-api-key is not set: anything that can reach this service can ask it to "
                     + "send sign-in codes. Set it, and the same value in Keycloak's sign-in step, in any deployment.");
@@ -69,8 +88,15 @@ public class InternalKeyWebFilter implements WebFilter, Ordered {
         }
         String given = exchange.getRequest().getHeaders().getFirst(HEADER);
         // compared as digests of equal length so the time taken does not tell how much of a guess was right
-        if (given != null && MessageDigest.isEqual(sha256(given.getBytes(StandardCharsets.UTF_8)), sha256(key))) {
-            return chain.filter(exchange);
+        if (given != null) {
+            byte[] digest = sha256(given.getBytes(StandardCharsets.UTF_8));
+            if (MessageDigest.isEqual(digest, sha256(key))) {
+                return chain.filter(exchange);
+            }
+            if (previous != null && MessageDigest.isEqual(digest, sha256(previous))) {
+                registry.counter(PREVIOUS_USED_METRIC).increment();
+                return chain.filter(exchange);
+            }
         }
         byte[] body = Problems.json("internal-key-invalid", 401, "This request needs the service key", Problems.correlationId(exchange));
         exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);

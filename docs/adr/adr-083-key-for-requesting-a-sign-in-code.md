@@ -38,8 +38,7 @@ many; this decides who.
 
 - **One shared secret, not a credential per caller.** There is one caller today. If another appears, it should have a key of its
   own, so one can be withdrawn without the other.
-- **No rotation without a gap.** Changing the key means changing it in both places, and a sign-in in between fails once. The
-  service could accept two keys during a change; it does not.
+- ~~**No rotation without a gap.**~~ The service now accepts a previous key during a change ([ADR-101](adr-101-internal-key-rotation.md)).
 - **Optional by default.** A deployment that never sets it stays open, with only a warning. Making it required in the chart would
   stop an upgrade of a cluster that has not yet created the secret.
 - **Only `/internal/otp/send`.** The other `/internal/**` endpoints of other services (quota checks, sub-eligibility, status) keep
