@@ -1,0 +1,84 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# Unit tests for pulsar.rules.yml (ADR-107): `promtool test rules` with these series.
+rule_files:
+  - ../pulsar.rules.yml
+evaluation_interval: 1m
+tests:
+  # a consumer that always catches up, however busy: nothing fires
+  - interval: 1m
+    input_series:
+      - series: 'pulsar_subscription_back_log_no_delayed{namespace="cm/bil",topic="persistent://cm/bil/evt-x",subscription="aud-sub"}'
+        values: '0 12 40 3 0 8 20 0 5 0 9 0 0 2 0 7 0 3 0 1 0 4 0 0 0 6 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 29m
+        alertname: PulsarSubscriptionBacklogLarge
+        exp_alerts: []
+      - eval_time: 29m
+        alertname: PulsarSubscriptionNeverCaughtUp
+        exp_alerts: []
+  # a consumer that stopped: its backlog only grows, past 1000 after a while
+  - interval: 1m
+    input_series:
+      - series: 'pulsar_subscription_back_log_no_delayed{namespace="cm/bil",topic="persistent://cm/bil/evt-x",subscription="aud-sub"}'
+        values: '0 0 50+100x40'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: PulsarSubscriptionBacklogLarge
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: PulsarSubscriptionNeverCaughtUp
+        exp_alerts: []
+      - eval_time: 30m
+        alertname: PulsarSubscriptionBacklogLarge
+        exp_alerts:
+          - exp_labels: {severity: ticket, namespace: "cm/bil", topic: "persistent://cm/bil/evt-x", subscription: aud-sub}
+            exp_annotations:
+              summary: "A consumer is more than 1000 messages behind for 10 minutes: events are arriving faster than it handles them, or it is slow (the threshold is a guess, ADR-107)"
+      - eval_time: 30m
+        alertname: PulsarSubscriptionNeverCaughtUp
+        exp_alerts:
+          - exp_labels: {severity: page, namespace: "cm/bil", topic: "persistent://cm/bil/evt-x", subscription: aud-sub}
+            exp_annotations:
+              summary: "A consumer has not reached an empty backlog in 15 minutes: it is stopped, stuck on a message it keeps refusing, or far behind"
+  # a message the consumer keeps refusing: a small backlog that never clears. Not large, but never caught up
+  - interval: 1m
+    input_series:
+      - series: 'pulsar_subscription_back_log_no_delayed{namespace="cm/ntf",topic="persistent://cm/ntf/evt-y",subscription="poison-sub"}'
+        values: '0 0 0 1x40'
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: PulsarSubscriptionBacklogLarge
+        exp_alerts: []
+      - eval_time: 30m
+        alertname: PulsarSubscriptionNeverCaughtUp
+        exp_alerts:
+          - exp_labels: {severity: page, namespace: "cm/ntf", topic: "persistent://cm/ntf/evt-y", subscription: poison-sub}
+            exp_annotations:
+              summary: "A consumer has not reached an empty backlog in 15 minutes: it is stopped, stuck on a message it keeps refusing, or far behind"
+  # the broker's own subscriptions are not the platform's consumers
+  - interval: 1m
+    input_series:
+      - series: 'pulsar_subscription_back_log_no_delayed{namespace="cm/bil",topic="persistent://cm/bil/__change_events",subscription="__compaction"}'
+        values: '5000x40'
+    alert_rule_test:
+      - eval_time: 35m
+        alertname: PulsarSubscriptionBacklogLarge
+        exp_alerts: []
+      - eval_time: 35m
+        alertname: PulsarSubscriptionNeverCaughtUp
+        exp_alerts: []

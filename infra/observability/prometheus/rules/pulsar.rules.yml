@@ -1,0 +1,31 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# A consumer that is not keeping up or is stuck (ADR-107). The metrics are Pulsar's own, scraped from the broker (the `pulsar` job); the
+# subscriptions that start with two underscores are the broker's own (compaction, system readers), not the platform's consumers.
+groups:
+  - name: pulsar-backlog
+    rules:
+      - alert: PulsarSubscriptionBacklogLarge
+        expr: max by (namespace, topic, subscription) (pulsar_subscription_back_log_no_delayed{subscription!~"__.*"}) > 1000
+        for: 10m
+        labels: {severity: ticket}
+        annotations: {summary: "A consumer is more than 1000 messages behind for 10 minutes: events are arriving faster than it handles them, or it is slow (the threshold is a guess, ADR-107)"}
+      - alert: PulsarSubscriptionNeverCaughtUp
+        expr: min_over_time(pulsar_subscription_back_log_no_delayed{subscription!~"__.*"}[15m]) > 0
+        for: 5m
+        labels: {severity: page}
+        annotations: {summary: "A consumer has not reached an empty backlog in 15 minutes: it is stopped, stuck on a message it keeps refusing, or far behind"}
