@@ -311,6 +311,36 @@ services:
     volumes:
       - ./observability/alertmanager:/etc/alertmanager:ro
 
+  loki:
+    profiles: [observability]
+    image: grafana/loki:3.5.1
+    user: "0"   # a new named volume is owned by root; this is the laptop stack, and a cluster runs Loki with its own chart
+    command: ["-config.file=/etc/loki/loki.yml"]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256m
+    volumes:
+      - ./observability/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki-data:/loki
+
+  # Reads the containers' logs through the Docker socket (read-only) and sends them to Loki (ADR-091).
+  alloy:
+    profiles: [observability]
+    image: grafana/alloy:v1.9.2
+    command: ["run", "--storage.path=/var/lib/alloy/data", "--disable-reporting", "/etc/alloy/config.alloy"]
+    deploy:
+      resources:
+        limits:
+          cpus: "0.15"
+          memory: 128m
+    volumes:
+      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+
   grafana:
     profiles: [observability]
     image: grafana/grafana:12.1.0
@@ -331,6 +361,7 @@ services:
       - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
+      - loki
 
   # ---- The sandbox (ADR-034, ADR-037): `docker compose --profile sandbox up -d` ----
   # The same images as production with SPRING_PROFILES_ACTIVE=docker,sandbox: their own database (cm_sandbox), Keycloak
@@ -420,5 +451,6 @@ services:
 
 volumes:
   prom-data:
+  loki-data:
   cns-tkn-keys:
   sbx-cns-tkn-keys:
