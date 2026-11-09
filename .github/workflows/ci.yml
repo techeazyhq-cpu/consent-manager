@@ -54,6 +54,10 @@ jobs:
         run: >-
           docker run --rm -v "$PWD/infra/opa/policies:/policies:ro" openpolicyagent/opa:1.20.1 check /policies
           && docker run --rm -v "$PWD/infra/opa/policies:/policies:ro" openpolicyagent/opa:1.20.1 test /policies -v
+      - name: Check the alert rules and unit-test those that have tests (ADR-092)
+        run: >-
+          docker run --rm --entrypoint sh -v "$PWD/infra/observability/prometheus/rules:/r:ro" prom/prometheus:v3.5.0
+          -c 'promtool check rules /r/*.rules.yml && promtool test rules /r/tests/*.test.yml'
       - name: Build, test (PostgreSQL integration tests need Docker), architecture rules and the coverage ratchet
         run: ./gradlew --no-daemon build coverageVerification
       - name: Upload test and coverage reports
