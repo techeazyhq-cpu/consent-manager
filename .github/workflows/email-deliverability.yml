@@ -1,0 +1,48 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# Weekly check of the sending domain's SPF, DKIM, DMARC and MTA-STS (ADR-094). It does nothing until the repository variable
+# CM_MAIL_DOMAIN is set (Settings, Secrets and variables, Actions, Variables); CM_DKIM_SELECTORS is optional (comma-separated).
+# A failure fails the run, and GitHub tells the people watching the repository.
+name: Email deliverability
+
+on:
+  schedule:
+    - cron: "41 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Sending domain records
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      MAIL_DOMAIN: ${{ vars.CM_MAIL_DOMAIN }}
+      DKIM_SELECTORS: ${{ vars.CM_DKIM_SELECTORS }}
+    steps:
+      - name: Say so when there is nothing to check
+        if: env.MAIL_DOMAIN == ''
+        run: echo "::notice::CM_MAIL_DOMAIN is not set, so no sending domain is checked (ADR-094)"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        if: env.MAIL_DOMAIN != ''
+      - name: Check the domain
+        if: env.MAIL_DOMAIN != ''
+        run: |
+          args=()
+          if [ -n "$DKIM_SELECTORS" ]; then args=(--dkim-selector "$DKIM_SELECTORS"); fi
+          node scripts/email-deliverability.mjs "$MAIL_DOMAIN" "${args[@]}"
