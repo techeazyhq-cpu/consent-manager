@@ -1,0 +1,51 @@
+# Copyright 2026 Vasantha Kumar
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# @author Vasantha Kumar <vasantha.kumar@hotmail.com>
+
+# Unit tests for the sign-in surge rule (ADR-112).
+rule_files:
+  - ../sign-in.rules.yml
+evaluation_interval: 1m
+tests:
+  # steady traffic, twelve codes an hour: nothing fires
+  - interval: 10m
+    input_series:
+      - series: 'cm_ntf_otp_send_accepted_total'
+        values: '0+2x160'
+    alert_rule_test:
+      - eval_time: 26h
+        alertname: SignInCodeSurge
+        exp_alerts: []
+  # a day of twelve an hour, then 240 in an hour
+  - interval: 10m
+    input_series:
+      - series: 'cm_ntf_otp_send_accepted_total'
+        values: '0+2x150 300+40x10'
+    alert_rule_test:
+      - eval_time: 26h
+        alertname: SignInCodeSurge
+        exp_alerts:
+          - exp_labels: {severity: ticket}
+            exp_annotations:
+              summary: "Sign-in codes sent in the last hour are more than six times the hourly average of the day before: a campaign to sign in in bulk, a bot, or a real event such as a launch; see docs/runbooks/anomaly-detection.md"
+  # a rise under the floor of 50 an hour is not a surge, however large the ratio to a quiet day
+  - interval: 10m
+    input_series:
+      - series: 'cm_ntf_otp_send_accepted_total'
+        values: '0+0x150 0+4x10'
+    alert_rule_test:
+      - eval_time: 26h
+        alertname: SignInCodeSurge
+        exp_alerts: []

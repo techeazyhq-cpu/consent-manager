@@ -26,6 +26,7 @@ import Onboard from "./Onboard";
 import TenantDetail from "./TenantDetail";
 import Staff from "./Staff";
 import Grievances from "./Grievances";
+import Anomalies from "./Anomalies";
 import Erasures from "./Erasures";
 import Security from "./Security";
 import StatusAdmin from "./StatusAdmin";
@@ -56,6 +57,9 @@ export default function CmAdminApp({ auth, gwBase }: Props) {
     { key: "grievances", href: "#/grievances", label: "Grievances", section: "Platform", icon: Icons.inbox },
     { key: "erasures", href: "#/erasures", label: "Account erasures", section: "Platform", icon: Icons.user },
     { key: "audit", href: "#/audit", label: "Audit", section: "Platform", icon: Icons.list },
+    ...(session.isAdmin
+      ? [{ key: "anomalies", href: "#/anomalies", label: "Unusual activity", section: "Platform", icon: Icons.bell }]
+      : []),
     { key: "security", href: "#/security", label: "Sign-in & security", section: "Platform", icon: Icons.shield },
     { key: "status", href: "#/status", label: "Platform status", section: "Platform", icon: Icons.bell },
   ];
@@ -80,6 +84,7 @@ export default function CmAdminApp({ auth, gwBase }: Props) {
       {route.page === "security" ? <Security session={session} /> : null}
       {route.page === "billing" ? <Billing session={session} tab={route.tab} /> : null}
       {route.page === "audit" ? <Audit session={session} /> : null}
+      {route.page === "anomalies" ? (session.isAdmin ? <Anomalies session={session} /> : <Dashboard session={session} />) : null}
       {route.page === "grievances" ? <Grievances session={session} /> : null}
       {route.page === "erasures" ? <Erasures session={session} /> : null}
       {route.page === "status" ? <StatusAdmin session={session} /> : null}

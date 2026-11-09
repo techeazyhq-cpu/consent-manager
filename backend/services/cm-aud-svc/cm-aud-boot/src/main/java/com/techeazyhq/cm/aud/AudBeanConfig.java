@@ -62,6 +62,25 @@ public class AudBeanConfig {
                 new com.techeazyhq.cm.aud.infra.R2dbcDfRecordsPurgeAdapter(databaseClient, transactionalOperator));
     }
 
+    /** Unusual activity, looked for in what the ledger holds (ADR-112): the counts, the findings, and a counter per new finding for the alert. */
+    @Bean
+    public com.techeazyhq.cm.aud.dom.AnomalyPort anomalyPort(DatabaseClient databaseClient) {
+        return new com.techeazyhq.cm.aud.infra.R2dbcAnomalyAdapter(databaseClient);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.aud.app.AnomalyDetector anomalyDetector(com.techeazyhq.cm.aud.dom.AnomalyPort port,
+            io.micrometer.core.instrument.MeterRegistry registry,
+            @Value("${cm.aud.anomaly.baseline-days:14}") int baselineDays,
+            @Value("${cm.aud.anomaly.min-history-hours:48}") int minHistoryHours,
+            @Value("${cm.aud.anomaly.min-count:20}") long minCount,
+            @Value("${cm.aud.anomaly.threshold:6.0}") double threshold) {
+        // every signal's counter exists from the start, at zero, so "none found" is a number and an alert on a rise has something to rise from
+        com.techeazyhq.cm.aud.app.AnomalyDetector.SIGNALS.forEach(s -> registry.counter("cm.aud.anomaly.found", "signal", s.name()));
+        return new com.techeazyhq.cm.aud.app.AnomalyDetector(port, Clock.systemUTC(), baselineDays, minHistoryHours, minCount, threshold,
+                signal -> registry.counter("cm.aud.anomaly.found", "signal", signal).increment());
+    }
+
     @Bean
     public AudLedgerPort audLedgerPort(DatabaseClient databaseClient, TransactionalOperator transactionalOperator) {
         return new R2dbcAudLedgerAdapter(databaseClient, transactionalOperator);

@@ -31,15 +31,19 @@ public class AudRouterConfig {
 
     @Bean
     public RouterFunction<ServerResponse> audRoutes(AudLedgerService ledger, AudAnchoringService anchoring,
-                                                  com.techeazyhq.cm.aud.app.PurgeDfRecordsHandler purgeDfRecords) {
+                                                  com.techeazyhq.cm.aud.app.PurgeDfRecordsHandler purgeDfRecords,
+                                                  com.techeazyhq.cm.aud.dom.AnomalyPort anomalies) {
         AudHandler handler = new AudHandler(ledger, anchoring);
         AudActivityHttpHandler activity = new AudActivityHttpHandler(ledger);
         DfPurgeHttpHandler dfPurge = new DfPurgeHttpHandler(purgeDfRecords);
         DfExportHttpHandler dfExport = new DfExportHttpHandler(ledger);
+        AnomalyHttpHandler anomaly = new AnomalyHttpHandler(anomalies, java.time.Clock.systemUTC());
         return RouterFunctions.route()
                 .POST("/internal/dfs/{id}/purge", dfPurge::purge)
                 .GET("/internal/dfs/{id}/export", dfExport::export)
                 .GET("/api/aud/activity", activity::activity)
+                .GET("/api/aud/anomalies", anomaly::list)
+                .POST("/api/aud/anomalies/{id}/acknowledge", anomaly::acknowledge)
                 .GET("/api/aud/entries", handler::entries)
                 .GET("/api/aud/chain/head", handler::head)
                 .GET("/api/aud/chain/verify", handler::verify)

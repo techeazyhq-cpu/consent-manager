@@ -210,6 +210,9 @@ services:
       JAVA_TOOL_OPTIONS: *svc-jvm
       CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
       CM_TRACING_SAMPLING: ${CM_TRACING_SAMPLING:-0}
+      # looking for unusual activity (ADR-112): how often, and how much history a fiduciary needs first; the defaults are the production ones
+      CM_AUD_ANOMALY_INTERVAL_MS: ${CM_ANOMALY_INTERVAL_MS:-600000}
+      CM_AUD_ANOMALY_MIN_HISTORY_HOURS: ${CM_ANOMALY_MIN_HISTORY_HOURS:-48}
 
   cm-stf-svc:
     <<: *svc-limits

@@ -13,6 +13,7 @@ What to do, in order, for the things an operator of the platform does or is aske
 | [A fiduciary leaves](offboarding.md) | suspension, the wind-down, closing, retention and legal hold ([ADR-064](../adr/adr-064-fiduciary-offboarding.md)) |
 | [A stuck account erasure](erasure.md) | an erasure saga that did not finish ([ADR-059](../adr/adr-059-closing-an-account-erasure-saga.md)) |
 | [Drafting purposes with a model](ai-drafting.md) | switching on AI drafting with Ollama or vLLM, what is sent, limits, what to do when it is slow ([ADR-111](../adr/adr-111-ai-assisted-purpose-drafting.md)) |
+| [Unusual activity](anomaly-detection.md) | what the detector looks at, reading and acknowledging a finding, tuning it, the sign-in surge alert ([ADR-112](../adr/adr-112-unusual-activity-detection.md)) |
 | [Invoicing](invoicing.md) | prices, the monthly run, marking paid, credit notes, the accounting export ([ADR-079](../adr/adr-079-invoicing.md), [ADR-084](../adr/adr-084-billing-ends-when-a-fiduciary-closes.md)) |
 | [The authorisation policy bundle](opa-policy-bundles.md) | signing and publishing the policy, rotating its key ([ADR-068](../adr/adr-068-signed-policy-bundles.md)) |
 | [Email deliverability](email-deliverability.md) | SPF, DKIM, DMARC for the sending domain; "the code never arrived" ([ADR-071](../adr/adr-071-email-deliverability-check.md)) |

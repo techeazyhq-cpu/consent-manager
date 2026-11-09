@@ -184,6 +184,15 @@ jobs:
           helm template cm consent-manager --set config.aiDrafting.enabled=true --set config.aiDrafting.endpoint=http://m:11434             --set config.aiDrafting.model=llama3.1:8b --set config.aiDrafting.apiKeySecretKey=AI_DRAFTING_API_KEY > /tmp/ai.yaml
           grep -q 'CM_CNSCMD_AI_DRAFTING_ENDPOINT, value: "http://m:11434"' /tmp/ai.yaml
           grep -q 'CM_CNSCMD_AI_DRAFTING_API_KEY' /tmp/ai.yaml
+      - name: The chart passes the unusual-activity settings to the audit service (ADR-112)
+        run: |
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          helm template cm consent-manager > /tmp/anom.yaml
+          grep -q 'CM_AUD_ANOMALY_MIN_COUNT, value: "20"' /tmp/anom.yaml
+          grep -q 'CM_AUD_ANOMALY_THRESHOLD, value: "6"' /tmp/anom.yaml
+          helm template cm consent-manager --set config.anomalyDetection.minCount=50 --set config.anomalyDetection.enabled=false > /tmp/anom2.yaml
+          grep -q 'CM_AUD_ANOMALY_MIN_COUNT, value: "50"' /tmp/anom2.yaml
+          grep -q 'CM_AUD_ANOMALY_ENABLED, value: "false"' /tmp/anom2.yaml
       - name: Every cloud requires the sign-in service key, the base values do not (ADR-103)
         run: |
           helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }

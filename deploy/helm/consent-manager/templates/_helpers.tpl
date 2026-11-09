@@ -152,6 +152,16 @@ sslMode={{ $tls.mode | upper | replace "-" "_" }}{{ if $tls.caConfigMap }}&sslRo
 {{- end }}
 {{- end }}
 {{- end }}
+{{- if eq $name "cm-aud-svc" }}
+{{- with $c.anomalyDetection }}
+# looking for unusual activity in the ledger's counts (ADR-112)
+- {name: CM_AUD_ANOMALY_ENABLED, value: {{ ne (toString .enabled) "false" | quote }}}
+- {name: CM_AUD_ANOMALY_BASELINE_DAYS, value: {{ .baselineDays | default 14 | quote }}}
+- {name: CM_AUD_ANOMALY_MIN_HISTORY_HOURS, value: {{ .minHistoryHours | default 48 | quote }}}
+- {name: CM_AUD_ANOMALY_MIN_COUNT, value: {{ .minCount | default 20 | quote }}}
+- {name: CM_AUD_ANOMALY_THRESHOLD, value: {{ .threshold | default 6 | quote }}}
+{{- end }}
+{{- end }}
 {{- if eq $name "cm-ntf-svc" }}
 - {name: CM_NTF_PROVIDER, value: {{ $c.notificationService.provider | quote }}}
 - {name: NTF_SVC_BASE_URL, value: {{ $c.notificationService.baseUrl | quote }}}
