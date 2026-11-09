@@ -34,6 +34,15 @@ output "helm_values" {
       database = { url = module.datastores.postgres_jdbc_url }
       redis    = { host = module.datastores.redis_host, port = module.datastores.redis_port }
     }
+    # the logical backup CronJob (ADR-097): where it uploads and under which identity. Set logicalBackup.enabled to turn it on.
+    logicalBackup = {
+      provider    = "gcp"
+      destination = "gs://${module.datastores.backup_bucket_name}/dumps"
+      serviceAccount = {
+        name        = "cm-logical-backup"
+        annotations = { "iam.gke.io/gcp-service-account" = google_service_account.workloads["db-dump"].email }
+      }
+    }
     # a service with an instance of its own (ADR-074, ADR-096): its `database:` block. The password is the Secret Manager entry
     # named in postgres_dedicated, synced into the application secret under passwordKey. Its server CA goes in the db-ca-bundle.
     services = {

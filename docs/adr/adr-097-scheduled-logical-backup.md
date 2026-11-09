@@ -43,8 +43,11 @@ database: both databases dumped, verified and a manifest written, exit 0. The tw
 - **Not run in a cluster, and the three uploads were never run.** The upload commands follow each CLI's documented way to use a pod
   identity (the Azure one logs in with the federated token), but no bucket, storage account or identity was used here; the first real
   run on each cloud will show a wrong image tag, a missing permission or a CLI flag.
-- **The Azure and GCP pod identities need their annotations and label set in the values** (`serviceAccount.annotations`, `podLabels`):
-  Terraform makes the identities, but its `helm_values` output does not yet fill these in.
+- ~~**The Azure and GCP pod identities need their annotations and label set in the values.**~~ Terraform's `helm_values` output now carries
+  `logicalBackup` for each cloud: the provider, the destination (the bucket or the storage account and container), and for Azure and
+  GCP the service account annotation and the Azure pod label. Only `enabled` is left to the operator. Checked by `terraform validate`
+  and by rendering the chart with values of that shape (the annotation and the label land on the service account and the pod); not by an
+  apply.
 - **A backup that never ran cannot be seen:** `kube_cronjob_status_last_successful_time` does not exist until the first success, so
   the alert is silent for a CronJob that has never succeeded; the failed-Job alert catches the case where it runs and fails.
 - **The restore drill is not scheduled** and neither is its alert's source (`postgres-recovery.rules.yml` reads a textfile that a
