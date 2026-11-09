@@ -65,6 +65,8 @@ import type {
   ProblemDetail,
   PushDvcRespDto,
   PushPltf,
+  PrpsAiStatusDto,
+  PrpsAiSuggestionDto,
   PrpsChange,
   PrpsContent,
   PrpsDefDto,
@@ -364,6 +366,14 @@ export const prps = {
     request<PrpsChange>(base, `/api/cns-cmd/prps-defs/${encodeURIComponent(code)}/draft/change`, token),
   publish: (base: string, token: string, code: string) =>
     request<PrpsDefDto>(base, `/api/cns-cmd/prps-defs/${encodeURIComponent(code)}/publish`, token, { method: "POST" }),
+  /** Whether drafting with the operator's own model is on, with which model and how long a description may be (ADR-111). */
+  aiStatus: (base: string, token: string) => request<PrpsAiStatusDto>(base, "/api/cns-cmd/prps-defs/draft-assist/status", token),
+  /** A purpose drafted from a description by the operator's model. Not saved: the person reads it, edits it and saves it as any draft. */
+  aiDraft: (base: string, token: string, description: string, lang = "en") =>
+    request<PrpsAiSuggestionDto>(base, "/api/cns-cmd/prps-defs/draft-assist", token, {
+      method: "POST",
+      body: JSON.stringify({ description, lang }),
+    }),
 };
 
 /** Money in minor units as a person reads it: 1250 INR is shown as 12.50 with the currency's own symbol where the locale knows it. */

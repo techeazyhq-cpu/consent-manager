@@ -175,6 +175,15 @@ jobs:
           grep -q 'CM_BIL_PAYMENT_TERMS_DAYS, value: "30"' /tmp/dun2.yaml
           grep -q 'CM_BIL_REMINDER_DAYS, value: "7,14"' /tmp/dun2.yaml
           helm template cm consent-manager --set config.billing.remindersEnabled=false | grep -q 'CM_BIL_REMINDER_DAYS, value: ""'   # off
+      - name: The chart switches AI drafting on only with an endpoint and a model (ADR-111)
+        run: |
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          helm template cm consent-manager | grep -q 'CM_CNSCMD_AI_DRAFTING_ENABLED, value: "false"'   # off by default
+          helm template cm consent-manager | grep -q 'CM_CNSCMD_AI_DRAFTING_ENDPOINT' && exit 1
+          if helm template cm consent-manager --set config.aiDrafting.enabled=true >/dev/null 2>&1; then exit 1; fi   # no endpoint: refused
+          helm template cm consent-manager --set config.aiDrafting.enabled=true --set config.aiDrafting.endpoint=http://m:11434             --set config.aiDrafting.model=llama3.1:8b --set config.aiDrafting.apiKeySecretKey=AI_DRAFTING_API_KEY > /tmp/ai.yaml
+          grep -q 'CM_CNSCMD_AI_DRAFTING_ENDPOINT, value: "http://m:11434"' /tmp/ai.yaml
+          grep -q 'CM_CNSCMD_AI_DRAFTING_API_KEY' /tmp/ai.yaml
       - name: Every cloud requires the sign-in service key, the base values do not (ADR-103)
         run: |
           helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }

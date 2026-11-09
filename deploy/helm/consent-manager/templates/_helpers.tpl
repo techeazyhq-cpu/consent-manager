@@ -136,6 +136,21 @@ sslMode={{ $tls.mode | upper | replace "-" "_" }}{{ if $tls.caConfigMap }}&sslRo
 {{- if eq $name "cm-cns-cmd-svc" }}
 # the address consent tokens name for their status list (ADR-077)
 - {name: CM_CNS_TKN_STATUS_LIST_BASE_URL, value: {{ printf "https://%s" $root.Values.ingress.apiHost | quote }}}
+{{- with $c.aiDrafting }}
+# drafting a purpose with a model the operator runs (ADR-111); off unless enabled, and then only the endpoint named here is called
+- {name: CM_CNSCMD_AI_DRAFTING_ENABLED, value: {{ .enabled | default false | quote }}}
+{{- if .enabled }}
+- {name: CM_CNSCMD_AI_DRAFTING_ENDPOINT, value: {{ required "config.aiDrafting.endpoint is required when config.aiDrafting.enabled" .endpoint | quote }}}
+- {name: CM_CNSCMD_AI_DRAFTING_MODEL, value: {{ required "config.aiDrafting.model is required when config.aiDrafting.enabled" .model | quote }}}
+- {name: CM_CNSCMD_AI_DRAFTING_TIMEOUT_SECONDS, value: {{ .timeoutSeconds | default 120 | quote }}}
+- {name: CM_CNSCMD_AI_DRAFTING_PER_HOUR, value: {{ .perHour | default 20 | quote }}}
+- {name: CM_CNSCMD_AI_DRAFTING_MAX_CONCURRENT, value: {{ .maxConcurrent | default 2 | quote }}}
+{{- if .apiKeySecretKey }}
+- name: CM_CNSCMD_AI_DRAFTING_API_KEY
+  {{- include "cm.secretRef" (dict "root" $root "key" .apiKeySecretKey) | nindent 2 }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{- end }}
 {{- if eq $name "cm-ntf-svc" }}
 - {name: CM_NTF_PROVIDER, value: {{ $c.notificationService.provider | quote }}}

@@ -57,6 +57,13 @@ spring:
               uri: http://localhost:8081
               predicates:
                 - Path=/api/df-reg/**
+            # A purpose drafted by the operator's own model takes longer than the 10 s of an ordinary call (ADR-111), so it has its own
+            # route, and with it its own circuit breaker and time limit: a slow model neither opens the circuit for the rest of cns-cmd nor
+            # is cut at 10 s.
+            - id: cns-cmd-draft-assist
+              uri: http://localhost:8082
+              predicates:
+                - Path=/api/cns-cmd/prps-defs/draft-assist
             - id: cns-cmd
               uri: http://localhost:8082
               predicates:
@@ -135,6 +142,9 @@ resilience4j:
       # the route of an organisation taking all of its data (ADR-064)
       df-reg-export:
         timeout-duration: 120s
+      # the route of a purpose drafted by a model (ADR-111): a little more than the service's own wait for it
+      cns-cmd-draft-assist:
+        timeout-duration: 130s
 
 management:
   metrics:

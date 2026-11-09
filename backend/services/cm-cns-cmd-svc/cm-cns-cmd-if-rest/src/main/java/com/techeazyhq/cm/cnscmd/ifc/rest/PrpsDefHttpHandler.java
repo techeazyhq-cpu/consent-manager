@@ -111,7 +111,7 @@ public class PrpsDefHttpHandler {
     }
 
     /** Fiduciary callers only; changing purposes needs a role that manages them (ADR-033), reading any of its people. */
-    private static Mono<ServerResponse> asDf(ServerRequest request, boolean changes,
+    static Mono<ServerResponse> asDf(ServerRequest request, boolean changes,
                                              Function<AuthCtx, Mono<ServerResponse>> action) {
         return CnsReqHandler.authCtx(request)
                 .filter(AuthCtx::isDf)

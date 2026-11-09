@@ -558,6 +558,24 @@ export interface PrpsContent {
   parties?: PartyDto[];
 }
 
+/** Whether drafting a purpose with the operator's own model is on, and its limits (ADR-111). */
+export interface PrpsAiStatusDto {
+  enabled: boolean;
+  model: string | null;
+  minChars: number;
+  maxChars: number;
+}
+
+/** A purpose the model drafted from a description: never saved; the fields to confirm and the warnings come with it (ADR-111). */
+export interface PrpsAiSuggestionDto {
+  code: string;
+  content: PrpsContent;
+  confirm: string[];
+  notes: string[];
+  model: string;
+  aiGenerated: true;
+}
+
 /** A party a purpose version names, as described when it was published: who, what it does with the data, and where. */
 export interface PartyDto {
   name: string;

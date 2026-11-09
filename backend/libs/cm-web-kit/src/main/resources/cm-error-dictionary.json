@@ -1231,6 +1231,84 @@
       ]
     },
     {
+      "code": "ai-drafting-disabled",
+      "kind": "problem",
+      "status": 404,
+      "category": "not-found",
+      "title": "Drafting with a model is not switched on",
+      "description": "The platform has no drafting model set up (cm.cnscmd.ai-drafting.enabled is off), so a purpose cannot be drafted from a description.",
+      "action": "Write the purpose by hand, or ask whoever runs the platform to set up a model (ADR-111).",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "ai-draft-personal-data",
+      "kind": "problem",
+      "status": 422,
+      "category": "validation",
+      "title": "The description seems to hold personal data",
+      "description": "The text to draft from looks like it holds an email address, a phone, a PAN, an Aadhaar-shaped or a card number. The drafting model is not where anyone's data goes, so the request was refused and nothing was sent to it.",
+      "action": "Describe the purpose in general words, with no one's details, and ask again.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "ai-drafting-rate-limited",
+      "kind": "problem",
+      "status": 429,
+      "category": "rate-limit",
+      "title": "Too many drafts asked for",
+      "description": "This fiduciary has asked for as many model drafts in the last hour as it may.",
+      "action": "Wait and ask again later, or write the purpose by hand.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "ai-drafting-busy",
+      "kind": "problem",
+      "status": 503,
+      "category": "dependency",
+      "title": "The drafting model is busy",
+      "description": "The model is already working on as many drafts as this instance allows at once.",
+      "action": "Try again in a moment.",
+      "retryable": true,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "ai-draft-invalid",
+      "kind": "problem",
+      "status": 502,
+      "category": "dependency",
+      "title": "The model's draft was not usable",
+      "description": "The model answered twice, and neither answer passed the rules a purpose must meet (not JSON, no data listed, no notice, a field out of bounds). Nothing was kept.",
+      "action": "Describe the purpose a little differently, or write it by hand.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "ai-drafting-unavailable",
+      "kind": "problem",
+      "status": 503,
+      "category": "dependency",
+      "title": "The drafting model could not be reached",
+      "description": "The model endpoint did not answer in time or refused the connection.",
+      "action": "Try again shortly. If it keeps failing, whoever runs the platform checks the model server (runbook: AI drafting).",
+      "retryable": true,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
       "code": "otp-send-invalid",
       "kind": "problem",
       "status": 400,

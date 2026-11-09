@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-167 entries: 151 API problems, 15 operational log codes and 1 event.
+173 entries: 157 API problems, 15 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -45,6 +45,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 
 | Code | Status | Title | What it means | What to do | Retry | Raised by |
 |---|---|---|---|---|---|---|
+| `ai-draft-personal-data` | 422 | The description seems to hold personal data | The text to draft from looks like it holds an email address, a phone, a PAN, an Aadhaar-shaped or a card number. The drafting model is not where anyone's data goes, so the request was refused and nothing was sent to it. | Describe the purpose in general words, with no one's details, and ask again. | no | cns-cmd |
 | `ambiguous-credentials` | 400 | Two kinds of credentials sent | The request carried both an API key and a bearer token, so it is unclear which identity is calling. | Send one credential: either the API key headers or a bearer token. | no | gw |
 | `confirmation-required` | 400 | Confirmation needed | Closing an account needs the confirmation words typed exactly. | Type the words the page asks for. | no | dsr |
 | `invalid-answer` | 400 | Answer not valid | An answer needs a reply, and a refusal also needs its legal ground. The detail says which. | Add what is missing. | no | dsr |
@@ -130,6 +131,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 
 | Code | Status | Title | What it means | What to do | Retry | Raised by |
 |---|---|---|---|---|---|---|
+| `ai-drafting-disabled` | 404 | Drafting with a model is not switched on | The platform has no drafting model set up (cm.cnscmd.ai-drafting.enabled is off), so a purpose cannot be drafted from a description. | Write the purpose by hand, or ask whoever runs the platform to set up a model (ADR-111). | no | cns-cmd |
 | `api-key-not-found` | 404 | API key not found | No API key with that id belongs to this fiduciary. | List the fiduciary's keys and use an id from that list. | no | df-reg |
 | `aud-not-checkpointed` | 404 | Entry not anchored yet | The entry is not part of a timestamped checkpoint yet, so it has no proof. | Try again after the next checkpoint. | no | aud |
 | `batch-not-found` | 404 | Batch not found | No batch with that id belongs to this fiduciary. | List the batches and use an id from it. | no | cns-cmd |
@@ -226,6 +228,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 
 | Code | Status | Title | What it means | What to do | Retry | Raised by |
 |---|---|---|---|---|---|---|
+| `ai-drafting-rate-limited` | 429 | Too many drafts asked for | This fiduciary has asked for as many model drafts in the last hour as it may. | Wait and ask again later, or write the purpose by hand. | yes | cns-cmd |
 | `otp-send-limited` | 429 | Too many sign-in codes sent | The notification service has sent as many sign-in codes to this address or number, or by this channel, as it allows in the hour or day, whoever asked. The sign-in is told to wait. | Wait and ask for a code again later; do not retry in a loop. If it is a real person, they can use the code already sent. | yes | ntf |
 | `rate-limit-exceeded` | 429 | Too many requests a second | The fiduciary's plan allows only so many requests a second, and this call went over it. | Wait for the Retry-After interval and slow down, or ask for a plan with a higher rate. | yes | gw |
 | `signup-rate-limited` | 429 | Too many sign-up requests | Too many applications were made from this address or for this contact address, or sign-up is busy today. | Try again later; a person is held to three applications a day for one contact address. | yes | df-reg, gw |
@@ -234,6 +237,9 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 
 | Code | Status | Title | What it means | What to do | Retry | Raised by |
 |---|---|---|---|---|---|---|
+| `ai-draft-invalid` | 502 | The model's draft was not usable | The model answered twice, and neither answer passed the rules a purpose must meet (not JSON, no data listed, no notice, a field out of bounds). Nothing was kept. | Describe the purpose a little differently, or write it by hand. | no | cns-cmd |
+| `ai-drafting-busy` | 503 | The drafting model is busy | The model is already working on as many drafts as this instance allows at once. | Try again in a moment. | yes | cns-cmd |
+| `ai-drafting-unavailable` | 503 | The drafting model could not be reached | The model endpoint did not answer in time or refused the connection. | Try again shortly. If it keeps failing, whoever runs the platform checks the model server (runbook: AI drafting). | yes | cns-cmd |
 | `api-key-check-unavailable` | 503 | API key could not be checked | The service that checks API keys is not answering. This says nothing about whether the key is valid. | Retry after the Retry-After interval. If it keeps failing, report the correlation id. | yes | gw |
 | `billing-unavailable` | 503 | Billing could not be reached | A fiduciary's departure could not be called off because Billing, which must bill it again, did not answer in time. Nothing was changed: the fiduciary is still leaving, and the one cancellation is not used up. | Try again in a moment. If it keeps failing, platform staff check cm-bil-svc. | yes | df-reg |
 | `consent-check-unavailable` | 503 | Consent could not be checked | The policy decision point could not answer in time or is unavailable. This is not a decision. | Retry after the Retry-After interval; do not treat it as a refusal or as permission. | yes | gw |

@@ -21,6 +21,7 @@ import {
   ApiError,
   partyLine,
   prps,
+  type PrpsAiSuggestionDto,
   type PrpsChange,
   type PrpsContent,
   type PrpsDCat,
@@ -31,6 +32,7 @@ import {
 } from "api-client";
 import { Button, Card, ErrorBanner, Field, OrgLogo, PageHeader, Spinner, friendlyError, humanise } from "ui-kit/src/index";
 import type { Console } from "./console";
+import { AiDraftPanel, AiReview, allTicked } from "./AiDraft";
 import { fmtDate, grantRate } from "./labels";
 import { Counts, RaiseButton, RequestTable } from "./pages";
 import { managesPurposes } from "./roles";
@@ -462,6 +464,9 @@ export function PurposeEditor({ console: c, prpsCode }: { console: Console; prps
   const [transfers, setTransfers] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // a purpose drafted by the operator's model (ADR-111) and what the person has ticked as checked
+  const [ai, setAi] = useState<PrpsAiSuggestionDto | null>(null);
+  const [ticked, setTicked] = useState<boolean[]>([]);
 
   useEffect(() => {
     if (!prpsCode) return;
@@ -488,7 +493,28 @@ export function PurposeEditor({ console: c, prpsCode }: { console: Console; prps
     set({ notices: content.notices.map((n, j) => (j === i ? { ...n, ...patch } : n)) });
   const days = (v: string) => Math.max(0, Math.floor(Number(v) || 0));
 
+  /** Puts what the model drafted into the form: for the person to read, change and save; it is not saved. */
+  const applySuggestion = (s: PrpsAiSuggestionDto) => {
+    const d = s.content;
+    setContent({
+      ...d,
+      description: d.description ?? "",
+      dCats: d.dCats.map((x) => ({ ...x, dpv: x.dpv ?? "", consequence: x.consequence ?? "" })),
+      notices: d.notices.map(({ lang, title, text }) => ({ lang, title, text })),
+    });
+    setRecipients(d.recipients.join("\n"));
+    setTransfers(d.transfers.join("\n"));
+    if (!prpsCode) setCode(s.code);
+    setAi(s);
+    setTicked(s.confirm.map(() => false));
+    setError(null);
+  };
+
   const save = async () => {
+    if (ai && !allTicked(ticked, ai.confirm.length)) {
+      setError("Tick each item under “Drafted by AI” once you have checked it, then save.");
+      return;
+    }
     const out = tidy({ ...content, recipients: linesOf(recipients), transfers: linesOf(transfers) });
     const finalCode = prpsCode ?? toCode(code || out.name);
     const problem = (finalCode ? null : "Give the purpose a code.") ?? contentProblem(out);
@@ -521,6 +547,8 @@ export function PurposeEditor({ console: c, prpsCode }: { console: Console; prps
         subtitle="Saved as a draft. Nothing changes for anyone until you publish it."
       />
       {error ? <ErrorBanner message={error} /> : null}
+      <AiDraftPanel console={c} onSuggestion={applySuggestion} />
+      {ai ? <AiReview suggestion={ai} ticked={ticked} onTick={(i, on) => setTicked(ticked.map((t, j) => (j === i ? on : t)))} /> : null}
       <form
         onSubmit={(e) => {
           e.preventDefault();

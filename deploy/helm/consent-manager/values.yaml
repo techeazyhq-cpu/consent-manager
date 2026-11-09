@@ -77,6 +77,18 @@ config:
     # (values-<cloud>.yaml), verify-full with the cloud's CA in production
     jdbcParams: "sslmode=prefer"
     r2dbcParams: "sslMode=prefer"
+  # Drafting a purpose from a description with a model YOU run (Ollama, vLLM or anything with an OpenAI-compatible /v1/chat/completions), ADR-111.
+  # Off by default. The model must be reachable from cm-cns-cmd-svc: add its namespace to networkPolicy.egress.namespaces, or its address to
+  # networkPolicy.egress.external. Only the fiduciary's own description is sent, after personal data is screened out; nothing leaves your servers
+  # unless you point the endpoint outside them. apiKeySecretKey names a key in the secret when the endpoint needs a bearer key.
+  aiDrafting:
+    enabled: false
+    # endpoint: http://ollama.models.svc.cluster.local:11434
+    # model: llama3.1:8b
+    # apiKeySecretKey: AI_DRAFTING_API_KEY
+    timeoutSeconds: 120
+    perHour: 20        # drafts per fiduciary per hour
+    maxConcurrent: 2   # asked of the model at once, per pod
   # Invoices (ADR-079): one currency for the platform (ISO 4217), and one tax rate in basis points (1800 is 18%) shown as its own line.
   billing:
     currency: INR
