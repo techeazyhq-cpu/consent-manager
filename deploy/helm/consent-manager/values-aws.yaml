@@ -27,6 +27,8 @@ config:
   redis:
     host: REPLACE_WITH_ELASTICACHE_ENDPOINT
     ssl: true
+secrets:
+  requireInternalKey: true # ADR-103
 externalSecrets:
   enabled: true
   storeRef: {kind: ClusterSecretStore, name: aws-secrets-manager}
@@ -40,6 +42,7 @@ externalSecrets:
     KEYCLOAK_ADMIN_PASSWORD: {key: cm-production/application, property: KEYCLOAK_ADMIN_PASSWORD}
     NTF_SVC_API_KEY: {key: cm-production/application, property: NTF_SVC_API_KEY}
     NTF_SVC_SIGNING_SECRET: {key: cm-production/application, property: NTF_SVC_SIGNING_SECRET}
+    NTF_INTERNAL_API_KEY: {key: cm-production/application, property: NTF_INTERNAL_API_KEY}
 databaseInit:
   # RDS creates only consent_manager
   enabled: true

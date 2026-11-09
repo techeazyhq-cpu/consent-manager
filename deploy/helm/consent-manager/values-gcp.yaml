@@ -26,6 +26,8 @@ config:
     host: REPLACE_WITH_MEMORYSTORE_HOST
     ssl: true
     passwordFromSecret: true
+secrets:
+  requireInternalKey: true # ADR-103
 externalSecrets:
   enabled: true
   storeRef: {kind: ClusterSecretStore, name: gcp-secret-manager}
@@ -41,6 +43,7 @@ externalSecrets:
     REDIS_PASSWORD: {key: cm-production-redis-password}
     NTF_SVC_API_KEY: {key: cm-production-ntf-svc-api-key}
     NTF_SVC_SIGNING_SECRET: {key: cm-production-ntf-svc-signing-secret}
+    NTF_INTERNAL_API_KEY: {key: cm-production-ntf-internal-api-key}
 databaseInit:
   # Terraform creates both consent_manager and keycloak
   enabled: false

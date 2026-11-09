@@ -77,7 +77,7 @@ resource "aws_secretsmanager_secret" "application" {
   description = <<-EOT
     Values for the chart's cm-secrets Secret, set by an operator and synced by External Secrets:
     DB_PASSWORD, DFREG_SECRETS_KEY, CNS_TKN_JWKS, CNS_RCPT_JWKS, CNSCMD_SECRETS_KEY, NTF_EMAIL_FINGERPRINT_KEY, KEYCLOAK_ADMIN_PASSWORD, KEYCLOAK_DB_PASSWORD,
-    NTF_SVC_API_KEY and NTF_SVC_SIGNING_SECRET.
+    NTF_SVC_API_KEY, NTF_SVC_SIGNING_SECRET and NTF_INTERNAL_API_KEY.
     MIGRATION_DB_PASSWORD comes from the RDS-managed master user secret.
   EOT
   kms_key_id  = aws_kms_key.primary.arn

@@ -96,6 +96,9 @@ keycloak:
   # The realms' passwordless sign-in posts codes to cm-ntf-svc (ntfBaseUrl in each realm's cm-otp config). The realm
   # files name it as compose does; these are its addresses from this namespace.
   otp:
+    # Whether Keycloak must have the notification service's key (NTF_INTERNAL_API_KEY, ADR-083) to start: off here, on in every cloud's
+    # values (ADR-103).
+    requireApiKey: false
     ntfBaseUrl: http://cm-ntf-svc.consent-manager.svc.cluster.local:8084
     sandboxNtfBaseUrl: http://cm-ntf-svc.consent-manager-sandbox.svc.cluster.local:8084
   helperImage: busybox:1.37

@@ -16,7 +16,7 @@
 #
 # The vault holds every value of the chart's cm-secrets Secret, synced by External Secrets. Terraform
 # writes the two it creates (the schema owner's password, write-only; the Redis access key); an operator adds the
-# application's own: db-password, secrets-encryption-key, data-encryption-key, admin-two-factor-key, admin-password.
+# application's own: db-password, secrets-encryption-key, data-encryption-key, admin-two-factor-key, admin-password, ntf-internal-api-key.
 
 data "azurerm_client_config" "current" {}
 

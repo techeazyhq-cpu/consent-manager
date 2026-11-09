@@ -163,7 +163,7 @@ run "secrets_are_replicated_to_both_regions_and_hold_no_plain_terraform_values" 
   assert {
     condition = toset(keys(google_secret_manager_secret.chart)) == toset([
       "db-password", "dfreg-secrets-key", "cns-tkn-jwks", "cns-rcpt-jwks", "cnscmd-secrets-key",
-      "keycloak-admin-password", "keycloak-db-password", "ntf-svc-api-key", "ntf-svc-signing-secret",
+      "keycloak-admin-password", "keycloak-db-password", "ntf-svc-api-key", "ntf-svc-signing-secret", "ntf-internal-api-key",
       "migration-db-password", "redis-password",
     ])
     error_message = "Every value of the chart's Secret has a Secret Manager entry."
