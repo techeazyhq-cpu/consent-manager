@@ -32,7 +32,8 @@ output "helm_values" {
   value = {
     config = {
       database = { url = module.datastores.postgres_jdbc_url }
-      redis    = { host = module.datastores.redis_host, port = module.datastores.redis_port }
+      # Memorystore signs with a CA of its own (ADR-098): the redis-ca ConfigMap is made from redis_server_ca_certificate
+      redis = { host = module.datastores.redis_host, port = module.datastores.redis_port, tls = { caConfigMap = "redis-ca" } }
     }
     # the logical backup CronJob (ADR-097): where it uploads and under which identity. Set logicalBackup.enabled to turn it on.
     logicalBackup = {

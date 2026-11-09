@@ -76,6 +76,8 @@ config:
     taxBps: 0
   redis:
     host: redis.common.svc.cluster.local
+    # The certificate authority the cache server's certificate chains to, when it is not one the JVM trusts (Memorystore's own CA):
+    # tls: {caConfigMap: redis-ca, caKey: ca-bundle.pem}. Every service that uses Redis then trusts exactly that CA (ADR-098).
     port: 6379
     # 0 for consent-manager, 1 for its sandbox; notification-service has 2 on the shared server (ADR-054)
     database: 0

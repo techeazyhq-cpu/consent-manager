@@ -96,6 +96,10 @@ sslMode={{ $tls.mode | upper | replace "-" "_" }}{{ if $tls.caConfigMap }}&sslRo
 - {name: SPRING_DATA_REDIS_PORT, value: {{ $c.redis.port | quote }}}
 - {name: SPRING_DATA_REDIS_DATABASE, value: {{ $c.redis.database | default 0 | quote }}}
 - {name: SPRING_DATA_REDIS_SSL_ENABLED, value: {{ $c.redis.ssl | quote }}}
+{{- if ($c.redis.tls | default dict).caConfigMap }}
+- {name: SPRING_DATA_REDIS_SSL_BUNDLE, value: redis}
+- {name: SPRING_SSL_BUNDLE_PEM_REDIS_TRUSTSTORE_CERTIFICATE, value: "file:/etc/redis-ca/ca-bundle.pem"}
+{{- end }}
 {{- if $c.redis.passwordFromSecret }}
 - name: SPRING_DATA_REDIS_PASSWORD
   {{- include "cm.secretRef" (dict "root" $root "key" "REDIS_PASSWORD") | nindent 2 }}
