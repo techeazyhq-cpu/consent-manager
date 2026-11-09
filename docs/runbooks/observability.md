@@ -13,6 +13,12 @@ Prometheus is at http://localhost:9090 (Status, Targets: all ten should be `up`)
 folder *Consent Manager*, dashboard *services*). They add about 450 MB and half a CPU, both capped. The services must have been
 built (`./gradlew bootJar`, then `docker compose build`) after this change, or they have no `/actuator/prometheus`.
 
+## Logs
+
+`observability.sh up` also starts Loki and a collector. In Grafana, *Explore*, pick the *Loki* data source and query by service, for
+example `{service="cm-ntf-svc"} |= "ERROR"` (the services are `cm-gw`, `cm-df-reg-svc`, `keycloak`, `postgres`, ...). Seven days are kept
+([ADR-091](../adr/adr-091-logs-in-loki.md)). When an alert fires, the table below says which service to open; its log is the next step.
+
 ## In a cluster
 
 Set `metrics.enabled: true` in the Helm values. Each pod then carries `prometheus.io/scrape`, `path` and `port` annotations
