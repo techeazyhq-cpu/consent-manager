@@ -150,6 +150,16 @@ export function shortChange(now: number, before: number | undefined): string | u
   return `${now > before ? "+" : "-"}${pct}%`;
 }
 
+/**
+ * How a percentage moved against the window before, in percentage points for a table cell: "+5 pts", "-3 pts", "same"; nothing when
+ * there is no comparison, or when nobody had decided in one of the two windows so there is no rate to compare (ADR-106).
+ */
+export function rateChange(now: number | null, before: number | null | undefined): string | undefined {
+  if (now == null || before == null) return undefined;
+  if (now === before) return "same";
+  return `${now > before ? "+" : "-"}${Math.abs(now - before)} pts`;
+}
+
 /** A purpose's row on the dashboard: this window's outcomes, and the window before's when comparing (ADR-104). */
 export interface PurposeRow {
   prpsCode: string;

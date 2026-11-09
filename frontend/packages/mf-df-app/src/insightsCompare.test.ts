@@ -22,11 +22,13 @@ import {
   calendarTitle,
   changeNote,
   comparisonSpan,
+  decidedRate,
   monthWindows,
   monthsAgo,
   purposeRows,
   quarterAndYearWindows,
   quartersAgo,
+  rateChange,
   sameWindow,
   shortChange,
   yearsAgo,
@@ -158,5 +160,34 @@ describe("purposes beside the window before (ADR-104)", () => {
     expect(rows.map((r) => r.prpsCode)).toEqual(["ORDERS", "QUIETER", "QUIET"]);
     expect(rows[1]).toEqual({ prpsCode: "QUIETER", outcomes: o(0), medianSeconds: null, before: o(9) });
     expect(shortChange(rows[1].outcomes.raised, rows[1].before?.raised)).toBe("-100%");
+  });
+});
+
+describe("the grant rate beside the window before (ADR-106)", () => {
+  it("moves in percentage points, not percent of a percent", () => {
+    expect(rateChange(80, 75)).toBe("+5 pts");
+    expect(rateChange(60, 63)).toBe("-3 pts");
+    expect(rateChange(50, 50)).toBe("same");
+    expect(rateChange(100, 0)).toBe("+100 pts");
+  });
+
+  it("says nothing when either window has no rate to compare", () => {
+    expect(rateChange(null, 50)).toBeUndefined();
+    expect(rateChange(50, null)).toBeUndefined();
+    expect(rateChange(50, undefined)).toBeUndefined();
+    expect(rateChange(null, null)).toBeUndefined();
+  });
+
+  it("works from a purpose's outcomes as the table has them", () => {
+    const now: InsightOutcomes = { raised: 10, given: 8, refused: 2, awaiting: 0, notNotified: 0 };
+    const before: InsightOutcomes = { raised: 8, given: 4, refused: 4, awaiting: 0, notNotified: 0 };
+    expect(rateChange(decidedRate(now), decidedRate(before))).toBe("+30 pts");
+    // nobody decided before: no rate then, so nothing to say
+    expect(rateChange(decidedRate(now), decidedRate({ given: 0, refused: 0 }))).toBeUndefined();
+  });
+
+  it("gives refused and awaiting the same short change as raised and given", () => {
+    expect(shortChange(6, 3)).toBe("+100%");
+    expect(shortChange(0, 4)).toBe("-100%");
   });
 });
