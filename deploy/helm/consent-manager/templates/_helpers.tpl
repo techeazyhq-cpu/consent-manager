@@ -64,6 +64,8 @@ sslMode={{ $tls.mode | upper | replace "-" "_" }}{{ if $tls.caConfigMap }}&sslRo
 {{- /* least privilege (ADR-090): the query login is the schema's own, unless this service names one itself */ -}}
 {{- $lp := false -}}{{- if and (($c.database.leastPrivilege | default dict).enabled) $s.schema (not (hasKey ($s.database | default dict) "user")) -}}{{- $lp = true -}}{{- end -}}
 {{- $runUser := ternary (printf "cm_%s_app" ($s.schema | default "")) $db.user $lp -}}{{- $runKey := ternary (printf "RUNTIME_DB_PASSWORD_%s" ($s.schema | default "" | upper)) $dbKey $lp -}}
+{{- /* an owner per schema (ADR-110): the migrations run as cm_<schema>_owner, not the shared owner */ -}}
+{{- if and $lp (($c.database.leastPrivilege | default dict).perSchemaOwners) -}}{{- $migUser = printf "cm_%s_owner" $s.schema -}}{{- $migKey = printf "OWNER_DB_PASSWORD_%s" ($s.schema | upper) -}}{{- end -}}
 - {name: SPRING_PROFILES_ACTIVE, value: docker}
 - {name: JAVA_TOOL_OPTIONS, value: "-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"}
 {{- if $root.Values.tracing.enabled }}

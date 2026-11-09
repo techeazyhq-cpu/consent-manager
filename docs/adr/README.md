@@ -115,6 +115,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [107](adr-107-consumer-backlog-alerts.md) | Alerts on a consumer that is behind or stuck | Accepted |
 | [108](adr-108-lock-wait-and-deadlock-alerts.md) | Alerts on a session stuck waiting for a lock, and on deadlocks | Accepted |
 | [109](adr-109-billing-ends-when-a-fiduciary-starts-leaving.md) | Billing ends when a fiduciary starts leaving | Accepted |
+| [110](adr-110-an-owner-per-schema.md) | Each schema has an owner of its own | Accepted |
 
 ## Writing one
 
