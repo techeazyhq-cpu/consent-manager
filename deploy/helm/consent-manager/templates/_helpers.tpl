@@ -66,6 +66,10 @@ sslMode={{ $tls.mode | upper | replace "-" "_" }}{{ if $tls.caConfigMap }}&sslRo
 {{- $runUser := ternary (printf "cm_%s_app" ($s.schema | default "")) $db.user $lp -}}{{- $runKey := ternary (printf "RUNTIME_DB_PASSWORD_%s" ($s.schema | default "" | upper)) $dbKey $lp -}}
 - {name: SPRING_PROFILES_ACTIVE, value: docker}
 - {name: JAVA_TOOL_OPTIONS, value: "-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"}
+{{- if $root.Values.tracing.enabled }}
+- {name: CM_TRACING_SAMPLING, value: {{ $root.Values.tracing.sampling | quote }}}
+- {name: CM_TRACING_ENDPOINT, value: {{ required "tracing.endpoint is required when tracing.enabled" $root.Values.tracing.endpoint | quote }}}
+{{- end }}
 {{- if $root.Values.metrics.enabled }}
 - {name: CM_METRICS_EXPOSURE, value: {{ ternary "health,info,gateway,prometheus" "health,info,prometheus" (eq $name "cm-gw") | quote }}}
 {{- if eq $name "cm-gw" }}

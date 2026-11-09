@@ -20,6 +20,8 @@ server:
     enabled: true
 
 spring:
+  reactor:
+    context-propagation: auto # the trace follows a request through the reactive chain (ADR-093)
   http:
     codecs:
       # Jackson 2, as the services' own code, until the move to Jackson 3 (#216)
@@ -68,6 +70,16 @@ management:
       # (docs/security/vapt-and-performance.md). HTTP request metrics are kept.
       spring:
         security: false
+  # Traces (ADR-093): spans exist, but none is sampled unless CM_TRACING_SAMPLING (0 to 1) says so, and they go to an OTLP endpoint
+  # (Tempo) that is only reached when something is sampled.
+  tracing:
+    sampling:
+      probability: ${CM_TRACING_SAMPLING:0}
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${CM_TRACING_ENDPOINT:http://tempo:4318/v1/traces}
   endpoints:
     web:
       exposure:

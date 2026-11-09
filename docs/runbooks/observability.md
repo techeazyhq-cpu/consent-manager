@@ -19,6 +19,13 @@ built (`./gradlew bootJar`, then `docker compose build`) after this change, or t
 example `{service="cm-ntf-svc"} |= "ERROR"` (the services are `cm-gw`, `cm-df-reg-svc`, `keycloak`, `postgres`, ...). Seven days are kept
 ([ADR-091](../adr/adr-091-logs-in-loki.md)). When an alert fires, the table below says which service to open; its log is the next step.
 
+## Traces
+
+`observability.sh up` starts Tempo and turns sampling to 1 (every request) on every service ([ADR-093](../adr/adr-093-traces-in-tempo.md)).
+In Grafana, *Explore*, the *Tempo* data source, *Search*, pick a service: one trace shows the gateway's span and the service's under
+it, with the time of each. To follow a slow request, find it by duration (*Min duration*). Without the script, sampling is 0 and
+nothing is recorded. In a cluster set `tracing.enabled`, `tracing.endpoint` and `tracing.sampling` in the Helm values.
+
 ## In a cluster
 
 Set `metrics.enabled: true` in the Helm values. Each pod then carries `prometheus.io/scrape`, `path` and `port` annotations

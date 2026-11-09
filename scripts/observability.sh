@@ -26,14 +26,14 @@ cd "$(dirname "$0")/../infra"
 
 case "${1:-}" in
   up)
-    export CM_METRICS_EXPOSURE="health,info,prometheus" CM_GW_MANAGEMENT_PORT=9091
+    export CM_METRICS_EXPOSURE="health,info,prometheus" CM_GW_MANAGEMENT_PORT=9091 CM_TRACING_SAMPLING="${CM_TRACING_SAMPLING:-1}"
     docker compose up -d --no-build cm-df-reg-svc cm-cns-cmd-svc cm-cns-qry-svc cm-ntf-svc cm-bil-svc cm-aud-svc cm-stf-svc cm-dsr-svc cm-gw
-    docker compose --profile observability up -d prometheus grafana alertmanager postgres-exporter redis-exporter loki alloy
+    docker compose --profile observability up -d prometheus grafana alertmanager postgres-exporter redis-exporter loki alloy tempo
     echo "Prometheus: http://localhost:9090   Grafana: http://localhost:3001 (Consent Manager > services)"
     ;;
   down)
-    docker compose --profile observability stop prometheus grafana alertmanager postgres-exporter redis-exporter loki alloy
-    docker compose --profile observability rm -f prometheus grafana alertmanager postgres-exporter redis-exporter loki alloy
+    docker compose --profile observability stop prometheus grafana alertmanager postgres-exporter redis-exporter loki alloy tempo
+    docker compose --profile observability rm -f prometheus grafana alertmanager postgres-exporter redis-exporter loki alloy tempo
     docker compose up -d --no-build cm-df-reg-svc cm-cns-cmd-svc cm-cns-qry-svc cm-ntf-svc cm-bil-svc cm-aud-svc cm-stf-svc cm-dsr-svc cm-gw
     ;;
   *)

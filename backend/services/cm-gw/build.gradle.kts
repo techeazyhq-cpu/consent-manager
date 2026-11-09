@@ -31,6 +31,10 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j:5.0.3")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("io.micrometer:micrometer-registry-prometheus") // /actuator/prometheus, exposed only when CM_METRICS_EXPOSURE says so (ADR-070)
+    implementation("io.micrometer:micrometer-tracing-bridge-otel") // traces, sampled at 0 unless CM_TRACING_SAMPLING says so (ADR-093)
+    implementation("org.springframework.boot:spring-boot-micrometer-tracing-opentelemetry")
+    implementation("org.springframework.boot:spring-boot-opentelemetry")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
     implementation("com.fasterxml.jackson.core:jackson-databind")
 
     testImplementation("io.projectreactor:reactor-test")

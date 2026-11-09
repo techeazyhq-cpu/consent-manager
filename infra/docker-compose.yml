@@ -104,6 +104,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
       CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
+      CM_TRACING_SAMPLING: ${CM_TRACING_SAMPLING:-0}
       CM_KEYCLOAK_ADMIN-USERNAME: admin
       CM_KEYCLOAK_ADMIN-PASSWORD: admin
 
@@ -120,6 +121,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
       CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
+      CM_TRACING_SAMPLING: ${CM_TRACING_SAMPLING:-0}
       # the address tokens name for their status list (ADR-077): the gateway as a fiduciary reaches it
       CM_CNS_TKN_STATUS_LIST_BASE_URL: ${CM_PUBLIC_API_URL:-http://localhost:9000}
     volumes:
@@ -143,6 +145,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
       CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
+      CM_TRACING_SAMPLING: ${CM_TRACING_SAMPLING:-0}
 
   cm-ntf-svc:
     <<: *svc-limits
@@ -157,6 +160,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
       CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
+      CM_TRACING_SAMPLING: ${CM_TRACING_SAMPLING:-0}
       # The test kit signs in as the same few addresses all day, so this stack's limit on codes to one address is loose (ADR-080);
       # the defaults (20 an hour, 40 a day) are what a deployment gets.
       CM_NTF_OTP_LIMITS_DESTINATION_PER_HOUR: ${CM_NTF_OTP_PER_HOUR:-1000}
@@ -184,6 +188,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
       CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
+      CM_TRACING_SAMPLING: ${CM_TRACING_SAMPLING:-0}
 
   cm-aud-svc:
     <<: *svc-limits
@@ -198,6 +203,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
       CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
+      CM_TRACING_SAMPLING: ${CM_TRACING_SAMPLING:-0}
 
   cm-stf-svc:
     <<: *svc-limits
@@ -212,6 +218,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
       CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
+      CM_TRACING_SAMPLING: ${CM_TRACING_SAMPLING:-0}
       CM_KEYCLOAK_ADMIN-USERNAME: admin
       CM_KEYCLOAK_ADMIN-PASSWORD: admin
 
@@ -228,6 +235,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
       CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
+      CM_TRACING_SAMPLING: ${CM_TRACING_SAMPLING:-0}
       CM_KEYCLOAK_ADMIN-USERNAME: admin
       CM_KEYCLOAK_ADMIN-PASSWORD: admin
 
@@ -244,6 +252,7 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       JAVA_TOOL_OPTIONS: *svc-jvm
       CM_METRICS_EXPOSURE: ${CM_METRICS_EXPOSURE:-health,info}
+      CM_TRACING_SAMPLING: ${CM_TRACING_SAMPLING:-0}
       CM_GW_MANAGEMENT_PORT: ${CM_GW_MANAGEMENT_PORT:-}
     depends_on:
       - opa
@@ -325,6 +334,20 @@ services:
       - ./observability/loki/loki.yml:/etc/loki/loki.yml:ro
       - loki-data:/loki
 
+  tempo:
+    profiles: [observability]
+    image: grafana/tempo:2.8.1
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    user: "0"   # a new named volume is owned by root (laptop stack only)
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256m
+    volumes:
+      - ./observability/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo-data:/var/tempo
+
   # Reads the containers' logs through the Docker socket (read-only) and sends them to Loki (ADR-091).
   alloy:
     profiles: [observability]
@@ -362,6 +385,7 @@ services:
     depends_on:
       - prometheus
       - loki
+      - tempo
 
   # ---- The sandbox (ADR-034, ADR-037): `docker compose --profile sandbox up -d` ----
   # The same images as production with SPRING_PROFILES_ACTIVE=docker,sandbox: their own database (cm_sandbox), Keycloak
@@ -452,5 +476,6 @@ services:
 volumes:
   prom-data:
   loki-data:
+  tempo-data:
   cns-tkn-keys:
   sbx-cns-tkn-keys:
