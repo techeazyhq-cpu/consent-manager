@@ -31,7 +31,7 @@ claiming to be from the domain (a convincing fake consent request) is refused.
 - **It cannot see the provider's signing.** A published DKIM key says nothing about whether the provider signs with it: send a test
   message to a mailbox that shows the headers (`dkim=pass`, `spf=pass`, `dmarc=pass`) after any change.
 - **SPF `redirect=` and nested includes are counted, not followed.** A domain that redirects is reported for a human to check.
-- **No scheduled run.** It is run by hand or from a pipeline; wiring it to an alert is open.
+- ~~**No scheduled run.**~~ A weekly workflow runs it and fails on a failed record ([ADR-094](adr-094-scheduled-deliverability-check.md)); a page rather than an email is open.
 - **Reverse DNS and sending IP reputation** are the provider's.
 
 ## Options considered

@@ -8,6 +8,10 @@ node scripts/email-deliverability.mjs consent.example.com --dkim-selector s1
 
 Fix every `FAIL`; read every `WARN`.
 
+A workflow runs it every Monday ([ADR-094](../adr/adr-094-scheduled-deliverability-check.md)). Turn it on by setting the repository variables
+`CM_MAIL_DOMAIN` (and optionally `CM_DKIM_SELECTORS`, comma-separated) under Settings, Secrets and variables, Actions, Variables; until then
+it only says it has nothing to check. A red run means a record failed: run the command above and read the `FAIL` lines.
+
 ## What to publish
 
 | Record | Where | Value |

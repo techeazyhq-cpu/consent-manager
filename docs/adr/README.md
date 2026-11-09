@@ -99,6 +99,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [091](adr-091-logs-in-loki.md) | Logs in Loki, next to the metrics | Accepted |
 | [092](adr-092-database-transaction-alerts.md) | Alerts on long and idle-in-transaction database sessions | Accepted |
 | [093](adr-093-traces-in-tempo.md) | Traces in Tempo, off until asked for | Accepted |
+| [094](adr-094-scheduled-deliverability-check.md) | A weekly run of the deliverability check | Accepted |
 
 ## Writing one
 
