@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-162 entries: 149 API problems, 12 operational log codes and 1 event.
+163 entries: 149 API problems, 13 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -259,6 +259,7 @@ Written as `[CODE]` at the start of a WARN or ERROR message, for alerts and runb
 | `CM-INTERNAL-ERROR` | ERROR | Unexpected error ended a request | An exception nobody planned for ended a request. The caller was answered with internal-error and the correlation id; the exception and its stack trace are in this log message. | Find the log line by the correlation id the caller quotes, and fix the cause. A burst of them is an incident. | aud, bil, cns-cmd, cns-qry, df-reg, dsr, gw, ntf, stf |
 | `CM-INVOICE-RUN-FAILED` | WARN | Invoice run failed | The monthly invoice run for last month failed part way. Invoices already issued stay; it is tried again every hour. | If it repeats, check the billing database and the plan prices, then run the month by hand from the admin console. | bil |
 | `CM-NTF-INTERNAL-OPEN` | WARN | Sign-in codes can be requested by anything on the network | cm-ntf-svc has no internal API key, so any caller that can reach it can ask it to send sign-in codes. Logged at start-up. | Set cm.ntf.internal-api-key (NTF_INTERNAL_API_KEY in the chart's secret) and the same value in Keycloak. | ntf |
+| `CM-NTF-INTERNAL-ROTATING` | WARN | The previous sign-in service key is still accepted | cm-ntf-svc has cm.ntf.internal-api-key-previous set, so requests to send a sign-in code are accepted with either the current key or the old one. Logged at start-up; meant only for the time it takes to change the key (ADR-101). | Once cm.ntf.internal.key.previous.used has stopped rising, remove NTF_INTERNAL_API_KEY_PREVIOUS from the secret and restart the service. | ntf |
 | `CM-OTP-LIMITS-EXEMPT` | WARN | Sign-in code limit lifted for some addresses | Keycloak started with addresses exempt from the limit on sign-in codes sent to one address (ADR-061). That is for the local stack, where a test kit signs in as the same accounts many times an hour. | In production this is a misconfiguration: remove spi-authenticator-cm-otp-authenticator-exempt-addresses from Keycloak's settings and restart it. | idn-otp-spi |
 | `CM-OTP-NTF-KEY-MISSING` | WARN | Keycloak sends no key to cm-ntf-svc | The sign-in step has no ntf-api-key server setting, so it asks cm-ntf-svc to send codes without a key. That works only while cm-ntf-svc does not ask for one. Logged at start-up. | Set the ntf-api-key server setting (KC_SPI_AUTHENTICATOR_CM_OTP_AUTHENTICATOR_NTF_API_KEY) to the value of cm-ntf-svc's internal API key. | idn-otp-spi |
 | `CM-OUTBOX-RELAY-FAILED` | WARN | Outbox relay pass failed | The service could not publish waiting events to Pulsar in one pass. They stay in the outbox and are sent on the next pass. | If it repeats, check that Pulsar is reachable and the service's database is healthy; events are not lost. | bil, dsr, df-reg, cns-cmd |
