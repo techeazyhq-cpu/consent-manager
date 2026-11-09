@@ -113,6 +113,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [105](adr-105-invoice-reminders.md) | Reminders for unpaid invoices | Accepted |
 | [106](adr-106-every-purpose-figure-beside-the-window-before.md) | Every figure of a purpose beside the window before | Accepted |
 | [107](adr-107-consumer-backlog-alerts.md) | Alerts on a consumer that is behind or stuck | Accepted |
+| [108](adr-108-lock-wait-and-deadlock-alerts.md) | Alerts on a session stuck waiting for a lock, and on deadlocks | Accepted |
 
 ## Writing one
 

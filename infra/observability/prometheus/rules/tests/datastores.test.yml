@@ -55,3 +55,50 @@ tests:
           - exp_labels: {severity: ticket}
             exp_annotations:
               summary: "A database statement has been running for more than 10 minutes: a slow query, a lock wait, or a migration (ADR-092)"
+
+  # a session waiting on a lock at every look for longer than 5 minutes (ADR-108)
+  - interval: 1m
+    input_series:
+      - series: 'pg_stat_activity_count{datname="consent_manager",state="active",wait_event_type="Lock",wait_event="transactionid"}'
+        values: '0 0 1x20'
+      - series: 'pg_stat_activity_count{datname="template1",state="active",wait_event_type="Lock",wait_event="transactionid"}'
+        values: '3x22'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: DatabaseSessionWaitingForALock
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: DatabaseSessionWaitingForALock
+        exp_alerts:
+          - exp_labels: {severity: ticket, datname: consent_manager}
+            exp_annotations:
+              summary: "A database session has been waiting on a lock at every look for 5 minutes: something holds a lock it should have let go, and what waits on it is stuck (ADR-108)"
+  # a lock wait that comes and goes (a busy table) is not an alert
+  - interval: 1m
+    input_series:
+      - series: 'pg_stat_activity_count{datname="consent_manager",state="active",wait_event_type="Lock",wait_event="transactionid"}'
+        values: '1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0 1 0 0'
+    alert_rule_test:
+      - eval_time: 22m
+        alertname: DatabaseSessionWaitingForALock
+        exp_alerts: []
+  # a deadlock fires when the counter rises, and goes quiet once it has not for 15 minutes
+  - interval: 1m
+    input_series:
+      - series: 'pg_stat_database_deadlocks{datname="consent_manager"}'
+        values: '0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1'
+      - series: 'pg_stat_database_deadlocks{datname="template1"}'
+        values: '0 0 0 5 5x36'
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: DatabaseDeadlock
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: DatabaseDeadlock
+        exp_alerts:
+          - exp_labels: {severity: ticket, datname: consent_manager}
+            exp_annotations:
+              summary: "PostgreSQL aborted a transaction to break a deadlock in the last 15 minutes: two pieces of code take the same rows in opposite orders (ADR-108)"
+      - eval_time: 35m
+        alertname: DatabaseDeadlock
+        exp_alerts: []

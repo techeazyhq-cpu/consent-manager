@@ -38,6 +38,15 @@ groups:
         for: 5m
         labels: {severity: ticket}
         annotations: {summary: "A database statement has been running for more than 10 minutes: a slow query, a lock wait, or a migration (ADR-092)"}
+      - alert: DatabaseSessionWaitingForALock
+        expr: sum by (datname) (pg_stat_activity_count{wait_event_type="Lock", datname!~"template.*"}) > 0
+        for: 5m
+        labels: {severity: ticket}
+        annotations: {summary: "A database session has been waiting on a lock at every look for 5 minutes: something holds a lock it should have let go, and what waits on it is stuck (ADR-108)"}
+      - alert: DatabaseDeadlock
+        expr: sum by (datname) (increase(pg_stat_database_deadlocks{datname!~"template.*"}[15m])) > 0
+        labels: {severity: ticket}
+        annotations: {summary: "PostgreSQL aborted a transaction to break a deadlock in the last 15 minutes: two pieces of code take the same rows in opposite orders (ADR-108)"}
       - alert: RedisDown
         expr: redis_up == 0
         for: 2m
