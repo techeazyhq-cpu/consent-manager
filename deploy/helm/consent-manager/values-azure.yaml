@@ -27,6 +27,8 @@ config:
     port: 10000
     ssl: true
     passwordFromSecret: true
+secrets:
+  requireInternalKey: true # ADR-103
 externalSecrets:
   enabled: true
   storeRef: {kind: ClusterSecretStore, name: azure-key-vault}
@@ -42,6 +44,7 @@ externalSecrets:
     REDIS_PASSWORD: {key: redis-password}
     NTF_SVC_API_KEY: {key: ntf-svc-api-key}
     NTF_SVC_SIGNING_SECRET: {key: ntf-svc-signing-secret}
+    NTF_INTERNAL_API_KEY: {key: ntf-internal-api-key}
 databaseInit:
   # Terraform creates both consent_manager and keycloak
   enabled: false

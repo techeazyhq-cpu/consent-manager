@@ -69,6 +69,7 @@ Terraform creates the secret entries without values. An operator sets them once:
 | `CNS_RCPT_JWKS` | The consent receipt signing key set (ADR-025), the same form, never the same keys. Keep retired keys in it, after the current one, for as long as receipts they signed are kept |
 | `KEYCLOAK_ADMIN_PASSWORD`, `KEYCLOAK_DB_PASSWORD` | Keycloak's admin and database passwords (read by both charts' Secrets) |
 | `NTF_SVC_API_KEY`, `NTF_SVC_SIGNING_SECRET` | The notification-service client credentials |
+| `NTF_INTERNAL_API_KEY` | A long random value: the key Keycloak sends and cm-ntf-svc requires on `POST /internal/otp/send` (ADR-083). **Required** in the cloud values: without it the notification service and Keycloak do not start (ADR-103). Both charts read it, so it goes in both namespaces' secrets. To change it without a gap, see ADR-101 |
 
 ## 2. The platform pieces outside the charts
 

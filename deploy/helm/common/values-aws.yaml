@@ -32,6 +32,8 @@ serviceAliases:
   pulsar: pulsar-broker
 
 keycloak:
+  otp:
+    requireApiKey: true # ADR-103
   hostname: https://id.example.com
   database:
     # RDS: the consent-manager chart's database-init job creates the keycloak database
@@ -55,3 +57,4 @@ externalSecrets:
   data:
     KEYCLOAK_DB_PASSWORD: {key: cm-production/application, property: KEYCLOAK_DB_PASSWORD}
     KEYCLOAK_ADMIN_PASSWORD: {key: cm-production/application, property: KEYCLOAK_ADMIN_PASSWORD}
+    NTF_INTERNAL_API_KEY: {key: cm-production/application, property: NTF_INTERNAL_API_KEY}

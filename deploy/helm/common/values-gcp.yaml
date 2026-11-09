@@ -32,6 +32,8 @@ serviceAliases:
   pulsar: pulsar-broker
 
 keycloak:
+  otp:
+    requireApiKey: true # ADR-103
   hostname: https://id.example.com
   database:
     # Terraform creates the keycloak database
@@ -55,3 +57,4 @@ externalSecrets:
   data:
     KEYCLOAK_DB_PASSWORD: {key: cm-production-keycloak-db-password}
     KEYCLOAK_ADMIN_PASSWORD: {key: cm-production-keycloak-admin-password}
+    NTF_INTERNAL_API_KEY: {key: cm-production-ntf-internal-api-key}

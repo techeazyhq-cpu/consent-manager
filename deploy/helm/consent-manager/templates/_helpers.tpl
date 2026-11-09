@@ -138,7 +138,7 @@ sslMode={{ $tls.mode | upper | replace "-" "_" }}{{ if $tls.caConfigMap }}&sslRo
 - {name: NTF_SVC_BASE_URL, value: {{ $c.notificationService.baseUrl | quote }}}
 # who may ask this service to send a sign-in code (ADR-083): the same value is Keycloak's NTF_API_KEY server setting
 - name: CM_NTF_INTERNAL_API_KEY
-  {{- include "cm.secretRef" (dict "root" $root "key" "NTF_INTERNAL_API_KEY" "optional" true) | nindent 2 }}
+  {{- include "cm.secretRef" (dict "root" $root "key" "NTF_INTERNAL_API_KEY" "optional" (not ($root.Values.secrets.requireInternalKey | default false))) | nindent 2 }}
 # the key before it, accepted too while it is being changed (ADR-101); leave the secret key out when no change is under way
 - name: CM_NTF_INTERNAL_API_KEY_PREVIOUS
   {{- include "cm.secretRef" (dict "root" $root "key" "NTF_INTERNAL_API_KEY_PREVIOUS" "optional" true) | nindent 2 }}

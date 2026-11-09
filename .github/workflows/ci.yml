@@ -165,6 +165,20 @@ jobs:
           test "$(grep -c 'sslmode=verify-full&sslrootcert=/etc/db-ca/ca-bundle.pem' /tmp/tls.yaml)" -eq 7   # the migration connection of each service
           test "$(grep -c 'sslMode=VERIFY_FULL&sslRootCert=/etc/db-ca/ca-bundle.pem' /tmp/tls.yaml)" -eq 7   # and its queries
           test "$(grep -c 'name: rds-ca' /tmp/tls.yaml)" -eq 8   # mounted in the seven services and in the database-init job
+      - name: Every cloud requires the sign-in service key, the base values do not (ADR-103)
+        run: |
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          for cloud in aws azure gcp; do
+            helm template cm consent-manager -f consent-manager/values-$cloud.yaml > /tmp/k-cm.yaml
+            helm template c common -f common/values-$cloud.yaml > /tmp/k-co.yaml
+            for f in /tmp/k-cm.yaml /tmp/k-co.yaml; do
+              grep -q 'key: NTF_INTERNAL_API_KEY}}' $f   # a reference with no optional: the pod does not start without it
+              grep -q 'secretKey: NTF_INTERNAL_API_KEY' $f   # and the secret sync maps it
+            done
+          done
+          for out in "$(helm template cm consent-manager)" "$(helm template c common)"; do
+            echo "$out" | grep -q 'key: NTF_INTERNAL_API_KEY, optional: true}}'
+          done
       - name: Keycloak can verify its database server (ADR-100)
         run: |
           helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }

@@ -39,8 +39,8 @@ many; this decides who.
 - **One shared secret, not a credential per caller.** There is one caller today. If another appears, it should have a key of its
   own, so one can be withdrawn without the other.
 - ~~**No rotation without a gap.**~~ The service now accepts a previous key during a change ([ADR-101](adr-101-internal-key-rotation.md)).
-- **Optional by default.** A deployment that never sets it stays open, with only a warning. Making it required in the chart would
-  stop an upgrade of a cluster that has not yet created the secret.
+- **Optional by default** in the base values, where a deployment that never sets it stays open with only a warning; **required in every
+  cloud's values** since [ADR-103](adr-103-internal-key-required-in-the-cloud.md).
 - **Only `/internal/otp/send`.** The other `/internal/**` endpoints of other services (quota checks, sub-eligibility, status) keep
   relying on the network policy; so does the gateway's call to the PDP.
 - **The key travels in a header over plain HTTP inside the cluster,** as every service-to-service call does; the mesh of ADR-073

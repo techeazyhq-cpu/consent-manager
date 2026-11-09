@@ -33,6 +33,10 @@ imagePullSecrets: []
 # CNS_TKN_JWKS, CNS_RCPT_JWKS, CNSCMD_SECRETS_KEY, NTF_EMAIL_FINGERPRINT_KEY, KEYCLOAK_ADMIN_PASSWORD, REDIS_PASSWORD (optional), NTF_SVC_API_KEY, NTF_SVC_SIGNING_SECRET.
 secrets:
   existingSecret: cm-secrets
+  # Whether the notification service must have its internal key (NTF_INTERNAL_API_KEY, ADR-083) to start: off here, so a local or a
+  # first install without it still starts, with a warning; on in every cloud's values (ADR-103), where a pod without the key does
+  # not start, and the secret sync fails loudly, rather than sign-in codes being askable by anything on the network.
+  requireInternalKey: false
 
 externalSecrets:
   enabled: false
