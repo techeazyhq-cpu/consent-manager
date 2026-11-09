@@ -24,6 +24,7 @@ import org.springframework.web.reactive.function.server.ServerResponse;
 import com.techeazyhq.cm.ntf.app.OtpSendCmd;
 import com.techeazyhq.cm.ntf.app.OtpSendCmdHandler;
 import com.techeazyhq.cm.ntf.dom.NtfDeliveryRejectedException;
+import com.techeazyhq.cm.webkit.DomRuleViolation;
 
 import reactor.core.publisher.Mono;
 
@@ -44,7 +45,11 @@ public class OtpSendHandler {
 
     public Mono<ServerResponse> send(ServerRequest request) {
         return request.bodyToMono(OtpSendReqDto.class)
-                .flatMap(body -> otpSendCmdHandler.handle(new OtpSendCmd(body.channel(), body.destination(), body.code())))
+                // no body, or a body without a channel, a destination or a code, is the caller's mistake (400), not ours (500)
+                .switchIfEmpty(Mono.error(() -> invalid()))
+                .flatMap(body -> body.channel() == null || blank(body.destination()) || blank(body.code())
+                        ? Mono.<Void>error(invalid())
+                        : otpSendCmdHandler.handle(new OtpSendCmd(body.channel(), body.destination(), body.code())))
                 .then(ServerResponse.ok().build())
                 // e.g. an invalid phone number: the caller has to ask the user again, retrying won't help
                 .onErrorResume(NtfDeliveryRejectedException.class, err ->
@@ -53,5 +58,13 @@ public class OtpSendHandler {
                 .onErrorResume(com.techeazyhq.cm.webkit.DomRuleViolation.class, err -> err.httpStatus() == 429
                         ? ServerResponse.status(429).header("Retry-After", "600").bodyValue(Map.of("code", err.problemType()))
                         : Mono.error(err));
+    }
+
+    private static DomRuleViolation invalid() {
+        return new DomRuleViolation(400, "otp-send-invalid", "A channel, a destination and a code are needed");
+    }
+
+    private static boolean blank(String value) {
+        return value == null || value.isBlank();
     }
 }

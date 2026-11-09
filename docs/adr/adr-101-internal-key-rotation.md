@@ -51,5 +51,5 @@ left, then stays.
 - **Keycloak's key still has to be changed by hand** (it is a server setting, not realm data, ADR-083); the sequence above is the
   procedure, not something a command does for you.
 - **Still optional:** making the key required by default is separate (ADR-083).
-- **An empty JSON body to the endpoint gave a 500, not a 4xx,** in the live check. That is behind the key filter and was not
-  changed here; it is worth its own look.
+- ~~**An empty JSON body to the endpoint gave a 500, not a 4xx.**~~ Fixed in the change that follows this record: a missing body, or a
+  body without a channel, a destination or a code, is a 400 `otp-send-invalid`, and nothing is sent.
