@@ -86,6 +86,9 @@ keycloak:
     user: keycloak
     # appended to the JDBC URL; require on a managed server
     params: ""
+    # Verified TLS (ADR-100), instead of params: mode is require, verify-ca or verify-full, caConfigMap the ConfigMap that holds the
+    # server's CA bundle (the consent-manager chart's db-ca ConfigMap, copied into this namespace), for example
+    # tls: {mode: verify-full, caConfigMap: rds-ca}. Unset, nothing changes.
   # ConfigMap of infra/keycloak/realm-export, imported on start (a realm that exists is skipped)
   realmsConfigMap: keycloak-realms
   # ConfigMap of backend/keycloak-ext/build/providers (cm-idn-otp-spi, cm-idn-theme); empty when the image has them

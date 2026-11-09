@@ -105,6 +105,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [097](adr-097-scheduled-logical-backup.md) | The logical backup runs on a schedule, in the chart | Accepted |
 | [098](adr-098-redis-trusts-its-own-ca.md) | The services trust the cache server's own CA | Accepted |
 | [099](adr-099-pulsar-tls-and-token.md) | Pulsar over TLS, with a token when the broker asks for one | Accepted |
+| [100](adr-100-keycloak-database-tls.md) | Keycloak verifies its database server | Accepted |
 
 ## Writing one
 
