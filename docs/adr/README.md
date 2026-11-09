@@ -111,6 +111,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [103](adr-103-internal-key-required-in-the-cloud.md) | The sign-in service key is required in the cloud values | Accepted |
 | [104](adr-104-purposes-beside-the-window-before.md) | Purposes beside the window before on the dashboard | Accepted |
 | [105](adr-105-invoice-reminders.md) | Reminders for unpaid invoices | Accepted |
+| [106](adr-106-every-purpose-figure-beside-the-window-before.md) | Every figure of a purpose beside the window before | Accepted |
 
 ## Writing one
 

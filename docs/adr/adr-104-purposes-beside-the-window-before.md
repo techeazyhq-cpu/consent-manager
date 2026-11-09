@@ -27,8 +27,8 @@ The earlier records listed "by purpose" as not yet.
 
 ## Not yet / limits
 
-- **Only *Raised* and *Given* are compared per purpose,** not refused, awaiting, the rate or the time to decide. The previous window's
-  numbers for those are in the answer, and the table can show more once it is clear which are wanted.
+- ~~**Only *Raised* and *Given* are compared per purpose.**~~ Refused, awaiting and the rate are compared too ([ADR-106](adr-106-every-purpose-figure-beside-the-window-before.md));
+  the time to decide is still not.
 - **Not by day:** the day-by-day series is still only for the current window.
 - **A percentage on a small number misleads** ("+300%" from 1 to 4). The figure shown is the plain percentage; a purpose with few
   requests is best read from the counts beside it.

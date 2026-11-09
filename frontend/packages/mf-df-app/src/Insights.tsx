@@ -33,6 +33,7 @@ import {
   niceMax,
   purposeRows,
   quarterAndYearWindows,
+  rateChange,
   sameWindow,
   shortChange,
   share,
@@ -334,7 +335,7 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
           {purposeRows(data.purposes, data.previous?.purposes).length ? (
             <>
               <h3 className="cm-section-title">By purpose</h3>
-              {data.previous ? <p className="cm-note">Beside each figure, how it moved against the {span}; a purpose with nothing now is listed last.</p> : null}
+              {data.previous ? <p className="cm-note">Beside each figure, how it moved against the {span}; a purpose with nothing now is listed last. The rate moves in percentage points.</p> : null}
               <div style={{ overflowX: "auto" }}>
                 <table className="cm-table">
                   <thead>
@@ -353,6 +354,9 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
                       const r = decidedRate(p.outcomes);
                       const raisedChange = shortChange(p.outcomes.raised, p.before?.raised);
                       const givenChange = shortChange(p.outcomes.given, p.before?.given);
+                      const refusedChange = shortChange(p.outcomes.refused, p.before?.refused);
+                      const awaitingChange = shortChange(p.outcomes.awaiting, p.before?.awaiting);
+                      const rateMove = p.before ? rateChange(r, decidedRate(p.before)) : undefined;
                       return (
                         <tr key={p.prpsCode}>
                           <td>
@@ -366,9 +370,18 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
                             {p.outcomes.given}
                             {givenChange ? <small className="cm-note"> {givenChange}</small> : null}
                           </td>
-                          <td>{p.outcomes.refused}</td>
-                          <td>{p.outcomes.awaiting}</td>
-                          <td>{r == null ? "—" : `${r}%`}</td>
+                          <td>
+                            {p.outcomes.refused}
+                            {refusedChange ? <small className="cm-note"> {refusedChange}</small> : null}
+                          </td>
+                          <td>
+                            {p.outcomes.awaiting}
+                            {awaitingChange ? <small className="cm-note"> {awaitingChange}</small> : null}
+                          </td>
+                          <td>
+                            {r == null ? "—" : `${r}%`}
+                            {rateMove ? <small className="cm-note"> {rateMove}</small> : null}
+                          </td>
                           <td>{fmtDuration(p.medianSeconds)}</td>
                         </tr>
                       );
