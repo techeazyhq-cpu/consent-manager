@@ -24,8 +24,7 @@ exporter already reports the age of the oldest transaction by state; nothing ale
 
 - **Thresholds are guesses for this system,** from what the services do (short transactions), not from measured production traffic.
   The usual long thing is a Flyway migration on a big table, which will fire the second alert once; the runbook says so.
-- **Lock waits and deadlocks are not alerted on:** the exporter's lock count does not separate waiting from granted, and the deadlock
-  counter is not among the series this exporter version exposes by default. A custom query would add them.
+- ~~**Lock waits and deadlocks are not alerted on.**~~ They are ([ADR-108](adr-108-lock-wait-and-deadlock-alerts.md)): the exporter does expose both.
 - **Not fired live:** the rules were checked and unit-tested, and the metrics were confirmed to exist on the running exporter, but a
   real held-open transaction was not run against the running Prometheus (the 5-minute `for` makes that slow).
 - **Per-service attribution** (which service holds the session) is by `application_name`, which the services do not set yet.
