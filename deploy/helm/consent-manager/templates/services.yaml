@@ -20,6 +20,7 @@
 {{- $ctx := dict "root" $root "name" $name }}
 {{- $dbm := mergeOverwrite (deepCopy $root.Values.config.database) ($s.database | default dict) }}
 {{- $dbCa := and $s.schema ($dbm.tls | default dict).caConfigMap }}
+{{- $redisCa := and $s.redis (($root.Values.config.redis.tls | default dict).caConfigMap) }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -97,6 +98,9 @@ spec:
             {{- if $dbCa }}
             - {name: db-ca, mountPath: /etc/db-ca, readOnly: true}
             {{- end }}
+            {{- if $redisCa }}
+            - {name: redis-ca, mountPath: /etc/redis-ca, readOnly: true}
+            {{- end }}
             {{- if $s.consentTokenKeys }}
             - {name: cns-tkn-keys, mountPath: /var/lib/cm/keys, readOnly: true}
             {{- end }}
@@ -110,6 +114,14 @@ spec:
             name: {{ $dbm.tls.caConfigMap }}
             items:
               - {key: {{ $dbm.tls.caKey | default "ca-bundle.pem" }}, path: ca-bundle.pem}
+        {{- end }}
+        {{- if $redisCa }}
+        # the cache server's certificate authority (ADR-098): Memorystore signs with a CA of its own, which no JVM trusts by default
+        - name: redis-ca
+          configMap:
+            name: {{ $root.Values.config.redis.tls.caConfigMap }}
+            items:
+              - {key: {{ $root.Values.config.redis.tls.caKey | default "ca-bundle.pem" }}, path: ca-bundle.pem}
         {{- end }}
         {{- if $s.consentTokenKeys }}
         # the consent token signing keys (ADR-006) and the receipt signing keys (ADR-025), each its own set, from the
