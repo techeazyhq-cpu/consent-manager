@@ -115,6 +115,49 @@ class DfInsightsQryHandlerTest {
     }
 
     @Test
+    void comparisonCarriesThePurposesOfTheWindowBeforeMostRaisedFirst() {
+        DfInsights.Previous before = handler.handle("df-1", 7, ZoneOffset.UTC, true).block().previous();
+
+        assertEquals(List.of("ORDERS", "NEWS"), before.purposes().stream().map(DfInsights.Purpose::prpsCode).toList());
+        assertEquals(new DfInsights.Outcomes(5, 3, 1, 0, 1), before.purposes().get(0).outcomes());
+    }
+
+    @Test
+    void aPurposeThatHadRequestsBeforeAndNoneNowIsOnlyInThePreviousWindow() {
+        Instant currentFrom = NOW.minus(Duration.ofDays(7));
+        DfInsightsPort split = new DfInsightsPort() {
+            @Override
+            public Flux<DfInsights.Purpose> byPurpose(String dfId, Instant from, Instant to) {
+                return from.isBefore(currentFrom)
+                        ? Flux.just(new DfInsights.Purpose("OLD", new DfInsights.Outcomes(4, 2, 1, 1, 0), 60L),
+                                new DfInsights.Purpose("SAME", new DfInsights.Outcomes(3, 3, 0, 0, 0), 60L))
+                        : Flux.just(new DfInsights.Purpose("NEW", new DfInsights.Outcomes(6, 2, 2, 2, 0), 60L),
+                                new DfInsights.Purpose("SAME", new DfInsights.Outcomes(5, 4, 1, 0, 0), 60L));
+            }
+
+            @Override
+            public Mono<DfInsights.Decisions> decisions(String dfId, Instant from, Instant to) {
+                return Mono.just(new DfInsights.Decisions(0, null, null, 0));
+            }
+
+            @Override
+            public Flux<DfInsights.Day> byDay(String dfId, Instant from, Instant to, java.time.ZoneId zone) {
+                return Flux.empty();
+            }
+
+            @Override
+            public Mono<DfInsights.Changes> changes(String dfId, Instant from, Instant to) {
+                return Mono.just(new DfInsights.Changes(0, 0, 0, 0));
+            }
+        };
+        DfInsights insights = new DfInsightsQryHandler(split, Clock.fixed(NOW, ZoneOffset.UTC)).handle("df-1", 7, ZoneOffset.UTC, true).block();
+
+        assertEquals(List.of("NEW", "SAME"), insights.purposes().stream().map(DfInsights.Purpose::prpsCode).toList());
+        assertEquals(List.of("OLD", "SAME"), insights.previous().purposes().stream().map(DfInsights.Purpose::prpsCode).toList());
+        assertEquals(new DfInsights.Outcomes(7, 5, 1, 1, 0), insights.previous().outcomes(), "the previous totals are those purposes added up");
+    }
+
+    @Test
     void daysAreCutInTheZoneAskedFor() {
         DfInsights insights = handler.handle("df-1", 1, java.time.ZoneId.of("Asia/Kolkata"), false).block();
 

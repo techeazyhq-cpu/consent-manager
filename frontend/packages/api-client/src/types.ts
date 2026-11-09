@@ -362,7 +362,7 @@ export interface DfInsightsDto {
   to: string;
   outcomes: InsightOutcomes;
   decisions: { decided: number; medianSeconds: number | null; p90Seconds: number | null; withinADay: number };
-  purposes: { prpsCode: string; outcomes: InsightOutcomes; medianSeconds: number | null }[];
+  purposes: InsightPurpose[];
   /** Every day of the window, UTC: raised that day, and given or refused that day. */
   days: { date: string; raised: number; given: number; refused: number }[];
   changes: { withdrawn: number; narrowed: number; renewed: number; lapsed: number };
@@ -375,7 +375,16 @@ export interface DfInsightsDto {
     outcomes: InsightOutcomes;
     decisions: { decided: number; medianSeconds: number | null; p90Seconds: number | null; withinADay: number };
     changes: { withdrawn: number; narrowed: number; renewed: number; lapsed: number };
+    /** The same window's outcomes purpose by purpose (ADR-104); a purpose with no requests then is not in it. */
+    purposes: InsightPurpose[];
   } | null;
+}
+
+/** One purpose's outcomes over a window, and how long its decided requests took (ADR-049). */
+export interface InsightPurpose {
+  prpsCode: string;
+  outcomes: InsightOutcomes;
+  medianSeconds: number | null;
 }
 
 /** A fiduciary's webhook endpoint (ADR-047); its secret is never shown again after it's made or rotated. */

@@ -113,5 +113,16 @@ expect((await get(owner, `/api/cns-qry/insights?month=${ym(0)}&year=${yr}`)).sta
 const qCsv = await get(owner, `/api/cns-qry/insights/export?quarter=${qText(1)}&view=days`);
 expect(qCsv.status === 200 && qCsv.text.trim().split('\n').length - 1 >= 89, 'the CSV of a quarter has a row for each of its days', `${qCsv.text.trim().split('\n').length - 1} rows`);
 
+// ---- purpose by purpose beside the window before (ADR-104)
+const sum = (rows, key) => rows.reduce((n, r) => n + r.outcomes[key], 0);
+const withPrev = JSON.parse((await get(owner, '/api/cns-qry/insights?days=90&compare=true')).text);
+expect(Array.isArray(withPrev.previous?.purposes), 'a comparison carries the window before\'s purposes', `${withPrev.previous?.purposes?.length} purposes`);
+expect(['raised', 'given', 'refused', 'awaiting', 'notNotified'].every((k) => sum(withPrev.previous.purposes, k) === withPrev.previous.outcomes[k]), 'which add up to its totals');
+expect(withPrev.previous.purposes.every((p, i, all) => i === 0 || all[i - 1].outcomes.raised >= p.outcomes.raised), 'most raised first, like this window\'s');
+const noPrev = JSON.parse((await get(owner, '/api/cns-qry/insights?days=90')).text);
+expect(!noPrev.previous, 'without a comparison there is none');
+const quarterPrev = JSON.parse((await get(owner, `/api/cns-qry/insights?quarter=${qText(1)}&compare=true`)).text);
+expect(Array.isArray(quarterPrev.previous?.purposes) && sum(quarterPrev.previous.purposes, 'raised') === quarterPrev.previous.outcomes.raised, 'a quarter\'s comparison carries them too');
+
 console.log(failed ? '\nSome checks failed.' : '\nAll checks passed.');
 process.exitCode = failed ? 1 : 0;

@@ -31,7 +31,7 @@ different size. ADR-088 listed "a quarter or a year to date" as not yet.
 
 - **Only the current quarter and the current year are offered as buttons;** the API takes any quarter of the last 8 and any year of the last
   2, and a picker is still not built.
-- **Comparison is still by totals** (ADR-078), not by purpose or by day.
+- **Comparison is by totals and, since [ADR-104](adr-104-purposes-beside-the-window-before.md), by purpose;** not by day.
 - **A daily rollup is still not built:** a year is a bounded read (366 days, as the 365 days already allowed), but a very large
   fiduciary's year takes as long as its 12-month window does today.
 - **Daylight saving and leap years:** a period is the real interval between two local midnights, so its length varies by an hour in zones that

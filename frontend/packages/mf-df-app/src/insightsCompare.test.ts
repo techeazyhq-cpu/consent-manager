@@ -24,11 +24,14 @@ import {
   comparisonSpan,
   monthWindows,
   monthsAgo,
+  purposeRows,
   quarterAndYearWindows,
   quartersAgo,
   sameWindow,
+  shortChange,
   yearsAgo,
 } from "./dashboard";
+import type { InsightOutcomes } from "api-client";
 
 describe("changeNote", () => {
   it("says nothing when no comparison is shown", () => {
@@ -108,5 +111,52 @@ describe("calendar months, quarters and years (ADR-088, ADR-102)", () => {
     expect(calendarTitle({ kind: "quarter", quarter: "2026-Q3" }, NOW)).toBe("Q3 2026");
     expect(calendarTitle({ kind: "year", year: "2026" }, NOW)).toBe("2026 so far");
     expect(calendarTitle({ kind: "year", year: "2025" }, NOW)).toBe("2025");
+  });
+});
+
+const o = (raised: number, given = 0): InsightOutcomes => ({ raised, given, refused: 0, awaiting: 0, notNotified: 0 });
+
+describe("purposes beside the window before (ADR-104)", () => {
+  it("says how a table figure moved, in a few characters", () => {
+    expect(shortChange(12, undefined)).toBeUndefined();
+    expect(shortChange(12, 10)).toBe("+20%");
+    expect(shortChange(7, 10)).toBe("-30%");
+    expect(shortChange(10, 10)).toBe("same");
+    expect(shortChange(4, 0)).toBe("new");
+    expect(shortChange(0, 0)).toBeUndefined();
+    expect(shortChange(0, 5)).toBe("-100%");
+  });
+
+  it("is the purposes as they came when not comparing", () => {
+    const rows = purposeRows([{ prpsCode: "NEWS", outcomes: o(2), medianSeconds: 60 }], undefined);
+    expect(rows).toEqual([{ prpsCode: "NEWS", outcomes: o(2), medianSeconds: 60 }]);
+    expect(rows[0].before).toBeUndefined();
+  });
+
+  it("puts the window before's outcomes beside each purpose, and zeros for one that is new", () => {
+    const rows = purposeRows(
+      [
+        { prpsCode: "ORDERS", outcomes: o(6, 4), medianSeconds: 60 },
+        { prpsCode: "NEW", outcomes: o(3, 1), medianSeconds: null },
+      ],
+      [{ prpsCode: "ORDERS", outcomes: o(5, 3), medianSeconds: 60 }],
+    );
+    expect(rows.map((r) => r.prpsCode)).toEqual(["ORDERS", "NEW"]);
+    expect(rows[0].before).toEqual(o(5, 3));
+    expect(rows[1].before).toEqual(o(0));
+  });
+
+  it("lists a purpose that had requests before and none now, last, with zeros now", () => {
+    const rows = purposeRows(
+      [{ prpsCode: "ORDERS", outcomes: o(6), medianSeconds: 60 }],
+      [
+        { prpsCode: "QUIET", outcomes: o(2), medianSeconds: 30 },
+        { prpsCode: "ORDERS", outcomes: o(5), medianSeconds: 60 },
+        { prpsCode: "QUIETER", outcomes: o(9), medianSeconds: 30 },
+      ],
+    );
+    expect(rows.map((r) => r.prpsCode)).toEqual(["ORDERS", "QUIETER", "QUIET"]);
+    expect(rows[1]).toEqual({ prpsCode: "QUIETER", outcomes: o(0), medianSeconds: null, before: o(9) });
+    expect(shortChange(rows[1].outcomes.raised, rows[1].before?.raised)).toBe("-100%");
   });
 });

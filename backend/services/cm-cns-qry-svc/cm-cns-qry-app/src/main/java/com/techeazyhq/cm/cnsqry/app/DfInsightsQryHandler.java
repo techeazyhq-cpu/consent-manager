@@ -152,7 +152,7 @@ public class DfInsightsQryHandler {
                         port.decisions(dfId, before, beforeTo), port.changes(dfId, before, beforeTo))
                 .map(t -> {
                     DfInsights totals = DfInsights.of(before, beforeTo, t.getT1(), t.getT2(), java.util.List.of(), t.getT3(), zone);
-                    return new DfInsights.Previous(before, beforeTo, totals.outcomes(), t.getT2(), t.getT3());
+                    return new DfInsights.Previous(before, beforeTo, totals.outcomes(), t.getT2(), t.getT3(), totals.purposes());
                 });
         return Mono.zip(current, previous).map(t -> t.getT1().withPrevious(t.getT2()));
     }
