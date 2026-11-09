@@ -119,6 +119,35 @@ public class BilBeanConfig {
         return new com.techeazyhq.cm.bil.app.InvoiceQueries(repo);
     }
 
+    /** Reminders for unpaid invoices (ADR-105): each step recorded once per invoice, and relayed to cm-df-reg-svc, which emails the fiduciary. */
+    @Bean
+    public com.techeazyhq.cm.bil.dom.InvoiceReminderPort invoiceReminderPort(DatabaseClient db) {
+        return new com.techeazyhq.cm.bil.infra.R2dbcInvoiceReminderAdapter(db);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.bil.app.InvoiceReminderPolicy invoiceReminderPolicy(
+            @org.springframework.beans.factory.annotation.Value("${cm.bil.payment-terms-days:14}") int paymentTermsDays,
+            @org.springframework.beans.factory.annotation.Value("${cm.bil.reminder-days:3,10,20}") String reminderDays) {
+        // "3,10,20": a blank value means no reminders
+        java.util.List<Integer> steps = java.util.Arrays.stream(reminderDays.split(","))
+                .map(String::trim).filter(d -> !d.isEmpty()).map(Integer::valueOf).toList();
+        return new com.techeazyhq.cm.bil.app.InvoiceReminderPolicy(paymentTermsDays, steps);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.bil.app.InvoiceReminderHandler invoiceReminderHandler(com.techeazyhq.cm.bil.dom.InvoiceReminderPort reminders,
+                                                                                   R2dbcBilOutbox outbox, AuditTrail audit) {
+        return new com.techeazyhq.cm.bil.app.InvoiceReminderHandler(reminders, outbox, audit);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.bil.app.InvoiceReminderSweep invoiceReminderSweep(com.techeazyhq.cm.bil.dom.InvoiceReminderPort reminders,
+            com.techeazyhq.cm.bil.app.InvoiceReminderHandler handler, com.techeazyhq.cm.bil.app.InvoiceReminderPolicy policy,
+            java.time.Clock clock) {
+        return new com.techeazyhq.cm.bil.app.InvoiceReminderSweep(reminders, handler, policy, clock);
+    }
+
     @Bean
     public UsgAlertSweep usgAlertSweep(DfSubRepoPort subs, SubPlnRepoPort plans, UsgPort usage, UsgAlertHandler handler,
                                        java.time.Clock clock) {

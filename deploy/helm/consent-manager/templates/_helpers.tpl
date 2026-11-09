@@ -128,6 +128,8 @@ sslMode={{ $tls.mode | upper | replace "-" "_" }}{{ if $tls.caConfigMap }}&sslRo
 - {name: CM_BIL_CURRENCY, value: {{ $c.billing.currency | quote }}}
 - {name: CM_BIL_TAX_LABEL, value: {{ $c.billing.taxLabel | quote }}}
 - {name: CM_BIL_TAX_BPS, value: {{ $c.billing.taxBps | quote }}}
+- {name: CM_BIL_PAYMENT_TERMS_DAYS, value: {{ $c.billing.paymentTermsDays | default 14 | quote }}}
+- {name: CM_BIL_REMINDER_DAYS, value: {{ ternary (join "," ($c.billing.reminderDays | default (list 3 10 20))) "" (ne (toString $c.billing.remindersEnabled) "false") | quote }}}
 {{- end }}
 {{- if eq $name "cm-cns-cmd-svc" }}
 # the address consent tokens name for their status list (ADR-077)

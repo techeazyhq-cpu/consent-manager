@@ -38,7 +38,7 @@ not exist yet; this ADR covers what does not.
 
 ## Not yet / limits
 
-- **No payment gateway, dunning or reminders,** and an unpaid invoice does not suspend anyone.
+- **No payment gateway,** and an unpaid invoice does not suspend anyone. Reminders for an unpaid invoice are in [ADR-105](adr-105-invoice-reminders.md).
 - **One currency and one tax rate for the platform.** Tax by the fiduciary's country (GST, VAT, reverse charge) and invoicing a
   fiduciary in its own currency need a country on the tenant and a rates table.
 - **No tax registration number, address or PDF** on the invoice: the printable page is HTML a person prints from a browser.

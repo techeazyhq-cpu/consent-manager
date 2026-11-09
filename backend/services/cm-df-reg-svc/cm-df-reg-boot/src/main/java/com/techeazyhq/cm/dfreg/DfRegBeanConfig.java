@@ -201,9 +201,24 @@ public class DfRegBeanConfig {
         return new com.techeazyhq.cm.dfreg.infra.PulsarUsgThresholdConsumer(reactivePulsarClient, objectMapper, handler);
     }
 
+    /** Reminders about unpaid invoices (ADR-105): cm-bil-svc finds them, this emails the fiduciary. */
+    @Bean
+    public com.techeazyhq.cm.dfreg.app.OnInvoiceReminderEvtHandler onInvoiceReminderEvtHandler(DfRepoPort dfs,
+            com.techeazyhq.cm.dfreg.dom.EmailPort email) {
+        return new com.techeazyhq.cm.dfreg.app.OnInvoiceReminderEvtHandler(dfs, email);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.dfreg.infra.PulsarInvoiceReminderConsumer pulsarInvoiceReminderConsumer(
+            ReactivePulsarClient reactivePulsarClient, ObjectMapper objectMapper,
+            com.techeazyhq.cm.dfreg.app.OnInvoiceReminderEvtHandler handler) {
+        return new com.techeazyhq.cm.dfreg.infra.PulsarInvoiceReminderConsumer(reactivePulsarClient, objectMapper, handler);
+    }
+
     @EventListener(ApplicationReadyEvent.class)
     public void startConsumers(ApplicationReadyEvent event) {
         event.getApplicationContext().getBean(com.techeazyhq.cm.dfreg.infra.PulsarUsgThresholdConsumer.class).start();
+        event.getApplicationContext().getBean(com.techeazyhq.cm.dfreg.infra.PulsarInvoiceReminderConsumer.class).start();
     }
 
     @Bean
