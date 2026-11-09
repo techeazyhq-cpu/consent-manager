@@ -69,3 +69,8 @@ output "postgres_dedicated" {
     }
   }
 }
+
+output "logical_dumps_container_name" {
+  description = "Name of the container the logical dumps go to, in backup_storage_account_name."
+  value       = azurerm_storage_container.logical_dumps.name
+}

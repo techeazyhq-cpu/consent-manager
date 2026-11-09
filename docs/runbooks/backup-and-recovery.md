@@ -49,7 +49,8 @@ None of these has been rehearsed end to end on a cloud. The restore drill below 
    failing drill as an incident**, not a nuisance: the backup you would have used does not work.
 
 **Scheduling the dump:** in a cluster, set `logicalBackup.enabled`, `provider` (aws, azure, gcp) and `destination` (Terraform's
-`backup_bucket_name` or `backup_storage_account_name`) in the Helm values ([ADR-097](../adr/adr-097-scheduled-logical-backup.md)). A
+`backup_bucket_name` or `backup_storage_account_name`) in the Helm values ([ADR-097](../adr/adr-097-scheduled-logical-backup.md)); Terraform's `helm_values` output already carries the provider,
+destination and identity, so it is `logicalBackup.enabled: true` over that. A
 CronJob then dumps the shared server and each service's own server every night and uploads the dumps under the identity Terraform
 made (`cm-logical-backup`); a failed or missing run is alerted by `infra/observability/prometheus/rules/cronjobs.rules.yml`
 (kube-state-metrics). Read a failed run in the pod's `dump-*` init containers first, then `upload`. **The restore drill is not

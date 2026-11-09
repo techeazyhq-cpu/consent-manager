@@ -31,6 +31,16 @@ output "helm_values" {
       database = { url = module.datastores.postgres_jdbc_url }
       redis    = { host = module.datastores.redis_host }
     }
+    # the logical backup CronJob (ADR-097): where it uploads and under which identity. Set logicalBackup.enabled to turn it on.
+    logicalBackup = {
+      provider    = "azure"
+      destination = "https://${module.datastores.backup_storage_account_name}.blob.core.windows.net/${module.datastores.logical_dumps_container_name}"
+      serviceAccount = {
+        name        = "cm-logical-backup"
+        annotations = { "azure.workload.identity/client-id" = azurerm_user_assigned_identity.workloads["logical-backup"].client_id }
+      }
+      podLabels = { "azure.workload.identity/use" = "true" }
+    }
     # a service with a server of its own (ADR-074, ADR-095): its `database:` block. The password is the vault secret named in
     # postgres_dedicated, synced into the application secret under passwordKey.
     services = {

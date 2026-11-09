@@ -26,6 +26,11 @@ output "helm_values" {
       database = { url = module.datastores.postgres_jdbc_url }
       redis    = { host = module.datastores.redis_primary_endpoint }
     }
+    # the logical backup CronJob (ADR-097): where it uploads and under which identity. Set logicalBackup.enabled to turn it on.
+    logicalBackup = {
+      provider    = "aws"
+      destination = "s3://${module.datastores.backup_bucket_name}/dumps"
+    }
     # a service with an instance of its own (ADR-074): its `database:` block. The password is the instance's owner secret
     # (postgres_dedicated), copied into the application secret under passwordKey.
     services = {
