@@ -28,7 +28,7 @@ and last month's 30 days are not September's.
 
 - **Only a month,** and ~~not a quarter or a year to date~~ (done, [ADR-102](adr-102-quarters-and-year-to-date.md)); nor a month chosen from a picker, only the two
   nearest. The API takes any month of the last 24.
-- **Comparison is still by totals** (ADR-078), not by purpose or by day.
+- **Comparison is by totals and, since [ADR-104](adr-104-purposes-beside-the-window-before.md), by purpose;** not by day.
 - **A daily rollup is still not built;** a month is a bounded read, and 24 months back is no more than the 365 days already allowed
   times two.
 - **Daylight saving:** a month is the real interval between two local midnights, so in a zone that changes its clocks it can be an hour

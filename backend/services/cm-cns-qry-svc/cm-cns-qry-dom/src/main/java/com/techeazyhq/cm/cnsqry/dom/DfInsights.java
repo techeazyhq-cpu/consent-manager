@@ -43,8 +43,11 @@ import java.util.Map;
 public record DfInsights(Instant from, Instant to, Outcomes outcomes, Decisions decisions, List<Purpose> purposes,
                          List<Day> days, Changes changes, String zone, Previous previous) {
 
-    /** The window just before, for comparison: the totals, not the day-by-day or purpose-by-purpose detail. */
-    public record Previous(Instant from, Instant to, Outcomes outcomes, Decisions decisions, Changes changes) {
+    /**
+     * The window just before, for comparison: the totals and the outcomes purpose by purpose (ADR-104), not the day-by-day detail.
+     * A purpose with no requests in that window is simply not in {@code purposes}.
+     */
+    public record Previous(Instant from, Instant to, Outcomes outcomes, Decisions decisions, Changes changes, List<Purpose> purposes) {
     }
 
     /** The same figures with the previous window's beside them. */

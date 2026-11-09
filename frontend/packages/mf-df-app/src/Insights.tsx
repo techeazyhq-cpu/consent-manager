@@ -31,8 +31,10 @@ import {
   fmtDuration,
   monthWindows,
   niceMax,
+  purposeRows,
   quarterAndYearWindows,
   sameWindow,
+  shortChange,
   share,
   type Window,
 } from "./dashboard";
@@ -329,9 +331,10 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
           </div>
           <p className="cm-note">Changes made in the period to any consent, whenever it was given.</p>
 
-          {data.purposes.length ? (
+          {purposeRows(data.purposes, data.previous?.purposes).length ? (
             <>
               <h3 className="cm-section-title">By purpose</h3>
+              {data.previous ? <p className="cm-note">Beside each figure, how it moved against the {span}; a purpose with nothing now is listed last.</p> : null}
               <div style={{ overflowX: "auto" }}>
                 <table className="cm-table">
                   <thead>
@@ -346,15 +349,23 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
                     </tr>
                   </thead>
                   <tbody>
-                    {data.purposes.map((p) => {
+                    {purposeRows(data.purposes, data.previous?.purposes).map((p) => {
                       const r = decidedRate(p.outcomes);
+                      const raisedChange = shortChange(p.outcomes.raised, p.before?.raised);
+                      const givenChange = shortChange(p.outcomes.given, p.before?.given);
                       return (
                         <tr key={p.prpsCode}>
                           <td>
                             <a href={purposeHref(p.prpsCode)}>{humanise(p.prpsCode)}</a>
                           </td>
-                          <td>{p.outcomes.raised}</td>
-                          <td>{p.outcomes.given}</td>
+                          <td>
+                            {p.outcomes.raised}
+                            {raisedChange ? <small className="cm-note"> {raisedChange}</small> : null}
+                          </td>
+                          <td>
+                            {p.outcomes.given}
+                            {givenChange ? <small className="cm-note"> {givenChange}</small> : null}
+                          </td>
                           <td>{p.outcomes.refused}</td>
                           <td>{p.outcomes.awaiting}</td>
                           <td>{r == null ? "—" : `${r}%`}</td>

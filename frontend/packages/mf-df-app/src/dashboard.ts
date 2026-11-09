@@ -16,7 +16,7 @@
  * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
  */
 
-import type { InsightOutcomes } from "api-client";
+import type { DfInsightsDto, InsightOutcomes } from "api-client";
 
 /** The windows the dashboard offers, in days. */
 export const PERIODS = [
@@ -136,6 +136,45 @@ export function changeNote(now: number, before: number | undefined, span: number
   if (now === before) return `same as the ${window}`;
   const pct = Math.round((100 * Math.abs(now - before)) / before);
   return `${now > before ? "up" : "down"} ${pct}% on the ${window}`;
+}
+
+/**
+ * How a figure moved against the window before, in a few characters for a table cell: "+20%", "-30%", "same", "new" when there was
+ * none before, and nothing when there is no comparison or there was none either time (ADR-104).
+ */
+export function shortChange(now: number, before: number | undefined): string | undefined {
+  if (before === undefined) return undefined;
+  if (before === 0) return now === 0 ? undefined : "new";
+  if (now === before) return "same";
+  const pct = Math.round((100 * Math.abs(now - before)) / before);
+  return `${now > before ? "+" : "-"}${pct}%`;
+}
+
+/** A purpose's row on the dashboard: this window's outcomes, and the window before's when comparing (ADR-104). */
+export interface PurposeRow {
+  prpsCode: string;
+  outcomes: InsightOutcomes;
+  medianSeconds: number | null;
+  /** The window before's outcomes for it; undefined when not comparing, zeros when it had none then. */
+  before?: InsightOutcomes;
+}
+
+const NONE: InsightOutcomes = { raised: 0, given: 0, refused: 0, awaiting: 0, notNotified: 0 };
+
+/**
+ * This window's purposes, each with the window before's outcomes beside it, and, when comparing, the purposes that had requests before
+ * and none now at the end (with zeros now), so one that went quiet is seen and not just missing. Without a comparison, as it came.
+ */
+export function purposeRows(current: DfInsightsDto["purposes"], previous: DfInsightsDto["purposes"] | undefined): PurposeRow[] {
+  if (!previous) return current.map((p) => ({ ...p }));
+  const before = new Map(previous.map((p) => [p.prpsCode, p.outcomes]));
+  const rows: PurposeRow[] = current.map((p) => ({ ...p, before: before.get(p.prpsCode) ?? NONE }));
+  const shown = new Set(current.map((p) => p.prpsCode));
+  const quiet = previous
+    .filter((p) => !shown.has(p.prpsCode))
+    .sort((a, b) => b.outcomes.raised - a.outcomes.raised)
+    .map((p): PurposeRow => ({ prpsCode: p.prpsCode, outcomes: NONE, medianSeconds: null, before: p.outcomes }));
+  return [...rows, ...quiet];
 }
 
 /** A share in whole percent, or null when there is nothing to share out. */
