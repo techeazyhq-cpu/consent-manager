@@ -240,6 +240,26 @@ ingress:
 databaseRoles:
   image: postgres:16
 
+# A daily logical dump of the platform's databases, uploaded off the cluster (ADR-097, docs/runbooks/backup-and-recovery.md): a CronJob
+# that dumps the shared server's databases and each service's own server (ADR-074) with the owner's login, then uploads them with the
+# cloud's CLI under the pod identity Terraform made (service account cm-logical-backup). `provider` is aws, azure, gcp, or custom
+# (then upload.image and upload.script). `destination` is s3://bucket/prefix, https://account.blob.core.windows.net/container or
+# gs://bucket/prefix: Terraform's backup_bucket_name / backup_storage_account_name. Azure's pod needs the label
+# azure.workload.identity/use: "true" (podLabels) and the identity's client id as the service account annotation
+# azure.workload.identity/client-id; GCP's the annotation iam.gke.io/gcp-service-account.
+logicalBackup:
+  enabled: false
+  schedule: "0 1 * * *"
+  provider: ""
+  destination: ""
+  image: postgres:16
+  databases: [consent_manager, keycloak]
+  serviceAccount: {name: cm-logical-backup, annotations: {}}
+  podLabels: {}
+  scratchSize: 20Gi
+  deadlineSeconds: 7200
+  upload: {}
+
 databaseInit:
   enabled: false
   image: postgres:16-alpine

@@ -165,6 +165,23 @@ jobs:
           test "$(grep -c 'sslmode=verify-full&sslrootcert=/etc/db-ca/ca-bundle.pem' /tmp/tls.yaml)" -eq 7   # the migration connection of each service
           test "$(grep -c 'sslMode=VERIFY_FULL&sslRootCert=/etc/db-ca/ca-bundle.pem' /tmp/tls.yaml)" -eq 7   # and its queries
           test "$(grep -c 'name: rds-ca' /tmp/tls.yaml)" -eq 8   # mounted in the seven services and in the database-init job
+      - name: The chart can run the logical backup on a schedule, for each database server (ADR-097)
+        run: |
+          # the script the Job runs is the one in deploy/backup
+          diff deploy/backup/postgres-backup.sh deploy/helm/consent-manager/files/backup/postgres-backup.sh
+          helm() { docker run --rm -v "$PWD/deploy/helm:/charts" -w /charts alpine/helm:3.16.4 "$@"; }
+          test "$(helm template cm consent-manager -f consent-manager/values-aws.yaml | grep -c 'kind: CronJob')" -eq 0   # off by default
+          helm template cm consent-manager -f consent-manager/values-aws.yaml --set logicalBackup.enabled=true --set logicalBackup.provider=aws             --set logicalBackup.destination=s3://bucket/dumps --set services.cm-aud-svc.database.host=aud.example.com             --set services.cm-aud-svc.database.name=cm_aud --set services.cm-aud-svc.database.passwordKey=AUD_DB_PASSWORD > /tmp/lb.yaml
+          docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas -kubernetes-version 1.30.0 < /tmp/lb.yaml
+          test "$(grep -c 'kind: CronJob' /tmp/lb.yaml)" -eq 1
+          grep -q 'name: dump-shared' /tmp/lb.yaml   # the platform's own server
+          grep -q 'name: dump-cm-aud-svc' /tmp/lb.yaml   # and the service that has a server of its own
+          grep -q 'aws s3 cp --sse aws:kms' /tmp/lb.yaml
+          for cloud in azure gcp; do
+            helm template cm consent-manager -f consent-manager/values-$cloud.yaml --set logicalBackup.enabled=true --set logicalBackup.provider=$cloud               --set logicalBackup.destination=dest://x | docker run --rm -i ghcr.io/yannh/kubeconform:v0.6.7 -strict -summary -ignore-missing-schemas -kubernetes-version 1.30.0
+          done
+          # a destination and a provider are needed
+          if helm template cm consent-manager -f consent-manager/values-aws.yaml --set logicalBackup.enabled=true > /dev/null 2>&1; then echo "rendered without a provider"; exit 1; fi
       - name: The chart can make the per-service logins and use them with one switch (ADR-090)
         run: |
           # the script the hook runs is the one in deploy/database

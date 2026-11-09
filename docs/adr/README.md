@@ -102,6 +102,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [094](adr-094-scheduled-deliverability-check.md) | A weekly run of the deliverability check | Accepted |
 | [095](adr-095-azure-dedicated-database-servers.md) | A PostgreSQL server of its own per service on Azure | Accepted |
 | [096](adr-096-gcp-dedicated-database-instances.md) | A Cloud SQL instance of its own per service on GCP, and Azure's extra servers watched | Accepted |
+| [097](adr-097-scheduled-logical-backup.md) | The logical backup runs on a schedule, in the chart | Accepted |
 
 ## Writing one
 
