@@ -386,9 +386,10 @@ public class DfRegBeanConfig {
 
     @Bean
     public DfLeavingHandler dfLeavingHandler(DfRepoPort dfRepo, DfMemberDirectoryPort members,
+                                             com.techeazyhq.cm.dfreg.dom.BillingClosurePort billing,
                                              com.techeazyhq.cm.dfreg.dom.EmailPort email, AuditTrail audit,
                                              @Value("${cm.dfreg.offboarding.wind-down-days:30}") int windDownDays) {
-        return new DfLeavingHandler(dfRepo, members, email, audit, java.time.Clock.systemUTC(), windDownDays);
+        return new DfLeavingHandler(dfRepo, members, billing, email, audit, java.time.Clock.systemUTC(), windDownDays);
     }
 
     @Bean

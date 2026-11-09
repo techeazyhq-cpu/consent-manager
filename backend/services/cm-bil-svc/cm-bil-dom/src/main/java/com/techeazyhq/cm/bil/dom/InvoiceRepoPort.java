@@ -44,6 +44,13 @@ public interface InvoiceRepoPort {
     Mono<Void> endBilling(String dfId, Instant at);
 
     /**
+     * Opens a plan stretch again from {@code at}, on the plan the fiduciary's subscription has now, unless one is already open (ADR-109):
+     * a departure that was called off. Running it again, or for a fiduciary that is still billed, changes nothing. The time the
+     * fiduciary was not billed stays unbilled.
+     */
+    Mono<Void> resumeBilling(String dfId, Instant at);
+
+    /**
      * Issues the invoice with the next number of its kind and year, unless the fiduciary already has one for that period
      * (then empty). The number is given here, so none is skipped by an invoice that fails to save.
      */

@@ -125,6 +125,11 @@ public class BilInvoiceHttpHandler {
         return repo.endBilling(request.pathVariable("id"), Instant.now()).then(ServerResponse.noContent().build());
     }
 
+    /** A departure that was called off (ADR-109): the fiduciary is billed again from now. */
+    public Mono<ServerResponse> resumeBilling(ServerRequest request) {
+        return repo.resumeBilling(request.pathVariable("id"), Instant.now()).then(ServerResponse.noContent().build());
+    }
+
     // ---- helpers
 
     private static Mono<java.util.Optional<YearMonth>> month(ServerRequest request) {

@@ -114,6 +114,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [106](adr-106-every-purpose-figure-beside-the-window-before.md) | Every figure of a purpose beside the window before | Accepted |
 | [107](adr-107-consumer-backlog-alerts.md) | Alerts on a consumer that is behind or stuck | Accepted |
 | [108](adr-108-lock-wait-and-deadlock-alerts.md) | Alerts on a session stuck waiting for a lock, and on deadlocks | Accepted |
+| [109](adr-109-billing-ends-when-a-fiduciary-starts-leaving.md) | Billing ends when a fiduciary starts leaving | Accepted |
 
 ## Writing one
 

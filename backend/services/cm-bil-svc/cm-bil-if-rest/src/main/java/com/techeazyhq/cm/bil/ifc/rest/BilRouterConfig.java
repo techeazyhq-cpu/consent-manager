@@ -72,6 +72,9 @@ public class BilRouterConfig {
                 .PUT("/api/bil/dfs/{id}/billing-end", invoices::endBilling)
                 // a fiduciary closing (ADR-084): df-reg ends its billing, on the private network
                 .PUT("/internal/dfs/{id}/billing-end", invoices::endBilling)
+                // a departure begun (billing ends) and called off (billing resumes), ADR-109: df-reg, on the private network, and staff
+                .PUT("/api/bil/dfs/{id}/billing-resume", invoices::resumeBilling)
+                .PUT("/internal/dfs/{id}/billing-resume", invoices::resumeBilling)
                 .GET("/api/bil/me/subscription", account::mySubscription)
                 .GET("/api/bil/me/usage-alerts", account::myAlerts)
                 .GET("/api/bil/usage-alerts", account::alerts)

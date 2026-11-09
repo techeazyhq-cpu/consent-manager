@@ -87,6 +87,18 @@ public class R2dbcInvoiceRepoAdapter implements InvoiceRepoPort {
                 .bind("at", at).bind("dfId", dfId).fetch().rowsUpdated().then();
     }
 
+    /** The unique index on one open stretch per fiduciary, and the "not exists", make this safe to repeat and to run twice at once. */
+    @Override
+    public Mono<Void> resumeBilling(String dfId, Instant at) {
+        return db.sql("""
+                        insert into bil.plan_hst (df_id, sub_pln_id, from_at)
+                        select df_id, sub_pln_id, :at from bil.df_sub
+                        where df_id = :dfId and not exists (select 1 from bil.plan_hst where df_id = :dfId and to_at is null)
+                        on conflict do nothing
+                        """)
+                .bind("at", at).bind("dfId", dfId).fetch().rowsUpdated().then();
+    }
+
     @Override
     public Mono<Invoice> issue(Invoice d) {
         String prefix = d.kind() == Invoice.Kind.INVOICE ? "INV" : "CN";

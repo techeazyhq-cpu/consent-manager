@@ -24,8 +24,8 @@ somebody called the billing endpoint by hand. Closing is final, its team can no 
 
 ## Not yet / limits
 
-- **Leaving and suspended fiduciaries are billed.** The wind-down is up to 30 days on the plan; stopping billing sooner is a staff
-  action. A suspension (ADR-064) is a hold, not an end.
+- ~~**Leaving and suspended fiduciaries are billed.**~~ A fiduciary that is *leaving* is not, from the day its departure begins
+  ([ADR-109](adr-109-billing-ends-when-a-fiduciary-starts-leaving.md)); a *suspended* one still is: a suspension is a hold, not an end.
 - **No credit for a month already invoiced** when the fiduciary closes inside it; staff issue a credit note if one is due.
 - **If Billing is down for long, the closing waits.** That is deliberate: a closed fiduciary that is still billed is worse than one
   that closes a pass later. The closing job logs the failure and retries.

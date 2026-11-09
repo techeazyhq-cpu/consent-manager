@@ -43,4 +43,10 @@ public class WebClientBillingClosureAdapter implements BillingClosurePort {
         return webClient.put().uri("/internal/dfs/{id}/billing-end", dfId)
                 .retrieve().toBodilessEntity().timeout(Duration.ofSeconds(15)).then();
     }
+
+    @Override
+    public Mono<Void> resumeBilling(String dfId) {
+        return webClient.put().uri("/internal/dfs/{id}/billing-resume", dfId)
+                .retrieve().toBodilessEntity().timeout(Duration.ofSeconds(15)).then();
+    }
 }

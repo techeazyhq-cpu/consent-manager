@@ -10,7 +10,7 @@ For platform staff and on-call engineers. Design and the reasons for each choice
 |---|---|---|
 | `ACTIVE` | Normal. | |
 | `SUSPENDED` | Stopped by staff, reversibly. No new requests, API keys refused (`df-suspended`). The team can sign in and read. | Staff: suspend (operator or administrator), resume (administrator). |
-| `LEAVING` | The Owner asked to leave. A 30-day wind-down (`cm.dfreg.offboarding.wind-down-days`). API keys refused (`df-leaving`), no new keys. The Owner can cancel once. | The Owner, in the DF Console under Agreements. |
+| `LEAVING` | The Owner asked to leave. A 30-day wind-down (`cm.dfreg.offboarding.wind-down-days`). API keys refused (`df-leaving`), no new keys. **Billing stops** when it starts (and resumes if it is cancelled, [ADR-109](../adr/adr-109-billing-ends-when-a-fiduciary-starts-leaving.md)). The Owner can cancel once. | The Owner, in the DF Console under Agreements. |
 | `CLOSED` | Final. Consents ended, keys revoked, team and logo removed, profile erased except names and registration numbers. Records kept for the retention period. | A job, when the wind-down ends. |
 
 ## Suspending a tenant
