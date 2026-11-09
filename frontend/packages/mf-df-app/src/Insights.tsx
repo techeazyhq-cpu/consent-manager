@@ -16,11 +16,26 @@
  * @author Vasantha Kumar <vasantha.kumar@hotmail.com>
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { insights, type CnsLcySts, type DfInsightsDto } from "api-client";
 import { ErrorBanner, Spinner, friendlyError, humanise } from "ui-kit/src/index";
 import type { Console } from "./console";
-import { PERIODS, changeNote, comparisonSpan, decidedRate, fmtDay, fmtDuration, monthWindows, niceMax, sameWindow, share, type Window } from "./dashboard";
+import {
+  PERIODS,
+  calendarOf,
+  calendarTitle,
+  changeNote,
+  comparisonSpan,
+  decidedRate,
+  fmtDay,
+  fmtDuration,
+  monthWindows,
+  niceMax,
+  quarterAndYearWindows,
+  sameWindow,
+  share,
+  type Window,
+} from "./dashboard";
 import { purposeHref } from "./routes";
 import { freshToken } from "./token";
 
@@ -186,8 +201,9 @@ function roundTop(x: number, top: number, w: number, h: number, r: number): stri
  */
 export function Insights({ console: c, onFilter }: { console: Console; onFilter: (sts?: CnsLcySts[]) => void }) {
   const [win, setWin] = useState<Window>({ kind: "days", days: 30 });
-  const days = win.kind === "days" ? win.days : 30; // the span the figures cover is the month's own; this is only for a file's name and the plain window
-  const month = win.kind === "month" ? win.month : undefined;
+  const days = win.kind === "days" ? win.days : 30; // the span the figures cover is the calendar period's own; this is only for a file's name and the plain window
+  const calendar = useMemo(() => calendarOf(win), [win]);
+  const calendarKey = calendar.month ?? calendar.quarter ?? calendar.year;
   const span = comparisonSpan(win);
   const [compare, setCompare] = useState(false);
   // days are cut in the viewer's own time zone unless they ask for UTC (ADR-078)
@@ -198,11 +214,11 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
 
   const download = async (view: "days" | "purposes") => {
     try {
-      const blob = await insights.exportCsv(c.gwBase, await freshToken(c.auth), days, view, tz, month);
+      const blob = await insights.exportCsv(c.gwBase, await freshToken(c.auth), days, view, tz, calendar);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `consent-insights-${view}-${month ?? `${days}d`}.csv`;
+      a.download = `consent-insights-${view}-${calendarKey ?? `${days}d`}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -215,7 +231,7 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
     setError(null);
     (async () => {
       try {
-        const d = await insights.get(c.gwBase, await freshToken(c.auth), days, { tz, compare, month });
+        const d = await insights.get(c.gwBase, await freshToken(c.auth), days, { tz, compare, ...calendar });
         if (live) setData(d);
       } catch (err) {
         if (live) setError(friendlyError(err));
@@ -224,7 +240,7 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
     return () => {
       live = false;
     };
-  }, [c.auth, c.gwBase, days, month, tz, compare]);
+  }, [c.auth, c.gwBase, days, calendar, tz, compare]);
 
   const o = data?.outcomes;
   const rate = o ? decidedRate(o) : null;
@@ -232,7 +248,7 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
   return (
     <>
       <div className="cm-toolbar df-periods" role="group" aria-label="Period">
-        {[...PERIODS.map((p) => ({ window: { kind: "days", days: p.days } as Window, label: p.label })), ...monthWindows()].map((p) => (
+        {[...PERIODS.map((p) => ({ window: { kind: "days", days: p.days } as Window, label: p.label })), ...monthWindows(), ...quarterAndYearWindows()].map((p) => (
           <button
             key={p.label}
             className={`cm-btn${sameWindow(p.window, win) ? " cm-btn-primary" : ""}`}
@@ -257,13 +273,13 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
         </button>
       </div>
       <p className="cm-note">
-        {win.kind === "month"
-          ? `Requests raised in ${new Date(`${win.month}-01T00:00:00Z`).toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" })}`
-          : `Requests raised in the last ${PERIODS.find((p) => p.days === win.days)?.label}`}
+        {win.kind === "days"
+          ? `Requests raised in the last ${PERIODS.find((p) => p.days === win.days)?.label}`
+          : `Requests raised in ${calendarTitle(win)}`}
       </p>
       {error ? <ErrorBanner message={error} /> : null}
       {!data || !o ? (
-        error ? null : <Spinner label="Working out the figuresâ€¦" />
+        error ? null : <Spinner label="Working out the figures…" />
       ) : (
         <>
           <div className="cm-summary">
@@ -296,7 +312,7 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
             <Stat value={fmtDuration(data.decisions.medianSeconds)} label="Median" note="from request to decision" />
             <Stat value={fmtDuration(data.decisions.p90Seconds)} label="9 in 10 decided within" />
             <Stat
-              value={data.decisions.decided ? `${share(data.decisions.withinADay, data.decisions.decided)}%` : "â€”"}
+              value={data.decisions.decided ? `${share(data.decisions.withinADay, data.decisions.decided)}%` : "—"}
               label="Decided within a day"
               note={`${data.decisions.decided} decided`}
             />
@@ -341,7 +357,7 @@ export function Insights({ console: c, onFilter }: { console: Console; onFilter:
                           <td>{p.outcomes.given}</td>
                           <td>{p.outcomes.refused}</td>
                           <td>{p.outcomes.awaiting}</td>
-                          <td>{r == null ? "â€”" : `${r}%`}</td>
+                          <td>{r == null ? "—" : `${r}%`}</td>
                           <td>{fmtDuration(p.medianSeconds)}</td>
                         </tr>
                       );

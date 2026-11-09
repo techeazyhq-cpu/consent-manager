@@ -107,6 +107,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [099](adr-099-pulsar-tls-and-token.md) | Pulsar over TLS, with a token when the broker asks for one | Accepted |
 | [100](adr-100-keycloak-database-tls.md) | Keycloak verifies its database server | Accepted |
 | [101](adr-101-internal-key-rotation.md) | Changing the sign-in service key without a gap | Accepted |
+| [102](adr-102-quarters-and-year-to-date.md) | Calendar quarters and the year to date on the dashboard | Accepted |
 
 ## Writing one
 

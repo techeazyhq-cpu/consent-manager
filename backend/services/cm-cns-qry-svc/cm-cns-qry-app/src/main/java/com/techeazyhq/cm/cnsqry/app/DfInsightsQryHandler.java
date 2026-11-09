@@ -81,14 +81,61 @@ public class DfInsightsQryHandler {
         if (month.isAfter(thisMonth) || month.isBefore(thisMonth.minusMonths(MAX_MONTHS_BACK))) {
             throw new IllegalArgumentException("the month is from the last " + MAX_MONTHS_BACK + " months up to this one");
         }
-        Instant from = month.atDay(1).atStartOfDay(zone).toInstant();
-        Instant end = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant();
+        return calendarPeriod(dfId, month.atDay(1), month.plusMonths(1).atDay(1), month.minusMonths(1).atDay(1), zone, compare);
+    }
+
+    /** How far back a calendar quarter, and a calendar year, may be asked for (ADR-102). */
+    public static final int MAX_QUARTERS_BACK = 8;
+    public static final int MAX_YEARS_BACK = 2;
+
+    /**
+     * The figures for one calendar quarter (1 to 4) in {@code zone} (ADR-102), compared like a month: against all of the quarter before when
+     * this one has ended, and against the same stretch of the start of the quarter before when it is still going.
+     *
+     * @throws IllegalArgumentException for a quarter that is not 1 to 4, in the future, or further back than {@link #MAX_QUARTERS_BACK}
+     */
+    public Mono<DfInsights> handleQuarter(String dfId, int year, int quarter, ZoneId zone, boolean compare) {
+        if (quarter < 1 || quarter > 4) {
+            throw new IllegalArgumentException("a quarter is 1 to 4");
+        }
+        java.time.LocalDate today = clock.instant().atZone(zone).toLocalDate();
+        java.time.LocalDate start = java.time.LocalDate.of(year, (quarter - 1) * 3 + 1, 1);
+        java.time.LocalDate thisQuarter = java.time.LocalDate.of(today.getYear(), ((today.getMonthValue() - 1) / 3) * 3 + 1, 1);
+        if (start.isAfter(thisQuarter) || start.isBefore(thisQuarter.minusMonths(3L * MAX_QUARTERS_BACK))) {
+            throw new IllegalArgumentException("the quarter is from the last " + MAX_QUARTERS_BACK + " quarters up to this one");
+        }
+        return calendarPeriod(dfId, start, start.plusMonths(3), start.minusMonths(3), zone, compare);
+    }
+
+    /**
+     * The figures for one calendar year in {@code zone} (ADR-102): all of a year that has ended and the year so far for this one, compared with the
+     * year before in the same way.
+     *
+     * @throws IllegalArgumentException for a year in the future or further back than {@link #MAX_YEARS_BACK}
+     */
+    public Mono<DfInsights> handleYear(String dfId, int year, ZoneId zone, boolean compare) {
+        int thisYear = clock.instant().atZone(zone).getYear();
+        if (year > thisYear || year < thisYear - MAX_YEARS_BACK) {
+            throw new IllegalArgumentException("the year is from the last " + MAX_YEARS_BACK + " years up to this one");
+        }
+        java.time.LocalDate start = java.time.LocalDate.of(year, 1, 1);
+        return calendarPeriod(dfId, start, start.plusYears(1), start.minusYears(1), zone, compare);
+    }
+
+    /**
+     * One calendar period, from its first local day to where the next begins: all of it when it has ended, and so far when it is still
+     * going. Compared with the period before, which starts at {@code beforeStart}: all of it when this one has ended, and only the same
+     * stretch of its start when this one is still going, never past where this one begins.
+     */
+    private Mono<DfInsights> calendarPeriod(String dfId, java.time.LocalDate start, java.time.LocalDate next,
+                                            java.time.LocalDate beforeStart, ZoneId zone, boolean compare) {
+        Instant from = start.atStartOfDay(zone).toInstant();
+        Instant end = next.atStartOfDay(zone).toInstant();
         Instant to = end.isAfter(clock.instant()) ? clock.instant() : end;
-        Instant beforeFrom = month.minusMonths(1).atDay(1).atStartOfDay(zone).toInstant();
-        // a month that has ended is set against all of the one before; one still going, against the same stretch of its start
+        Instant beforeFrom = beforeStart.atStartOfDay(zone).toInstant();
         Instant beforeTo = end.isAfter(clock.instant()) ? beforeFrom.plus(Duration.between(from, to)) : from;
         if (beforeTo.isAfter(from)) {
-            beforeTo = from; // the month before ends where this one begins, however long this one has run
+            beforeTo = from; // the period before ends where this one begins, however long this one has run
         }
         return figures(dfId, from, to, beforeFrom, beforeTo, zone, compare);
     }

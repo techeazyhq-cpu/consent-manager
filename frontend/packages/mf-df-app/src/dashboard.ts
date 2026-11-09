@@ -26,8 +26,34 @@ export const PERIODS = [
   { days: 365, label: "12 months" },
 ];
 
-/** What the dashboard is showing: the last N days, or one calendar month (ADR-088). */
-export type Window = { kind: "days"; days: number } | { kind: "month"; month: string };
+/** What the dashboard is showing: the last N days, or one calendar month (ADR-088), quarter or year (ADR-102). */
+export type Window =
+  | { kind: "days"; days: number }
+  | { kind: "month"; month: string }
+  | { kind: "quarter"; quarter: string }
+  | { kind: "year"; year: string };
+
+/** The quarter as `yyyy-Qn`, counting back from {@code now} (0 is this quarter, 1 the last), in UTC. */
+export function quartersAgo(back: number, now: Date = new Date()): string {
+  const index = now.getUTCFullYear() * 4 + Math.floor(now.getUTCMonth() / 3) - back;
+  return `${Math.floor(index / 4)}-Q${(index % 4) + 1}`;
+}
+
+/** The year as `yyyy`, counting back from {@code now} (0 is this year), in UTC. */
+export function yearsAgo(back: number, now: Date = new Date()): string {
+  return String(now.getUTCFullYear() - back);
+}
+
+/** The calendar periods offered beyond the two months: this quarter so far, and the year so far. */
+export function quarterAndYearWindows(now: Date = new Date()): { window: Window; label: string }[] {
+  return [
+    { window: { kind: "quarter", quarter: quartersAgo(0, now) }, label: "This quarter" },
+    { window: { kind: "year", year: yearsAgo(0, now) }, label: "Year to date" },
+  ];
+}
+
+/** The key that tells one window from another: the number of days, or the month, quarter or year asked for. */
+const windowKey = (w: Window) => (w.kind === "days" ? String(w.days) : w.kind === "month" ? w.month : w.kind === "quarter" ? w.quarter : w.year);
 
 /** The month as `yyyy-MM`, counting back from {@code now} (0 is this month, 1 the last), in UTC. */
 export function monthsAgo(back: number, now: Date = new Date()): string {
@@ -43,16 +69,44 @@ export function monthWindows(now: Date = new Date()): { window: Window; label: s
   ];
 }
 
-export const sameWindow = (a: Window, b: Window) =>
-  a.kind === b.kind && (a.kind === "days" ? a.days === (b as typeof a).days : a.month === (b as typeof a).month);
+export const sameWindow = (a: Window, b: Window) => a.kind === b.kind && windowKey(a) === windowKey(b);
 
 /**
  * What a comparison is against, in words that follow "on the": "30 days before" for a span of days; for a month still going "same days
  * of last month"; for a month that has ended "month before".
  */
 export function comparisonSpan(w: Window, now: Date = new Date()): string {
-  if (w.kind === "days") return `${w.days} days before`;
-  return w.month === monthsAgo(0, now) ? "same days of last month" : "month before";
+  switch (w.kind) {
+    case "days":
+      return `${w.days} days before`;
+    case "month":
+      return w.month === monthsAgo(0, now) ? "same days of last month" : "month before";
+    case "quarter":
+      return w.quarter === quartersAgo(0, now) ? "same days of last quarter" : "quarter before";
+    case "year":
+      return w.year === yearsAgo(0, now) ? "same days of last year" : "year before";
+  }
+}
+
+/** The month, quarter or year a window asks for, as the three query values the API takes; none of them for a span of days. */
+export function calendarOf(w: Window): { month?: string; quarter?: string; year?: string } {
+  return w.kind === "month" ? { month: w.month } : w.kind === "quarter" ? { quarter: w.quarter } : w.kind === "year" ? { year: w.year } : {};
+}
+
+/** What the figures are for, in words: "October 2026", "Q3 2026", "2026 so far"; null for a span of days. */
+export function calendarTitle(w: Window, now: Date = new Date()): string | null {
+  switch (w.kind) {
+    case "month":
+      return new Date(`${w.month}-01T00:00:00Z`).toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" });
+    case "quarter": {
+      const [year, q] = w.quarter.split("-");
+      return `${q} ${year}`;
+    }
+    case "year":
+      return w.year === yearsAgo(0, now) ? `${w.year} so far` : w.year;
+    default:
+      return null;
+  }
 }
 
 /** A duration in seconds as a person says it: "45 s", "12 min", "3.5 h", "2 days"; "—" when there is none. */
