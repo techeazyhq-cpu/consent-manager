@@ -37,8 +37,7 @@ reach across all of them.
   root, which also emits the service's `database:` block in `helm_values`) builds one Multi-AZ, encrypted instance per service
   with the same backups and cross-region copy as the shared one, checked by plan tests. Azure ([ADR-095](adr-095-azure-dedicated-database-servers.md)) and GCP ([ADR-096](adr-096-gcp-dedicated-database-instances.md)) have the same.
 - **Backups of a separate server** are a run of their own: `BACKUP_MANIFEST_PREFIX` keeps each server's manifests apart so the
-  restore drill finds the right one. Scheduling those runs is still a job for whoever schedules the first (the CronJob is open in
-  the backup runbook), and the retention job (ADR-064) still assumes one database.
+  restore drill finds the right one. Scheduling those runs is the chart's CronJob now ([ADR-097](adr-097-scheduled-logical-backup.md)), and the retention job (ADR-064) still assumes one database.
 - **The sandbox** and the local compose stack keep one database.
 - **Per-service roles with least privilege** are done separately: [ADR-082](adr-082-least-privilege-database-logins.md), whose logins can only touch their own schema.
 

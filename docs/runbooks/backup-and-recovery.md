@@ -48,10 +48,13 @@ None of these has been rehearsed end to end on a cloud. The restore drill below 
    restores the newest dump into a scratch database next to the live one, checks it against the manifest, and drops it. **Treat a
    failing drill as an incident**, not a nuisance: the backup you would have used does not work.
 
-**Not scheduled yet:** the chart does not run the dump as a CronJob, and nothing alerts when the daily dump or the drill did not
-run. Until that exists, whoever owns operations has to schedule `postgres-backup.sh` (a Kubernetes CronJob with an image that has
-the PostgreSQL client and the cloud's CLI, using the same identity as the backup bucket's policy) and watch its exit status. The
-alert rules `notifications.tf` mentions now exist ([`postgres-recovery.rules.yml`](../../infra/observability/prometheus/rules/postgres-recovery.rules.yml), ADR-070):
+**Scheduling the dump:** in a cluster, set `logicalBackup.enabled`, `provider` (aws, azure, gcp) and `destination` (Terraform's
+`backup_bucket_name` or `backup_storage_account_name`) in the Helm values ([ADR-097](../adr/adr-097-scheduled-logical-backup.md)). A
+CronJob then dumps the shared server and each service's own server every night and uploads the dumps under the identity Terraform
+made (`cm-logical-backup`); a failed or missing run is alerted by `infra/observability/prometheus/rules/cronjobs.rules.yml`
+(kube-state-metrics). Read a failed run in the pod's `dump-*` init containers first, then `upload`. **The restore drill is not
+scheduled.** Outside a cluster, whoever owns operations schedules `postgres-backup.sh` and watches its exit status. The
+alert rules `notifications.tf` mentions for a host-run backup exist ([`postgres-recovery.rules.yml`](../../infra/observability/prometheus/rules/postgres-recovery.rules.yml), ADR-070):
 set `BACKUP_METRICS_FILE` to a node_exporter textfile and they fire when no dump has succeeded for 36 hours, the last run failed,
 or no restore drill has passed for 93 days. They need that file scraped, which is still part of scheduling the job.
 
@@ -182,7 +185,7 @@ matter, replay (E) rather than enlarge the broker.
 ## Not yet
 
 - **Replicating the secrets** to the recovery region (the AWS secret is in the primary region only; check Azure and GCP).
-- A scheduled backup job in the chart, and an alert when it or the drill did not run.
+- A scheduled restore drill, and an alert when it did not run (the dump itself is scheduled, ADR-097).
 - The Prometheus alert rules the Terraform comment mentions.
 - A **log of erasures and purges outside the database**, so a restore can re-apply them automatically.
 - An end-to-end rehearsal of region loss on a real cloud, with the timings above measured.
