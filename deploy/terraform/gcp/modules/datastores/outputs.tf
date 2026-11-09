@@ -64,3 +64,17 @@ output "backup_bucket_name" {
   description = "Bucket in the recovery region for logical dumps."
   value       = google_storage_bucket.backups.name
 }
+
+output "postgres_dedicated" {
+  description = "Per service with its own instance (ADR-074, ADR-096): the address, port, database, user, the Secret Manager entry holding the owner's password and the PEM of the CA that signs that instance (add it to the db-ca-bundle ConfigMap: each instance has its own CA), for that service's `database:` block in the Helm values."
+  value = {
+    for service, instance in google_sql_database_instance.dedicated : service => {
+      host            = instance.private_ip_address
+      port            = 5432
+      name            = var.dedicated_databases[service].db_name
+      user            = var.dedicated_databases[service].username
+      password_secret = google_secret_manager_secret.dedicated_owner_password[service].secret_id
+      server_ca       = nonsensitive(instance.server_ca_cert[0].cert)
+    }
+  }
+}

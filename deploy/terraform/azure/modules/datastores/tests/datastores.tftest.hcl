@@ -201,7 +201,7 @@ run "outages_reach_the_operators" {
     error_message = "The listed operators receive the alerts."
   }
   assert {
-    condition     = toset(keys(azurerm_monitor_metric_alert.postgres)) == toset(["storage_nearly_full", "server_down"])
+    condition     = toset(keys(azurerm_monitor_metric_alert.postgres)) == toset(["postgres/storage_nearly_full", "postgres/server_down"])
     error_message = "Alert on PostgreSQL running out of storage and on the server being down."
   }
   assert {
@@ -259,6 +259,27 @@ run "a_service_can_have_a_server_of_its_own" {
   assert {
     condition     = length(azurerm_management_lock.dedicated) == 1 && length(azurerm_key_vault_secret.dedicated_owner_password) == 1
     error_message = "A dedicated server is locked against deletion and its password is a vault secret of its own."
+  }
+}
+
+run "a_dedicated_server_is_watched_like_the_shared_one" {
+  command = plan
+
+  variables {
+    dedicated_databases = {
+      "cm-aud-svc" = { db_name = "cm_aud", username = "cm_aud" }
+    }
+  }
+
+  assert {
+    condition = toset(keys(azurerm_monitor_metric_alert.postgres)) == toset([
+      "postgres/storage_nearly_full", "postgres/server_down", "cm-aud-svc/storage_nearly_full", "cm-aud-svc/server_down",
+    ])
+    error_message = "Each dedicated server gets the storage and server-down alerts of the shared one."
+  }
+  assert {
+    condition     = azurerm_monitor_metric_alert.postgres["postgres/server_down"].name == "cm-prod-postgres-server-down"
+    error_message = "The shared server's alert keeps its name, so it is not recreated."
   }
 }
 

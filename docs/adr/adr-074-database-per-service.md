@@ -35,7 +35,7 @@ reach across all of them.
   stops the service first. A copy under live traffic would need logical replication, which is not here.
 - **Terraform creates the extra servers on AWS only.** `dedicated_databases` in the AWS datastores module (and the production
   root, which also emits the service's `database:` block in `helm_values`) builds one Multi-AZ, encrypted instance per service
-  with the same backups and cross-region copy as the shared one, checked by plan tests. Azure has the same since [ADR-095](adr-095-azure-dedicated-database-servers.md); GCP has no equivalent yet.
+  with the same backups and cross-region copy as the shared one, checked by plan tests. Azure ([ADR-095](adr-095-azure-dedicated-database-servers.md)) and GCP ([ADR-096](adr-096-gcp-dedicated-database-instances.md)) have the same.
 - **Backups of a separate server** are a run of their own: `BACKUP_MANIFEST_PREFIX` keeps each server's manifests apart so the
   restore drill finds the right one. Scheduling those runs is still a job for whoever schedules the first (the CronJob is open in
   the backup runbook), and the retention job (ADR-064) still assumes one database.
