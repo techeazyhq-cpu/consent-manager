@@ -35,6 +35,6 @@ go. Keycloak holds the realms, the users and the signing keys, so its database c
 
 - **A wrong-name or untrusted-CA certificate was not tried,** only the missing CA; the driver's `verify-full` is what refuses those.
 - **The CA ConfigMap is made by hand** in the common namespace; Terraform does not do it.
-- **Keycloak 25's own JDBC driver and settings were used as the chart sets them;** a Keycloak upgrade is checked by the same test.
+- **The live check was run by hand, not in CI:** CI checks the render only, so a Keycloak upgrade that changed how it reads the JDBC options would not be caught there.
 - **A rotated server CA** needs the ConfigMap updated and Keycloak restarted.
 - **Keycloak's cache (Infinispan) and its other connections are not covered:** this is its database connection only.
