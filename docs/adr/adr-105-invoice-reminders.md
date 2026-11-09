@@ -38,12 +38,13 @@ person marking it. Reminders are the part of the issue's "dunning" that needs no
 - Four integration tests against PostgreSQL: which invoices are looked at (paid, credited, zero, credit note, too recent excluded), a paid
   invoice dropping out, eight replicas raising a step once with one event, one audit entry and no address in the payload, and steps being
   independent.
-- Live, with the rebuilt billing and fiduciary-registry services: the migration ran, and for a test invoice issued 20 days earlier (6 days
-  past due) the sweep recorded the step-3 reminder, with its event and audit entry in the outbox. **The rest of the path was not seen
-  working:** the local Pulsar's embedded BookKeeper was damaged (`Bookie handle is not available`, which also broke the notification
-  service's own publishing; a restart did not fix it, and repairing it means deleting its data), so the relay could not publish and the
-  email from cm-df-reg-svc was never sent. That leg rests on its unit tests and on being the path ADR-060's usage alerts already use.
-  The test invoice and its rows were removed afterwards.
+- Live, with the rebuilt billing and fiduciary-registry services and the notification service in its local Mailpit mode, for a test invoice
+  issued 20 days earlier (6 days past its due date) on a fiduciary whose contact is `batch-owner@example.test`: the sweep recorded the step-3
+  reminder; its event was published to Pulsar's `bil/evt-invoice-reminder`; cm-df-reg-svc consumed it and the email arrived in Mailpit
+  with the subject "Invoice INV-TESTREMINDER-2 is 3 days past its due date" and the text naming the fiduciary, "1180.00 INR" and the due date
+  (3 November 2026). Billing was then restarted, and its next sweep, more than four minutes later, left the invoice alone: still one reminder row (its time unchanged), one event and one email.
+  (An earlier attempt the same day could not get past the relay, because the local Pulsar's embedded BookKeeper was damaged; its data
+  volume was removed, with the maintainer's agreement, and it came back healthy.) The test invoice and its rows were removed afterwards.
 - The chart passes the terms and steps (and none when off), checked in CI.
 
 ## Not yet / limits
@@ -56,3 +57,4 @@ person marking it. Reminders are the part of the issue's "dunning" that needs no
 - **The email text is English** and not configurable.
 - **Reminders are per invoice:** a fiduciary with three unpaid invoices gets three emails.
 - **A reminder is raised when the sweep first sees the step,** up to an hour after the days have passed.
+- **One audit entry from the live check remains** in the local audit ledger (`invoice.reminder` for the test invoice): the ledger is append-only, so it was not removed.
