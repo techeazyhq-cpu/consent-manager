@@ -100,6 +100,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [092](adr-092-database-transaction-alerts.md) | Alerts on long and idle-in-transaction database sessions | Accepted |
 | [093](adr-093-traces-in-tempo.md) | Traces in Tempo, off until asked for | Accepted |
 | [094](adr-094-scheduled-deliverability-check.md) | A weekly run of the deliverability check | Accepted |
+| [095](adr-095-azure-dedicated-database-servers.md) | A PostgreSQL server of its own per service on Azure | Accepted |
 
 ## Writing one
 

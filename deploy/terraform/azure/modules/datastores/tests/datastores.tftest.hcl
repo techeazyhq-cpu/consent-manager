@@ -229,3 +229,56 @@ run "the_recovery_region_must_differ_from_the_primary" {
 
   expect_failures = [var.disaster_recovery_location]
 }
+
+run "a_service_can_have_a_server_of_its_own" {
+  command = plan
+
+  variables {
+    dedicated_databases = {
+      "cm-aud-svc" = { db_name = "cm_aud", username = "cm_aud" }
+    }
+  }
+
+  assert {
+    condition     = length(azurerm_postgresql_flexible_server.dedicated) == 1 && azurerm_postgresql_flexible_server_database.dedicated["cm-aud-svc"].name == "cm_aud"
+    error_message = "A dedicated server is created for each service named, with the database name asked for."
+  }
+  assert {
+    condition = (
+      azurerm_postgresql_flexible_server.dedicated["cm-aud-svc"].high_availability[0].mode == "ZoneRedundant"
+      && !azurerm_postgresql_flexible_server.dedicated["cm-aud-svc"].public_network_access_enabled
+      && azurerm_postgresql_flexible_server.dedicated["cm-aud-svc"].geo_redundant_backup_enabled
+      && azurerm_postgresql_flexible_server.dedicated["cm-aud-svc"].backup_retention_days == 35
+    )
+    error_message = "A dedicated server must be as protected as the shared one: zone-redundant, private, geo-redundant backups, 35 days."
+  }
+  assert {
+    condition     = length(azurerm_postgresql_flexible_server_configuration.dedicated) == 6 && azurerm_postgresql_flexible_server_configuration.dedicated["cm-aud-svc/require_secure_transport"].value == "ON"
+    error_message = "A dedicated server must require TLS and carry the same settings as the shared one."
+  }
+  assert {
+    condition     = length(azurerm_management_lock.dedicated) == 1 && length(azurerm_key_vault_secret.dedicated_owner_password) == 1
+    error_message = "A dedicated server is locked against deletion and its password is a vault secret of its own."
+  }
+}
+
+run "a_burstable_dedicated_server_is_refused" {
+  command = plan
+
+  variables {
+    dedicated_databases = {
+      "cm-aud-svc" = { db_name = "cm_aud", username = "cm_aud", sku_name = "B_Standard_B2s" }
+    }
+  }
+
+  expect_failures = [var.dedicated_databases]
+}
+
+run "by_default_no_dedicated_server_exists" {
+  command = plan
+
+  assert {
+    condition     = length(azurerm_postgresql_flexible_server.dedicated) == 0
+    error_message = "Nothing is created for a service until it is asked for."
+  }
+}

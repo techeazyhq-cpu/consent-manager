@@ -56,3 +56,16 @@ output "operations_action_group_id" {
   description = "Action group receiving the datastore alerts; add more receivers to it as needed."
   value       = azurerm_monitor_action_group.operations.id
 }
+
+output "postgres_dedicated" {
+  description = "Per service with its own server (ADR-074, ADR-095): the address, port, database, user and the key vault secret holding the owner's password, for that service's `database:` block in the Helm values."
+  value = {
+    for service, server in azurerm_postgresql_flexible_server.dedicated : service => {
+      host            = server.fqdn
+      port            = 5432
+      name            = var.dedicated_databases[service].db_name
+      user            = server.administrator_login
+      password_secret = azurerm_key_vault_secret.dedicated_owner_password[service].name
+    }
+  }
+}

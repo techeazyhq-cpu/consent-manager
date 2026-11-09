@@ -217,5 +217,6 @@ module "datastores" {
   private_endpoint_subnet_id = azurerm_subnet.private_endpoints.id
   operator_ip_ranges         = var.operator_ip_ranges
   alert_email_addresses      = var.alert_email_addresses
+  dedicated_databases        = var.dedicated_databases
   tags                       = local.tags
 }
