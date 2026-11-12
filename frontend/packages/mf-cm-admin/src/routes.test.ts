@@ -38,6 +38,7 @@ describe("CM Admin routes", () => {
     expect(parseRoute("#/security").page).toBe("security");
     expect(parseRoute("#/audit").page).toBe("audit");
     expect(parseRoute("#/anomalies").page).toBe("anomalies");
+    expect(parseRoute("#/ai-drafting").page).toBe("ai-drafting");
     expect(parseRoute(tenantHref("df-1", "audit"))).toEqual({ page: "tenant", dfId: "df-1", tab: "audit" });
   });
 

@@ -176,24 +176,46 @@ public class CnsCmdBeanConfig {
     }
 
     /**
-     * The model that drafts purposes (ADR-111): off unless cm.cnscmd.ai-drafting.enabled, and then an OpenAI-compatible endpoint the operator runs
-     * (Ollama, vLLM, llama.cpp). The key, when the endpoint wants one, is a secret and is never logged.
+     * The model that drafts purposes (ADR-111), as platform staff set it in CM Admin (ADR-113). Until they save a setting the
+     * cm.cnscmd.ai-drafting.* properties apply: off unless enabled, and then an OpenAI-compatible endpoint the operator runs (Ollama, vLLM,
+     * llama.cpp). Keys are secrets: sealed when stored, never logged.
      */
     @Bean
-    public com.techeazyhq.cm.cnscmd.dom.DraftingModelPort draftingModel(WebClient.Builder builder,
+    public com.techeazyhq.cm.cnscmd.dom.DraftingModelFactoryPort draftingModelFactory(WebClient.Builder builder) {
+        return new com.techeazyhq.cm.cnscmd.infra.DraftingModels(builder);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.cnscmd.dom.AiDraftingConfigRepoPort aiDraftingConfigRepoPort(DatabaseClient db) {
+        return new com.techeazyhq.cm.cnscmd.infra.R2dbcAiDraftingConfigAdapter(db);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.cnscmd.app.AiDraftingSettings draftingModel(com.techeazyhq.cm.cnscmd.dom.AiDraftingConfigRepoPort repo,
+            com.techeazyhq.cm.cnscmd.dom.DraftingModelFactoryPort factory, SecretSealerPort sealer, AuditTrail audit,
             @Value("${cm.cnscmd.ai-drafting.enabled:false}") boolean enabled,
             @Value("${cm.cnscmd.ai-drafting.endpoint:http://localhost:11434}") String endpoint,
             @Value("${cm.cnscmd.ai-drafting.model:llama3.2:3b}") String model,
             @Value("${cm.cnscmd.ai-drafting.api-key:}") String apiKey,
             @Value("${cm.cnscmd.ai-drafting.timeout-seconds:100}") int timeoutSeconds,
             @Value("${cm.cnscmd.ai-drafting.max-tokens:1500}") int maxTokens) {
-        return enabled
-                ? new com.techeazyhq.cm.cnscmd.infra.OpenAiCompatibleDraftingModel(builder, endpoint, model, apiKey, java.time.Duration.ofSeconds(timeoutSeconds), maxTokens)
-                : new com.techeazyhq.cm.cnscmd.infra.NoDraftingModel();
+        // the properties name an OpenAI-compatible server; being the operator's own configuration they carry their own consent to where it points
+        com.techeazyhq.cm.cnscmd.dom.AiDraftingConfig fromProperties = new com.techeazyhq.cm.cnscmd.dom.AiDraftingConfig(enabled,
+                com.techeazyhq.cm.cnscmd.dom.AiProvider.OPENAI_COMPATIBLE, endpoint, model, null, timeoutSeconds, maxTokens, true, "properties", null);
+        com.techeazyhq.cm.cnscmd.app.AiDraftingSettings settings = new com.techeazyhq.cm.cnscmd.app.AiDraftingSettings(repo, factory, sealer, audit,
+                java.time.Clock.systemUTC(), fromProperties, apiKey);
+        settings.reload().block(java.time.Duration.ofSeconds(10)); // a saved setting wins from the first request
+        return settings;
+    }
+
+    /** Picks up a change made on another instance. */
+    @Bean
+    public com.techeazyhq.cm.cnscmd.app.AiDraftingReloadJob aiDraftingReloadJob(com.techeazyhq.cm.cnscmd.app.AiDraftingSettings settings) {
+        return new com.techeazyhq.cm.cnscmd.app.AiDraftingReloadJob(settings);
     }
 
     @Bean
-    public com.techeazyhq.cm.cnscmd.app.PrpsDraftAssist prpsDraftAssist(com.techeazyhq.cm.cnscmd.dom.DraftingModelPort model, AuditTrail audit,
+    public com.techeazyhq.cm.cnscmd.app.PrpsDraftAssist prpsDraftAssist(com.techeazyhq.cm.cnscmd.app.AiDraftingSettings model, AuditTrail audit,
             ObjectMapper objectMapper,
             @Value("${cm.cnscmd.ai-drafting.max-input-chars:2000}") int maxInput,
             @Value("${cm.cnscmd.ai-drafting.per-hour:20}") int perHour,

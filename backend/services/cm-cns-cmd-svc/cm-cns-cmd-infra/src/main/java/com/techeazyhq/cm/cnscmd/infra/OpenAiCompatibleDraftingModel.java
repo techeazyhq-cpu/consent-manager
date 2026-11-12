@@ -41,11 +41,18 @@ public class OpenAiCompatibleDraftingModel implements DraftingModelPort {
 
     private final WebClient client;
     private final String model;
+    private final String chatPath;
     private final Duration timeout;
     private final int maxTokens;
 
     /** {@code apiKey} is optional: a self-hosted endpoint often has none. It is sent as a bearer token and never logged. */
     public OpenAiCompatibleDraftingModel(WebClient.Builder builder, String baseUrl, String model, String apiKey, Duration timeout, int maxTokens) {
+        this(builder, baseUrl, "/v1/chat/completions", model, apiKey, timeout, maxTokens);
+    }
+
+    /** {@code chatPath} is where the provider takes a chat call: {@code /v1/chat/completions}, or {@code /chat/completions} for DeepSeek. */
+    public OpenAiCompatibleDraftingModel(WebClient.Builder builder, String baseUrl, String chatPath, String model, String apiKey, Duration timeout,
+                                         int maxTokens) {
         WebClient.Builder b = builder.baseUrl(baseUrl)
                 .codecs(c -> c.defaultCodecs().maxInMemorySize(1024 * 1024));
         if (apiKey != null && !apiKey.isBlank()) {
@@ -53,6 +60,7 @@ public class OpenAiCompatibleDraftingModel implements DraftingModelPort {
         }
         this.client = b.build();
         this.model = model;
+        this.chatPath = chatPath;
         this.timeout = timeout;
         this.maxTokens = maxTokens;
     }
@@ -71,7 +79,7 @@ public class OpenAiCompatibleDraftingModel implements DraftingModelPort {
                 "max_tokens", maxTokens,
                 "stream", false,
                 "response_format", Map.of("type", "json_object"));
-        return client.post().uri("/v1/chat/completions").contentType(MediaType.APPLICATION_JSON).bodyValue(body)
+        return client.post().uri(chatPath).contentType(MediaType.APPLICATION_JSON).bodyValue(body)
                 .retrieve().bodyToMono(JsonNode.class)
                 .timeout(timeout)
                 .map(n -> n.path("choices").path(0).path("message").path("content").asText(""))

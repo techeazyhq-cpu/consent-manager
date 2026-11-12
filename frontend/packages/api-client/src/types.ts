@@ -928,3 +928,60 @@ export interface AnomalyDto {
   acknowledgedBy: string | null;
   acknowledgedAt: string | null;
 }
+
+/** A model provider the platform's staff can choose for drafting purposes (ADR-113). */
+export type AiProviderId = "OLLAMA" | "OPENAI_COMPATIBLE" | "OPENAI" | "ANTHROPIC" | "GEMINI" | "DEEPSEEK";
+
+export interface AiProviderInfo {
+  id: AiProviderId;
+  label: string;
+  defaultEndpoint: string;
+  defaultModel: string;
+  /** A server the operator runs: they set its address. A vendor's own API has a fixed one. */
+  endpointEditable: boolean;
+  keyRequired: boolean;
+  /** A vendor's API: descriptions leave the platform. */
+  thirdParty: boolean;
+}
+
+/** The drafting model setting. The key is never returned: only whether one is stored. */
+export interface AiDraftingConfigDto {
+  enabled: boolean;
+  provider: AiProviderId;
+  endpoint: string;
+  model: string;
+  apiKeySet: boolean;
+  timeoutSeconds: number;
+  maxTokens: number;
+  thirdPartyAck: boolean;
+  /** Whether descriptions would be sent outside the platform's own infrastructure. */
+  leavesPlatform: boolean;
+  updatedBy: string | null;
+  updatedAt: string | null;
+}
+
+export interface AiDraftingViewDto {
+  config: AiDraftingConfigDto;
+  /** True until staff first save: the setting then comes from the service's properties. */
+  fromProperties: boolean;
+  providers: AiProviderInfo[];
+}
+
+/** What staff send. {@code apiKey} blank keeps the stored key while the provider and address are unchanged; it is never read back. */
+export interface AiDraftingUpdate {
+  enabled: boolean;
+  provider: AiProviderId;
+  endpoint: string;
+  model: string;
+  apiKey?: string;
+  clearKey?: boolean;
+  timeoutSeconds: number;
+  maxTokens: number;
+  thirdPartyAck: boolean;
+}
+
+export interface AiDraftingTestResult {
+  ok: boolean;
+  millis: number;
+  message: string;
+}

@@ -88,6 +88,9 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.GET, "/api/bil/sub-plns").authenticated()
                         .pathMatchers(HttpMethod.GET, "/api/bil/**").hasAnyRole(STAFF)
                         .pathMatchers("/api/bil/**").hasRole("CM_ADMIN")
+                        // Which model drafts purposes (ADR-113): staff may look, only administrators change it or test it.
+                        .pathMatchers(HttpMethod.GET, "/api/cns-cmd/admin/ai-drafting").hasAnyRole(STAFF)
+                        .pathMatchers("/api/cns-cmd/admin/**").hasRole("CM_ADMIN")
                         // A tenant's consent counts and masked requests, for CM Admin's tenant detail.
                         .pathMatchers("/api/cns-qry/admin/**").hasAnyRole("CM_ADMIN", "CM_OPERATOR")
                         // Grievances about the platform are answered by its staff (ADR-058); principals and

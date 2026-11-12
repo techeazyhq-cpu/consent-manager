@@ -27,6 +27,7 @@ import TenantDetail from "./TenantDetail";
 import Staff from "./Staff";
 import Grievances from "./Grievances";
 import Anomalies from "./Anomalies";
+import AiDrafting from "./AiDrafting";
 import Erasures from "./Erasures";
 import Security from "./Security";
 import StatusAdmin from "./StatusAdmin";
@@ -60,6 +61,7 @@ export default function CmAdminApp({ auth, gwBase }: Props) {
     ...(session.isAdmin
       ? [{ key: "anomalies", href: "#/anomalies", label: "Unusual activity", section: "Platform", icon: Icons.bell }]
       : []),
+    { key: "ai-drafting", href: "#/ai-drafting", label: "AI drafting model", section: "Platform", icon: Icons.shield },
     { key: "security", href: "#/security", label: "Sign-in & security", section: "Platform", icon: Icons.shield },
     { key: "status", href: "#/status", label: "Platform status", section: "Platform", icon: Icons.bell },
   ];
@@ -87,6 +89,7 @@ export default function CmAdminApp({ auth, gwBase }: Props) {
       {route.page === "anomalies" ? (session.isAdmin ? <Anomalies session={session} /> : <Dashboard session={session} />) : null}
       {route.page === "grievances" ? <Grievances session={session} /> : null}
       {route.page === "erasures" ? <Erasures session={session} /> : null}
+      {route.page === "ai-drafting" ? <AiDrafting session={session} /> : null}
       {route.page === "status" ? <StatusAdmin session={session} /> : null}
     </AppShell>
   );

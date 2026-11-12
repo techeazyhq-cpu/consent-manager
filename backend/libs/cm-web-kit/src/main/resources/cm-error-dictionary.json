@@ -1250,8 +1250,8 @@
       "status": 404,
       "category": "not-found",
       "title": "Drafting with a model is not switched on",
-      "description": "The platform has no drafting model set up (cm.cnscmd.ai-drafting.enabled is off), so a purpose cannot be drafted from a description.",
-      "action": "Write the purpose by hand, or ask whoever runs the platform to set up a model (ADR-111).",
+      "description": "The platform has no drafting model switched on (neither CM Admin's AI drafting model setting nor cm.cnscmd.ai-drafting.enabled), so a purpose cannot be drafted from a description.",
+      "action": "Write the purpose by hand, or ask whoever runs the platform to set up a model (ADR-111, ADR-113).",
       "retryable": false,
       "raisedBy": [
         "cm-cns-cmd-svc"
@@ -1304,6 +1304,19 @@
       "title": "The model's draft was not usable",
       "description": "The model answered twice, and neither answer passed the rules a purpose must meet (not JSON, no data listed, no notice, a field out of bounds). Nothing was kept.",
       "action": "Describe the purpose a little differently, or write it by hand.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "invalid-ai-config",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "The drafting model setting is not valid",
+      "description": "The provider, address, model name, limits or acknowledgement in the setting break a rule: a vendor needs its key, an address must be http or https and never a metadata address, a server outside the network needs https, and sending descriptions to a party outside the platform needs the administrator's acknowledgement. Nothing was saved.",
+      "action": "Correct what the message names and save again.",
       "retryable": false,
       "raisedBy": [
         "cm-cns-cmd-svc"
