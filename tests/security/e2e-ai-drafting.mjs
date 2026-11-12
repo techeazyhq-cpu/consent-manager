@@ -27,7 +27,7 @@
 //
 //   node tests/security/e2e-ai-drafting.mjs
 
-import { GW, dfSignIn } from './lib/cm1.mjs';
+import { GW, dfSignIn, staffSignIn } from './lib/cm1.mjs';
 
 let failed = false;
 const expect = (ok, what, detail) => {
@@ -42,9 +42,26 @@ const call = async (token, method, path, body) => {
 };
 
 const owner = await dfSignIn('batch-owner@example.test');
+const dfId = JSON.parse(Buffer.from(owner.split('.')[1], 'base64url').toString()).df_id;
+const staff = await staffSignIn(process.env.STAFF || 'operator@cm.local');
 
-const status = await call(owner, 'GET', '/api/cns-cmd/prps-defs/draft-assist/status');
-expect(status.status === 200 && status.json.enabled === true && !!status.json.model, 'the status says drafting is on, with the model', JSON.stringify(status.json));
+// Drafting is on per organisation (ADR-114): staff turn it on at onboarding, or when the organisation asks.
+let status = await call(owner, 'GET', '/api/cns-cmd/prps-defs/draft-assist/status');
+expect(status.status === 200 && status.json.modelOffered === true && !!status.json.model, 'the platform has a model, so the organisation can ask for it', JSON.stringify(status.json));
+if (status.json.access !== 'ENABLED') {
+  const refused = await call(owner, 'POST', '/api/cns-cmd/prps-defs/draft-assist', { description: 'We email customers about their order status and keep it 30 days.', lang: 'en' });
+  expect(refused.status === 403 && refused.json?.code === 'ai-drafting-not-enabled', 'without access, drafting is refused before the model', `${refused.status} ${refused.json?.code}`);
+  if (status.json.access !== 'PENDING') {
+    const asked = await call(owner, 'POST', '/api/cns-cmd/prps-defs/draft-assist/access-request', { note: 'e2e' });
+    expect(asked.status === 200 && asked.json.access === 'PENDING', 'the organisation asks for it', `${asked.status} ${JSON.stringify(asked.json)}`);
+  }
+  const queue = await call(staff, 'GET', '/api/cns-cmd/admin/ai-drafting/access');
+  expect(queue.status === 200 && queue.json.pending.some((r) => r.dfId === dfId), 'staff see the request waiting');
+  const granted = await call(staff, 'PUT', `/api/cns-cmd/admin/ai-drafting/access/${dfId}`, { enabled: true });
+  expect(granted.status === 200 && granted.json.enabled === true, 'staff turn it on', `${granted.status}`);
+}
+status = await call(owner, 'GET', '/api/cns-cmd/prps-defs/draft-assist/status');
+expect(status.status === 200 && status.json.enabled === true && status.json.access === 'ENABLED' && !!status.json.model, 'the status says drafting is on, with the model', JSON.stringify(status.json));
 
 const before = (await call(owner, 'GET', '/api/cns-cmd/prps-defs')).json.length;
 const ask = 'We email customers when their order ships and when it is delivered, using their email address and their mobile number. '

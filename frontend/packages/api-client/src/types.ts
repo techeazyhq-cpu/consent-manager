@@ -560,10 +560,18 @@ export interface PrpsContent {
 
 /** Whether drafting a purpose with the operator's own model is on, and its limits (ADR-111). */
 export interface PrpsAiStatusDto {
+  /** The platform has a model and this fiduciary may use it. */
   enabled: boolean;
   model: string | null;
   minChars: number;
   maxChars: number;
+  /** The platform has a model, so this fiduciary may ask for access when it has none (ADR-114). */
+  modelOffered: boolean;
+  access: AiAccessState;
+  /** When the waiting request was made. */
+  requestedAt: string | null;
+  /** Why platform staff turned the last request down, when they did. */
+  declineReason: string | null;
 }
 
 /** A purpose the model drafted from a description: never saved; the fields to confirm and the warnings come with it (ADR-111). */
@@ -984,4 +992,24 @@ export interface AiDraftingTestResult {
   ok: boolean;
   millis: number;
   message: string;
+}
+
+/** Whether a fiduciary may draft with the platform's model (ADR-114). */
+export type AiAccessState = "ENABLED" | "PENDING" | "DECLINED" | "NOT_ENABLED";
+
+export interface AiAccessRowDto {
+  dfId: string;
+  enabled: boolean;
+  access: AiAccessState;
+  note: string | null;
+  requestedBy: string | null;
+  requestedAt: string | null;
+  declineReason: string | null;
+  updatedAt: string | null;
+}
+
+/** Requests waiting (oldest first) and the fiduciaries it is on for. */
+export interface AiAccessListDto {
+  pending: AiAccessRowDto[];
+  enabled: AiAccessRowDto[];
 }

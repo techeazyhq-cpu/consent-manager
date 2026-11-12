@@ -118,6 +118,7 @@ in the repository, so where the code and the plan disagreed, the record follows 
 | [110](adr-110-an-owner-per-schema.md) | Each schema has an owner of its own | Accepted |
 | [112](adr-112-unusual-activity-detection.md) | Finding unusual activity from counts the platform already has | Accepted |
 | [113](adr-113-ai-model-provider-settings-in-cm-admin.md) | The drafting model is chosen in CM Admin: Ollama, OpenAI, Anthropic, Gemini, DeepSeek or a compatible server | Accepted |
+| [114](adr-114-ai-drafting-per-tenant-at-onboarding-or-on-request.md) | Drafting with a model is turned on per tenant, at onboarding or when the tenant asks | Accepted |
 | [111](adr-111-ai-assisted-purpose-drafting.md) | Drafting a purpose with a model the operator runs | Accepted |
 
 ## Writing one

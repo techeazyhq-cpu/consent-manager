@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
+- **Extended by:** [ADR-114](adr-114-ai-drafting-per-tenant-at-onboarding-or-on-request.md) (drafting is turned on per tenant)
 - **Refines:** [ADR-111](adr-111-ai-assisted-purpose-drafting.md) §2 (the model was set by properties and an OpenAI-compatible endpoint only)
 
 ## Context

@@ -26,6 +26,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import com.techeazyhq.cm.cnscmd.app.AiDraftingAccessCmds;
 import com.techeazyhq.cm.cnscmd.app.AiDraftingSettings;
 import com.techeazyhq.cm.cnscmd.dom.AiDraftingConfig;
 import com.techeazyhq.cm.cnscmd.dom.AiProvider;
@@ -46,9 +47,11 @@ import reactor.core.publisher.Mono;
 public class AiDraftingAdminHandler {
 
     private final AiDraftingSettings settings;
+    private final AiDraftingAccessCmds access;
 
-    public AiDraftingAdminHandler(AiDraftingSettings settings) {
+    public AiDraftingAdminHandler(AiDraftingSettings settings, AiDraftingAccessCmds access) {
         this.settings = settings;
+        this.access = access;
     }
 
     public Mono<ServerResponse> get(ServerRequest request) {
@@ -67,6 +70,46 @@ public class AiDraftingAdminHandler {
                 .switchIfEmpty(Mono.error(() -> new DomRuleViolation(400, "invalid-ai-config", "Send the setting")))
                 .flatMap(body -> settings.test(ctx.subject(), body.toDomain()))
                 .flatMap(r -> ServerResponse.ok().bodyValue(r)));
+    }
+
+    // ---- which fiduciaries may draft (ADR-114)
+
+    /** {@code GET .../access}: requests waiting, oldest first, and fiduciaries it is on for. Platform staff. */
+    public Mono<ServerResponse> accessList(ServerRequest request) {
+        return asStaff(request, false, ctx -> access.pending().map(AccessRowDto::of).collectList()
+                .zipWith(access.enabled().map(AccessRowDto::of).collectList())
+                .flatMap(t -> ServerResponse.ok().bodyValue(new AccessListDto(t.getT1(), t.getT2()))));
+    }
+
+    /**
+     * {@code PUT .../access/{dfId}}: {@code {enabled}}. Any staff may turn it on (an operator onboards a tenant with it); turning it off is for
+     * administrators, like the other changes to a tenant's terms.
+     */
+    public Mono<ServerResponse> accessSet(ServerRequest request) {
+        return asStaff(request, false, ctx -> request.bodyToMono(AccessSetDto.class)
+                .switchIfEmpty(Mono.error(() -> new DomRuleViolation(400, "invalid-ai-drafting-access", "Say whether to turn it on or off: enabled")))
+                .flatMap(body -> {
+                    if (!body.enabled() && !ctx.isCmAdmin()) {
+                        return Mono.<ServerResponse>error(new DomRuleViolation(403, "not-permitted", "Only a platform administrator turns it off"));
+                    }
+                    String dfId = request.pathVariable("dfId");
+                    return (body.enabled() ? access.grant(dfId, ctx.subject()) : access.revoke(dfId, ctx.subject()))
+                            .flatMap(r -> ServerResponse.ok().bodyValue(AccessRowDto.of(r)));
+                }));
+    }
+
+    /** {@code POST .../access/{dfId}/approve}. Administrators. */
+    public Mono<ServerResponse> accessApprove(ServerRequest request) {
+        return asStaff(request, true, ctx -> access.approve(request.pathVariable("dfId"), ctx.subject())
+                .flatMap(r -> ServerResponse.ok().bodyValue(AccessRowDto.of(r))));
+    }
+
+    /** {@code POST .../access/{dfId}/decline}: {@code {reason}}, which the fiduciary sees. Administrators. */
+    public Mono<ServerResponse> accessDecline(ServerRequest request) {
+        return asStaff(request, true, ctx -> request.bodyToMono(DeclineDto.class)
+                .switchIfEmpty(Mono.error(() -> new DomRuleViolation(400, "invalid-ai-drafting-access", "Say why: reason")))
+                .flatMap(body -> access.decline(request.pathVariable("dfId"), ctx.subject(), body.reason()))
+                .flatMap(r -> ServerResponse.ok().bodyValue(AccessRowDto.of(r))));
     }
 
     /** Platform staff may look; changing the model is for administrators (the gateway says the same; this is the second check). */
@@ -104,6 +147,24 @@ public class AiDraftingAdminHandler {
             return new ConfigDto(c.enabled(), c.provider().name(), c.provider().endpointEditable() ? c.endpoint() : c.provider().defaultEndpoint(),
                     c.model(), c.hasKey(), c.timeoutSeconds(), c.maxTokens(), c.thirdPartyAck(), c.leavesPlatform(), c.updatedBy(), c.updatedAt());
         }
+    }
+
+    record AccessSetDto(boolean enabled) {
+    }
+
+    record DeclineDto(String reason) {
+    }
+
+    record AccessRowDto(String dfId, boolean enabled, String access, String note, String requestedBy, Instant requestedAt, String declineReason,
+                        Instant updatedAt) {
+
+        static AccessRowDto of(com.techeazyhq.cm.cnscmd.dom.AiDraftingAccess x) {
+            var q = x.request();
+            return new AccessRowDto(x.dfId(), x.enabled(), x.view().name(), q.note(), q.requestedBy(), q.requestedAt(), q.declineReason(), x.updatedAt());
+        }
+    }
+
+    record AccessListDto(List<AccessRowDto> pending, List<AccessRowDto> enabled) {
     }
 
     record ViewDto(ConfigDto config, boolean fromProperties, List<AiDraftingSettings.ProviderInfo> providers) {

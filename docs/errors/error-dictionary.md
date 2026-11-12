@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-177 entries: 159 API problems, 17 operational log codes and 1 event.
+180 entries: 162 API problems, 17 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -49,6 +49,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `ambiguous-credentials` | 400 | Two kinds of credentials sent | The request carried both an API key and a bearer token, so it is unclear which identity is calling. | Send one credential: either the API key headers or a bearer token. | no | gw |
 | `confirmation-required` | 400 | Confirmation needed | Closing an account needs the confirmation words typed exactly. | Type the words the page asks for. | no | dsr |
 | `invalid-ai-config` | 400 | The drafting model setting is not valid | The provider, address, model name, limits or acknowledgement in the setting break a rule: a vendor needs its key, an address must be http or https and never a metadata address, a server outside the network needs https, and sending descriptions to a party outside the platform needs the administrator's acknowledgement. Nothing was saved. | Correct what the message names and save again. | no | cns-cmd |
+| `invalid-ai-drafting-access` | 400 | The drafting access request is not valid | The fiduciary is not named properly, a note or a reason is longer than allowed, or a decline came without a reason. | Correct what the message names and send it again. | no | cns-cmd |
 | `invalid-answer` | 400 | Answer not valid | An answer needs a reply, and a refusal also needs its legal ground. The detail says which. | Add what is missing. | no | dsr |
 | `invalid-api-key` | 400 | API key request not valid | The request to issue an API key was refused. The detail says why. | Correct the request as the detail says. | no | df-reg |
 | `invalid-batch` | 400 | Batch not valid | The batch request was refused. The detail says why. | Correct the batch as the detail says. | no | cns-cmd |
@@ -104,6 +105,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | Code | Status | Title | What it means | What to do | Retry | Raised by |
 |---|---|---|---|---|---|---|
 | `admin-only` | 403 | Administrators only | Only a platform administrator can manage staff. | Ask a platform administrator. | no | stf |
+| `ai-drafting-not-enabled` | 403 | Drafting with a model is off for this organisation | The platform has a drafting model, but platform staff have not turned drafting on for this fiduciary. Nothing was sent to the model. | Ask for it from the DF Console's purpose editor, or ask platform staff; they turn it on at onboarding or when asked. | no | cns-cmd |
 | `aud-forbidden` | 403 | Not allowed to read the audit | Only Owners, Administrators and Auditors of the fiduciary, and platform staff, read the audit. | Ask someone with that role. | no | aud |
 | `consent-not-verified` | 403 | Consent not verified | The consent behind this call could not be confirmed: it is missing, withdrawn, lapsed, for another purpose or fiduciary, or the token was altered. | Do not process the personal data. Ask the person for consent again if it is still needed. | no | gw |
 | `contact-not-verified` | 403 | Contact not verified | The sign-in did not verify an email address or number to claim requests with. | Sign in again with a code sent to your own address. | no | cns-cmd |
@@ -165,6 +167,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | Code | Status | Title | What it means | What to do | Retry | Raised by |
 |---|---|---|---|---|---|---|
 | `account-exists` | 409 | An account with that email already exists | The email address already belongs to an account, so a second cannot be created. | Use a different address, or sign in with the existing account. | no | df-reg, stf |
+| `ai-drafting-access-state` | 409 | That does not fit where the request stands | The change asked for does not fit the state of this fiduciary's access to drafting: asking when it is already on or a request is already waiting, or deciding or withdrawing when none is waiting. | Reload to see where it stands, then act on that. | no | cns-cmd |
 | `cannot-change-admin` | 409 | Administrators are managed elsewhere | Platform administrators are managed in Keycloak, not through this service. | Change them in Keycloak. | no | stf |
 | `cannot-change-self` | 409 | You cannot change your own role | People cannot change or remove their own account here. | Ask another Owner or Administrator. | no | df-reg, stf |
 | `df-already-registered` | 409 | Organisation already registered | An organisation is already registered with this contact address. | Sign in to the DF Console, or contact the platform. | no | df-reg |
