@@ -22,12 +22,36 @@ import { AiDraftPanel, AiReview, allTicked } from "./AiDraft";
 import type { Console } from "./console";
 
 let enabled = true;
+let offered = true;
+let access = "ENABLED";
+let declineReason: string | null = null;
+const asked: (string | undefined)[] = [];
+let withdrawn = 0;
 
 vi.mock("api-client", async (actual) => ({
   ...(await actual<typeof import("api-client")>()),
   prps: {
-    aiStatus: async () => ({ enabled, model: "llama3.2:3b", minChars: 20, maxChars: 2000 }),
+    aiStatus: async () => ({
+      enabled: enabled && offered && access === "ENABLED",
+      model: "llama3.2:3b",
+      minChars: 20,
+      maxChars: 2000,
+      modelOffered: enabled && offered,
+      access,
+      requestedAt: access === "PENDING" ? "2026-11-12T10:00:00Z" : null,
+      declineReason,
+    }),
     aiDraft: async () => ({}),
+    aiRequestAccess: async (_b: string, _t: string, note?: string) => {
+      asked.push(note);
+      access = "PENDING";
+      return { access };
+    },
+    aiWithdrawAccess: async () => {
+      withdrawn++;
+      access = "NOT_ENABLED";
+      return { access };
+    },
   },
 }));
 vi.mock("./token", () => ({ freshToken: async () => "t" }));
@@ -37,11 +61,44 @@ const console_ = { auth: { token: "t", logout: () => {} }, gwBase: "http://gw", 
 afterEach(() => {
   cleanup();
   enabled = true;
+  offered = true;
+  access = "ENABLED";
+  declineReason = null;
+  asked.length = 0;
+  withdrawn = 0;
 });
 
 describe("AI drafting (ADR-111)", () => {
   it("is not offered when the platform has no model set up", async () => {
     enabled = false;
+    const { container } = render(<AiDraftPanel console={console_} onSuggestion={() => {}} />);
+    await waitFor(() => expect(container.textContent).toBe(""));
+  });
+
+  it("lets an organisation without access ask for it, with a note, and then shows the request waiting", async () => {
+    access = "NOT_ENABLED";
+    render(<AiDraftPanel console={console_} onSuggestion={() => {}} />);
+    expect(screen.queryByText("Describe the purpose")).toBeNull();
+    fireEvent.change(await screen.findByLabelText(/Why you would like it/), { target: { value: "We write many purposes" } });
+    fireEvent.click(screen.getByText("Ask to turn it on"));
+    await screen.findByText(/The platform.s staff have not answered yet/);
+    expect(asked).toEqual(["We write many purposes"]);
+    fireEvent.click(screen.getByText("Withdraw the request"));
+    await screen.findByText("Ask to turn it on");
+    expect(withdrawn).toBe(1);
+  });
+
+  it("says why a request was turned down, and lets the organisation ask again", async () => {
+    access = "DECLINED";
+    declineReason = "Not for trial accounts";
+    render(<AiDraftPanel console={console_} onSuggestion={() => {}} />);
+    expect(await screen.findByText(/turned down: Not for trial accounts/)).toBeTruthy();
+    expect(screen.getByText("Ask to turn it on")).toBeTruthy();
+  });
+
+  it("offers nothing to ask for when the platform has no model", async () => {
+    access = "NOT_ENABLED";
+    offered = false;
     const { container } = render(<AiDraftPanel console={console_} onSuggestion={() => {}} />);
     await waitFor(() => expect(container.textContent).toBe(""));
   });

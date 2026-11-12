@@ -1323,6 +1323,45 @@
       ]
     },
     {
+      "code": "ai-drafting-not-enabled",
+      "kind": "problem",
+      "status": 403,
+      "category": "authorization",
+      "title": "Drafting with a model is off for this organisation",
+      "description": "The platform has a drafting model, but platform staff have not turned drafting on for this fiduciary. Nothing was sent to the model.",
+      "action": "Ask for it from the DF Console's purpose editor, or ask platform staff; they turn it on at onboarding or when asked.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "ai-drafting-access-state",
+      "kind": "problem",
+      "status": 409,
+      "category": "conflict",
+      "title": "That does not fit where the request stands",
+      "description": "The change asked for does not fit the state of this fiduciary's access to drafting: asking when it is already on or a request is already waiting, or deciding or withdrawing when none is waiting.",
+      "action": "Reload to see where it stands, then act on that.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
+      "code": "invalid-ai-drafting-access",
+      "kind": "problem",
+      "status": 400,
+      "category": "validation",
+      "title": "The drafting access request is not valid",
+      "description": "The fiduciary is not named properly, a note or a reason is longer than allowed, or a decline came without a reason.",
+      "action": "Correct what the message names and send it again.",
+      "retryable": false,
+      "raisedBy": [
+        "cm-cns-cmd-svc"
+      ]
+    },
+    {
       "code": "ai-drafting-unavailable",
       "kind": "problem",
       "status": 503,

@@ -17,7 +17,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { bil, dfReg, type DfRegisterReqDto, type SubPln } from "api-client";
+import { aiDraftingConfig, bil, dfReg, type DfRegisterReqDto, type SubPln } from "api-client";
 import { Button, Card, ErrorBanner, Field, PageHeader, friendlyError } from "ui-kit/src/index";
 import { forgetLogo } from "./DfLogo";
 import { checkLogo, type CheckedImage } from "./logo";
@@ -47,6 +47,7 @@ export default function Onboard({ session }: { session: Session }) {
   const [plans, setPlans] = useState<SubPln[]>([]);
   const [logo, setLogo] = useState<CheckedImage | null>(null);
   const [activateNow, setActivateNow] = useState(true);
+  const [aiDrafting, setAiDrafting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +80,10 @@ export default function Onboard({ session }: { session: Session }) {
       if (activateNow) {
         const active = await dfReg.activate(session.gwBase, await freshToken(session.auth), created.id);
         if (active.cmDfApiClientSecret) rememberSecret(created.id, active.cmDfApiClientSecret);
+      }
+      if (aiDrafting) {
+        // chosen at onboarding (ADR-114); a tenant that did not choose it can ask for it later in the DF Console
+        await aiDraftingConfig.setAccess(session.gwBase, await freshToken(session.auth), created.id, true);
       }
       window.location.hash = tenantHref(created.id);
     } catch (err) {
@@ -181,6 +186,18 @@ export default function Onboard({ session }: { session: Session }) {
               <input type="email" value={form.dpoEmail} onChange={set("dpoEmail")} />
             </Field>
           </div>
+
+          <h3 className="cm-section-title">Features</h3>
+          <label style={{ display: "flex", gap: 8, alignItems: "flex-start", margin: "8px 0" }}>
+            <input type="checkbox" checked={aiDrafting} onChange={(e) => setAiDrafting(e.target.checked)} />
+            <span>
+              Draft purposes with the AI model
+              <span className="cm-note" style={{ display: "block", margin: 0 }}>
+                Its people can describe a purpose in words and get a draft to read and edit. What they type goes to the model chosen under AI drafting
+                model, which may be a vendor&apos;s. If you leave this off, the organisation can ask for it later from its console.
+              </span>
+            </span>
+          </label>
 
           <label style={{ display: "flex", gap: 8, alignItems: "center", margin: "8px 0 16px" }}>
             <input type="checkbox" checked={activateNow} onChange={(e) => setActivateNow(e.target.checked)} />

@@ -29,6 +29,20 @@ The service's own configuration applies, as in ADR-111, and CM Admin says so. Sa
    `networkPolicy.egress.external`, or the test and every draft will fail as "could not be reached".
 2. **Local stack:** `CM_AI_DRAFTING_ENABLED=true` (Ollama on the host is reached as `host.docker.internal:11434`; `CM_AI_DRAFTING_ENDPOINT` and `CM_AI_DRAFTING_MODEL` change it).
 
+## Turn it on for a tenant
+
+Decision: [ADR-114](../adr/adr-114-ai-drafting-per-tenant-at-onboarding-or-on-request.md). Choosing a model does not give any tenant drafting: **each tenant is
+off until staff turn it on.** A tenant without it is refused with 403 `ai-drafting-not-enabled` before anything is sent to the model.
+
+- **At onboarding:** tick *Draft purposes with the AI model* on *Onboard tenant*. It is off by default.
+- **Already onboarded:** CM Admin → *AI drafting model* → *Organisations that can draft* → *Turn on for an organisation*.
+- **When a tenant asks:** its purpose editor shows *Draft with AI* with *Ask to turn it on* (when the platform has a model). The request appears under
+  *Requests waiting* with its note. An **administrator** approves it, or declines it with a reason the tenant sees. Operators can see requests and turn drafting
+  on, but not decide a request or turn it off.
+- **Turning off:** an administrator, from the *Turned on* list. It applies to the tenant's next draft.
+
+Every change is in the audit trail (`ai-drafting.access-*`) with who and which tenant, never the note or the reason.
+
 ## What is sent, and what is kept
 
 The fiduciary's description, after it is screened for an email address, PAN, Aadhaar-shaped number, card number and phone number, and nothing else. The audit
@@ -38,7 +52,9 @@ trail records who drafted, with which model, how many characters and the outcome
 
 | What they see | Meaning | What to do |
 |---|---|---|
-| Panel missing | drafting is off or the status call failed | check `enabled`, the endpoint, the status call |
+| Panel missing | the platform has no model, or the status call failed | check the model under *AI drafting model*, and the status call |
+| *Ask to turn it on* shown | the tenant has not been given drafting | turn it on for the tenant, or approve its request |
+| 403 `ai-drafting-not-enabled` | the tenant has no access | as above |
 | 422 `ai-draft-personal-data` | the description holds personal data | remove it; the answer names the kinds |
 | 429 `ai-drafting-rate-limited` | over `perHour` | raise `config.aiDrafting.perHour` or wait |
 | 503 `ai-drafting-busy` / `-unavailable` | too many calls at once, or the model is down or timed out | raise `maxConcurrent` or the model's capacity; check the endpoint |

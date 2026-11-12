@@ -35,6 +35,8 @@ export function AiDraftPanel({ console: c, onSuggestion }: { console: Console; o
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [reload, setReload] = useState(0);
+
   useEffect(() => {
     let live = true;
     freshToken(c.auth)
@@ -44,9 +46,12 @@ export function AiDraftPanel({ console: c, onSuggestion }: { console: Console; o
     return () => {
       live = false;
     };
-  }, [c.auth, c.gwBase]);
+  }, [c.auth, c.gwBase, reload]);
 
-  if (!status?.enabled) return null;
+  // the platform has no model: nothing to offer or ask for
+  if (!status?.modelOffered) return null;
+  // the platform has one, but staff have not turned it on for this organisation: it can ask (ADR-114)
+  if (!status.enabled) return <AiAccessCard console={c} status={status} onChanged={() => setReload((n) => n + 1)} />;
 
   const ask = async () => {
     setBusy(true);
@@ -108,6 +113,68 @@ export function AiDraftPanel({ console: c, onSuggestion }: { console: Console; o
               Cancel
             </Button>
           </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * Drafting with a model is turned on per organisation by the platform's staff, at onboarding or when it asks (ADR-114). Until then this says so, lets the
+ * organisation ask (with a note), shows a request that is waiting, which it can withdraw, and says why a request was turned down.
+ */
+export function AiAccessCard({ console: c, status, onChanged }: { console: Console; status: PrpsAiStatusDto; onChanged: () => void }) {
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (action: (token: string) => Promise<unknown>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await action(await freshToken(c.auth));
+      setNote("");
+      onChanged();
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <h3 className="cm-section-title" style={{ marginTop: 0 }}>
+        Draft with AI
+      </h3>
+      {error ? <ErrorBanner message={error} /> : null}
+      {status.access === "PENDING" ? (
+        <>
+          <p role="status">
+            You asked for this{status.requestedAt ? ` on ${new Date(status.requestedAt).toLocaleDateString()}` : ""}. The platform&apos;s staff have not answered yet.
+          </p>
+          <Button disabled={busy} onClick={() => run((t) => prps.aiWithdrawAccess(c.gwBase, t))}>
+            Withdraw the request
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="cm-note">
+            Describe a purpose in your own words and a model suggests the fields and the notice, for you to read, change and save. It is not switched on
+            for your organisation: platform staff turn it on, and you can ask.
+          </p>
+          {status.access === "DECLINED" ? (
+            <p role="status">
+              Your last request was turned down{status.declineReason ? `: ${status.declineReason}` : ""}. You can ask again.
+            </p>
+          ) : null}
+          <label className="cm-field">
+            <span>Why you would like it (optional)</span>
+            <textarea rows={2} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />
+          </label>
+          <Button variant="primary" disabled={busy} onClick={() => run((t) => prps.aiRequestAccess(c.gwBase, t, note))}>
+            Ask to turn it on
+          </Button>
         </>
       )}
     </Card>

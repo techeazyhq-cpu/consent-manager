@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { aiDraftingConfig, type AiDraftingTestResult, type AiDraftingUpdate, type AiDraftingViewDto, type AiProviderId, type AiProviderInfo } from "api-client";
 import { Button, Card, ErrorBanner, Field, PageHeader, Spinner, friendlyError } from "ui-kit/src/index";
+import AiDraftingAccess from "./AiDraftingAccess";
 import { freshToken, type Session } from "./session";
 
 /** A host on the platform's own network: loopback, private, or a single-label or cluster-internal name. Mirrors the service, which decides. */
@@ -268,6 +269,7 @@ export default function AiDrafting({ session }: { session: Session }) {
           ) : null}
         </form>
       </Card>
+      <AiDraftingAccess session={session} />
       {view.config.updatedBy && view.config.updatedAt ? (
         <p className="cm-note">
           Last changed by <code>{view.config.updatedBy}</code> on {new Date(view.config.updatedAt).toLocaleString()}.

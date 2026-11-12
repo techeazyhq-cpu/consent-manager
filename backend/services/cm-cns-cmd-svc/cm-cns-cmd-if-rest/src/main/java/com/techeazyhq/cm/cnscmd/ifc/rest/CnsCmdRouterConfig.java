@@ -87,7 +87,8 @@ public class CnsCmdRouterConfig {
                                                          com.techeazyhq.cm.cnscmd.app.CloseDfConsentsHandler closeDfConsents,
                                                          com.techeazyhq.cm.cnscmd.app.PurgeDfRecordsHandler purgeDfRecords,
                                                          com.techeazyhq.cm.cnscmd.app.PrpsDraftAssist prpsDraftAssist,
-                                                         com.techeazyhq.cm.cnscmd.app.AiDraftingSettings aiDraftingSettings) {
+                                                         com.techeazyhq.cm.cnscmd.app.AiDraftingSettings aiDraftingSettings,
+                                                         com.techeazyhq.cm.cnscmd.app.AiDraftingAccessCmds aiDraftingAccess) {
         CnsReqHandler cnsReqHandler = new CnsReqHandler(createHandler, approveHandler, denyHandler, cnsReqTerms);
         CnsArtHandler cnsArtHandler = new CnsArtHandler(revokeHandler, refreshTknHandler, liveStatusHandler,
                 changeCnsArtCmds);
@@ -97,8 +98,8 @@ public class CnsCmdRouterConfig {
         DfExportHttpHandler dfExport = new DfExportHttpHandler(cnsRecords);
         CnsReqBatchHttpHandler batches = new CnsReqBatchHttpHandler(submitBatchHandler, batchQueries);
         PrpsDefHttpHandler purposes = new PrpsDefHttpHandler(prpsDefCmds);
-        PrpsDraftAssistHandler draftAssist = new PrpsDraftAssistHandler(prpsDraftAssist);
-        AiDraftingAdminHandler aiAdmin = new AiDraftingAdminHandler(aiDraftingSettings);
+        PrpsDraftAssistHandler draftAssist = new PrpsDraftAssistHandler(prpsDraftAssist, aiDraftingAccess);
+        AiDraftingAdminHandler aiAdmin = new AiDraftingAdminHandler(aiDraftingSettings, aiDraftingAccess);
         ProcessorHttpHandler processors = new ProcessorHttpHandler(processorCmds);
         StatusListHttpHandler statusListHandler = new StatusListHttpHandler(statusLists);
         CnsRecHttpHandler recs = new CnsRecHttpHandler(cnsRecords);
@@ -109,10 +110,17 @@ public class CnsCmdRouterConfig {
                 // a purpose drafted from a description by the operator's own model, never saved (ADR-111)
                 .GET("/api/cns-cmd/prps-defs/draft-assist/status", draftAssist::status)
                 .POST("/api/cns-cmd/prps-defs/draft-assist", draftAssist::draft)
+                .POST("/api/cns-cmd/prps-defs/draft-assist/access-request", draftAssist::requestAccess)
+                .DELETE("/api/cns-cmd/prps-defs/draft-assist/access-request", draftAssist::withdrawAccess)
                 // which model drafts purposes, set by platform staff in CM Admin (ADR-113)
                 .GET("/api/cns-cmd/admin/ai-drafting", aiAdmin::get)
                 .PUT("/api/cns-cmd/admin/ai-drafting", aiAdmin::put)
                 .POST("/api/cns-cmd/admin/ai-drafting/test", aiAdmin::test)
+                // which fiduciaries may draft: on at onboarding or when asked for (ADR-114)
+                .GET("/api/cns-cmd/admin/ai-drafting/access", aiAdmin::accessList)
+                .PUT("/api/cns-cmd/admin/ai-drafting/access/{dfId}", aiAdmin::accessSet)
+                .POST("/api/cns-cmd/admin/ai-drafting/access/{dfId}/approve", aiAdmin::accessApprove)
+                .POST("/api/cns-cmd/admin/ai-drafting/access/{dfId}/decline", aiAdmin::accessDecline)
                 .GET("/api/cns-cmd/prps-defs", purposes::list)
                 .POST("/api/cns-cmd/prps-defs", purposes::create)
                 .GET("/api/cns-cmd/prps-defs/{code}", purposes::get)

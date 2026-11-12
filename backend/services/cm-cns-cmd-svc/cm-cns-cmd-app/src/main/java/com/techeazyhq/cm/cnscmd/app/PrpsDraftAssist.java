@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -110,9 +111,18 @@ public class PrpsDraftAssist {
     private final int perHour;
     private final Semaphore concurrent;
     private final Map<String, Deque<Instant>> recent = new ConcurrentHashMap<>();
+    private final Function<String, Mono<Boolean>> entitled;
 
+    /** Everyone is entitled: for tests of the drafting itself. The platform wires the other constructor (ADR-114). */
     public PrpsDraftAssist(DraftingModelPort model, AuditTrail audit, ObjectMapper json, Clock clock, int maxInput, int perHour,
                            int maxConcurrent) {
+        this(model, audit, json, clock, maxInput, perHour, maxConcurrent, dfId -> Mono.just(true));
+    }
+
+    /** {@code entitled} says whether a fiduciary may draft at all: staff turn it on at onboarding or when it asks (ADR-114). */
+    public PrpsDraftAssist(DraftingModelPort model, AuditTrail audit, ObjectMapper json, Clock clock, int maxInput, int perHour,
+                           int maxConcurrent, Function<String, Mono<Boolean>> entitled) {
+        this.entitled = entitled;
         this.model = model;
         this.audit = audit;
         this.json = json;
@@ -136,6 +146,12 @@ public class PrpsDraftAssist {
         if (!status.enabled()) {
             return Mono.error(new DomRuleViolation(404, "ai-drafting-disabled", "Drafting with a model is not switched on for this platform"));
         }
+        return entitled.apply(dfId).flatMap(ok -> ok ? draftEntitled(dfId, userId, description, lang, status)
+                : Mono.<Suggestion>error(new DomRuleViolation(403, "ai-drafting-not-enabled",
+                        "Drafting with a model is not switched on for your organisation: ask for it, and the platform's staff decide")));
+    }
+
+    private Mono<Suggestion> draftEntitled(String dfId, String userId, String description, String lang, DraftingModelPort.Status status) {
         String text = description == null ? "" : description.strip();
         if (text.length() < MIN_INPUT) {
             return Mono.error(new DomRuleViolation(400, "invalid-purpose", "Say a little more about what the data is used for: at least " + MIN_INPUT + " characters"));

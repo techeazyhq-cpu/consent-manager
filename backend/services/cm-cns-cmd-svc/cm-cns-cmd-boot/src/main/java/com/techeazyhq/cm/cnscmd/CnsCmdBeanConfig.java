@@ -214,13 +214,24 @@ public class CnsCmdBeanConfig {
         return new com.techeazyhq.cm.cnscmd.app.AiDraftingReloadJob(settings);
     }
 
+    /** Which fiduciaries may draft with the model: on at onboarding or when asked for (ADR-114). */
     @Bean
-    public com.techeazyhq.cm.cnscmd.app.PrpsDraftAssist prpsDraftAssist(com.techeazyhq.cm.cnscmd.app.AiDraftingSettings model, AuditTrail audit,
+    public com.techeazyhq.cm.cnscmd.dom.AiDraftingAccessRepoPort aiDraftingAccessRepoPort(DatabaseClient db) {
+        return new com.techeazyhq.cm.cnscmd.infra.R2dbcAiDraftingAccessAdapter(db);
+    }
+
+    @Bean
+    public com.techeazyhq.cm.cnscmd.app.AiDraftingAccessCmds aiDraftingAccessCmds(com.techeazyhq.cm.cnscmd.dom.AiDraftingAccessRepoPort repo, AuditTrail audit) {
+        return new com.techeazyhq.cm.cnscmd.app.AiDraftingAccessCmds(repo, audit, java.time.Clock.systemUTC());
+    }
+
+    @Bean
+    public com.techeazyhq.cm.cnscmd.app.PrpsDraftAssist prpsDraftAssist(com.techeazyhq.cm.cnscmd.app.AiDraftingSettings model, com.techeazyhq.cm.cnscmd.app.AiDraftingAccessCmds access, AuditTrail audit,
             ObjectMapper objectMapper,
             @Value("${cm.cnscmd.ai-drafting.max-input-chars:2000}") int maxInput,
             @Value("${cm.cnscmd.ai-drafting.per-hour:20}") int perHour,
             @Value("${cm.cnscmd.ai-drafting.max-concurrent:2}") int maxConcurrent) {
-        return new com.techeazyhq.cm.cnscmd.app.PrpsDraftAssist(model, audit, objectMapper, java.time.Clock.systemUTC(), maxInput, perHour, maxConcurrent);
+        return new com.techeazyhq.cm.cnscmd.app.PrpsDraftAssist(model, audit, objectMapper, java.time.Clock.systemUTC(), maxInput, perHour, maxConcurrent, access::isEnabled);
     }
 
     @Bean

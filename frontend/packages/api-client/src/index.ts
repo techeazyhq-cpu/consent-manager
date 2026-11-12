@@ -64,6 +64,8 @@ import type {
   ExtDpRefTyp,
   ProblemDetail,
   AnomalyDto,
+  AiAccessListDto,
+  AiAccessRowDto,
   AiDraftingTestResult,
   AiDraftingUpdate,
   AiDraftingViewDto,
@@ -378,6 +380,15 @@ export const prps = {
       method: "POST",
       body: JSON.stringify({ description, lang }),
     }),
+  /** Ask platform staff to turn drafting on for this organisation (ADR-114). Those who manage purposes may ask. */
+  aiRequestAccess: (base: string, token: string, note?: string) =>
+    request<{ access: string }>(base, "/api/cns-cmd/prps-defs/draft-assist/access-request", token, {
+      method: "POST",
+      body: JSON.stringify({ note: note?.trim() || undefined }),
+    }),
+  /** Take back a request that is still waiting. */
+  aiWithdrawAccess: (base: string, token: string) =>
+    request<{ access: string }>(base, "/api/cns-cmd/prps-defs/draft-assist/access-request", token, { method: "DELETE" }),
 };
 
 /** Money in minor units as a person reads it: 1250 INR is shown as 12.50 with the currency's own symbol where the locale knows it. */
@@ -798,6 +809,21 @@ export const aiDraftingConfig = {
   save: (base: string, token: string, update: AiDraftingUpdate) =>
     request<AiDraftingViewDto>(base, "/api/cns-cmd/admin/ai-drafting", token, { method: "PUT", body: JSON.stringify(update) }),
   /** A one-line ping with the setting as it stands in the form, before it is saved. No fiduciary text is sent. */
+  /** Requests waiting and the fiduciaries it is on for (ADR-114). Platform staff. */
+  accessList: (base: string, token: string) => request<AiAccessListDto>(base, "/api/cns-cmd/admin/ai-drafting/access", token),
+  /** Turn it on for a fiduciary (any staff, as at onboarding) or off (administrators). */
+  setAccess: (base: string, token: string, dfId: string, enabled: boolean) =>
+    request<AiAccessRowDto>(base, `/api/cns-cmd/admin/ai-drafting/access/${encodeURIComponent(dfId)}`, token, {
+      method: "PUT",
+      body: JSON.stringify({ enabled }),
+    }),
+  approveAccess: (base: string, token: string, dfId: string) =>
+    request<AiAccessRowDto>(base, `/api/cns-cmd/admin/ai-drafting/access/${encodeURIComponent(dfId)}/approve`, token, { method: "POST" }),
+  declineAccess: (base: string, token: string, dfId: string, reason: string) =>
+    request<AiAccessRowDto>(base, `/api/cns-cmd/admin/ai-drafting/access/${encodeURIComponent(dfId)}/decline`, token, {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+    }),
   test: (base: string, token: string, update: AiDraftingUpdate) =>
     request<AiDraftingTestResult>(base, "/api/cns-cmd/admin/ai-drafting/test", token, { method: "POST", body: JSON.stringify(update) }),
 };

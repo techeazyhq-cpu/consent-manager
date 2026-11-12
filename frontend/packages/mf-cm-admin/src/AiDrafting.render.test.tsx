@@ -53,7 +53,9 @@ const base = (over: Partial<AiDraftingViewDto["config"]> = {}): AiDraftingViewDt
 
 vi.mock("api-client", async (actual) => ({
   ...(await actual<typeof import("api-client")>()),
+  dfReg: { list: async () => [] },
   aiDraftingConfig: {
+    accessList: async () => ({ pending: [], enabled: [] }),
     get: async () => current,
     save: async (_b: string, _t: string, u: AiDraftingUpdate) => {
       saves.push(u);
