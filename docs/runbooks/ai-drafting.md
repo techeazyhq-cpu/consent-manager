@@ -3,13 +3,31 @@
 Decision: [ADR-111](../adr/adr-111-ai-assisted-purpose-drafting.md). Off by default. A fiduciary describes a purpose in words and gets a draft to read, edit and
 save; nothing is saved or published for them.
 
-## Switch it on
+## Choose the model (CM Admin)
 
-1. Run a model with an OpenAI-compatible endpoint, for example Ollama (`ollama pull llama3.1:8b`) or vLLM.
-2. **Helm:** set `config.aiDrafting.enabled: true`, `endpoint` and `model`; `apiKeySecretKey` if the endpoint wants a bearer key (a key in the release's secret).
-   Let `cm-cns-cmd-svc` reach it: add the model's namespace to `networkPolicy.egress.namespaces` (or its address to `networkPolicy.egress.external`).
-3. **Local stack:** `CM_AI_DRAFTING_ENABLED=true` (Ollama on the host is reached as `host.docker.internal:11434`; `CM_AI_DRAFTING_ENDPOINT` and `CM_AI_DRAFTING_MODEL` change it).
-4. Check: `GET /api/cns-cmd/prps-defs/draft-assist/status` says `enabled: true` with the model; `node tests/security/e2e-ai-drafting.mjs` runs the whole path.
+Decision: [ADR-113](../adr/adr-113-ai-model-provider-settings-in-cm-admin.md). Sign in to CM Admin as a platform administrator and open **AI drafting model**
+(operators can look, only administrators change it).
+
+1. **Provider:** Ollama or any OpenAI-compatible server you run (vLLM, llama.cpp, LiteLLM), or a vendor's API: OpenAI, Anthropic, Google Gemini, DeepSeek.
+2. **Model:** the vendor's model name (`gpt-4o-mini`, `claude-haiku-5-5`, `gemini-2.0-flash`, `deepseek-chat`) or what your server serves (`llama3.2:3b`).
+3. **Server address:** only for a server you run. A vendor's address is fixed. Plain `http` is for your own network only; anything else must be `https`.
+4. **API key:** a vendor needs one; a server of yours may. It is write-only: it is sealed when saved and never shown again. Leave the field blank to keep the stored
+   key, or tick *Remove the stored key*. **Changing provider drops the stored key**: enter the new vendor's own.
+5. **A vendor, or a server outside your network, sends fiduciaries' descriptions outside the platform.** You must tick the acknowledgement before you can switch it on;
+   who did, and when, is in the audit trail. Say so in your privacy notice.
+6. **Test the connection** before saving: it sends one line (no description) with the form as it stands, and says whether it worked and how long it took.
+7. **Save.** It is used at once on that instance and within 30 s on the others (`cm.cnscmd.ai-drafting.reload-ms`).
+
+Check: `GET /api/cns-cmd/prps-defs/draft-assist/status` says `enabled: true` with the model; `node tests/security/e2e-ai-drafting.mjs` runs the whole path.
+
+### Before anyone has saved a setting
+
+The service's own configuration applies, as in ADR-111, and CM Admin says so. Saving the page replaces it; the properties are then ignored.
+
+1. **Helm:** `config.aiDrafting.enabled: true`, `endpoint` and `model`; `apiKeySecretKey` if the endpoint wants a bearer key. Let `cm-cns-cmd-svc` reach it: add the model's
+   namespace to `networkPolicy.egress.namespaces` (or its address to `networkPolicy.egress.external`). **A vendor's API needs that egress too**: add its address to
+   `networkPolicy.egress.external`, or the test and every draft will fail as "could not be reached".
+2. **Local stack:** `CM_AI_DRAFTING_ENABLED=true` (Ollama on the host is reached as `host.docker.internal:11434`; `CM_AI_DRAFTING_ENDPOINT` and `CM_AI_DRAFTING_MODEL` change it).
 
 ## What is sent, and what is kept
 

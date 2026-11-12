@@ -64,6 +64,9 @@ import type {
   ExtDpRefTyp,
   ProblemDetail,
   AnomalyDto,
+  AiDraftingTestResult,
+  AiDraftingUpdate,
+  AiDraftingViewDto,
   PushDvcRespDto,
   PushPltf,
   PrpsAiStatusDto,
@@ -787,4 +790,14 @@ export const anomalies = {
     request<AnomalyDto[]>(base, `/api/aud/anomalies?status=${status}`, token),
   acknowledge: (base: string, token: string, id: string) =>
     request<void>(base, `/api/aud/anomalies/${encodeURIComponent(id)}/acknowledge`, token, { method: "POST" }),
+};
+
+/** Which model drafts purposes (ADR-113): platform staff look, administrators change it. The key is write-only. */
+export const aiDraftingConfig = {
+  get: (base: string, token: string) => request<AiDraftingViewDto>(base, "/api/cns-cmd/admin/ai-drafting", token),
+  save: (base: string, token: string, update: AiDraftingUpdate) =>
+    request<AiDraftingViewDto>(base, "/api/cns-cmd/admin/ai-drafting", token, { method: "PUT", body: JSON.stringify(update) }),
+  /** A one-line ping with the setting as it stands in the form, before it is saved. No fiduciary text is sent. */
+  test: (base: string, token: string, update: AiDraftingUpdate) =>
+    request<AiDraftingTestResult>(base, "/api/cns-cmd/admin/ai-drafting/test", token, { method: "POST", body: JSON.stringify(update) }),
 };

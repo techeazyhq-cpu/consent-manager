@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-09
+- **Refined by:** [ADR-113](adr-113-ai-model-provider-settings-in-cm-admin.md) (the model and provider are chosen in CM Admin; vendors' APIs are supported)
 
 ## Context
 

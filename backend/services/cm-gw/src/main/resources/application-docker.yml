@@ -46,7 +46,7 @@ spring:
             - id: cns-cmd-draft-assist
               uri: http://cm-cns-cmd-svc:8082
               predicates:
-                - Path=/api/cns-cmd/prps-defs/draft-assist
+                - Path=/api/cns-cmd/prps-defs/draft-assist, /api/cns-cmd/admin/ai-drafting/test
             - id: cns-cmd
               uri: http://cm-cns-cmd-svc:8082
               predicates:

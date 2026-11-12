@@ -4,7 +4,7 @@
 # Error dictionary
 
 Every error, warning and event this platform raises, in one place ([ADR-062](../adr/adr-062-error-dictionary.md)).
-176 entries: 158 API problems, 17 operational log codes and 1 event.
+177 entries: 159 API problems, 17 operational log codes and 1 event.
 
 ## How an API error looks
 
@@ -48,6 +48,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 | `ai-draft-personal-data` | 422 | The description seems to hold personal data | The text to draft from looks like it holds an email address, a phone, a PAN, an Aadhaar-shaped or a card number. The drafting model is not where anyone's data goes, so the request was refused and nothing was sent to it. | Describe the purpose in general words, with no one's details, and ask again. | no | cns-cmd |
 | `ambiguous-credentials` | 400 | Two kinds of credentials sent | The request carried both an API key and a bearer token, so it is unclear which identity is calling. | Send one credential: either the API key headers or a bearer token. | no | gw |
 | `confirmation-required` | 400 | Confirmation needed | Closing an account needs the confirmation words typed exactly. | Type the words the page asks for. | no | dsr |
+| `invalid-ai-config` | 400 | The drafting model setting is not valid | The provider, address, model name, limits or acknowledgement in the setting break a rule: a vendor needs its key, an address must be http or https and never a metadata address, a server outside the network needs https, and sending descriptions to a party outside the platform needs the administrator's acknowledgement. Nothing was saved. | Correct what the message names and save again. | no | cns-cmd |
 | `invalid-answer` | 400 | Answer not valid | An answer needs a reply, and a refusal also needs its legal ground. The detail says which. | Add what is missing. | no | dsr |
 | `invalid-api-key` | 400 | API key request not valid | The request to issue an API key was refused. The detail says why. | Correct the request as the detail says. | no | df-reg |
 | `invalid-batch` | 400 | Batch not valid | The batch request was refused. The detail says why. | Correct the batch as the detail says. | no | cns-cmd |
@@ -131,7 +132,7 @@ Add the entry to the dictionary and raise it from the code (`new DomRuleViolatio
 
 | Code | Status | Title | What it means | What to do | Retry | Raised by |
 |---|---|---|---|---|---|---|
-| `ai-drafting-disabled` | 404 | Drafting with a model is not switched on | The platform has no drafting model set up (cm.cnscmd.ai-drafting.enabled is off), so a purpose cannot be drafted from a description. | Write the purpose by hand, or ask whoever runs the platform to set up a model (ADR-111). | no | cns-cmd |
+| `ai-drafting-disabled` | 404 | Drafting with a model is not switched on | The platform has no drafting model switched on (neither CM Admin's AI drafting model setting nor cm.cnscmd.ai-drafting.enabled), so a purpose cannot be drafted from a description. | Write the purpose by hand, or ask whoever runs the platform to set up a model (ADR-111, ADR-113). | no | cns-cmd |
 | `anomaly-not-found` | 404 | No open finding with that id | There is no finding of unusual activity with that id, or it was already acknowledged. | Reload the Anomalies page and acknowledge a finding that is still open. | no | aud |
 | `api-key-not-found` | 404 | API key not found | No API key with that id belongs to this fiduciary. | List the fiduciary's keys and use an id from that list. | no | df-reg |
 | `aud-not-checkpointed` | 404 | Entry not anchored yet | The entry is not part of a timestamped checkpoint yet, so it has no proof. | Try again after the next checkpoint. | no | aud |
