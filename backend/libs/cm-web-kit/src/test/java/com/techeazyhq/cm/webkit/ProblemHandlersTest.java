@@ -110,6 +110,58 @@ class ProblemHandlersTest {
         assertFalse(problem.get("detail").toString().contains("Unexpected character"), "nothing of the parser's message");
     }
 
+    /** Stands for a database driver's exception: public, with a SQLSTATE, like R2dbcException. */
+    public static class DriverException extends RuntimeException {
+        private final String sqlState;
+
+        public DriverException(String message, String sqlState) {
+            super(message);
+            this.sqlState = sqlState;
+        }
+
+        public String getSqlState() {
+            return sqlState;
+        }
+    }
+
+    /** Package-private, as a driver's nested exception classes can be: its public parent is asked instead. */
+    static final class HiddenDriverException extends DriverException {
+        HiddenDriverException(String message, String sqlState) {
+            super(message, sqlState);
+        }
+    }
+
+    @Test
+    void textTheDatabaseRefusesForWhatItContainsIsMalformedRequestNotAServerError() throws Exception {
+        // ZAP's fuzzing reached this three ways: a NUL in a query parameter, and in two bodies (the platform's V-05 class)
+        for (String state : new String[] {"22021", "22P05", "22P02", "22001", "22003", "22007", "22008"}) {
+            MockServerWebExchange exchange = exchange();
+
+            new FallbackProblemWebExceptionHandler(JSON).handle(exchange,
+                    new IllegalStateException("executeMany; bad SQL grammar [select * from cns_cmd.whk_delivery where endpoint_id = $1]",
+                            new HiddenDriverException("invalid byte sequence for encoding \"UTF8\": 0x00", state))).block();
+
+            assertEquals(HttpStatus.BAD_REQUEST, exchange.getResponse().getStatusCode(), state);
+            String raw = exchange.getResponse().getBodyAsString().block();
+            Map<String, Object> problem = JSON.readValue(raw, new TypeReference<>() {
+            });
+            assertEquals("malformed-request", problem.get("code"), state);
+            assertFalse(raw.contains("select *") || raw.contains("0x00") || raw.contains("cns_cmd"), "nothing of the query or the driver's words: " + state);
+        }
+    }
+
+    @Test
+    void aDatabaseFaultThatIsNotTheCallersInputStaysAServerError() {
+        // a unique violation, a deadlock, a division by zero in our own SQL: those are ours to fix, so they stay 500 and are logged
+        for (String state : new String[] {"23505", "40P01", "22012", "42P01", "XX000"}) {
+            MockServerWebExchange exchange = exchange();
+
+            new FallbackProblemWebExceptionHandler(JSON).handle(exchange, new DriverException("boom", state)).block();
+
+            assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, exchange.getResponse().getStatusCode(), state);
+        }
+    }
+
     @Test
     void anUnexpectedErrorIsInternalErrorWithNothingAboutItInTheAnswer() throws Exception {
         MockServerWebExchange exchange = exchange();
