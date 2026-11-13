@@ -1,6 +1,7 @@
 # VAPT and performance: Data Fiduciary API
 
-- **Date:** 19 October 2026; load rerun 7 November 2026 (V-03, [Performance](#performance))
+- **Date:** 19 October 2026; load rerun 7 November 2026 (V-03, [Performance](#performance)); full rerun 13 November 2026 for
+  release 1.0.0 ([Release 1.0.0 rerun](#release-100-rerun-13-november-2026))
 - **Target:** the local stack (`infra/docker-compose.yml`), gateway at `localhost:9000`, with notification-service
   beside it. No cloud environment was tested.
 - **Build:** `main` after #214 (API keys and signed requests, ADR-041) and #215 (deployment, ADR-042), plus the fixes
@@ -17,8 +18,8 @@
 | Load at 50, 75 and 100 requests a second (expected mix) | **0 failures** at each; at 100, verify p95 51 ms. The pool deadlock (V-03) is fixed |
 | Ramp to the knee | Clean to about 125 requests a second; beyond, Postgres (1 CPU here) saturates. Verify answered DENY there (V-17, since fixed: now 503) |
 
-Twenty findings: 1 critical, 4 high, 8 medium, 3 low, 2 accepted, 1 fixed by an upgrade (V-13), 1 false positive.
-Sixteen are fixed, the CI gate is in place, two are accepted, and one is open (V-11).
+Twenty-three findings: 1 critical, 4 high, 9 medium, 4 low, 3 accepted, 1 fixed by an upgrade (V-13), 1 false positive.
+Seventeen are fixed, the CI gate is in place, three are accepted, and two are open (V-11, V-23).
 
 ## How it was tested
 
@@ -33,6 +34,22 @@ Sixteen are fixed, the CI gate is in place, two are accepted, and one is open (V
 - **Trivy:** each running service image, HIGH and CRITICAL, fixable only.
 - **k6:** `tests/perf/df-api.js` signs every request in the script. Scenarios: the expected mix (60% verify, 20%
   reads, 10% token refresh, 10% new requests), API key against OAuth, and a ramp.
+
+## Release 1.0.0 rerun (13 November 2026)
+
+Everything below was run again on the local stack for the 1.0.0 release, with the kit as it stands (`tests/`). One service,
+cm-cns-cmd-svc, was rebuilt with the V-21 fix and retested; the other images are those that were running.
+
+| Check | Result |
+|---|---|
+| Scripted penetration checks (`vapt.mjs`) | **74 of 74 pass** (the kit has grown from 68 checks) |
+| OWASP ZAP API scan | Before the fix: 113 rules pass, 0 fail, 3 warnings, one of them a **500 on three requests (V-21)**. After it: 112 pass, 0 fail, 3 warnings: the tool is out of date, site isolation (V-10), and the SQL injection alert of V-14, which was checked again and is still a false positive |
+| Trivy, the repository (dependencies, secrets, misconfiguration; HIGH and CRITICAL, fixable) | 0 vulnerable dependencies, 0 secrets. 3 HIGH misconfigurations in the development Helm chart `common` (V-22) |
+| Trivy, the eight service images | 0 fixable HIGH or CRITICAL, 0 secrets |
+| `pnpm audit --prod` | Nothing at high or critical (1 low, 3 moderate) |
+| Benchmark ([details](#release-100-benchmark-13-november-2026)) | 0 failures at 50, 75 and 100 requests a second, every threshold met; warm verify p95 49 ms at 100 a second; the ramp is clean to about 186 a second with 2 CPUs per service |
+
+New findings: **V-21** (fixed), **V-22** (accepted), **V-23** (open, #360). Twenty-three findings in all.
 
 ## Findings
 
@@ -51,13 +68,49 @@ Sixteen are fixed, the CI gate is in place, two are accepted, and one is open (V
 | V-11 | Low | df-reg's `/internal/**` relies on network isolation; any pod of the release can reach it | Open, #99 |
 | V-12 | Accepted | A signing key needs signatures on writes only, so a leaked key alone can read | Accepted, as notification-service |
 | V-13 | Fixed | Spring WebFlux (Spring Boot 4, ADR-056) and the Pulsar client's bundled BouncyCastle (Pulsar 4.0.14) | #216, #217 |
-| V-14 | False positive | ZAP's SQL injection on `/api/aud/activity` | Closed |
+| V-14 | False positive | ZAP's SQL injection on `/api/aud/activity` (`limit`, `before`, and from 13 November `category`) | Closed; checked again |
 | V-15 | Critical | Anyone signed in, a fiduciary's API key included, could approve, decline or withdraw any consent by its id | Fixed (ADR-044) |
 | V-16 | Accepted | Two HIGH advisories without a patched release in the mobile app's build tooling (braces, node-forge) | Accepted until 2026-12-31 |
 | V-17 | Medium | Overloaded, the PEP answers a valid consent with DENY (403 `consent-not-verified`), not 503 | Fixed (ADR-057); confirmed by the ramp, 0 of 16,209 refusals a 403 |
 | V-18 | Medium | The receipt job read every consent event and receipt every 2 s, a cost that grew with each consent ever recorded | Fixed (V7, a queue of events awaiting receipts) |
 | V-20 | Medium | Sign-in codes could be requested without limit for any address, and guessing restarted with every sign-in | Fixed (ADR-061); `e2e-otp-abuse.mjs` checks it |
 | V-19 | High | A signed-in principal could claim another person's pending consent requests by naming their email to `/api/cns-cmd/dp-links` | Fixed; IDOR-13 checks it |
+| V-21 | Low | A NUL character in a query parameter or a body reached the database and answered 500, on three endpoints (found by ZAP) | Fixed: 400 `malformed-request`, in the shared handler |
+| V-22 | Accepted | Trivy flags the development chart `common`: Keycloak and Pulsar run with a writable root filesystem (KSV-0014, twice); a ConfigMap "stores secrets" (KSV-0109) | Accepted: the two servers write to their own files at start; the ConfigMap only names password variables (a false positive). The chart is for development and test clusters |
+| V-23 | Medium | Cold start: the first minute of load after an idle period or a restart is answered with 503 for up to a third of requests | Open, #360 |
+
+### V-23: cold start answers 503 (Medium, open)
+
+After the stack had been idle, the first minute of the expected mix at 50 requests a second returned 957 503s out of 2,923
+requests (33%; 18% on 7 November), with a p95 of 3.5 s. The same warm-up again, once warm: 0 of 3,034. After the containers were
+recreated, latencies stayed above steady state for the first minutes (see the benchmark). Every failure is the intended
+retryable 503 (V-17), never a wrong consent answer, but a rolling deploy or an autoscale event would send traffic to
+instances that have not warmed up. Tracked in #360: a readiness gate or a slow start, and a longer warm-up in the runbook.
+
+### V-22: findings in the development Helm chart (accepted)
+
+Trivy 0.75 flags three HIGH items in `deploy/helm/common` (CI's Trivy does not). KSV-0014 on Keycloak and on Pulsar: neither
+runs with a read-only root filesystem, because Keycloak writes its temporary files and Pulsar rewrites its configuration and
+writes its data at start; forcing it risks breaking both for no gain on a single-replica chart meant for development and test
+clusters, where PostgreSQL and Redis are managed services in the cloud. KSV-0109 on the init ConfigMap is a false positive: the
+SQL names password variables (`PASSWORD :'pw_name'`); the values come from Kubernetes secrets. Accepted, with this note. If CI's
+Trivy is upgraded and starts to flag them, allow these three with an expiry in `.trivyignore`.
+
+### V-21: a NUL character answered 500 (Low)
+
+ZAP's fuzzing got three 500s: `GET /api/cns-cmd/webhooks/deliveries?endpointId=%00`, and a NUL in the body of
+`POST /api/cns-cmd/cns-reqs` and of `POST /api/cns-cmd/cns-req-batches`. PostgreSQL rejects NUL ("invalid byte sequence",
+SQLSTATE 22021), and the error surfaced as an internal error. V-05 had bounded the inputs it knew about; this was the same
+class on paths it had not named.
+
+**Fix:** the shared error handler (`cm-web-kit`, used by every service) now answers 400 `malformed-request`, with nothing of the
+query or the driver in it, when the database refuses what the value contains: SQLSTATEs 22021, 22P05, 22P02, 22001, 22003,
+22007, 22008, anywhere in the cause chain. Other database faults (a unique violation, a deadlock, an error in the platform's
+own SQL) stay 500 and are logged. The state is read by name, so the library needs no database driver and the gateway is
+unaffected. Unit tests cover each state, a package-private driver exception, and the faults that must stay 500.
+
+**Verified** against the rebuilt service: the three requests answer 400, a normal request still 200, no internal error in the
+log, and ZAP's server-error alert is gone.
 
 ### V-20: sign-in codes without limits across sign-ins (Medium)
 
@@ -337,6 +390,10 @@ numbers, fall back to defaults when they aren't, and are bound as parameters. Th
 same 50 rows as plain `50` and `abc`. ZAP saw differences because the activity log grows while it scans: its own
 requests add entries.
 
+**13 November:** ZAP raised it again, now on `category` as well. Sent one after another, the true, false, plain and junk
+payloads returned identical rows for `limit` and `before`. For `category` the newest row rose with every call (135230, 135235,
+135238, 135243), whatever the payload, because each request adds about five entries to the log. Still a false positive.
+
 ## What held
 
 All of these passed from the first run:
@@ -372,6 +429,42 @@ All of these passed from the first run:
 ## Performance
 
 These numbers show behaviour and bottlenecks on a laptop; they are not production capacity.
+
+### Release 1.0.0 benchmark, 13 November 2026
+
+**Environment:** the same laptop and Docker VM as 7 November (10 GiB, 12 CPUs), the common servers with their ADR-052 limits
+(PostgreSQL 1 CPU), `tests/perf/run-benchmarks.sh` unchanged. Two settings of the services, because the compose file's
+default is 1 CPU each and the earlier numbers were taken with `CM_SVC_MEM=768m CM_SVC_CPUS=2`:
+
+**2 CPUs per service (like for like), run straight after recreating the containers:**
+
+| Rate | Requests | Failed | verify p95 | read p95 | token p95 | raise p95 |
+|---|---|---|---|---|---|---|
+| 50/s | 6,034 | 0 | 107 ms | 98 ms | 109 ms | 166 ms |
+| 75/s | 9,169 | 0 | 108 ms | 97 ms | 114 ms | 183 ms |
+| 100/s | 12,063 | 0 | 143 ms | 135 ms | 134 ms | 229 ms |
+| 100/s, run again once warm | 12,064 | 0 | **49 ms** | **44 ms** | **48 ms** | **83 ms** |
+
+The warm rerun at 100 a second matches 7 November (51, 40, 61 and 84 ms). The first three rows are higher because the
+services had just been recreated: a one-minute warm-up is too short after a fresh start, and the JVMs and connection pools were
+still warming (the warm-up run itself had a p95 of 3.6 s). Every threshold held in every run (300 ms for verify and reads, 500
+ms for tokens, 800 ms for new requests), with 0 failures. API key against OAuth, 50 reads a second each for a minute: 9,002
+reads, 0 failed, p95 25 ms.
+
+**The ramp at 2 CPUs:** clean up to about 186 requests a second (p95 193 ms), then latency climbs from about 190 a second, and
+from about 195 a second the services refuse with 503: 4,098 of 30,885 requests (13%), all 503, none 500 or 403. That is in the
+145 to 204 range of 7 November.
+
+**The same benchmark at the compose default of 1 CPU per service:** 0 failures at 50, 75 and 100 a second (verify p95 92, 103
+and 64 ms), and the ramp clean only to about 127 a second. At the knee the gateway, df-reg-svc and cns-cmd-svc each ran at
+107 to 112% of their one CPU, while PostgreSQL peaked at 74%: the limit was the services' own CPU cap, not the database as
+before. So the lower knee is the setting, not a regression; raise `CM_SVC_CPUS` for performance runs, as the compose file says.
+
+**Cold start** (V-23): see above. For a benchmark: warm a fresh start with 3 to 4 minutes of load before measuring.
+
+**The anomaly detector saw the benchmark.** The hour of load was flagged as unusual activity for the test fiduciary: 9,857
+consent requests against a usual of 0.2 (ADR-112), which is the detector doing its job on test traffic. Those findings were
+acknowledged.
 
 ### Rerun, 7 November 2026
 
