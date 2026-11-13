@@ -55,10 +55,10 @@ describe("your rights (ADR-058)", () => {
     expect(needsDetails("NOMINATION")).toBe(true);
   });
 
-  it("points to the Board once the answer is in or late, and the organisation's own officer first", () => {
+  it("points to the data protection authority once the answer is in or late, and the organisation's own officer first", () => {
     expect(escalation(req({}))).toBeNull();
     expect(escalation(req({ sts: "REFUSED" }))).toMatch(/grievance officer first/);
-    expect(escalation(req({ overdue: true }))).toMatch(/Data Protection Board/);
+    expect(escalation(req({ overdue: true }))).toMatch(/data protection authority/);
     expect(escalation(req({ kind: "GRIEVANCE", sts: "RESOLVED" }))).not.toMatch(/grievance officer/);
     expect(escalation(req({ sts: "WITHDRAWN" }))).toBeNull();
   });
