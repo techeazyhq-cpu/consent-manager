@@ -106,13 +106,13 @@ terraform -chdir=deploy/terraform/aws/production output -json helm_values > helm
 helm upgrade --install cm deploy/helm/consent-manager -n consent-manager --create-namespace \
   -f deploy/helm/consent-manager/values-aws.yaml -f helm-values.json \
   --set config.database.host=<terraform output> --set config.redis.host=<terraform output> \
-  --set image.tag=0.1.0
+  --set image.tag=1.0.0
 ```
 
 Build the web app images per environment:
 
 ```bash
-docker build -f infra/docker/Dockerfile.ui --build-arg APP=mf-df-app --build-arg VITE_GW_BASE_URL=https://api.example.com --build-arg VITE_KC_BASE_URL=https://id.example.com --build-arg VITE_KC_REALM=cm-df --build-arg VITE_KC_CLIENT_ID=cm-df-app -t ghcr.io/techeazyhq-cpu/cm-df-app:0.1.0 .
+docker build -f infra/docker/Dockerfile.ui --build-arg APP=mf-df-app --build-arg VITE_GW_BASE_URL=https://api.example.com --build-arg VITE_KC_BASE_URL=https://id.example.com --build-arg VITE_KC_REALM=cm-df --build-arg VITE_KC_CLIENT_ID=cm-df-app -t ghcr.io/techeazyhq-cpu/cm-df-app:1.0.0 .
 ```
 
 A sandbox is a second release in the namespace `consent-manager-sandbox`, with its own database (`cm_sandbox`), Redis
@@ -152,7 +152,7 @@ kubectl -n consent-manager create secret generic cm-secrets --from-literal=DB_PA
   --from-literal=KEYCLOAK_ADMIN_PASSWORD=admin --from-literal=DFREG_SECRETS_KEY="$(openssl rand -base64 32)" \
   --from-literal=CNSCMD_SECRETS_KEY="$(openssl rand -base64 32)" --from-literal=NTF_EMAIL_FINGERPRINT_KEY="$(openssl rand -base64 32)" \
   --from-file=CNS_TKN_JWKS=<a JWK set> --from-file=CNS_RCPT_JWKS=<another JWK set>
-helm upgrade --install cm deploy/helm/consent-manager -n consent-manager --set image.tag=0.1.0 \
+helm upgrade --install cm deploy/helm/consent-manager -n consent-manager --set image.tag=1.0.0 \
   --set config.keycloak.publicUrl=http://localhost:8080 --set config.notificationService.provider=local
 ```
 

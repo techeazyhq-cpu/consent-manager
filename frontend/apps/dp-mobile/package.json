@@ -1,6 +1,6 @@
 {
   "name": "dp-mobile",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
     "@react-native-firebase/app": "26.4.0",
