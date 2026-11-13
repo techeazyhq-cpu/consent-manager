@@ -158,3 +158,137 @@ def verify(secret: str, headers: dict, body: bytes) -> bool:
     expected = base64.b64encode(hmac.new(key, f"{msg_id}.{ts}.".encode() + body, hashlib.sha256).digest()).decode()
     return any(hmac.compare_digest(expected, s.split(",", 1)[1]) for s in headers["webhook-signature"].split())
 ```
+
+## 5. Keep each consent tied to your customer
+
+A consent is the person's decision about **your** purpose, so your systems must be able to say which customer a decision
+belongs to. The Consent Manager does not do that for you, on purpose: the read model and the webhooks carry **ids, not the
+email address or mobile number** you asked, so a message that leaks, or an endpoint that logs it, tells nobody who the person
+is. You hold the link, and the link is the request id.
+
+### The ids
+
+| Where | Field | Is |
+|---|---|---|
+| `POST /api/cns-cmd/cns-reqs` answers `201` | `id` | the request's id: **keep it** |
+| `GET /api/cns-qry/cns-arts`, `.../{requestId}` | `cnsReqId` | the same id |
+| every `consent.*` webhook, in `data` | `cnsReqId` | the same id |
+| `consent.given` and later | `cnsArtId` | the consent itself, set once the person gives it |
+| every webhook | `id` (and the `webhook-id` header) | the message: de-duplicate on it |
+
+Note that the create call says `id` and everything after says `cnsReqId`. They are one value.
+
+### What to keep, and when
+
+1. **Before you ask**, note in your own database that you are about to ask customer X for purpose P (version V). Nothing stops
+   two requests to the same person, and the platform does not de-duplicate them, so an unnoticed retry asks twice.
+2. **As soon as the call answers `201`**, save the request `id` against that customer.
+3. **As decisions arrive**, update that row from the webhook, keyed by `cnsReqId`.
+
+| Keep | From | Why |
+|---|---|---|
+| your customer id | you | the link everything else hangs on |
+| request id | `id`, then `cnsReqId` | the key |
+| purpose code and version | what you asked for | what the person agreed to is *that version's* notice |
+| state | `PENDING`, `ISSUED`, `DENIED`, `REVOKED`, `EXPIRED`, `NOTIFICATION_FAILED` | whether you may use the data |
+| consent id | `cnsArtId` | to withdraw, check and reconcile later |
+| data granted | `dCatCodes` in `consent.given`, or `grantedDCatCodes` when you read it back | use only these (the person may grant fewer than you asked) |
+| valid until | `validUntil` | stop using the data after it |
+
+Keep the person's email or mobile in your customer record, as you do today, not in the consent table.
+
+### What each message means for your systems
+
+| Message | State | Do |
+|---|---|---|
+| `consent.requested` | `PENDING` | nothing: confirms the person was asked |
+| `consent.notification_failed` | `NOTIFICATION_FAILED` | the person was not reached: try another contact |
+| `consent.given` | `ISSUED` | record `cnsArtId`, `dCatCodes`, `validUntil`; start the processing it allows |
+| `consent.refused` | `DENIED` | record it; do not use the data or ask again for this purpose without a reason |
+| `consent.modified` | `ISSUED` | narrow to the new `dCatCodes` (`change` says what) |
+| `consent.renewed` | `ISSUED` | extend to the new `validUntil` |
+| `consent.withdrawn` | `REVOKED` | stop at once, for this purpose |
+| `consent.lapsed` | `EXPIRED` | stop; ask again if you still need it |
+| `principal_request.received` | n/a | route the correction or complaint to the team that answers it |
+
+A message for a request id you do not have was not raised by this system (another integration, or someone in the console):
+acknowledge it with a 2xx and leave it alone.
+
+### A worked example
+
+SQLite and Python, with the signature check from section 4. The same shape works in any language and database.
+
+```python
+import base64, hashlib, hmac, json, sqlite3, time
+
+db = sqlite3.connect(":memory:")
+db.executescript("""
+create table consent (
+  request_id   text primary key,   -- the platform's id: `id` when you raise it, `cnsReqId` everywhere after
+  customer_id  text not null,      -- YOUR customer
+  purpose      text not null,
+  purpose_ver  integer not null,
+  state        text not null,      -- PENDING | ISSUED | DENIED | REVOKED | EXPIRED | NOTIFICATION_FAILED
+  consent_id   text,               -- `cnsArtId`, once given
+  categories   text,               -- what was granted
+  valid_until  text,
+  updated_at   text not null
+);
+create table seen (message_id text primary key);
+""")
+
+
+def record_request(customer_id: str, purpose: str, version: int, created: dict) -> None:
+    """Call as soon as POST /api/cns-cmd/cns-reqs answers 201: `created` is its JSON body."""
+    db.execute("insert into consent (request_id, customer_id, purpose, purpose_ver, state, updated_at) values (?,?,?,?,?,?)",
+               (created["id"], customer_id, purpose, version, created.get("sts", "PENDING"), time.strftime("%Y-%m-%dT%H:%M:%SZ")))
+    db.commit()
+
+
+STATE = {"consent.given": "ISSUED", "consent.renewed": "ISSUED", "consent.modified": "ISSUED", "consent.refused": "DENIED",
+         "consent.withdrawn": "REVOKED", "consent.lapsed": "EXPIRED", "consent.notification_failed": "NOTIFICATION_FAILED"}
+
+
+def verify(secret: str, headers: dict, body: bytes) -> bool:
+    msg_id, ts = headers["webhook-id"], headers["webhook-timestamp"]
+    if abs(time.time() - int(ts)) > 300:
+        return False
+    key = base64.b64decode(secret.removeprefix("whsec_"))
+    expected = base64.b64encode(hmac.new(key, f"{msg_id}.{ts}.".encode() + body, hashlib.sha256).digest()).decode()
+    return any(hmac.compare_digest(expected, s.split(",", 1)[1]) for s in headers["webhook-signature"].split())
+
+
+def on_webhook(secret: str, headers: dict, body: bytes) -> int:
+    """Returns the HTTP status to answer with. Verify the raw body first, answer fast, and ignore a message seen before."""
+    if not verify(secret, headers, body):
+        return 400
+    if db.execute("select 1 from seen where message_id = ?", (headers["webhook-id"],)).fetchone():
+        return 200  # a redelivery
+    msg = json.loads(body)
+    d = msg.get("data", {})
+    new_state = STATE.get(msg["type"])
+    if new_state and "cnsReqId" in d:
+        # the request id is the key to your customer; an id you did not raise is not yours to act on
+        row = db.execute("select customer_id from consent where request_id = ?", (d["cnsReqId"],)).fetchone()
+        if row is None:
+            return 200  # not raised by this system (another integration, or the console): nothing to correlate
+        db.execute("update consent set state = ?, consent_id = coalesce(?, consent_id), categories = coalesce(?, categories), "
+                   "valid_until = coalesce(?, valid_until), updated_at = ? where request_id = ?",
+                   (new_state, d.get("cnsArtId"), json.dumps(d["dCatCodes"]) if "dCatCodes" in d else None, d.get("validUntil"),
+                    msg["occurredAt"], d["cnsReqId"]))
+    db.execute("insert into seen (message_id) values (?)", (headers["webhook-id"],))
+    db.commit()
+    return 200
+```
+
+### Do not rely on the webhook alone
+
+A webhook is the fast path, not the record. Your endpoint may be down, and a message is retried for about two days and then
+marked failed until you send it again from the console. So also **reconcile**: on a schedule (hourly is plenty), read
+`GET /api/cns-qry/cns-arts`, and for each row whose `lcySts` differs from yours, take the platform's value. After an outage,
+that is how you catch up. Reconcile also finds the case where `POST` timed out and you do not know whether the request was
+made: list your recent requests, match on purpose and time, and save the id of the one you find before asking again.
+
+Check consent just before using data, not only when the webhook says so. `GET /api/cns-qry/cns-arts/{cnsArtId}/verify`
+(with the consent token from `POST /api/cns-cmd/cns-arts/{cnsArtId}/token`) answers "is this still allowed right now, for
+this purpose?", so a withdrawal takes effect at once even if its webhook is still on its way.
