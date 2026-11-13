@@ -18,7 +18,10 @@
 
 package com.techeazyhq.cm.webkit;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +43,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * JSON, which carries a timestamp and an internal request id and varies by version:
  * <ul>
  *   <li>input that could not be read (bad JSON, a parameter of the wrong type): 400 {@code malformed-request};</li>
+ *   <li>input the database refuses for what it contains (a NUL character, text it cannot encode, a value too long or out of range,
+ *       a malformed number or date): also 400 {@code malformed-request}, since the caller's text is the fault, not the platform's;</li>
  *   <li>an exception nobody expected: 500 {@code internal-error}, with nothing about it in the answer, and the exception
  *       logged as {@code [CM-INTERNAL-ERROR]} with the correlation id the caller was given.</li>
  * </ul>
@@ -64,7 +69,7 @@ public class FallbackProblemWebExceptionHandler implements WebExceptionHandler {
         if (response.isCommitted() || isNotOurs(ex)) {
             return Mono.error(ex);
         }
-        if (ex instanceof ServerWebInputException) {
+        if (ex instanceof ServerWebInputException || refusedAsInput(ex)) {
             return write(exchange, HttpStatus.BAD_REQUEST, Problems.body("malformed-request", 400,
                     "The request could not be read: check its body, its parameters and its headers.",
                     Problems.correlationId(exchange)));
@@ -83,6 +88,47 @@ public class FallbackProblemWebExceptionHandler implements WebExceptionHandler {
         return Mono.fromCallable(() -> objectMapper.writeValueAsBytes(problem))
                 .map(bytes -> response.bufferFactory().wrap(bytes))
                 .flatMap(buffer -> response.writeWith(Mono.just((DataBuffer) buffer)));
+    }
+
+    /**
+     * SQLSTATEs by which a database says the value it was given is the problem: invalid byte sequence (a NUL character), an
+     * untranslatable character, a malformed text representation, a string too long, a number or a date out of range.
+     */
+    private static final Set<String> INPUT_SQL_STATES = Set.of("22021", "22P05", "22P02", "22001", "22003", "22007", "22008");
+
+    /**
+     * Whether a database refused what the caller sent, from the SQLSTATE of any exception in the cause chain. It asks by name
+     * (an R2DBC exception's {@code getSqlState()}) so this library needs no database driver, and the gateway, which has none,
+     * is unaffected.
+     */
+    static boolean refusedAsInput(Throwable ex) {
+        for (Throwable t = ex; t != null; t = t.getCause()) {
+            String state = sqlState(t);
+            if (state != null && INPUT_SQL_STATES.contains(state)) {
+                return true;
+            }
+            if (t.getCause() == t) {
+                break;
+            }
+        }
+        return false;
+    }
+
+    private static String sqlState(Throwable t) {
+        for (Class<?> c = t.getClass(); c != null; c = c.getSuperclass()) {
+            if (!Modifier.isPublic(c.getModifiers())) {
+                continue; // a driver's own nested exception types may be package-private: ask one of its public parents
+            }
+            try {
+                Method m = c.getMethod("getSqlState");
+                if (m.getReturnType() == String.class) {
+                    return (String) m.invoke(t);
+                }
+            } catch (ReflectiveOperationException | RuntimeException e) {
+                // not this class
+            }
+        }
+        return null;
     }
 
     private static boolean isNotOurs(Throwable ex) {

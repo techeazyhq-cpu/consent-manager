@@ -22,7 +22,7 @@
 # database index and Pulsar tenant (values-sandbox.yaml).
 
 image:
-  # <registry>/<component>:<tag>, e.g. ghcr.io/techeazyhq-cpu/cm-gw:0.1.0. Pin by digest in production.
+  # <registry>/<component>:<tag>, e.g. ghcr.io/techeazyhq-cpu/cm-gw:1.0.0. Pin by digest in production.
   registry: ghcr.io/techeazyhq-cpu
   tag: ""
   pullPolicy: IfNotPresent

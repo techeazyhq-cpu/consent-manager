@@ -21,6 +21,6 @@ description: >-
   PostgreSQL, Redis, Pulsar and Keycloak are shared with notification-service in the namespace "common"
   (deploy/helm/common, ADR-054); on a cloud, PostgreSQL and Redis are managed services (ADR-042).
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 1.0.0
+appVersion: "1.0.0"
 kubeVersion: ">=1.30.0-0"
