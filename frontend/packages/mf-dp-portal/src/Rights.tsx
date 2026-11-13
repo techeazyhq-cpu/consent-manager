@@ -35,8 +35,8 @@ export function escalation(r: DpReqDto): string | null {
   const done = r.sts === "RESOLVED" || r.sts === "REFUSED" || r.overdue;
   if (!done) return null;
   return r.kind === "RELAY"
-    ? "Not satisfied with the answer? Complain to the organisation's grievance officer first, then to the Data Protection Board of India."
-    : "Not satisfied with the answer? You can complain to the Data Protection Board of India.";
+    ? "Not satisfied with the answer? Complain to the organisation's grievance officer first, then to the data protection authority."
+    : "Not satisfied with the answer? You can complain to the data protection authority.";
 }
 
 function RequestCard({ portal, r, onChanged }: { portal: Portal; r: DpReqDto; onChanged: () => void }) {
